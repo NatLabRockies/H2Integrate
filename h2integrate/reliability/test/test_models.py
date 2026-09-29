@@ -649,3 +649,29 @@ def test_reliability_model_initialization(subtests, name, config):
         assert model.downtime_per_event.shape[1] < 100
         assert model.component_availability.shape == (4, model.simulation.n_timesteps)
         assert model.system_availability.shape == (model.simulation.n_timesteps,)
+
+
+@pytest.mark.unit
+def test_fixed_interval_spacing(subtests):
+    """Tests that the event interval is the inverse of the annual frequency."""
+    downtime = {"model": "FixedDowntime", "hours": 1, "n_components": 3}
+
+    with subtests.test("Hourly timesteps"):
+        config = {
+            "simulation": {"dt": 3600, "n_timesteps": 8760},
+            "availability_type": "minimum",
+            "frequency": [0.25, 1, 4],
+            "downtime": downtime,
+        }
+        model = FixedIntervalReliability.from_dict(config)
+        npt.assert_array_equal(model.sample_events()[:, 1], [35040, 8760, 2190])
+
+    with subtests.test("Sub-hourly timesteps"):
+        config = {
+            "simulation": {"dt": 900, "n_timesteps": 35040},
+            "availability_type": "minimum",
+            "frequency": [0.25, 1, 4],
+            "downtime": downtime,
+        }
+        model = FixedIntervalReliability.from_dict(config)
+        npt.assert_array_equal(model.sample_events()[:, 1], [140160, 35040, 8760])

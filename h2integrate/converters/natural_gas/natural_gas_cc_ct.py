@@ -167,16 +167,16 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         heat_rate_mmbtu_per_mwh = inputs["heat_rate_mmbtu_per_mwh"]
         max_natural_gas_consumption = system_capacity * heat_rate_mmbtu_per_mwh
 
-        # electrical command value, saturated at maximum rated system capacity
-        electricity_command_value = np.where(
-            inputs["electricity_command_value"] > system_capacity,
-            system_capacity,
-            inputs["electricity_command_value"],
-        )
-        natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
+        available_capacity = system_capacity
         if self.use_reliability:
             self.reliability_model.run()
-            natural_gas_demand * self.reliability_model.availability
+            available_capacity = system_capacity * self.reliability_model.availability
+
+        # electrical command value, saturated at the available system capacity
+        electricity_command_value = np.minimum(
+            inputs["electricity_command_value"], available_capacity
+        )
+        natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
 
         # available feedstock, saturated at maximum system feedstock consumption
         natural_gas_available = np.where(
@@ -194,10 +194,10 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
         outputs["electricity_headroom_out"] = (
-            np.minimum(  # we are limitied by either
+            np.minimum(  # we are limited by either
                 natural_gas_available
                 / heat_rate_mmbtu_per_mwh,  # the power available in the natural gas supply
-                system_capacity,  # or the rated power of the system
+                available_capacity,  # or the available power of the system
             )
             - electricity_out
         )  # and subtracting out what we're using gives the available excess capacity

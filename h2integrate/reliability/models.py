@@ -708,9 +708,7 @@ class FixedIntervalReliability(BaseReliability):
             np.ndarray: An array of shape (:py:attr:`n_components`, 100) for the next 100 events'
                 time to next failure.
         """
-        interval = np.ceil(
-            8760 / (1 / self.frequency) / self.simulation.n_timesteps_in_hour
-        ).astype(int)
+        interval = np.ceil(self.simulation.n_timesteps_in_year / self.frequency).astype(int)
         max_first_occurrence = np.where(
             interval > self.simulation.n_timesteps, self.simulation.n_timesteps, interval
         )

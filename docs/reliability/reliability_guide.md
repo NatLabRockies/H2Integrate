@@ -171,16 +171,21 @@ During setup,
 
 ```
 
-During compute the model should be run and the availability applied at the demand stage to correctly
-impact the actual production of energy from the natural gas plant.
+During compute the model should be run and the availability applied to the system capacity so that
+the command value, natural gas demand, and headroom all reflect the downtime.
 
 ```python
     def compute(self):
         ...
-        natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
+        available_capacity = system_capacity
         if self.use_reliability:
             self.reliability_model.run()
-            natural_gas_demand * self.reliability_model.availability
+            available_capacity = system_capacity * self.reliability_model.availability
+
+        electricity_command_value = np.minimum(
+            inputs["electricity_command_value"], available_capacity
+        )
+        natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
         ...
 ```
 
