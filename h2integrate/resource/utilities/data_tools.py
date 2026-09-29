@@ -117,3 +117,45 @@ def clip_data_to_resource_year(data, resource_year):
         return meta_data | ts_clipped
 
     raise ValueError("Missing 'year' timeseries info")
+
+
+def estimate_resource_year_from_data(data):
+    """Estimate the resource data from the resource data. Returns
+    the most common year in the resource data timeseries.
+
+    Args:
+        data (dict): resource data loaded from a single file (should not contain multiple years)
+
+    Raises:
+        ValueError: missing 'year' key or found multiple years with the same number of data-points
+
+    Returns:
+        int | None: most common resource data year if found. None otherwise
+    """
+    if ("year" in data) or ("Year" in data):
+        yr_col = "year" if "year" in data else "Year"
+
+    else:
+        msg = "Mising 'year' or 'Year' key in data dictionary"
+        raise ValueError(msg)
+
+    # get a list of the unique resource years in the data
+    unique_years = sorted(set(data[yr_col]))
+    if len(unique_years) == 1:
+        return unique_years[0]
+
+    yr_to_cnts = {y: list(data[yr_col]).count(y) for y in unique_years}
+    most_often_yr = [y for y, v in yr_to_cnts.items() if v == max(yr_to_cnts.values())]
+    if len(most_often_yr) == 1:
+        return most_often_yr[0]
+
+    if len(most_often_yr) > 1:
+        msg = (
+            f"Multiple years have the same number of data entries "
+            f"(years {most_often_yr}). This function should only be "
+            "used for annual resource data and not TMY datasets."
+        )
+        warnings.warn(msg, UserWarning, stacklevel=3)
+        return None
+
+    raise ValueError("This should not happen.")

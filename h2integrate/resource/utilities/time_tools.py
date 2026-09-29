@@ -136,8 +136,7 @@ def add_resource_start_end_times(data: dict):
         data (dict): resource data dictionary with added time strings, modified in place
     """
 
-    time_keys = ["year", "month", "day", "hour", "minute", "second"]
-    time_dict = {k: data.get(k) for k in time_keys if k in data}
+    time_dict = {k: data.get(k) for k in TIME_DATA_KEYS if k in data}
 
     # If no time information is in the resource data, return the dictionary unchanged
     if not bool(time_dict):

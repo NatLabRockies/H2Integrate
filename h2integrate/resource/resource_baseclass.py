@@ -12,6 +12,7 @@ from h2integrate.resource.utilities.data_tools import (
     append_timeseries_data,
     clip_data_to_n_timesteps,
     clip_data_to_resource_year,
+    estimate_resource_year_from_data,
     separate_timeseries_and_meta_data,
 )
 from h2integrate.resource.utilities.time_tools import (
@@ -529,8 +530,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             self.filepath = filepath
             data = self.load_data(filepath)
             # Clip data to a single resource year
-            data = clip_data_to_resource_year(data, resource_year)
-            # NOTE: this where we could up/downsample
+            # NOTE: could clip data to a single resource year here instead
+            # data = clip_data_to_resource_year(data, resource_year)
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -543,8 +544,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 6) Load data from the file created in Step 5 using `load_data()`
             data = self.load_data(filepath)
-            # Clip data to a single resource year
-            data = clip_data_to_resource_year(data, resource_year)
+            # NOTE: could clip data to a single resource year here instead
+            # data = clip_data_to_resource_year(data, resource_year)
             # NOTE: this where we could up/downsample
             return data
 
@@ -628,6 +629,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # NOTE: maybe should check the timestep for each file?
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
+            # TODO: add user-warning if site changed
         elif self.config.resource_year_setting == "year_order":
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
@@ -650,6 +652,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             resource_data = self.get_data_for_year(
                 latitude, longitude, year, resource_filename=filename, first_call=first_call
             )
+
+            if not self._is_tmy_dataset():
+                # Not a TMY dataset, get resource year from data-dict
+                data_year = estimate_resource_year_from_data(resource_data)
+                # This is mostly used for OpenMeteo resource datasets
+                if data_year is not None:
+                    # Clip resource data to the data-year
+                    resource_data = clip_data_to_resource_year(resource_data, data_year)
 
             # Extract the metadata and timeseries data
             md, ts = separate_timeseries_and_meta_data(resource_data)
@@ -680,3 +690,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
         self.resource_data = data
         discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
+
+    def _is_tmy_dataset(self):
+        resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
+        if resource_year_validator == "_InValidator":
+            return True
+        return False
