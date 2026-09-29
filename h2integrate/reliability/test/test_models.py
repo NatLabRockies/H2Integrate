@@ -581,6 +581,19 @@ def test_PerformanceReliability_results(subtests):
             reliability.availability, reliability.maintenance.system_availability
         )
 
+    with subtests.test("Consistency in results between calls to run"):
+        reliability = PerformanceReliability.from_dict(config)
+        reliability.run()
+        first_call_availability = reliability.availability
+
+        reliability.run()
+        second_call_availability = reliability.availability
+        npt.assert_array_equal(second_call_availability, first_call_availability)
+
+        reliability.run(reset_rng=False)
+        third_call_availability = reliability.availability
+        assert not np.array_equal(third_call_availability, second_call_availability)
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize("name, config", minimal_model_config["downtime"].items())
