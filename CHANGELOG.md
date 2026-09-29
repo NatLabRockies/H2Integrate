@@ -42,11 +42,12 @@
 - Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
 - Remove the unused single-source commodity summation component and its references. [PR 898](https://github.com/NatLabRockies/H2Integrate/pull/898)
 - Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
+- Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
 - Adds the ability to model reliability in a WOMBAT-lite formulation to randomly sample downtime
   events and durations to account for system and component-level availability. The
   `PerformanceReliability` class is made available for integration with existing performance models
   by applying the `availability` to either the demand or production of energy, dependent on the
-  performance model's design. . [PR 833](https://github.com/NatLabRockies/H2Integrate/pull/833)
+  performance model's design. [PR 833](https://github.com/NatLabRockies/H2Integrate/pull/833)
 
 ## 0.9 [August 10, 2026]
 
