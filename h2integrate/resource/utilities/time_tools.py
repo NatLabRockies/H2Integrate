@@ -31,11 +31,13 @@ def is_leap_year(year: int):
 
 
 def check_data_length(data, n_timesteps: int):
-    """_summary_
+    """Validates that the length of the data matches the expected number of timesteps.
+    This function should be called after leap-days are removed (if needed) and data
+    has been clipped to the number of timesteps.
 
     Args:
-        data (dict): DataFrame-like dictionary of resource data containing
-            "Month" and "Day" columns.
+        data (dict): dataframe or dictionary of resource data containing
+            "Month" (or "month") and "Day" (or "day") timeseries data
         n_timesteps (int): Number of timesteps in the simulation.
 
     Raises:
@@ -74,20 +76,16 @@ def process_leap_day(data: dict, include_leap_day: bool):
 
     Checks whether the provided resource data contains a leap day (February 29th).
     If ``include_leap_day`` is set to False in the config and the data contains a
-    leap day, the leap day entries are removed. After processing, validates that
-    the length of the data matches the expected number of timesteps.
+    leap day, the leap day entries are removed.
 
     Args:
-        data (dict): DataFrame-like dictionary of resource data containing
-            "Month" and "Day" columns.
+        data (dict): dataframe or dictionary of resource data containing
+            "Month" (or "month") and "Day" (or "day") timeseries data
         include_leap_day (bool): Whether to include leap day in the resource data.
 
     Returns:
         dict: Processed resource data with leap day handled according to configuration.
 
-    Raises:
-        ValueError: If the length of the data does not match ``n_timesteps``
-            after leap day processing.
     """
 
     convert_to_dict = False
@@ -174,8 +172,34 @@ def add_resource_start_end_times(data: dict):
     return data
 
 
+def get_n_timesteps_from_year_list(dt: int, year_list: list, include_leap: bool):
+    """Get the number of timesteps of data available from a list of resouce years.
+
+    Args:
+        dt (int): number of seconds in a timesteps
+        year_list (list): list of resource years
+        include_leap (bool): whether to include leap days or not.
+
+    Returns:
+        int | float: number of timesteps of data available from a year_list
+    """
+    if isinstance(year_list[0], str) or not include_leap:
+        # year is a string if using TMY data, which doesnt allow for leap days
+        n_hours_from_yearlist = len(year_list) * 8760
+    else:
+        # including leap and not using TMY data
+        hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in year_list]
+        n_hours_from_yearlist = sum(hours_per_simulation_year)
+
+    # convert hours to dt
+    n_dt_from_list = n_hours_from_yearlist * (3600 / dt)
+    return n_dt_from_list
+
+
 def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap: bool):
-    """Get the number of years required to get n_timesteps worth of resource data
+    """Get the number of years required to get n_timesteps worth of resource data.
+
+    Note: this method may return a conservative estimate of the number of years needed.
 
     Args:
         dt (int): number of seconds in a timesteps
@@ -189,23 +213,37 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
     # Get the number of hours in the simulation
     hours_simulated = (dt / 3600) * n_timesteps
 
-    if hours_simulated % 8760 == 0:
-        # using multiples of 8760, easy to calc number of years needed
+    if not include_leap:
+        # not including leap-year, so all years have 8760 hours
         n_years_needed = hours_simulated // 8760
-        return int(n_years_needed)
+        if hours_simulated % 8760 == 0:
+            # using multiples of 8760, easy to calc number of years needed
+            # make sure to use at least 1 resource year
+            return int(np.max([n_years_needed, 1]))
+        else:
+            # requires a partial year, add 1 to account for partial year
+            return int(n_years_needed + 1)
+
+    # including leap days
 
     # check if remainder is multiple of 24, indicating leap days
     remainder_hrs = hours_simulated % 8760
-    if remainder_hrs % 24 == 0 and include_leap:
+    if remainder_hrs % 24 == 0:
         # remaining hours is divisible by 24 and including leap-day
+
+        # estimate the number of leap-years based on the remaining hours
         n_leap_years = np.min([remainder_hrs // 24, hours_simulated // 8760])
-        # number of hours from non-leap years
+        # number of hours simulated from leap years
         n_hrs_leap_years = n_leap_years * (8760 + 24)
+        # number of hours from non-leap years
         n_hrs_non_leap = hours_simulated - n_hrs_leap_years
+        #
         if n_hrs_non_leap % 8760 == 0:
             n_years_needed = n_leap_years + (n_hrs_non_leap // 8760)
         else:
             # need an extra year
             n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
         return n_years_needed
+
+    # conservative estimate of number of years needed
     return int((hours_simulated // 8760) + 1)
