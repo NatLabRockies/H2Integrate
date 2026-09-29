@@ -8,6 +8,10 @@ from attrs import field, define, validators
 from retry_requests import retry
 
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.utilities.data_tools import (
+    clip_data_to_resource_year,
+    estimate_resource_year_from_data,
+)
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.wind.wind_resource_baseclass import WindResourceBase
 
@@ -301,6 +305,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
 
         # update wind resource data with site data
         data.update(site_data)
+
+        # remove any excess or trailing resource data
+        resource_year = estimate_resource_year_from_data(data)
+        data = clip_data_to_resource_year(data, resource_year)
 
         return data | {"units": data_units}
 

@@ -11,8 +11,6 @@ from h2integrate.core.file_utils import check_resource_dir
 from h2integrate.resource.utilities.data_tools import (
     append_timeseries_data,
     clip_data_to_n_timesteps,
-    clip_data_to_resource_year,
-    estimate_resource_year_from_data,
     separate_timeseries_and_meta_data,
 )
 from h2integrate.resource.utilities.time_tools import (
@@ -645,16 +643,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             # Get the resource data for this year
             resource_data = self.get_data_for_year(
-                latitude, longitude, year, resource_filename=filename, first_call=first_call
+                latitude, longitude, year, resource_filename=filename
             )
 
-            if not self._is_tmy_dataset():
-                # Not a TMY dataset, get resource year from data-dict
-                data_year = estimate_resource_year_from_data(resource_data)
-                # This is mostly used for OpenMeteo resource datasets
-                if data_year is not None:
-                    # Clip resource data to the data-year
-                    resource_data = clip_data_to_resource_year(resource_data, data_year)
+            # if not self._is_tmy_dataset():
+            #     # Not a TMY dataset, get resource year from data-dict
+            #     data_year = estimate_resource_year_from_data(resource_data)
+            #     # This is mostly used for OpenMeteo resource datasets
+            #     if data_year is not None:
+            #         # Clip resource data to the data-year
+            #         resource_data = clip_data_to_resource_year(resource_data, data_year)
 
             # Extract the metadata and timeseries data
             md, ts = separate_timeseries_and_meta_data(resource_data)
