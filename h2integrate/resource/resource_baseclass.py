@@ -527,7 +527,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # 3) If the resulting resource_dir and filename from Steps 1 and 2 make a valid
         # filepath, load data using `load_data()`
         if filepath.is_file():
-            self.filepath = filepath
+            # self.filepath = filepath # TODO: appears unused, remove
             data = self.load_data(filepath)
             # Clip data to a single resource year
             # NOTE: could clip data to a single resource year here instead
@@ -535,7 +535,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
-        self.filepath = filepath
+        # self.filepath = filepath # TODO: appears unused, remove
         # 4) Create the url to download data using `create_url()` and continue to Step 5.
         url = self.create_url(latitude, longitude, resource_year)
         # 5) Download data from the url created in Step 4 and save to a filepath created from
