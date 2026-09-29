@@ -213,9 +213,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 )
                 raise ValueError(msg)
 
-        # NOTE: below could be done in setup() if resource_year is not an openmdao input
-        # self.resource_years = self._get_resource_years(self.config.resource_year)
-
     def _check_resource_year(self, resource_year):
         """Check if the input resource year is valid based on the config validator.
 
@@ -227,6 +224,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             ValueError: If the resource year in invalid based on the config validator
         """
 
+        # NOTE: this method could be updated to deepcopy the config,
+        # and set resource_year attribute of the copied config
+        # but unsure whether that is more computationally expensive...
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
 
         # In a list validator
@@ -267,17 +267,19 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
             raise ValueError(msg)
 
-    def _get_resource_years(self, resource_starting_year):
-        """_summary_
+    def get_resource_years_from_start_year(self, resource_starting_year):
+        """Get valid resource years to achieve the simulation period, starting at the
+        resource year ``resource_starting_year``.
 
         Args:
-            resource_starting_year (str | int): _description_
+            resource_starting_year (str | int): year
 
         Raises:
-            ValueError: _description_
+            ValueError: not enough valid years following ``resource_starting_year`` to fill the
+            simulation period.
 
         Returns:
-            list: _description_
+            list: list of resource years starting at ``resource_starting_year``
         """
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
@@ -522,15 +524,11 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # 3) If the resulting resource_dir and filename from Steps 1 and 2 make a valid
         # filepath, load data using `load_data()`
         if filepath.is_file():
-            # self.filepath = filepath # TODO: appears unused, remove
             data = self.load_data(filepath)
-            # Clip data to a single resource year
-            # NOTE: could clip data to a single resource year here instead
-            # data = clip_data_to_resource_year(data, resource_year)
+            # NOTE: this where we could up/downsample
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
-        # self.filepath = filepath # TODO: appears unused, remove
         # 4) Create the url to download data using `create_url()` and continue to Step 5.
         url = self.create_url(latitude, longitude, resource_year)
         # 5) Download data from the url created in Step 4 and save to a filepath created from
@@ -539,8 +537,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 6) Load data from the file created in Step 5 using `load_data()`
             data = self.load_data(filepath)
-            # NOTE: could clip data to a single resource year here instead
-            # data = clip_data_to_resource_year(data, resource_year)
             # NOTE: this where we could up/downsample
             return data
 
@@ -561,7 +557,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             dict: resource_data after final processing and checks
         """
-
+        # NOTE: we could up/downsample here also
         resource_data = process_leap_day(resource_data, self.config.include_leap_day)
         resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
         resource_data = add_resource_start_end_times(resource_data)
@@ -603,6 +599,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             data = add_resource_start_end_times(self.config.resource_data)
 
             if site_changed:
+                # warn user if site changed and the resource data didn't
                 msg = (
                     f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
                     "Since resource data was user-input as a dictionary, the resource data will"
@@ -615,14 +612,21 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 2) Determine the resource years and resource filenames to loop
         if self.config.resource_year_setting == "start_year":
-            resource_years = self._get_resource_years(self.config.resource_year)
+            resource_years = self.get_resource_years_from_start_year(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
         elif self.config.resource_year_setting == "filenames":
             # NOTE: trusting that the site, timezone, and timestep is consistent across files
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
-            # TODO: add user-warning if site changed
+            if site_changed:
+                msg = (
+                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
+                    f"Since using `resource_year_setting` of 'filenames', resource data from "
+                    f"{self.config.resource_year} will be repeated for each of the "
+                    f"{len(resource_filenames)} years"
+                )
+                warnings.warn(msg, UserWarning, stacklevel=3)
         elif self.config.resource_year_setting == "year_order":
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
@@ -646,14 +650,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 latitude, longitude, year, resource_filename=filename
             )
 
-            # if not self._is_tmy_dataset():
-            #     # Not a TMY dataset, get resource year from data-dict
-            #     data_year = estimate_resource_year_from_data(resource_data)
-            #     # This is mostly used for OpenMeteo resource datasets
-            #     if data_year is not None:
-            #         # Clip resource data to the data-year
-            #         resource_data = clip_data_to_resource_year(resource_data, data_year)
-
             # Extract the metadata and timeseries data
             md, ts = separate_timeseries_and_meta_data(resource_data)
 
@@ -666,8 +662,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             else:
                 # append new timeseries data to existing
                 timeseries_data = append_timeseries_data(timeseries_data, ts)
-
-        # NOTE: this where we could up/downsample
 
         # combine meta-data and timeseries data
         resource_data = meta_data | timeseries_data
@@ -683,9 +677,3 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.resource_site = [inputs["latitude"][0], inputs["longitude"][0]]
         self.resource_data = data
         discrete_outputs[f"{self.config.resource_type}_resource_data"] = data
-
-    def _is_tmy_dataset(self):
-        resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
-        if resource_year_validator == "_InValidator":
-            return True
-        return False
