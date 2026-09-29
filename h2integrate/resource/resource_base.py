@@ -227,11 +227,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Raises:
             ValueError: If the resource year in invalid based on the config validator
         """
-        init_resource_year = deepcopy(self.config.resource_year)
 
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
 
+        # In a list validator
         if resource_year_validator == "_InValidator":
+            # this type of validator is used in TMY datasets
+            init_resource_year = deepcopy(self.config.resource_year)
             year_options = self.config.__attrs_attrs__.resource_year.validator.options
             if isinstance(resource_year, str):
                 # resource_year is already a string, like 'tmy-2020'
@@ -249,6 +251,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # Bounds validator
         for validator in self.config.__attrs_attrs__.resource_year.validator._validators:
+            # this type of validator is used for non-TMY datasets
             if "<" in validator.compare_op:
                 last_yr = (
                     validator.bound if validator.compare_op == "<=" else int(validator.bound - 1)
@@ -266,8 +269,17 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             raise ValueError(msg)
 
     def _get_resource_years(self, resource_starting_year):
-        # TODO: replace with method in time_tools()
+        """_summary_
 
+        Args:
+            resource_starting_year (str | int): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            list: _description_
+        """
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
             # to accomodate tmy solar resource models

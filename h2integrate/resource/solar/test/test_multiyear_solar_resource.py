@@ -89,3 +89,8 @@ def test_solar_resource_multi_year(
         assert len(ts_keys)>5
     with subtests.test(f"timeseries is {n_timesteps}"):
         assert all(len(solar_resource[k])==n_timesteps for k in ts_keys)
+
+# def test_solar_resource_multiyear_site_change():
+#     # TODO: add test in to check when site changes
+
+#     pass

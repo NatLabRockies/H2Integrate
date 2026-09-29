@@ -9,8 +9,11 @@ from h2integrate.resource.utilities.data_tools import separate_timeseries_and_me
 TIME_DATA_KEYS = ["year", "month", "day", "hour", "minute", "second"]
 
 
-def is_leap_year(year):
-    """Determine if a year is leap year
+def is_leap_year(year: int):
+    """Determine if a year is leap year. A year is a leap-year if it is:
+
+    - divisible by 4 and not divisible by 100 (not a century-year) OR
+    - divisible by 4, 100, and 400
 
     Args:
         year (int): calendar year
@@ -18,6 +21,9 @@ def is_leap_year(year):
     Returns:
         bool: True if the year is a leap year
     """
+
+    # Check if a century year and also a leap year
+    # Or check if not a century year and also divisible by 4
     is_leap = (year % 100 == 0 and year % 400 == 0 and year % 4 == 0) or (
         year % 4 == 0 and year % 100 != 0
     )
@@ -75,7 +81,6 @@ def process_leap_day(data: dict, include_leap_day: bool):
         data (dict): DataFrame-like dictionary of resource data containing
             "Month" and "Day" columns.
         include_leap_day (bool): Whether to include leap day in the resource data.
-        n_timesteps (int): Number of timesteps in the simulation.
 
     Returns:
         dict: Processed resource data with leap day handled according to configuration.
@@ -205,66 +210,3 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
             n_years_needed = n_leap_years + (n_hrs_non_leap // 8760) + 1
         return n_years_needed
     return int((hours_simulated // 8760) + 1)
-
-
-def get_future_valid_resource_years(resource_config, resource_starting_year, dt, n_timesteps):
-    # functionalized-version of `_get_resource_years()` in resource_base.py
-    resource_year_validator = type(resource_config.__attrs_attrs__.resource_year.validator).__name__
-    if resource_year_validator == "_InValidator":
-        # to accomodate tmy solar resource models
-        year_options = resource_config.__attrs_attrs__.resource_year.validator.options
-        if isinstance(resource_starting_year, str):
-            # resource_year is formatted like `tmy-2020`
-            resource_year_type, resource_year = resource_starting_year.split("-")
-            resource_base_year = int(resource_year)
-        else:
-            # resource_year is just the year, get the "type" from the config (like tmy or tgy)
-            resource_year_type, _ = resource_config.resource_year.split("-")
-            resource_base_year = int(resource_starting_year)
-
-        future_years = sorted(
-            [
-                int(yr.split("-")[-1])
-                for yr in year_options
-                if (f"{resource_year_type}-" in yr) and int(yr.split("-")[-1]) >= resource_base_year
-            ]
-        )
-
-    else:
-        resource_base_year = int(resource_starting_year)
-        for validator in resource_config.__attrs_attrs__.resource_year.validator._validators:
-            if "<" in validator.compare_op:
-                last_available_yr = (
-                    validator.bound if validator.compare_op == "<=" else int(validator.bound - 1)
-                )
-
-        future_years = np.arange(resource_base_year, last_available_yr + 1, 1).astype(int).tolist()
-
-    if resource_config.include_leap_day:
-        hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
-    else:
-        hours_per_simulation_year = [8760] * len(future_years)
-
-    # Get the maximum number of hours available in the resource years
-    # following resource_start_year
-    future_hours_available = int(sum(hours_per_simulation_year))
-
-    # Get the number of hours in the simulation
-    hours_simulated = (dt / 3600) * n_timesteps
-
-    if future_hours_available < hours_simulated:
-        msg = f"Not enough future resource years for simulation of {hours_simulated} hours"
-        raise ValueError(msg)
-
-    cumulative_hrs = np.cumsum(hours_per_simulation_year)
-
-    # Get the last resource year needed to get enough resource data for n_timesteps
-    last_resource_year = [y for y, h in zip(future_years, cumulative_hrs) if h >= hours_simulated][
-        0
-    ]
-
-    resource_years = np.arange(resource_base_year, last_resource_year + 1, 1).astype(int).tolist()
-    if resource_year_validator == "_InValidator":
-        # Using TMY data, turn resource year into strings again
-        resource_years = [f"{resource_year_type}-{int(y)}" for y in resource_years]
-    return sorted(resource_years)
