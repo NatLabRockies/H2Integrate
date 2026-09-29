@@ -312,13 +312,13 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage CapEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.CapEx", units="USD"), rel=1e-6)
-            == 64553014.22218219
+            == 69521620.41642682
         )
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-4)
-            == 2975616.89
+            == 3110212.576328236
         )
 
     with subtests.test("Check ammonia CapEx"):
@@ -330,7 +330,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check ammonia OpEx"):
         assert (
             pytest.approx(model.prob.get_val("ammonia.OpEx", units="USD/year")[0], rel=1e-4)
-            == 25415561.5
+            == 25547542.96710026
         )
 
     with subtests.test("Check ammonia production"):
@@ -338,7 +338,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-3
             )
-            == 406226.7872
+            == 388947.8683921149
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -347,7 +347,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted", units="USD")[0],
                 rel=1e-4,
             )
-            == 3728034379.0699997
+            == 3733518790.635646
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -356,7 +356,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
                 rel=1e-4,
             )
-            == 79258124.93845007
+            == 79538674.8511007
         )
 
     with subtests.test("Check LCOH"):
@@ -364,7 +364,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-4
             )
-            == 4.013427289493614
+            == 4.2034231727488836
         )
 
     with subtests.test("Check LCOA"):
@@ -372,7 +372,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-3
             )
-            == 1.1021542544557135
+            == 1.1531642215468845
         )
     with subtests.test("Check LCON"):
         assert (
@@ -911,28 +911,28 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("LCOE of electricity generated"):
-        assert pytest.approx(138.9378311, rel=1e-6) == lcoe_gen
+        assert pytest.approx(121.66558068665938, rel=1e-6) == lcoe_gen
 
     with subtests.test("LCOE of electrical load (battery for min power)"):
-        assert pytest.approx(153.2393976, rel=1e-6) == lcoe_load
+        assert pytest.approx(135.76636056874776, rel=1e-6) == lcoe_load
 
     with subtests.test("LCOE of electrical system (battery for min power)"):
-        assert pytest.approx(150.374804998, rel=1e-6) == lcoe_sys
+        assert pytest.approx(131.68316748483326, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for min power)"):
-        assert pytest.approx(10.230507642864733, rel=1e-3) == lcoh
+        assert pytest.approx(9.108995855797247, rel=1e-3) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for min power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
-        assert pytest.approx(38.63085748, rel=1e-3) == elec_cf_yr0
+        assert pytest.approx(43.430309930087155, rel=1e-3) == elec_cf_yr0
 
     with subtests.test("Electrical load capacity factor (battery for min power)"):
         load_cf = h2i.prob.get_val("elec_load_demand.capacity_factor", units="percent")[0]
-        assert pytest.approx(37.4444016, rel=1e-6) == load_cf
+        assert pytest.approx(42.26347029528633, rel=1e-6) == load_cf
 
     with subtests.test("Electricity to electrolyzer (battery for min power)"):
         electricity_to_electrolyzer = h2i.prob.get_val("electrolyzer.electricity_in", "MW").sum()
-        assert pytest.approx(196807.7748, rel=1e-6) == electricity_to_electrolyzer
+        assert pytest.approx(222136.79987202495, rel=1e-6) == electricity_to_electrolyzer
     # Re-run where we set the battery demand equal to the electrolyzer capacity
 
     h2i.prob.set_val("battery.electricity_set_point", electrolyzer_capacity_MW, units="MW")
@@ -945,25 +945,25 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("LCOE of electrical load (battery for full power)"):
-        assert pytest.approx(151.0430342961, rel=1e-6) == lcoe_load
+        assert pytest.approx(132.9892815088089, rel=1e-6) == lcoe_load
 
     with subtests.test("LCOE of electrical system (battery for full power)"):
-        assert pytest.approx(150.35216704, rel=1e-6) == lcoe_sys
+        assert pytest.approx(131.66092750719028, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for full power)"):
-        assert pytest.approx(10.809740788, rel=1e-6) == lcoh
+        assert pytest.approx(9.282072582110251, rel=1e-6) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for full power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
-        assert pytest.approx(38.633272786, rel=1e-6) == elec_cf_yr0
+        assert pytest.approx(43.78774804839158, rel=1e-6) == elec_cf_yr0
 
     with subtests.test("Electrical load capacity factor (battery for full power)"):
         load_cf = h2i.prob.get_val("elec_load_demand.capacity_factor", units="percent")[0]
-        assert pytest.approx(37.988892, rel=1e-6) == load_cf
+        assert pytest.approx(43.146015091573176, rel=1e-6) == load_cf
 
     with subtests.test("Electricity to electrolyzer (battery for full power)"):
         electricity_to_electrolyzer = h2i.prob.get_val("electrolyzer.electricity_in", "MW").sum()
-        assert pytest.approx(199669.6173879, rel=1e-6) == electricity_to_electrolyzer
+        assert pytest.approx(226775.45532130863, rel=1e-6) == electricity_to_electrolyzer
 
 
 @pytest.mark.integration
@@ -1078,7 +1078,7 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
             )
-            == 41.156
+            == 41.36241716032637
         )
 
     with subtests.test("Check LCOE"):
@@ -1120,7 +1120,7 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
     with subtests.test("Check Carbon Credit"):
         assert (
             pytest.approx(model.prob.get_val("oae.carbon_credit_value", units="USD/t")[0], rel=1e-3)
-            == 1026.4684117
+            == 1087.6316247363743
         )
 
 
@@ -2134,7 +2134,7 @@ def test_floris_example(subtests, temp_copy_of_example):
             pytest.approx(
                 h2i.prob.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")[0], rel=1e-6
             )
-            == 99.8978994
+            == 94.86633261636857
         )
     with subtests.test("Utility LCOE"):
         assert (
@@ -2150,7 +2150,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("finance_subgroup_total_electricity.LCOE", units="USD/MW/h")[0],
                 rel=1e-6,
             )
-            == 65.24845058
+            == 57.39614177712789
         )
 
     with subtests.test("Distributed wind plant capacity"):
@@ -2159,7 +2159,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("distributed_wind_plant.rated_electricity_production", units="MW"),
                 rel=1e-6,
             )
-            == 66.0
+            == 16.5
         )
 
     with subtests.test("Total distributed electricity production"):
@@ -2172,7 +2172,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 ),
                 rel=1e-6,
             )
-            == 128915.05855
+            == 33938.129582746864
         )
 
     with subtests.test("Total utility electricity production"):
@@ -2189,7 +2189,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("distributed_wind_plant.capacity_factor", units="percent")[0],
                 rel=1e-6,
             )
-            == 22.297471
+            == 23.480095186624368
         )
 
     with subtests.test("Utility wind plant capacity"):

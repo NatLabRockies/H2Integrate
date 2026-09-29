@@ -3,7 +3,6 @@ import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
-from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
 from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
 
 
@@ -151,43 +150,3 @@ def test_generic_combiner_performance_4_in(plant_config, tech_config_4_in, commo
     prob.run_model()
 
     assert prob.get_val(f"{commodity}_out", units=units) == approx(commodity_output, rel=1e-5)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "commodity,operation_mode",
-    [
-        ("electricity", "production"),
-        ("electricity", "consumption"),
-        ("electricity", None),
-        ("hydrogen", "production"),
-        ("hydrogen", "consumption"),
-        ("hydrogen", None),
-    ],
-)
-def test_generic_summer_performance(plant_config, tech_config, commodity, operation_mode):
-    """Tests generic setups for electricy and hydrogen production and consumption."""
-    units = "kg" if commodity == "hydrogen" else "kW"
-    mode = "consumed" if operation_mode == "consumption" else "produced"  # default is production
-    prob = om.Problem()
-    comp = GenericSummerPerformanceModel(
-        plant_config=plant_config,
-        tech_config=tech_config,
-        driver_config={},
-    )
-    prob.model.add_subsystem("comp", comp, promotes=["*"])
-    ivc = om.IndepVarComp()
-    ivc.add_output(f"{commodity}_in", val=np.zeros(8760), units=units)
-    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-
-    prob.setup()
-
-    commodity_input = rng.random(8760)
-    total_commodity = sum(commodity_input)
-
-    prob.set_val(f"{commodity}_in", commodity_input, units=units)
-    prob.run_model()
-
-    assert prob.get_val(f"total_{commodity}_{mode}", units=f"{units}*h/yr") == approx(
-        total_commodity, rel=1e-5
-    )

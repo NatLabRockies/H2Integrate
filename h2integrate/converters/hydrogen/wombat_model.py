@@ -13,7 +13,7 @@ from h2integrate.converters.hydrogen.pem_electrolyzer import (
 
 
 @define(kw_only=True)
-class WOMBATModelConfig(ECOElectrolyzerPerformanceModelConfig):
+class WOMBATElectrolyzerModelConfig(ECOElectrolyzerPerformanceModelConfig):
     """
     library_path: Path to the WOMBAT library directory, relative from this file
     if not an absolute path.
@@ -42,7 +42,7 @@ class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
 
     def setup(self):
         super().setup()
-        self.config = WOMBATModelConfig.from_dict(
+        self.config = WOMBATElectrolyzerModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )

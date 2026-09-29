@@ -3,10 +3,17 @@ import time
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from functools import cache
 
 import pandas as pd
 import requests
 from timezonefinder import TimezoneFinder
+
+
+@cache
+def _get_timezone_finder() -> TimezoneFinder:
+    """Return a shared TimezoneFinder, which is slow to initialize."""
+    return TimezoneFinder()
 
 
 def download_from_api(url, filename):
@@ -98,7 +105,7 @@ def make_time_index_openmeteo(data, timezone, lat, lon):
         if timezone != "GMT" and timezone != "UTC":
             # in local time, times were in UTC
             # and need to be converter to local timezone
-            tf = TimezoneFinder()
+            tf = _get_timezone_finder()
             local_timezone = tf.timezone_at(lat=lat, lng=lon)
             # in local time, times are also in UTC
             dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))

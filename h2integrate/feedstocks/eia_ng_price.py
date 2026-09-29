@@ -9,8 +9,8 @@ from attrs import field, define, validators
 from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path, check_feedstock_dir
+from h2integrate.core.model_baseclass import BaseConfig
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
-from h2integrate.core.model_baseclasses import BaseConfig
 
 
 HOURS_PER_YEAR = 8760

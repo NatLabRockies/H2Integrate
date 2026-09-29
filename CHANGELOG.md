@@ -18,6 +18,7 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Added `populate_tech_yaml` utility to automatically generate `model_inputs` sections in technology configuration files by introspecting model classes and organizing parameters into appropriate sections. Simplifies building tech configs, especially for storage models with multiple parameter sections. [PR 866](https://github.com/NatLabRockies/H2Integrate/pull/866)
 - Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
 - Add resource models that can extract resource data from NLR resource datasets using the `rex` package [PR 854](https://github.com/NatLabRockies/H2Integrate/pull/854)
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
@@ -37,6 +38,16 @@
 - Removed pass-through demand from demand components, updated demand to SLC connection to use input-to-input connection, and removed tech naming dependence for combiners and splitters [PR 884](https://github.com/NatLabRockies/H2Integrate/pull/884)
 - Added inputs `dc_ac_ratio`, `tilt_angle` and `azimuth_angle` to `PYSAMSolarPlantPerformanceModel`. [PR #881](https://github.com/NatLabRockies/H2Integrate/pull/881)
 - Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
+- Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
+- Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
+- Remove the unused single-source commodity summation component and its references. [PR 898](https://github.com/NatLabRockies/H2Integrate/pull/898)
+- Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
+- Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
+- Reduced test suite runtime by speeding up slow code paths and shrinking the most expensive examples. [PR 899](https://github.com/NatLabRockies/H2Integrate/pull/899)
+  - Vectorized the time-to-peak and allowed-charge calculations in `PeakLoadManagementHeuristicOpenLoopStorageController`, removed a deep copy of every YAML node in the config loader, reused a single `TimezoneFinder` for OpenMeteo resource data, and switched reverse geocoding to single-process mode. These changes do not change results.
+  - Example 12 now uses `PYSAMWindPlantPerformanceModel` (same 148 x 6 MW turbines), example 13 uses 44 GE 1.5 MW turbines (same 66 MW capacity), and example 26 uses 25 turbines instead of 100 for the FLORIS wind plant.
+  - The OAE examples and tests now use at most 5 ED units instead of 10 (same maximum capacity), and the OAE unit and regression tests share a single model run.
+- Standardized base class module file names on the `_baseclass.py` suffix, including renaming `h2integrate/core/model_baseclasses.py` to `h2integrate/core/model_baseclass.py`; imports from the old module paths must be updated. [PR 900](https://github.com/NatLabRockies/H2Integrate/pull/900)
 
 ## 0.9 [August 10, 2026]
 

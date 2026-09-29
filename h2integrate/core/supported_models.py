@@ -156,10 +156,9 @@ supported_models = _ModelRegistry(
         "GenericSplitterPerformanceModel": "transporters:GenericSplitterPerformanceModel",
         "GenericTransporterPerformanceModel": "transporters:GenericTransporterPerformanceModel",
         "LinearDistanceCostModel": "transporters:LinearDistanceCostModel",
+        "LinearMassTransportCostModel": "transporters:LinearMassTransportCostModel",
         "IronTransportPerformanceComponent": "converters.iron:IronTransportPerformanceComponent",
         "IronTransportCostComponent": "converters.iron:IronTransportCostComponent",
-        # Simple Summers
-        "GenericSummerPerformanceModel": "transporters:GenericSummerPerformanceModel",
         # Storage
         "PySAMBatteryPerformanceModel": "storage.battery:PySAMBatteryPerformanceModel",
         "StoragePerformanceModel": "storage:StoragePerformanceModel",
