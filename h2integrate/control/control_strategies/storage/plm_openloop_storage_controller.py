@@ -296,19 +296,12 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
             unit=self.config.delay_charge_period.units,
         )
 
-        # Extract columns once; per-row pandas indexing is slow inside the loop
-        date_times = self.peaks_df["date_time"].tolist()
-        times_to_peak = self.peaks_df["time_to_peak"].tolist()
-        allow_charge = self.peaks_df["allow_charge"].to_numpy()
-
         # Initialize: no discharge has occurred yet
-        last_discharge = date_times[0] - delay_charge_period
+        last_discharge = self.peaks_df["date_time"].iloc[0] - delay_charge_period
 
         # Process each timestep using the pre-computed peak schedule
-        for i in range(self.n_timesteps):
-            time_stamp = date_times[i]
-            time_to_peak = times_to_peak[i]
-
+        sub = ["date_time", "time_to_peak", "allow_charge"]
+        for i, (time_stamp, time_to_peak, allow_charge) in enumerate(self.peaks_df[sub].to_numpy()):
             # Get the input flow at the current time step
             inputs[f"{commodity}_in"][i]
 
@@ -322,7 +315,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
                 charging = False
 
             if not discharging and soc < soc_max:
-                if allow_charge[i]:
+                if allow_charge:
                     if (time_stamp - last_discharge) > delay_charge_period:
                         charging = True
                         discharging = False
