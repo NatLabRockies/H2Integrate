@@ -443,9 +443,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def get_data_for_year(
-        self, latitude, longitude, resource_year, resource_filename="", first_call=True
-    ):
+    def get_data_for_year(self, latitude, longitude, resource_year, resource_filename=""):
         """Get resource data for a single resource year to handle any of the expected inputs.
         This method does the following:
 
@@ -464,8 +462,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             longitude (float): longitude corresponding to location for resource data
             resource_year (str | int): year corresponding to the resource data
             resource_filename (str, optional): name of the resource file
-            first_call (bool): True if called from `setup()` method, False if called from
-                `compute()` method to prevent unnecessary reloading of data.
+
 
         Raises:
             ValueError: If data was not successfully downloaded from the API
@@ -624,9 +621,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
         elif self.config.resource_year_setting == "filenames":
-            # NOTE: maybe should check that the site is the same for each file?
-            # NOTE: maybe should check the timezone is the same for each file?
-            # NOTE: maybe should check the timestep for each file?
+            # NOTE: trusting that the site, timezone, and timestep is consistent across files
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
             # TODO: add user-warning if site changed
