@@ -10,8 +10,8 @@ import pyomo.environ as pyomo
 
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_optimized_storage_controller import (
-    PeakLoadManagementOptimizedControllerConfig,
     PeakLoadManagementOptimizedStorageController,
+    PeakLoadManagementOptimizedStorageControllerConfig,
 )
 
 
@@ -50,7 +50,7 @@ def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
 @pytest.fixture
 def base_config():
     n = 24
-    return PeakLoadManagementOptimizedControllerConfig(
+    return PeakLoadManagementOptimizedStorageControllerConfig(
         max_capacity=10.0,
         max_soc_fraction=1.0,
         min_soc_fraction=0.0,
@@ -409,8 +409,10 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         "signal_threshold_percentile": 0.0,
         "event_duration": {"val": 2, "units": "h"},
     }
-    config_kwh = PeakLoadManagementOptimizedControllerConfig(**common, performance_incentive=5.0)
-    config_event = PeakLoadManagementOptimizedControllerConfig(
+    config_kwh = PeakLoadManagementOptimizedStorageControllerConfig(
+        **common, performance_incentive=5.0
+    )
+    config_event = PeakLoadManagementOptimizedStorageControllerConfig(
         **common, performance_incentive_per_event=10.0
     )
 
@@ -444,7 +446,7 @@ def test_optimizer_respects_set_point_cap(subtests):
     """p_discharge/p_charge are capped by set_point_w's magnitude when the new
     constrain_dispatch_to_set_point flag is set, on top of the usual P_max bound."""
     n = 24
-    config = PeakLoadManagementOptimizedControllerConfig(
+    config = PeakLoadManagementOptimizedStorageControllerConfig(
         max_capacity=10.0,
         max_soc_fraction=1.0,
         min_soc_fraction=0.0,
@@ -747,7 +749,7 @@ def test_exclusive_control_mask_and_window_boundary_check(subtests):
 @pytest.fixture
 def seasonal_config():
     n = 24
-    return PeakLoadManagementOptimizedControllerConfig(
+    return PeakLoadManagementOptimizedStorageControllerConfig(
         max_capacity=40.0,
         max_soc_fraction=1.0,
         min_soc_fraction=0.0,
@@ -781,7 +783,7 @@ def test_control_tier_requires_bill_min_fields(seasonal_config):
     del kwargs["demand_charge_window"]
 
     with pytest.raises(ValueError, match="control_tier requires"):
-        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+        PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.unit
@@ -791,7 +793,7 @@ def test_bill_min_fields_require_control_tier(seasonal_config):
     del kwargs["control_tier"]
 
     with pytest.raises(ValueError, match="require control_tier"):
-        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+        PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.unit
@@ -801,7 +803,7 @@ def test_invalid_control_tier_raises(seasonal_config):
     kwargs["control_tier"] = 5
 
     with pytest.raises(ValueError, match="control_tier must be one of"):
-        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+        PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.unit
@@ -811,7 +813,7 @@ def test_invalid_max_cycles_per_day_raises(seasonal_config):
     kwargs["max_cycles_per_day"] = 0.0
 
     with pytest.raises(ValueError, match="max_cycles_per_day must be > 0"):
-        PeakLoadManagementOptimizedControllerConfig(**kwargs)
+        PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.regression
