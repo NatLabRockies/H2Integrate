@@ -524,7 +524,7 @@ class FixedDowntime(BaseDowntime):
 @define(kw_only=True)
 class UniformDowntime(BaseDowntime):
     """Basic uniform distribution-based downtime model for generating the length of downtime for a
-    given event.
+    given event. Based on the `NumPy uniform random generator`_.
 
     Args:
         min_hours (int | array-like): Minimum length of downtime per event, in hours. Must be at
@@ -544,6 +544,9 @@ class UniformDowntime(BaseDowntime):
     Attributes:
         rng (np.random.BitGenerator): The NumPy random generator instance. Created automatically
             from the :py:func:generate_rng`.
+
+    .. _NumPy uniform random generator:
+       https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.integers.html
     """
 
     min_hours: int | ArrayLike = field(
@@ -582,11 +585,12 @@ class UniformDowntime(BaseDowntime):
 
 @define(kw_only=True)
 class LogNormalDowntime(BaseDowntime):
-    """Basic log-normal downtime model for generating the length of downtime for a given event.
+    """Basic log-normal distribution-based  downtime model for generating the length of downtime
+    for a given event. Based on the `NumPy log-normal random generator`_.
 
     Args:
-        mean (float | array-like): Average length of downtime per event, in hours.
-        sigma (float | array-like): Standard deviation of the distribution(s), in hours.
+        mean (float | array-like): Mean value of the underlying normal distribution.
+        sigma (float | array-like): Standard deviation of the underlying normal distribution.
         simulation (dict | ``SimulationConfig``): Configuration consisting of:
 
             - dt (int): Timestep in seconds.
@@ -600,6 +604,9 @@ class LogNormalDowntime(BaseDowntime):
     Attributes:
         rng (np.random.BitGenerator): The NumPy random generator instance. Created automatically
             from the :py:func:generate_rng`.
+
+    .. _NumPy log-normal random generator:
+       https://numpy.org/doc/2.2/reference/random/generated/numpy.random.Generator.lognormal.html#numpy.random.Generator.lognormal
     """
 
     mean: float = field(
@@ -634,7 +641,7 @@ class WeibullReliability(BaseReliability):
     r"""Basic reliability model for operating/not operating statuses.
 
     Assumes a full operational shutdown with zero ramping of production for an hourly, 1 year
-    simulation.
+    simulation. Based on the `NumPy Weibull random generator`_.
 
     Args:
         scale (float): Also referred to as :math:`\lambda` or :math:`\alpha`. Determines
@@ -679,6 +686,9 @@ class WeibullReliability(BaseReliability):
             of the simulation.
         system_availability (np.ndarray): Minimum operational ratio of all components for every time
             time step of the simulation.
+
+    .. _NumPy Weibull random generator:
+       https://numpy.org/doc/stable/reference/random/generated/numpy.random.Generator.weibull.html
     """
 
     scale: float = field(
