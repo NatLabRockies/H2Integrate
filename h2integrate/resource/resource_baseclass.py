@@ -448,19 +448,15 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """Get resource data for a single resource year to handle any of the expected inputs.
         This method does the following:
 
-        0) If this is not the first resource call of the simulation, check if latitude and longitude
-            inputs are different than the previous latitude and longitude values. If resource data
-            has not been already loaded for the, continue to Step 1.
-        1) Check if resource data was input. If not, continue to Step 2.
-        2) Get valid resource_dir with :py:func:`check_resource_dir`
-        3) Create a filename if resource_filename was not input or if the site location changed
+        1) Get valid resource_dir with :py:func:`check_resource_dir`
+        2) Create a filename if resource_filename was not input or if the site location changed
             with the method `create_filename()`. Otherwise, use resource_filename as the filename.
-        4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid filepath,
-            load data using `load_data()`. Otherwise, continue to Step 5.
-        5) Create the url to download data using `create_url()` and continue to Step 6.
-        6) Download data from the url created in Step 5 and save to a filepath created from the
-            resulting resource_dir and filename from Steps 2 and 3. Continue to Step 7.
-        7) Load data from the file created in Step 6 using `load_data()`
+        3) If the resulting resource_dir and filename from Steps 1 and 2 make a valid filepath,
+            load data using `load_data()`. Otherwise, continue to Step 4.
+        4) Create the url to download data using `create_url()` and continue to Step 5.
+        5) Download data from the url created in Step 5 and save to a filepath created from the
+            resulting resource_dir and filename from Steps 2 and 3. Continue to Step 6.
+        6) Load data from the file created in Step 5 using `load_data()`
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -480,36 +476,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
-        # 0) If site hasn't changed and resource data has already been loaded
-        # just return the resource data that was loaded in the setup() method
-        # if not site_changed and not first_call:
-        #     if self.resource_data is not None:
-        #         return self.resource_data
-
-        # 1) check if user provided data, add start and end times if so
-        # and return the data
-        # if bool(self.config.resource_data):
-        #     data = add_resource_start_end_times(self.config.resource_data)
-
-        #     if site_changed:
-        #         msg = (
-        #             f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
-        #             "Since resource data was user-input as a dictionary, the resource data will"
-        #             "remain unchanged and still be for the site "
-        #             f"({self.config.latitude}, {self.config.longitude}) provided in the config"
-        #         )
-        #         warnings.warn(msg, UserWarning, stacklevel=3)
-
-        #     return data
-
         # check if user provided directory or filename
         provided_filename = False if resource_filename == "" else True
         provided_dir = False if self.config.resource_dir is None else True
 
-        # 2a) check if file exists directly within resource directory
-        # 2) Get valid resource_dir with the function check_resource_dir()
+        # 1a) check if file exists directly within resource directory
+        # 1) Get valid resource_dir with the function check_resource_dir()
         resource_dir = check_resource_dir(data_dir=self.config.resource_dir)
-        # 3a) Create a filename if resource_filename was input
+        # 2a) Create a filename if resource_filename was input
         if provided_filename and not site_changed:
             # If a filename was input, use resource_filename as the filename.
             filepath = resource_dir / resource_filename
@@ -519,8 +493,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             filepath = resource_dir / filename
         # if file doesn't exist, continue to Step 2b
         if not filepath.is_file():
-            # 2b) check if file exists directly within a subfolder of the resource directory
-            # 2) Get valid resource_dir with the function check_resource_dir()
+            # 1b) check if file exists directly within a subfolder of the resource directory
+            # 1) Get valid resource_dir with the function check_resource_dir()
             if (
                 provided_dir
                 and Path(self.config.resource_dir).parts[-1] == self.config.resource_type
@@ -530,7 +504,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 resource_dir = check_resource_dir(
                     data_dir=self.config.resource_dir, data_subdir=self.config.resource_type
                 )
-            # 3) Create a filename if resource_filename was input
+            # 2) Create a filename if resource_filename was input
             if provided_filename and not site_changed:
                 # If a filename was input, use resource_filename as the filename.
                 filepath = resource_dir / resource_filename
@@ -549,7 +523,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 )
                 warnings.warn(msg, UserWarning)
 
-        # 4) If the resulting resource_dir and filename from Steps 2 and 3 make a valid
+        # 3) If the resulting resource_dir and filename from Steps 1 and 2 make a valid
         # filepath, load data using `load_data()`
         if filepath.is_file():
             self.filepath = filepath
@@ -561,13 +535,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # If the filepath (resource_dir/filename) does not exist, download data
         self.filepath = filepath
-        # 5) Create the url to download data using `create_url()` and continue to Step 6.
+        # 4) Create the url to download data using `create_url()` and continue to Step 5.
         url = self.create_url(latitude, longitude, resource_year)
-        # 6) Download data from the url created in Step 5 and save to a filepath created from
-        # the resulting resource_dir and filename from Steps 2 and 3.
+        # 5) Download data from the url created in Step 4 and save to a filepath created from
+        # the resulting resource_dir and filename from Steps 1 and 2.
         success = self.download_data(url, filepath)
         if success:
-            # 7) Load data from the file created in Step 6 using `load_data()`
+            # 6) Load data from the file created in Step 5 using `load_data()`
             data = self.load_data(filepath)
             # Clip data to a single resource year
             data = clip_data_to_resource_year(data, resource_year)
