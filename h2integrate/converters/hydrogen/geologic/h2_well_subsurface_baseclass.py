@@ -1,7 +1,7 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,

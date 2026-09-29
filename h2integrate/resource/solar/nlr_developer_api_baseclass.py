@@ -2,8 +2,8 @@ import urllib.parse
 
 import pandas as pd
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,

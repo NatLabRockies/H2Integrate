@@ -7,9 +7,9 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
+from h2integrate.resource.wind.wind_resource_baseclass import WindResourceBase
 
 
 @define(kw_only=True)

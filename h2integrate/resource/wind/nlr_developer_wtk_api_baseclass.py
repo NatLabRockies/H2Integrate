@@ -4,8 +4,8 @@ import urllib.parse
 import pandas as pd
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
-from h2integrate.resource.wind.wind_resource_base import WindResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.wind.wind_resource_baseclass import WindResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,

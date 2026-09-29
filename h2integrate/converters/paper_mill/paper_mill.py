@@ -1,7 +1,7 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
 
 
 @define(kw_only=True)
