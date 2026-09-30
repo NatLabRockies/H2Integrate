@@ -1,6 +1,7 @@
 import importlib.util
 from enum import IntEnum
 
+import numpy as np
 import networkx as nx
 import openmdao.api as om
 
@@ -1975,6 +1976,47 @@ class H2IntegrateModel:
         """
         Extremely light wrapper to setup the OpenMDAO problem and track setup status.
         """
+        ### TODO: SET INPUT DEFAULTS???
+        # 1) find, loop over the demand components
+        technologies = self.technology_config.get("technologies", {})
+        for tech_name, technology in technologies.items():
+            model_name = technology.get("performance_model", {}).get("model", "")
+            if "DemandComponent" not in model_name:
+                continue  # ignore if not a demand component
+            # 2) grab the demand profile quantities set up in the technology configs
+            performance_parameters = technology.get("model_inputs", {}).get(
+                "performance_parameters", {}
+            )
+            demand_profile = performance_parameters.get("demand_profile")
+            commodity = performance_parameters.get("commodity")
+            commodity_rate_units = performance_parameters.get("commodity_rate_units")
+            ### BEGIN ???
+            if demand_profile is None:
+                raise ValueError(
+                    f"`demand_profile` not found in `performance_parameters` in `{model_name}` "
+                    f"for {tech_name}, which is required for default value initialization..."
+                )  # ???, option 1: throw a value error
+            if demand_profile is None:
+                continue  # ???, option 2: do nothing if demand_profile isn't set
+            ### END ???
+            # make sure the demand profile is vector-valued
+            n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+            demand_profile = np.atleast_1d(demand_profile)  # coerce everything to a numpy type
+            if len(demand_profile) == 1:
+                demand_profile = np.full((n_timesteps), demand_profile[0])
+            # 3) set their default values using set_input_defaults
+            # # if we get here... we've got a demand technology
+            # from pprint import pprint; pprint(technology)  # DEBUG!!!!!
+            self.model.set_input_defaults(
+                f"{tech_name}.{commodity}_demand",
+                val=demand_profile,
+                units=commodity_rate_units,
+            )
+            print(
+                f"setting input default on {tech_name}.{commodity}_demand "
+                f"to value: {demand_profile} with units {commodity_rate_units}"
+            )  # DEBUG!!!!!
+            # raise NotImplementedError(f"got here! model_name: {model_name}")  # DEBUG!!!!!
         self.prob.setup()
         self.state = State.SETUP
 
