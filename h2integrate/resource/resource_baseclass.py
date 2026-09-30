@@ -318,6 +318,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             )
 
         if self.config.include_leap_day:
+            # could use calendar.leapdays(start_year, end_year)
             hours_per_simulation_year = [8784 if is_leap_year(y) else 8760 for y in future_years]
         else:
             hours_per_simulation_year = [8760] * len(future_years)

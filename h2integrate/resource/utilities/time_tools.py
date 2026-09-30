@@ -21,6 +21,7 @@ def is_leap_year(year: int):
     Returns:
         bool: True if the year is a leap year
     """
+    # NOTE: could replace with calendar.isleap()
 
     # Check if a century year and also a leap year
     # Or check if not a century year and also divisible by 4
@@ -107,8 +108,14 @@ def process_leap_day(data: dict, include_leap_day: bool):
             data.reset_index(drop=False)
             .set_index(keys=["Month", "Day"], drop=True)
             .loc[(2, 29)]["index"]
-            .to_list()
         )
+
+        # leap_day_index = (
+        #     data.reset_index(drop=False)
+        #     .set_index(keys=["Month", "Day"], drop=True)
+        #     .loc[(2, 29)]["index"]
+        #     .to_list()
+        # )
         # Drop the leap day data from the dataframe
         data = data.drop(index=leap_day_index)
 
