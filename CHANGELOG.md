@@ -43,6 +43,11 @@
 - Remove the unused single-source commodity summation component and its references. [PR 898](https://github.com/NatLabRockies/H2Integrate/pull/898)
 - Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
 - Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
+- Adds the ability to model reliability in a WOMBAT-lite formulation to randomly sample downtime
+  events and durations to account for system and component-level availability. The
+  `PerformanceReliability` class is made available for integration with existing performance models
+  by applying the `availability` to either the demand or production of energy, dependent on the
+  performance model's design. [PR 833](https://github.com/NatLabRockies/H2Integrate/pull/833)
 - Reduced test suite runtime by speeding up slow code paths and shrinking the most expensive examples. [PR 899](https://github.com/NatLabRockies/H2Integrate/pull/899)
   - Vectorized the time-to-peak and allowed-charge calculations in `PeakLoadManagementHeuristicOpenLoopStorageController`, removed a deep copy of every YAML node in the config loader, reused a single `TimezoneFinder` for OpenMeteo resource data, and switched reverse geocoding to single-process mode. These changes do not change results.
   - Example 12 now uses `PYSAMWindPlantPerformanceModel` (same 148 x 6 MW turbines), example 13 uses 44 GE 1.5 MW turbines (same 66 MW capacity), and example 26 uses 25 turbines instead of 100 for the FLORIS wind plant.
