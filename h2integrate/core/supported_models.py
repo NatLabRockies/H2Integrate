@@ -142,6 +142,8 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "ShellTubeHXPerformanceModel": "converters.heat.shell_tube_hx:ShellTubeHXPerformanceModel",
+        "ShellTubeHXCostModel": "converters.heat.shell_tube_hx_cost_model:ShellTubeHXCostModel",
         "PaperMillPerformanceModel": "converters.paper_mill:PaperMillPerformanceModel",
         "PaperMillCostModel": "converters.paper_mill:PaperMillCostModel",
         "SAFPerformanceModel": "converters.saf:SAFPerformanceModel",
