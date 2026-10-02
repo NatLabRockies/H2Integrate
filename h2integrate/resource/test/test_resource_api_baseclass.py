@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
@@ -118,21 +119,53 @@ def test_config_attribute_errors(input_config, expected_msg, yr_setting):
     assert f"`resource_year_setting` of '{yr_setting}'" in str(excinfo.value)
 
 
-# @pytest.mark.unit
-# @pytest.mark.parametrize(
-#     "n_timesteps,include_leap,yr_setting,resource_fname,yr_order",
-#     [
-#         8760, False, "start_year",
-#     ],
-#     ids=[
-#         "yr_order-missing",
-#         "filenames-missing",
-#         "start_year-extra_attr",
-#         "start_year-invalid"
-#     ]
-# )
-# def test_setup_errors(subtests, input_config):
-#     pass
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,expected_msg",
+    [
+        # Invalid setting with <= 1 year
+        (2012, 4380, False, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
+        (2012, 8760, False, "filenames", [""], None, "_year_setting` must be 'start_year'"),
+        (2012, 8784, True, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
+        (2012, 8784, True, "filenames", [""], None, "_year_setting` must be 'start_year'"),
+        # Not enough inputs
+        (2012, 17520, False, "year_order", "", [2012], "2 resource years are req"),
+        (2012, 17520, False, "filenames", [""], None, "2 resource filenames are req"),
+        # Too many inputs
+        (2012, 17520, False, "year_order", "", [2012, 2012, 2012], "2 resource years are req"),
+        (2012, 17520, False, "filenames", ["", "", ""], None, "2 resource filenames are req"),
+    ],
+    ids=[
+        # Invalid setting with <= 1 year
+        "yr_order-0.5yr",
+        "filenames-1yr",
+        "yr_order-1yr-leap",
+        "filenames-1yr-leap",
+        # Not enough inputs
+        "yr_order-too_short",
+        "filenames-too_short",
+        # Too many inputs
+        "yr_order-too_long",
+        "filenames-too_long",
+    ],
+)
+def test_setup_errors(input_config, expected_msg):
+    # this test is pretty dependent on the function
+    # `get_number_of_resource_years_needed`
+    error_type = AttributeError if "must be 'start_year'" in expected_msg else ValueError
+
+    prob = om.Problem()
+    comp = FakeResource(
+        plant_config=input_config,
+        resource_config=input_config["site"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+
+    with pytest.raises(error_type) as excinfo:
+        prob.setup()
+    assert expected_msg in str(excinfo.value)
+
 
 # @pytest.mark.unit
 # def test_check_resource_year(subtests):

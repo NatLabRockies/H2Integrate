@@ -197,7 +197,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # If only running 1 year, then only valid option is 'start_year'
         if n_data_years == 1 and self.config.resource_year_setting != "start_year":
             msg = (
-                "Invalid resource_year_setting when simulating 1 year. `resource_year_setting`"
+                "Invalid resource_year_setting when simulating 1 year. `resource_year_setting` "
                 "must be 'start_year' when only using 1 year of resource data."
             )
             raise AttributeError(msg)
