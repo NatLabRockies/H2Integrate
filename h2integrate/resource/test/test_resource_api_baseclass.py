@@ -183,6 +183,65 @@ def test_setup_errors(input_config, expected_msg):
 # def test_process_final_resource_data(subtests):
 #     pass
 
-# @pytest.mark.unit
-# def test_get_data_(subtests):
-#     pass
+
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order",
+    [(2012, 17544, True, "filenames", ["data_2013.csv", "data_2012.csv"], None)],
+)
+@pytest.mark.unit
+def test_get_data_filenames(subtests, input_config):
+    # This is testing whether the resource years are properly estimated from the first call
+
+    prob = om.Problem()
+    comp = FakeResource(
+        plant_config=input_config,
+        resource_config=input_config["site"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    prob.run_model()
+
+    data_site0 = prob.get_val("resource.fake_resource_data").copy()
+
+    with subtests.test("Initial filename"):
+        assert data_site0["filename"] == "data_2012.csv"
+
+    # Run again, dont change the site
+    prob.run_model()
+
+    with subtests.test("Initial filename after rerun"):
+        assert prob.get_val("resource.fake_resource_data")["filename"] == "data_2012.csv"
+
+    # Change the site
+    prob.set_val("resource.latitude", 35.0, units="deg")
+    prob.set_val("resource.longitude", -100.0, units="deg")
+    prob.run_model()
+
+    data_site1 = prob.get_val("resource.fake_resource_data").copy()
+
+    with subtests.test("Year order was estimated correctly."):
+        assert np.allclose(data_site0["year"], data_site1["year"])
+
+    with subtests.test("Month order was estimated correctly."):
+        assert np.allclose(data_site0["month"], data_site1["month"])
+
+    with subtests.test("Latitude changed"):
+        assert data_site0["latitude"] != data_site1["latitude"]
+
+    with subtests.test("Longitude changed"):
+        assert data_site0["longitude"] != data_site1["longitude"]
+
+    with subtests.test("Filenames changed"):
+        assert data_site0["filename"] != data_site1["filename"]
+
+    with subtests.test("Second filename"):
+        assert data_site1["filename"] == ""
+
+    with subtests.test("Data length"):
+        assert len(data_site1["year"]) == 17544
+
+    # Run again without changing site, make sure filename is still ""
+    prob.run_model()
+    with subtests.test("Third filename"):
+        assert prob.get_val("resource.fake_resource_data")["filename"] == ""

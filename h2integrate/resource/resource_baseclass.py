@@ -639,6 +639,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             else:
                 # not first call, use resource years that were estimated from earlier run
                 resource_years = self.resource_years_from_files
+                if site_changed:
+                    resource_filenames = [""] * len(self.config.resource_filename)
 
             if site_changed and self.raise_error_if_site_change:
                 msg = (

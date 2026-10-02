@@ -131,12 +131,6 @@ def process_leap_day(data: dict, include_leap_day: bool):
             .loc[(2, 29)]["index"]
         )
 
-        # leap_day_index = (
-        #     data.reset_index(drop=False)
-        #     .set_index(keys=["Month", "Day"], drop=True)
-        #     .loc[(2, 29)]["index"]
-        #     .to_list()
-        # )
         # Drop the leap day data from the dataframe
         data = data.drop(index=leap_day_index)
 
@@ -240,6 +234,10 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
     # Get the number of hours in the simulation
     hours_simulated = (dt / 3600) * n_timesteps
+
+    # simulation is definitely < 1 yr, only need 1 year of data
+    if hours_simulated < 8760:
+        return 1
 
     if not include_leap:
         # not including leap-year, so all years have 8760 hours
