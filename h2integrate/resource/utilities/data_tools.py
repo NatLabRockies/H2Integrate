@@ -40,8 +40,9 @@ def append_timeseries_data(data_full, new_data, return_with_metadata=True):
     meta_data, ts_data_full = separate_timeseries_and_meta_data(data_full)
     _, new_ts_data = separate_timeseries_and_meta_data(new_data)
     shared_keys = set(ts_data_full) & set(new_ts_data)
-    if len(shared_keys) != len(set(ts_data_full)):
-        missing_data = (set(new_ts_data) - shared_keys) & (set(ts_data_full) - shared_keys)
+    missing_data = (set(new_ts_data) - shared_keys) | (set(ts_data_full) - shared_keys)
+
+    if bool(missing_data):
         msg = (
             "Mismatch in timeseries data. Non-shared data keys of "
             f"{sorted(missing_data)} will be removed. "
