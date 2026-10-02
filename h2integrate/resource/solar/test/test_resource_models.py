@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -296,3 +297,29 @@ def test_multi_year_solar_resource(subtests):
 
     with subtests.test("timeseries is 17544"):
         assert all(len(solar_resource[k])==17544 for k in ts_keys)
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,resource_year,model_name,timezone",
+    [("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 0)],
+)
+def test_forced_download(plant_simulation,site_config,model):
+    site_config["include_leap_day"] = True
+    plant_simulation["simulation"]["n_timesteps"] = 8784
+
+    plant_config = {
+        "site": site_config,
+        "plant": plant_simulation,
+    }
+
+    prob = om.Problem()
+    comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"]["resource_parameters"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+
+    with pytest.raises(json.JSONDecodeError) as excinfo:
+        prob.setup()
+    assert "Expecting value: line 1 column 1 (char 0)" in str(excinfo.value)
