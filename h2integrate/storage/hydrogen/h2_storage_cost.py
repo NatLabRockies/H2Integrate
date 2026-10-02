@@ -4,6 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
 
@@ -163,6 +164,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
 
+@register
 class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for lined rock cavern hydrogen storage.
 
@@ -297,6 +299,7 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for salt cavern hydrogen storage.
 
@@ -431,6 +434,7 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class PipeStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for underground pipeline hydrogen storage.
 
@@ -579,6 +583,7 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class CompressedGasStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for compressed gas hydrogen storage.
 

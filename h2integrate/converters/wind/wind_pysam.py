@@ -12,6 +12,7 @@ from h2integrate.converters.tools import (
     check_pysam_lifetime_options,
     apply_non_native_lifetime_degradation,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -182,6 +183,7 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
         return design_dict
 
 
+@register
 class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
     """
     An OpenMDAO component that wraps a WindPlant model.

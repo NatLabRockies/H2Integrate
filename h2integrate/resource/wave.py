@@ -7,6 +7,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import get_path, find_file
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -26,6 +27,7 @@ class WaveResourceConfig(BaseConfig):
     resource_year: int = field(default=2010, converter=int)
 
 
+@register
 class WaveResource(om.ExplicitComponent):
     """A resource component for processing wave data from a CSV file.
 

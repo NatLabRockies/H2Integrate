@@ -1,6 +1,9 @@
 import openmdao.api as om
 
+from h2integrate.core.supported_models import register
 
+
+@register(name="pipe", no_cost=True)
 class PipePerformanceModel(om.ExplicitComponent):
     """
     Pass-through pipe with no losses.

@@ -7,6 +7,7 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.time_tools import process_leap_day
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
@@ -49,6 +50,7 @@ class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
     verify_download: bool = field(default=False)
 
 
+@register
 class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalWindAPIConfig

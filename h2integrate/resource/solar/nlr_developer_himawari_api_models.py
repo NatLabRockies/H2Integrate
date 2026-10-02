@@ -2,6 +2,7 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
@@ -42,6 +43,7 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class Himawari7SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -91,6 +93,7 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -156,6 +159,7 @@ class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "himawari_tgy_v3"
 
 
+@register
 class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()

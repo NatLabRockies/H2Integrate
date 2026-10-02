@@ -4,6 +4,7 @@ import PySAM.BatteryStateful as BatteryStateful
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -68,6 +69,7 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     resistance: int | float = field(default=0.001)
 
 
+@register
 class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component wrapping the PySAM Battery Performance model.
 

@@ -3,6 +3,7 @@ import copy
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfaceCostConfig,
@@ -100,6 +101,7 @@ class GeoH2SubsurfaceCostConfig(GeoH2SubsurfaceCostConfig):
             )
 
 
+@register
 class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
     """An OpenMDAO component for modeling subsurface well costs in geologic
         hydrogen plants.

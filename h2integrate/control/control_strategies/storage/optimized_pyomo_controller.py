@@ -6,6 +6,7 @@ from attrs import field, define, validators
 from pyomo.util.check_units import assert_units_consistent
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_rules.plant_dispatch_model import PyomoDispatchPlantModel
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
@@ -95,6 +96,7 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
         return dispatch_inputs
 
 
+@register
 class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
     """Operates storage based on optimization to meet the demand profile based on
         available commodity from generation profiles and demand profile while minimizing costs.

@@ -22,6 +22,7 @@ from h2integrate.tools.constants import (
     LHV_CH4_MJ_PER_KG,
 )
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define
@@ -137,6 +138,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponentConfig(BaseConfig):
                 raise ValueError("SiO2_ratio must be provided when pellet_grade='custom'.")
 
 
+@register
 class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,

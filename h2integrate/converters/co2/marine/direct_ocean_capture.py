@@ -3,6 +3,7 @@ from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 def setup_electrodialysis_inputs(config):
@@ -70,6 +71,7 @@ class DOCPerformanceConfig(BaseConfig):
     save_plots: bool = field(default=False)
 
 
+@register
 class DOCPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a Direct Ocean Capture (DOC) plant.
@@ -153,6 +155,7 @@ class DOCCostModelConfig(DOCPerformanceConfig):
     cost_year: int = field(default=2023, converter=int, validator=validators.in_([2023]))
 
 
+@register
 class DOCCostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     direct ocean capture (DOC) system.
