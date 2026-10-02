@@ -117,38 +117,42 @@ class ResourceBaseAPIConfig(BaseConfig):
                     "'resource_year_order'."
                 )
                 raise AttributeError(msg)
-            # TODO: Check for extraneous or extra inputs
+            # Check for extraneous or extra inputs
+            if isinstance(self.resource_filename, list) or self.resource_filename != "":
+                msg = (
+                    "With `resource_year_setting` of 'year_order', "
+                    "the attribute `resource_filename` is an extraneous input. "
+                )
+                raise AttributeError(msg)
 
         if self.resource_year_setting == "filenames":
             # Check for missing inputs
             if not isinstance(self.resource_filename, list):
                 msg = (
-                    "With resource_year_setting of 'filename', "
+                    "With `resource_year_setting` of 'filenames', "
                     "the attribute `resource_filename` must be a list. "
                     "Please provide a list of filenames for the attribute "
                     "'resource_filename'."
                 )
                 raise AttributeError(msg)
-            # TODO: Check for extraneous inputs
-
-        if self.resource_year_setting == "start_year":
-            # Check for missing inputs
+            # Check for extraneous inputs
             if self.resource_year_order is not None:
                 msg = (
-                    "With resource_year_setting of 'start_year', "
+                    "With `resource_year_setting` of 'filenames', "
                     "the attribute `resource_year_order` is an extraneous input. "
-                    "Please remove the attribute 'resource_year_order'."
                 )
                 raise AttributeError(msg)
+
+        if self.resource_year_setting == "start_year":
             # Check for extraneous inputs
             invalid_inputs = ""
             if isinstance(self.resource_filename, list):
                 invalid_inputs += "`resource_filename` must be a single filename and not a list. "
             if self.resource_year_order is not None:
-                invalid_inputs += "'resource_year_order' is an extraneous input. "
+                invalid_inputs += "`resource_year_order` is an extraneous input. "
             if len(invalid_inputs) > 0:
                 msg = (
-                    "Invalid inputs provided for ``resource_year_setting`` of 'start_year': \n"
+                    "Invalid inputs provided for `resource_year_setting` of 'start_year': \n"
                     f"{invalid_inputs}"
                 )
                 raise AttributeError(msg)
@@ -686,7 +690,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                     successful_match = False
                     for txy in typical_types:
                         # match format like tmy-2022
-                        match_pattern = re.findall(txy + r"-[+-]?\d+")
+                        match_pattern = re.findall(txy + r"-[+-]?\d+", filename)
                         if bool(match_pattern):
                             # not going to check if valid resource year here,
                             # will be checked if site changes
@@ -701,11 +705,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                     # year can be easily pulled from timeseries data
                     year = estimate_resource_year_from_data(ts)
                     self.resource_years_from_files.append(year)
+                    # update whether its a leap year for leap-year checks
+                    is_leap = is_leap_year(year)
 
             # Check if data has leap-day data
             has_leap_day_data = contains_leap_day(ts)
 
             if self.config.include_leap_day and is_leap and not has_leap_day_data:
+                msg = "Resource data is missing leap-day, attempting a forced redownload"
+                warnings.warn(msg, UserWarning, stacklevel=3)
+
                 # should have leap day data but doesnt, force redownload data
                 resource_data = self.get_data_for_year(
                     latitude, longitude, year, resource_filename=filename, forced_download=True

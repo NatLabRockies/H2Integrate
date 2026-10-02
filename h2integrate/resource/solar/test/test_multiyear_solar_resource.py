@@ -202,11 +202,10 @@ def test_solar_resource_multiyear_site_change(
         ghi_2012_avg1 = data_site1["ghi"][idx_2012].mean()
         assert pytest.approx(site1_expected_avg_ghi["2012"], rel=1e-6) == ghi_2012_avg1
 
-    if yr_setting != "filenames":
-        # when yr_setting is filenames, it repeats 2012 data for both years
-        with subtests.test("changed site average GHI in 2013"):
-            ghi_2013_avg1 = data_site1["ghi"][idx_2013].mean()
-            assert pytest.approx(site1_expected_avg_ghi["2013"], rel=1e-6) == ghi_2013_avg1
-        with subtests.test("changed site average GHI in 2012 and 2013"):
-            ghi_avg1 = data_site1["ghi"].mean()
-            assert pytest.approx(site1_expected_avg_ghi["2012 and 2013"], rel=1e-6) == ghi_avg1
+
+    with subtests.test("changed site average GHI in 2013"):
+        ghi_2013_avg1 = data_site1["ghi"][idx_2013].mean()
+        assert pytest.approx(site1_expected_avg_ghi["2013"], rel=1e-6) == ghi_2013_avg1
+    with subtests.test("changed site average GHI in 2012 and 2013"):
+        ghi_avg1 = data_site1["ghi"].mean()
+        assert pytest.approx(site1_expected_avg_ghi["2012 and 2013"], rel=1e-6) == ghi_avg1
