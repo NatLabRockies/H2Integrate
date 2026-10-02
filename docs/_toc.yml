@@ -112,6 +112,9 @@ parts:
           - file: finance_models/ProFastComp
           - file: finance_models/ProFastNPV
           - file: finance_models/numpy_financial_npv
+  - caption: Reliability
+    chapters:
+      - file: reliability/reliability_guide
   - caption: Developer Guide
     chapters:
       - file: CONTRIBUTING
