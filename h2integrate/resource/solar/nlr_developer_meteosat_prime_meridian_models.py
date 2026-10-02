@@ -2,6 +2,7 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
@@ -42,6 +43,7 @@ class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -114,6 +116,7 @@ class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "nsrdb_msg_tgy_v4"
 
 
+@register
 class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()

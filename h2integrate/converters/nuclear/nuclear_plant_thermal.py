@@ -7,6 +7,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -42,6 +43,7 @@ class SimpleThermalNuclearReactorPerformanceModelConfig(BaseConfig):
     minimum_heat_extract: float = field(default=0.0)
 
 
+@register
 class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
     """Simple thermal nuclear reactor model with heat and electricity outputs.
 
@@ -216,6 +218,7 @@ class SimpleThermalNuclearReactorCostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2025, converter=int)
 
 
+@register
 class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     """Simple cost model for the thermal nuclear reactor.
 

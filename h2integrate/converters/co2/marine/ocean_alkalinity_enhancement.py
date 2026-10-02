@@ -7,6 +7,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 def setup_ocean_alkalinity_enhancement_inputs(config):
@@ -65,6 +66,7 @@ class OAEPerformanceConfig(BaseConfig):
     save_plots: bool = field(default=False)
 
 
+@register
 class OAEPerformanceModel(PerformanceModelBaseClass):
     """OpenMDAO component for modeling Ocean Alkalinity Enhancement (OAE) performance."""
 
@@ -262,6 +264,7 @@ class OAECostAndFinancialModelConfig(OAECostModelConfig):
     pass
 
 
+@register
 class OAECostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     ocean alkalinity enhancement (OAE) system.
@@ -350,6 +353,7 @@ class OAECostModel(CostModelBaseClass):
         outputs["OpEx"] = results["Annual Operating Cost ($/yr)"]
 
 
+@register
 class OAECostAndFinancialModel(CostModelBaseClass):
     """OpenMDAO component for calculating costs and financial metrics of an
         Ocean Alkalinity Enhancement (OAE) system.

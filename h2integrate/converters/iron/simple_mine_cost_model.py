@@ -7,6 +7,7 @@ from openmdao.utils import units
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
@@ -39,6 +40,7 @@ class SimpleIronMineCostComponentConfig(BaseConfig):
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
 
 
+@register
 class SimpleIronMineCostComponent(CostModelBaseClass):
     _time_step_bounds = (
         3600,

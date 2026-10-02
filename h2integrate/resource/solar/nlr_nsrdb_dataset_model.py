@@ -5,6 +5,7 @@ import pandas as pd
 from rex import NSRDBX
 from attrs import field, define, validators
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_hpc_baseclass import ResourceBaseH5Model, ResourceBaseH5Config
 from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 
@@ -33,6 +34,7 @@ class NSRDBDatasetH5Config(ResourceBaseH5Config):
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
 
 
+@register
 class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
     def setup(self):
         self.units_translation = {

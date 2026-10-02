@@ -8,6 +8,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -27,6 +28,7 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
     uptime_hours_until_eol: int = field(validator=validators.ge(0))
 
 
+@register
 class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a hydrogen fuel cell.
@@ -221,6 +223,7 @@ class H2FuelCellCostConfig(CostModelBaseConfig):
     variable_opex_per_kwh: float = field(validator=validators.ge(0))
 
 
+@register
 class H2FuelCellCostModel(CostModelBaseClass):
     """
     Cost model for a hydrogen fuel cell system.

@@ -9,6 +9,7 @@ from attrs import field, define, validators
 from pyomo.opt import SolverStatus, TerminationCondition
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     SolverOptions,
@@ -144,6 +145,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
                     )
 
 
+@register
 class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseClass):
     """Demand-response storage controller using a rolling-horizon MILP.
 

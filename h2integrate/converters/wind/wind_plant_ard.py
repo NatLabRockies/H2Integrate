@@ -1,6 +1,8 @@
 import openmdao.api as om
 from attrs import field, define
 
+from h2integrate.core.supported_models import register
+
 
 try:
     from ard.api import set_up_ard_model
@@ -118,6 +120,7 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
         outputs["OpEx"] = inputs["ard_OpEx"]
 
 
+@register
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
