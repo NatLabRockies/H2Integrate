@@ -344,8 +344,13 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_out is already in kW*h/yr (shape=plant_life)
                 varopex += inputs["annual_electricity_out"] * buy_price
             else:
-                # Scalar or per-timestep: same cost each year
-                varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+                # Scalar or per-timestep: sum the purchase cost over the simulated horizon
+                # and annualize it (fraction_of_year_simulated == 1 for a 1-year sim, > 1 for
+                # multi-year sims) so the per-year VarOpEx is the average annual cost.
+                varopex += (
+                    np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+                    / self.fraction_of_year_simulated
+                )
 
         # Add selling revenue if sell price is configured
         if self.config.electricity_sell_price is not None:
@@ -354,6 +359,11 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
                 varopex -= inputs["annual_electricity_sold"] * sell_price
             else:
-                varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+                # Scalar or per-timestep: sum the sales revenue over the simulated horizon
+                # and annualize it (see buying branch above).
+                varopex -= (
+                    np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+                    / self.fraction_of_year_simulated
+                )
 
         outputs["VarOpEx"] = varopex

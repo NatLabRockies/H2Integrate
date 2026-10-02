@@ -161,6 +161,7 @@ supported_models = _ModelRegistry(
         "IronTransportCostComponent": "converters.iron:IronTransportCostComponent",
         # Storage
         "PySAMBatteryPerformanceModel": "storage.battery:PySAMBatteryPerformanceModel",
+        "BatteryPerformanceModel": "storage.battery:BatteryPerformanceModel",
         "StoragePerformanceModel": "storage:StoragePerformanceModel",
         "StorageAutoSizingModel": "storage:StorageAutoSizingModel",
         "LinedRockCavernStorageCostModel": "storage.hydrogen:LinedRockCavernStorageCostModel",
