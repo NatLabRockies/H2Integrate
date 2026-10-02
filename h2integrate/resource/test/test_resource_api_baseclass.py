@@ -184,11 +184,11 @@ def test_setup_errors(input_config, expected_msg):
 #     pass
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order",
     [(2012, 17544, True, "filenames", ["data_2013.csv", "data_2012.csv"], None)],
 )
-@pytest.mark.unit
 def test_get_data_filenames(subtests, input_config):
     # This is testing whether the resource years are properly estimated from the first call
 

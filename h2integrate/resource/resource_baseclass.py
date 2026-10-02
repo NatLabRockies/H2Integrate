@@ -213,6 +213,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # If using a resource_year list, check that the correct number of files were included
         if self.config.resource_year_setting == "year_order":
             if len(self.config.resource_year_order) != n_data_years:
+                # NOTE: could double check with get_n_timesteps_from_year_list
+                # (only if not using TMY dataset)
                 msg = (
                     f"{n_data_years} resource years are required to "
                     f"but {len(self.config.resource_year_order)} were provided."

@@ -91,6 +91,22 @@ def test_number_of_years_needed_without_leap(subtests):
     with subtests.test("1/3 year without leap"):
         assert n_years == 1
 
+    n_years = get_number_of_resource_years_needed(dt, 8760 * (1 / 3), True)
+    with subtests.test("1/3 year with leap"):
+        assert n_years == 1
+
     n_years = get_number_of_resource_years_needed(dt, 8760 * 2.5, False)
     with subtests.test("2.5 year without leap"):
         assert n_years == 3
+
+    n_years = get_number_of_resource_years_needed(dt, 8808, True)
+    with subtests.test("1 year + 1 day year with leap"):
+        assert n_years == 2
+
+    n_years = get_number_of_resource_years_needed(dt, 17544, True)
+    with subtests.test("2 years (1 is leap)"):
+        assert n_years == 2
+
+    n_years = get_number_of_resource_years_needed(dt, 17520, True)
+    with subtests.test("2 years (both are leap)"):
+        assert n_years == 2
