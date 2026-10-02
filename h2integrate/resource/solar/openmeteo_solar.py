@@ -8,14 +8,14 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel, ResourceBaseAPIConfig
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.time_tools import process_leap_day
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
+from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 
 
 @define(kw_only=True)
-class OpenMeteoHistoricalSolarAPIConfig(ResourceBaseAPIConfig):
+class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
@@ -54,7 +54,7 @@ class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = OpenMeteoHistoricalSolarAPIConfig.from_dict(
+        self.config = OpenMeteoHistoricalSolarResourceConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

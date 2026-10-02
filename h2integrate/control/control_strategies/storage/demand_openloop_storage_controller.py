@@ -5,7 +5,7 @@ from attrs import define
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )

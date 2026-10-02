@@ -5,8 +5,8 @@ import pandas as pd
 from rex import WindX
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base_hpc import ResourceBaseH5Model, ResourceBaseH5Config
-from h2integrate.resource.wind.wind_resource_base import WindResourceBase
+from h2integrate.resource.resource_hpc_baseclass import ResourceBaseH5Model, ResourceBaseH5Config
+from h2integrate.resource.wind.wind_resource_baseclass import WindResourceBase
 
 
 @define(kw_only=True)

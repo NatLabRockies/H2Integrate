@@ -6,12 +6,12 @@ from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
 @define(kw_only=True)
-class SimpleIronMineCostConfig(BaseConfig):
+class SimpleIronMineCostComponentConfig(BaseConfig):
     """Configuration class for SimpleIronMineCostComponent.
 
     Attributes:
@@ -76,7 +76,7 @@ class SimpleIronMineCostComponent(CostModelBaseClass):
             self.target_dollar_year = 2024
 
         config_dict.update({"cost_year": self.target_dollar_year})
-        self.config = SimpleIronMineCostConfig.from_dict(
+        self.config = SimpleIronMineCostComponentConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

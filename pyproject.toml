@@ -97,6 +97,9 @@ documentation = "https://h2integrate.readthedocs.io/"
 issues = "https://github.com/NatLabRockies/H2Integrate/issues"
 changelog = "https://github.com/NatLabRockies/H2Integrate/blob/main/CHANGELOG.md"
 
+[project.scripts]
+populate_tech_yaml = "h2integrate.preprocess.populate_tech_yaml:main"
+
 [project.optional-dependencies]
 develop = [
     "isort",
@@ -296,5 +299,7 @@ gis = { features = ["gis"], solve-group = "default" }
 [tool.pixi.tasks]
 
 [tool.pixi.dependencies]
-pre-commit = ">=4.6.2,<5"
+vim = ">=9.2.785,<10"
 git = ">=2.55.0,<3"
+pre-commit = ">=4.6.2,<5"
+pyvis = ">=0.3.2,<0.4"

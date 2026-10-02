@@ -108,6 +108,7 @@ failing test cases.
 <!-- Complete this section only if you checked "New Model" above -->
 - [ ] **Model Structure**:
   - [ ] Follows established naming conventions outlined in `docs/developer_guide/coding_guidelines.md`
+  - [ ] Configuration class is named `{ModelName}Config`, where `{ModelName}` is the complete model class name registered in `supported_models.py`
   - [ ] Used `attrs` class to define the `Config` to load in attributes for the model
     - [ ] If applicable: inherit from `BaseConfig` or `CostModelBaseConfig`
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method

@@ -14,7 +14,14 @@ from h2integrate.converters.methanol.methanol_baseclass import (
 
 
 @define(kw_only=True)
-class SMRPerformanceConfig(MethanolPerformanceConfig):
+class SMRMethanolPlantFinanceModelConfig(MethanolFinanceConfig):
+    """Configuration for the SMR methanol finance model."""
+
+    pass
+
+
+@define(kw_only=True)
+class SMRMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
     meoh_syn_cat_consume_ratio: float = field()
     meoh_atr_cat_consume_ratio: float = field()
     ng_consume_ratio: float = field()
@@ -48,7 +55,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = SMRPerformanceConfig.from_dict(
+        self.config = SMRMethanolPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -120,7 +127,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
 
 @define(kw_only=True)
-class SMRCostConfig(MethanolCostConfig):
+class SMRMethanolPlantCostModelConfig(MethanolCostConfig):
     ng_lhv: float = field()
     meoh_syn_cat_price: float = field()
     meoh_atr_cat_price: float = field()
@@ -155,7 +162,7 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = SMRCostConfig.from_dict(
+        self.config = SMRMethanolPlantCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -220,7 +227,7 @@ class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
 
     def setup(self):
-        self.config = MethanolFinanceConfig.from_dict(
+        self.config = SMRMethanolPlantFinanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
             additional_cls_name=self.__class__.__name__,
         )
