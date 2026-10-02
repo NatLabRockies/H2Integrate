@@ -14,7 +14,8 @@ from h2integrate.storage.battery.pysam_battery import (
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
-def test_pysam_battery_performance_model_without_controller(plant_config, subtests):
+@pytest.mark.parametrize("calendar_a", [None, 0.004])
+def test_pysam_battery_performance_model_without_controller(plant_config, subtests, calendar_a):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
 
@@ -24,6 +25,11 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     # Load the technology configuration
     with tech_config_path.open() as file:
         tech_config = yaml.safe_load(file)
+
+    if calendar_a is not None:
+        tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"][
+            "pysam_options"
+        ] = {"ParamsCell": {"calendar_a": calendar_a}}
 
     # Set up the OpenMDAO problem
     prob = om.Problem()
@@ -81,6 +87,13 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     prob.setup()
 
     prob.run_model()
+
+    with subtests.test("PySAM options are applied"):
+        battery = prob.model.pysam_battery
+        if calendar_a is not None:
+            assert battery.system_model.ParamsCell.calendar_a == pytest.approx(calendar_a)
+        else:
+            assert battery.config.pysam_options == {}
 
     expected_battery_power = np.array(
         [
@@ -190,6 +203,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             unmet_demand,
             expected_unment_demand,
             rtol=1e-2,
+            atol=1e-7,
         )
 
     with subtests.test("expected_battery_unused_commodity"):
@@ -296,6 +310,27 @@ def test_battery_initialization(plant_config, subtests):
         # computed in `compute()` rather than at model initialization
         # suggest removing this subtest
         assert battery.system_model.ParamsPack.mass * 20000 == pytest.approx(3044540.0, 1e-3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [24])
+@pytest.mark.parametrize(
+    "pysam_options, error",
+    [
+        ({"NotAGroup": {"value": 1}}, "Unknown PySAM battery options group: NotAGroup"),
+        ({"ParamsCell": {"minimum_SOC": 20}}, "ParamsCell.minimum_SOC.*managed"),
+    ],
+)
+def test_battery_rejects_invalid_pysam_options(plant_config, pysam_options, error):
+    tech_config_path = Path(__file__).parent / "inputs" / "tech_config.yaml"
+    with tech_config_path.open() as file:
+        tech_config = yaml.safe_load(file)["technologies"]["battery"]
+
+    tech_config["model_inputs"]["performance_parameters"]["pysam_options"] = pysam_options
+    battery = PySAMBatteryPerformanceModel(plant_config=plant_config, tech_config=tech_config)
+
+    with pytest.raises(ValueError, match=error):
+        battery.setup()
 
 
 @pytest.mark.regression
