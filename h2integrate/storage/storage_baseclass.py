@@ -47,7 +47,7 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
 
     _time_step_bounds = (
         1,
-        36000,
+        86400,
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "storage"
 
@@ -306,24 +306,39 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
         # rate * dt_amount = commodity_amount_units (works for any commodity_rate_units)
         outputs[f"total_{self.commodity}_produced"] = np.sum(storage_commodity_out) * self.dt_amount
-        outputs[f"annual_{self.commodity}_produced"] = outputs[
-            f"total_{self.commodity}_produced"
-        ] * (1 / self.fraction_of_year_simulated)
-
         if outputs[f"rated_{self.commodity}_production"] <= 0:
+            outputs[f"annual_{self.commodity}_produced"] = 0.0
             outputs["capacity_factor"] = 0.0
             outputs["standard_capacity_factor"] = 0.0
         else:
-            outputs["capacity_factor"] = outputs[f"total_{self.commodity}_produced"] / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
+            annualized_discharge_only_cf, replacement_schedule = (
+                self.calculate_annual_cf_and_replacement_schedule(
+                    performance_timeseries=outputs[f"storage_{self.commodity}_discharge"],
+                    rated_performance=float(outputs[f"rated_{self.commodity}_production"][0]),
+                    state_of_health_timeseries=None,
+                    eol_soh=None,
+                )
             )
-            # standard_capacity_factor is the ratio of commodity discharged to the discharge rate
-            total_commodity_discharged = (
-                outputs[f"storage_{self.commodity}_discharge"].sum() * self.dt_amount
+            outputs[f"annual_{self.commodity}_produced"] = (
+                annualized_discharge_only_cf
+                * float(outputs[f"rated_{self.commodity}_production"][0])
+                * 8760
             )
-            outputs["standard_capacity_factor"] = total_commodity_discharged / (
-                outputs[f"rated_{self.commodity}_production"] * self.n_timesteps * self.dt_amount
+            outputs["replacement_schedule"] = replacement_schedule
+            # Capacity factor should reflect the net storage contribution so it can
+            # balance with system-level totals across technologies, but it should still
+            # be projected per simulated year for non-annual and multi-year runs.
+            annualized_net_cf, _ = self.calculate_annual_cf_and_replacement_schedule(
+                performance_timeseries=outputs[f"{self.commodity}_out"],
+                rated_performance=float(outputs[f"rated_{self.commodity}_production"][0]),
+                state_of_health_timeseries=None,
+                eol_soh=None,
             )
+            outputs["capacity_factor"] = annualized_net_cf
+            # Standard capacity factor is the storage-service metric: discharge-only
+            # relative to the rated discharge capability over the full simulation.
+
+            outputs["standard_capacity_factor"] = annualized_discharge_only_cf
         return outputs
 
     def simulate(

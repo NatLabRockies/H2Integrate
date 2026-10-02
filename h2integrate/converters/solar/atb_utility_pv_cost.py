@@ -26,8 +26,8 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
 
 class ATBUtilityPVCostModel(CostModelBaseClass):
     _time_step_bounds = (
-        3600,
-        3600,
+        900,
+        14400,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
