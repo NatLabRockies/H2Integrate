@@ -7,7 +7,7 @@ from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
-from h2integrate.core.model_baseclasses import SkippableComputeMixin
+from h2integrate.core.model_baseclass import SkippableComputeMixin
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names

@@ -19,7 +19,7 @@ from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseCla
 
 
 @define(kw_only=True)
-class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     """Performance-model configuration for ``PYSAMSolarPlantPerformanceModel``.
 
     Fields declared here are validated against the user inputs supplied in
@@ -49,7 +49,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         super().setup()
 
         # Build a validated configuration object from user inputs.
-        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -115,7 +115,7 @@ model always reports costs in a fixed dollar-year), inherit the config from
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
 
 
 @define(kw_only=True)
@@ -155,7 +155,7 @@ adds a required `cost_year` field, forcing the user to supply it:
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)

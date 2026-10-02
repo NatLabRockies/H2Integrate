@@ -6,7 +6,7 @@ from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
 from h2integrate.core.connection_utils import create_technology_graph
-from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
 

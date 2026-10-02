@@ -5,11 +5,11 @@ from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 @define(kw_only=True)
-class SimpleIronMinePerformanceConfig(BaseConfig):
+class SimpleIronMinePerformanceComponentConfig(BaseConfig):
     """Configuration class for SimpleIronMinePerformanceComponent.
 
     Attributes:
@@ -46,7 +46,7 @@ class SimpleIronMinePerformanceComponent(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        self.config = SimpleIronMinePerformanceConfig.from_dict(
+        self.config = SimpleIronMinePerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
