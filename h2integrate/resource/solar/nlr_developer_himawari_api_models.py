@@ -166,4 +166,12 @@ class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
+
         super().setup()
