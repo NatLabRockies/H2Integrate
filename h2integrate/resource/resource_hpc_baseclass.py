@@ -463,8 +463,7 @@ class ResourceBaseH5Model(om.ExplicitComponent):
         # Sample data to the proper timestep interval
         data = self.sample_data_to_interval(data)
         # Remove leap day (if necessary)
-        # data = self.process_leap_day(data)
-        data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
+        data = process_leap_day(data, self.config.include_leap_day)
         # Add start/end times to the resource data
         data = add_resource_start_end_times(data)
 
