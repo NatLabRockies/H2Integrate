@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+import pandas as pd
 
 
 """
@@ -54,7 +55,6 @@ from openmdao.utils import units as om_units
 from simses.battery.state import BatteryState
 from simses.battery.battery import Battery
 from simses.degradation import DegradationModel
-from simses.thermal.ambient import AmbientThermalModel
 from simses.degradation.state import DegradationState
 from simses.converter.converter import Converter
 from simses.model.cell.sony_lfp import SonyLFP
@@ -86,10 +86,19 @@ from simses.model.degradation.sony_lfp_calendar import (
 )
 # isort: on
 
-from h2integrate.core.utilities import merge_shared_inputs
+from simses.thermal import SolarConfig, solar_heat_load
+
+from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
+)
+from h2integrate.storage.battery.battery_with_degredation.container import (
+    ContainerLayer,
+    VariableCopHvac,
+    ThermostatStrategy,
+    ContainerProperties,
+    ContainerThermalModel,
 )
 
 
@@ -252,7 +261,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
         validator=validators.optional((validators.ge(0), validators.le(1))),
     )
 
-    deg_scale: float = field(default=0.7056, validator=(validators.ge(0), validators.le(1)))
+    deg_scale: float = field(default=0.115, validator=(validators.ge(0), validators.le(1)))
     eol_soh_capacity: float = field(default=0.8, validator=(validators.ge(0), validators.le(1)))
     # TODO convert from power and energy ratings (see math in chat)
     series_count: int = field(default=336, converter=int, validator=validators.gt(0))
@@ -263,8 +272,27 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     )
     converter_max_power: float = field(default=2400.0, validator=validators.gt(0))
 
-    # TODO degradation: add additional parameters for degradation here
-    cop: float = field(validator=validators.gt(0))
+    # Container HVAC / thermostat parameters (container geometry itself is fixed; see
+    # self.container_properties).
+    hvac_cop_cooling_nominal: float = field(default=3.2, validator=validators.gt(0))
+    hvac_cop_heating_nominal: float = field(default=3.8, validator=validators.gt(0))
+    hvac_max_power: float = field(default=12.0, validator=validators.gt(0))
+    thermostat_setpoint: float = field(default=25.0)
+    thermostat_deadband: float = field(default=5.0, validator=validators.gt(0))
+    # The container's thin wall layers make its forward-Euler thermal integration
+    # unstable at large dt; it is sub-stepped internally at up to this duration.
+    thermal_substep_max: float = field(default=60.0, validator=validators.gt(0))
+
+    # Container orientation for solar heat-gain pre-computation (container geometry itself
+    # remains fixed; see self.container_properties). Site latitude/longitude are not
+    # tech_config parameters; they must be connected from the plant's site info (see
+    # the `latitude`/`longitude` inputs in setup()).
+    azimuth: float = field(default=0.0)
+
+    # Battery cell temperature range for safe operation; commanded power is forced to
+    # zero for any timestep where the battery temperature falls outside this range.
+    battery_temp_safe_lower: float = field(default=15.0)
+    battery_temp_safe_upper: float = field(default=45.0)
 
     def __attrs_post_init__(self):
         """
@@ -339,12 +367,109 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self.commodity_rate_units = self.config.commodity_rate_units
         self.commodity_amount_units = self.config.commodity_amount_units
 
+        # Tesla Megapack 2XL enclosure geometry/wall layers (fixed; tied to the 336s x 16p pack
+        # topology below, so not exposed as tech_config parameters).
+        # ---------------------------------------------------------------------------
+        # Tesla Megapack 2 XL battery pack
+        #
+        # Physical layout  : 24 modules max; each module = 3 trays (112 cells) = 336 series cells
+        # Configuration    : (336s)(16p)  (16 modules in parallel)
+        # DC bus voltage   : (336)(3.2 V) = 1075.2 V
+        # Nominal energy   : (336)(3.2)(280)(16) = 4817 kWh  (0-100 % SOC)
+        # Usable (10-90 %) : (0.8)(4817) = 3854 kWh  (matches 2-hr AC discharge spec)
+        # Inverter         : FixedEfficiency(0.96), max 2400 kW  → converter RTE 92.2 %
+        # ---------------------------------------------------------------------------
+        self.container_properties = ContainerProperties(
+            length=9.118,
+            width=1.659,
+            height=2.800,
+            # Inner and outer surface convection coefficient in W/m²K.
+            h_inner=5.0,
+            h_outer=15.0,
+            # thickness, conductivity, density, and specific heat by layer
+            inner=ContainerLayer(0.001, 200, 2700, 900),
+            mid=ContainerLayer(0.06, 0.04, 30, 1000),
+            outer=ContainerLayer(0.002, 50, 7800, 500),
+        )
+
         super().setup()
 
         self.add_discrete_input(
             "solar_resource_data",
             val={},
             desc="Solar resource data dictionary",
+        )
+
+        # Container HVAC / thermostat inputs (geometry is fixed; see self.container_properties).
+        self.add_input(
+            "hvac_cop_cooling_nominal",
+            val=self.config.hvac_cop_cooling_nominal,
+            units="unitless",
+            desc="HVAC cooling coefficient of performance at nominal conditions",
+        )
+        self.add_input(
+            "hvac_cop_heating_nominal",
+            val=self.config.hvac_cop_heating_nominal,
+            units="unitless",
+            desc="HVAC heating coefficient of performance at nominal conditions",
+        )
+        self.add_input(
+            "hvac_max_power",
+            val=self.config.hvac_max_power,
+            units=self.commodity_rate_units,
+            desc="Maximum HVAC thermal power (heating and cooling)",
+        )
+        self.add_input(
+            "thermostat_setpoint",
+            val=self.config.thermostat_setpoint,
+            units="degC",
+            desc="Target container internal air temperature",
+        )
+        self.add_input(
+            "thermostat_deadband",
+            val=self.config.thermostat_deadband,
+            units="degC",
+            desc="Thermostat dead-band half-width",
+        )
+        self.add_input(
+            "thermal_substep_max",
+            val=self.config.thermal_substep_max,
+            units="s",
+            desc="Maximum internal substep duration for the container thermal simulation",
+        )
+        self.add_input(
+            "latitude",
+            val=0.0,
+            shape=1,
+            require_connection=True,
+            units="deg",
+            desc="Site latitude for solar heat-gain pre-computation (from plant site info)",
+        )
+        self.add_input(
+            "longitude",
+            val=0.0,
+            shape=1,
+            require_connection=True,
+            units="deg",
+            desc="Site longitude for solar heat-gain pre-computation (from plant site info)",
+        )
+        self.add_input(
+            "azimuth",
+            val=self.config.azimuth,
+            units="deg",
+            desc="Container orientation (compass bearing of the north face)",
+        )
+        self.add_input(
+            "battery_temp_safe_lower",
+            val=self.config.battery_temp_safe_lower,
+            units="degC",
+            desc="Battery output is forced to zero below this cell temperature",
+        )
+        self.add_input(
+            "battery_temp_safe_upper",
+            val=self.config.battery_temp_safe_upper,
+            units="degC",
+            desc="Battery output is forced to zero above this cell temperature",
         )
 
         self.add_output(
@@ -387,13 +512,58 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             "power_dc", shape=self.n_timesteps, units="W", desc="DC-side power (positive = charge)"
         )
         self.add_output("converter_loss", shape=self.n_timesteps, units="W", desc="Converter loss")
+        self.add_output(
+            "container_air_temperature",
+            shape=self.n_timesteps,
+            units="degC",
+            desc="Container internal air temperature",
+        )
+        self.add_output(
+            "container_wall_temperature_inner",
+            shape=self.n_timesteps,
+            units="degC",
+            desc="Container inner wall layer temperature",
+        )
+        self.add_output(
+            "container_wall_temperature_mid",
+            shape=self.n_timesteps,
+            units="degC",
+            desc="Container middle wall layer temperature",
+        )
+        self.add_output(
+            "container_wall_temperature_outer",
+            shape=self.n_timesteps,
+            units="degC",
+            desc="Container outer wall layer temperature",
+        )
+        self.add_output(
+            "solar_heat_gain",
+            shape=self.n_timesteps,
+            units="W",
+            desc="Solar irradiance heat load absorbed by the container",
+        )
+        self.add_output(
+            "hvac_thermal_power",
+            shape=self.n_timesteps,
+            units="W",
+            desc="HVAC thermal power delivered to container air (+heating/-cooling)",
+        )
+        self.add_output(
+            "hvac_electrical_power",
+            shape=self.n_timesteps,
+            units="W",
+            desc="HVAC electrical power consumption",
+        )
+        self.add_output(
+            "system_derated",
+            shape=self.n_timesteps,
+            units="unitless",
+            desc="1 where battery output was forced to zero by the safe temperature interlock",
+        )
 
         # TODO degradation: adjustments for degradation
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
-        # temp = deepcopy(discrete_inputs["solar_resource_data"]["temperature"])  # deg C
-        # ghi = deepcopy(discrete_inputs["solar_resource_data"]["ghi"])  # W/m^2
-
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
 
@@ -439,12 +609,62 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         )
 
         # ---------------------------------------------------------------------------
-        # Thermal model: constant ambient, battery registered as thermal node
-        # #TODO check battery temp ambient
+        # Thermal model: container enclosure (fixed Megapack 2XL geometry) with a
+        # thermostatically-controlled HVAC unit; battery registered as a thermal node.
+        # Ambient temperature and solar GHI are taken from the resource weather data.
         # ---------------------------------------------------------------------------
-        thermal = AmbientThermalModel(
-            T_ambient=self.config.battery_temperature_c, components=[battery]
+        resource_data = discrete_inputs["solar_resource_data"]
+        missing_keys = [k for k in ("temperature", "ghi") if resource_data.get(k) is None]
+        if missing_keys:
+            raise ValueError(
+                f"{self.msginfo}: the container thermal model requires ambient temperature and "
+                f"GHI data, but 'solar_resource_data' is missing: {missing_keys}. Connect a "
+                "resource providing this data (e.g. via site_to_tech_connections) to this "
+                "technology."
+            )
+        ambient_temperature = np.asarray(resource_data["temperature"], dtype=float)
+
+        time_index = pd.DatetimeIndex(
+            build_time_series_from_plant_config(self.options["plant_config"])
         )
+        ghi_series = pd.Series(np.asarray(resource_data["ghi"], dtype=float), index=time_index)
+        solar_config = SolarConfig(
+            latitude=float(inputs["latitude"][0]),
+            longitude=float(inputs["longitude"][0]),
+            azimuth=float(inputs["azimuth"][0]),
+        )
+        q_solar = solar_heat_load(ghi_series, self.container_properties, solar_config).to_numpy()
+
+        battery_temp_safe_lower = float(inputs["battery_temp_safe_lower"][0])
+        battery_temp_safe_upper = float(inputs["battery_temp_safe_upper"][0])
+
+        hvac_max_power_w = om_units.convert_units(
+            float(inputs["hvac_max_power"][0]), self.commodity_rate_units, "W"
+        )
+        tms = ThermostatStrategy(
+            T_setpoint=float(inputs["thermostat_setpoint"][0]),
+            max_power=hvac_max_power_w,
+            threshold=float(inputs["thermostat_deadband"][0]),
+        )
+        hvac = VariableCopHvac(
+            cop_cooling_nominal=float(inputs["hvac_cop_cooling_nominal"][0]),
+            cop_heating_nominal=float(inputs["hvac_cop_heating_nominal"][0]),
+            max_heating_capacity=hvac_max_power_w,
+            max_cooling_capacity=hvac_max_power_w,
+        )
+        thermal = ContainerThermalModel(
+            self.container_properties,
+            T_ambient=float(ambient_temperature[0]),
+            T_initial=float(inputs["thermostat_setpoint"][0]),
+            hvac=hvac,
+            tms=tms,
+        )
+        thermal.add_component(battery)
+
+        # The container thermal network is stiff (thin wall layers); sub-step it so the
+        # forward-Euler integration stays stable regardless of the outer simulation dt.
+        n_thermal_substeps = max(1, math.ceil(self.dt / float(inputs["thermal_substep_max"][0])))
+        thermal_sub_dt = self.dt / n_thermal_substeps
 
         # ---------------------------------------------------------------------------
         # Simulation loop
@@ -454,18 +674,46 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         power_ac = np.empty(self.n_timesteps)
         power_dc = np.empty(self.n_timesteps)
         conv_loss = np.empty(self.n_timesteps)
+        container_T_air = np.empty(self.n_timesteps)
+        container_T_in = np.empty(self.n_timesteps)
+        container_T_mid = np.empty(self.n_timesteps)
+        container_T_out = np.empty(self.n_timesteps)
+        hvac_power_th = np.empty(self.n_timesteps)
+        hvac_power_el = np.empty(self.n_timesteps)
+        system_derated = np.zeros(self.n_timesteps)
 
         for i, p in enumerate(power_profile):
+            # Safety interlock: force commanded power to zero if the battery cell
+            # temperature (from the prior step) is outside the safe operating range.
+            current_batt_temp = battery.state.T
+            if (
+                current_batt_temp > battery_temp_safe_upper
+                or current_batt_temp < battery_temp_safe_lower
+            ):
+                p_executed = 0.0
+                system_derated[i] = 1.0
+            else:
+                p_executed = float(p)
+
             # H2I sign (+discharge) -> SimSES AC sign (+charge)
             converter.step(
-                -om_units.convert_units(float(p), self.commodity_rate_units, "W"), self.dt
+                -om_units.convert_units(p_executed, self.commodity_rate_units, "W"), self.dt
             )
-            thermal.step(self.dt)  # update battery temperature after each step
+            thermal.T_ambient = float(ambient_temperature[i])
+            thermal.Q_solar = float(q_solar[i])
+            for _ in range(n_thermal_substeps):
+                thermal.step(thermal_sub_dt)  # update battery temperature after each substep
             for k in keys:
                 log[k][i] = getattr(battery.state, k)
             power_ac[i] = converter.state.power  # AC power (W), positive = charge
             power_dc[i] = battery.state.power  # AC power (W), positive = charge
             conv_loss[i] = converter.state.loss
+            container_T_air[i] = thermal.state.T_air
+            container_T_in[i] = thermal.state.T_in
+            container_T_mid[i] = thermal.state.T_mid
+            container_T_out[i] = thermal.state.T_out
+            hvac_power_th[i] = thermal.state.power_th
+            hvac_power_el[i] = thermal.state.power_el
 
         #############
 
@@ -481,6 +729,14 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         outputs["power_ac"] = power_ac
         outputs["power_dc"] = power_dc
         outputs["converter_loss"] = conv_loss
+        outputs["container_air_temperature"] = container_T_air
+        outputs["container_wall_temperature_inner"] = container_T_in
+        outputs["container_wall_temperature_mid"] = container_T_mid
+        outputs["container_wall_temperature_outer"] = container_T_out
+        outputs["solar_heat_gain"] = q_solar
+        outputs["hvac_thermal_power"] = hvac_power_th
+        outputs["hvac_electrical_power"] = hvac_power_el
+        outputs["system_derated"] = system_derated
 
         # Populate all OpenMDAO outputs defined in this class and its parent classes.
         # Convert SimSES AC power (W, +charge) back to H2I convention
@@ -489,8 +745,9 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         power_ts = -om_units.convert_units(power_ac, "W", self.commodity_rate_units)
 
         # --- BatteryPerformanceModel outputs ---
-        # TODO calc aux power
-        outputs[f"{self.commodity}_auxiliary_demand"] = np.zeros(self.n_timesteps)
+        outputs[f"{self.commodity}_auxiliary_demand"] = om_units.convert_units(
+            hvac_power_el, "W", self.commodity_rate_units
+        )
 
         # --- StoragePerformanceBase outputs ---
         outputs["storage_duration"] = (

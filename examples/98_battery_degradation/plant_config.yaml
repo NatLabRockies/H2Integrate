@@ -32,8 +32,11 @@ technology_interconnections:
   # The battery discharge stream is sold to the grid.
   - [battery, grid_sell, [storage_electricity_discharge, electricity_in]]
 site_to_tech_connections:
-  # connect the wind resource to the wind technology
+  # connect the solar resource (ambient temperature, GHI) to the battery
   - [site.solar_resource, battery, solar_resource_data]
+  # connect the site location to the battery for solar heat-gain pre-computation
+  - [site, battery, latitude]
+  - [site, battery, longitude]
 finance_parameters:
   finance_groups:
     profast_model:

@@ -33,9 +33,11 @@ technologies:
         converter_efficiency: 0.96
         converter_max_power: 2400.0  # kW
       performance_parameters:
-        cop: 3.0
-        deg_scale: 0.7056  # degradation scaling (calibrated: ~20 % capacity fade after 15 years)
+        deg_scale: 0.115  # degradation scaling (notebook-calibrated for the container+HVAC thermal model)
         eol_soh_capacity: 0.8  # capacity SOH at which the battery is replaced (0.8 = 20 % fade)
+        azimuth: 0.0  # container orientation, compass bearing of the north face (0 = North)
+        # latitude/longitude come from site_to_tech_connections in plant_config.yaml,
+        # not tech_config.
       cost_parameters:
         cost_year: 2022
         energy_capex: 300.0  # $/kWh (ATB utility-scale battery, energy component)
