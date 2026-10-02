@@ -2,7 +2,7 @@ from attrs import field, define, validators
 from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
 
 
 def setup_electrodialysis_inputs(config):

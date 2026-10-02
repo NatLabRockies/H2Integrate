@@ -84,28 +84,28 @@ class TestCalcTiltAngle:
     # --- tilt_angle_setting = "none" ---
     def test_none_mode_default_with_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=15.0, create_model_from="default")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(15.0)
 
     def test_none_mode_default_without_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="default")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(20.0)  # from system_model.value("tilt")
 
     def test_none_mode_new_with_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=10.0, create_model_from="new")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(10.0)
 
     def test_none_mode_new_without_user_tilt(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="new")
         model.config.pysam_options = {"SystemDesign": {"tilt": 22.0}}
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(22.0)
 
     def test_none_mode_new_no_tilt_anywhere(self):
         model = self._make_model(tilt_angle_setting="input", tilt=None, create_model_from="new")
-        result = PYSAMSolarPlantPerformanceModel.get_inital_angle_value(model, "tilt")
+        result = PYSAMSolarPlantPerformanceModel.get_initial_angle_value(model, "tilt")
         assert result == pytest.approx(0)  # default fallback
 
 
