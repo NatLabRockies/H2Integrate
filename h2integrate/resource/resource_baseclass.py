@@ -19,6 +19,7 @@ from h2integrate.resource.utilities.time_tools import (
     is_leap_year,
     process_leap_day,
     check_data_length,
+    contains_leap_day,
     add_resource_start_end_times,
     get_number_of_resource_years_needed,
 )
@@ -446,7 +447,9 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """
         raise NotImplementedError("This method should be implemented in a subclass.")
 
-    def get_data_for_year(self, latitude, longitude, resource_year, resource_filename=""):
+    def get_data_for_year(
+        self, latitude, longitude, resource_year, resource_filename="", forced_download=False
+    ):
         """Get resource data for a single resource year to handle any of the expected inputs.
         This method does the following:
 
@@ -525,8 +528,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 warnings.warn(msg, UserWarning)
 
         # 3) If the resulting resource_dir and filename from Steps 1 and 2 make a valid
-        # filepath, load data using `load_data()`
-        if filepath.is_file():
+        # filepath, and a new download isn't forced, then load data using `load_data()`
+        if filepath.is_file() and not forced_download:
             data = self.load_data(filepath)
             # NOTE: this where we could up/downsample
             return data
@@ -653,9 +656,11 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         # 3) Loop through the resource years
         for year, filename in zip(resource_years, resource_filenames):
+            is_leap = False  # leap year is always false for TMY datasets
             if not isinstance(year, str):
                 # make sure year is an integer if its not a string
                 year = int(year)
+                is_leap = is_leap_year(year)
 
             # Check that the resource year is valid
             self._check_resource_year(year)
@@ -696,6 +701,27 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                     # year can be easily pulled from timeseries data
                     year = estimate_resource_year_from_data(ts)
                     self.resource_years_from_files.append(year)
+
+            # Check if data has leap-day data
+            has_leap_day_data = contains_leap_day(ts)
+
+            if self.config.include_leap_day and is_leap and not has_leap_day_data:
+                # should have leap day data but doesnt, force redownload data
+                resource_data = self.get_data_for_year(
+                    latitude, longitude, year, resource_filename=filename, forced_download=True
+                )
+
+                # Re-extract the metadata and timeseries data
+                md, ts = separate_timeseries_and_meta_data(resource_data)
+
+                # Verify that the data now contains a leap day
+                now_has_leap_day_data = contains_leap_day(ts)
+
+                if not now_has_leap_day_data:
+                    raise ValueError("Leap day data may not be available for this dataset.")
+
+                # Re-update the meta-data with the most recent meta-data
+                meta_data |= md
 
             # Update the timeseries data
             if not bool(timeseries_data):

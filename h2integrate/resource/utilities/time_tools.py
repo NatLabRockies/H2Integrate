@@ -9,6 +9,27 @@ from h2integrate.resource.utilities.data_tools import separate_timeseries_and_me
 TIME_DATA_KEYS = ["year", "month", "day", "hour", "minute", "second"]
 
 
+def contains_leap_day(data):
+    """Check whether timeseries data contains a data for leap day
+
+    Args:
+        data (dict): dataframe or dictionary of resource data containing
+            "Month" (or "month") and "Day" (or "day") timeseries data
+
+    Returns:
+        bool: whether the data has data for leap day
+    """
+    if isinstance(data, dict):
+        _, ts_data = separate_timeseries_and_meta_data(data)
+        data = pd.DataFrame(ts_data)
+
+    data = data.rename(columns={"month": "Month", "day": "Day"})
+
+    # Check if data includes leap day
+    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    return data_has_leap_day
+
+
 def is_leap_year(year: int):
     """Determine if a year is leap year. A year is a leap-year if it is:
 
