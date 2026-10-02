@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
-from h2integrate.storage.battery.battery_with_degredation.battery_performance import (
+from h2integrate.storage.battery.battery_with_degradation.battery_performance import (
     BatteryPerformanceModel,
     BatteryPerformanceModelConfig,
 )

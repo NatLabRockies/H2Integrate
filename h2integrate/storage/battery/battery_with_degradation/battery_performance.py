@@ -93,7 +93,7 @@ from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
 )
-from h2integrate.storage.battery.battery_with_degredation.container import (
+from h2integrate.storage.battery.battery_with_degradation.container import (
     ContainerLayer,
     VariableCopHvac,
     ThermostatStrategy,
