@@ -122,7 +122,8 @@ gis = [
   "contextily",
   "reverse_geocoder"
 ]
-ard = ["ard-nrel"]
+# optiwindnet 0.3.1 made set_problem arguments keyword-only, which breaks ard-nrel 0.1.0b5
+ard = ["ard-nrel", "optiwindnet<0.3.1"]
 extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 
