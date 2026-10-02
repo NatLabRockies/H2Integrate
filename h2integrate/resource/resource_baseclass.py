@@ -1,3 +1,4 @@
+import re
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -11,6 +12,7 @@ from h2integrate.core.file_utils import check_resource_dir
 from h2integrate.resource.utilities.data_tools import (
     append_timeseries_data,
     clip_data_to_n_timesteps,
+    estimate_resource_year_from_data,
     separate_timeseries_and_meta_data,
 )
 from h2integrate.resource.utilities.time_tools import (
@@ -620,14 +622,26 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # NOTE: trusting that the site, timezone, and timestep is consistent across files
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
-            if site_changed:
+            if first_call:
+                # resource_years are not used on first call since the filename is provided
+                resource_years = [self.config.resource_year] * len(self.config.resource_filename)
+                # Prepare to handle discrepancies if site changes
+                self.resource_years_from_files = []
+                self.raise_error_if_site_change = False
+                self.error_msg_details = ""
+            else:
+                # not first call, use resource years that were estimated from earlier run
+                resource_years = self.resource_years_from_files
+
+            if site_changed and self.raise_error_if_site_change:
                 msg = (
                     f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
-                    f"Since using `resource_year_setting` of 'filenames', resource data from "
-                    f"{self.config.resource_year} will be repeated for each of the "
-                    f"{len(resource_filenames)} years"
+                    f"When using `resource_year_setting` of 'filenames' with TMY datasets, "
+                    "the filenames must following the standard naming convention. Resource years "
+                    f"could not be estimated from the input filenames of {self.error_msg_details}."
                 )
-                warnings.warn(msg, UserWarning, stacklevel=3)
+                raise ValueError(msg)
+
         elif self.config.resource_year_setting == "year_order":
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
@@ -657,6 +671,33 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # Update the meta-data with the most recent meta-data
             meta_data |= md
 
+            # Very specific handling - if first call and using filenames,
+            # then estimate resource year for future loops
+            if self.config.resource_year_setting == "filenames" and first_call:
+                # record the resource year order in case site changes in later calls
+                if isinstance(year, str):
+                    # using a TMY dataset, infer from filename (only possible way)
+                    typical_types = ["tmy", "tgy", "tdy"]
+                    successful_match = False
+                    for txy in typical_types:
+                        # match format like tmy-2022
+                        match_pattern = re.findall(txy + r"-[+-]?\d+")
+                        if bool(match_pattern):
+                            # not going to check if valid resource year here,
+                            # will be checked if site changes
+                            successful_match = True
+                            self.resource_years_from_files.append(match_pattern[0])
+                            continue
+                    if not successful_match:
+                        # Flag to throw an error if the site changes
+                        self.raise_error_if_site_change = True
+                        self.error_msg_details += f" '{filename}',"
+                else:
+                    # year can be easily pulled from timeseries data
+                    year = estimate_resource_year_from_data(ts)
+                    self.resource_years_from_files.append(year)
+
+            # Update the timeseries data
             if not bool(timeseries_data):
                 # timeseries_data is empty (first-loop), populate it
                 timeseries_data |= ts
