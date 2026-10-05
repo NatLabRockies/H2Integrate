@@ -64,7 +64,7 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         # add resource data dictionary as an output
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_filename(self, latitude, longitude, resource_year=None):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_wtk_v2_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -72,14 +72,12 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
-            resource_year (int | str | None): resource year to build the filename for. When
-                None, ``self.config.resource_year`` is used.
 
         Returns:
             str: filename for resource data to be saved to or loaded from.
         """
-
-        resource_year = self.config.resource_year if resource_year is None else resource_year
+        # TODO: update to handle multiple years
+        # TODO: update to handle nonstandard time intervals
         if self.utc:
             tz_desc = "utc"
         else:
@@ -90,31 +88,29 @@ class NLRDeveloperAPIWindResourceBase(WindResourceBase, ResourceBaseAPIModel):
         )
         return filename
 
-    def create_url(self, latitude, longitude, resource_year=None):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
             longitude (float): longitude corresponding to location for resource data
-            resource_year (int | str | None): resource year to build the url for. When None,
-                ``self.config.resource_year`` is used.
 
         Returns:
             str: url to use for API call.
         """
-        resource_year = self.config.resource_year if resource_year is None else resource_year
         input_data = {
             "wkt": f"POINT({longitude} {latitude})",
-            "names": [str(resource_year)],
+            "names": [str(resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
+            "leap_day": str(self.config.include_leap_day).lower(),
             "api_key": get_nlr_developer_api_key(),
             "email": get_nlr_developer_api_email(),
         }
         url = self.base_url + urllib.parse.urlencode(input_data, True)
         return url
 
-    def load_data(self, fpath, resource_year=None):
+    def load_data(self, fpath):
         """Load data from a file and format as a dictionary that:
 
         1) follows naming convention described in WindResourceBase.
