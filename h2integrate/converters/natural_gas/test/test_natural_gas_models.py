@@ -267,6 +267,50 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
 
 
 @pytest.mark.unit
+def test_ngcc_performance_with_reliability(plant_config, ngcc_performance_params, subtests):
+    """Test that reliability availability derates the NGCC output and headroom."""
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": ngcc_performance_params,
+            "reliability": {
+                "availability_type": "minimum",
+                "failure_model": "WeibullReliability",
+                "failure_parameters": {
+                    "scale": 0.1,
+                    "shape": 1,
+                    "downtime": {"model": "FixedDowntime", "hours": 48},
+                },
+            },
+        }
+    }
+
+    prob = om.Problem()
+    perf_comp = NaturalGasPerformanceModel(plant_config=plant_config, tech_config=tech_config_dict)
+    prob.model.add_subsystem("ng_perf", perf_comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("natural_gas_in", np.full(8760, 750.0))
+    prob.run_model()
+
+    availability = perf_comp.reliability_model.availability
+    capacity = ngcc_performance_params["system_capacity_mw"]
+
+    with subtests.test("Downtime occurs"):
+        assert availability.min() == 0
+
+    with subtests.test("Electricity output is derated by availability"):
+        electricity_out = prob.get_val("electricity_out", units="MW")
+        np.testing.assert_allclose(electricity_out, capacity * availability)
+
+    with subtests.test("No headroom is reported during downtime"):
+        headroom_out = prob.get_val("electricity_headroom_out", units="MW")
+        np.testing.assert_allclose(headroom_out, 0.0)
+
+    with subtests.test("Downtime shows up as unmet demand"):
+        unmet = prob.get_val("unmet_electricity_demand", units="MW")
+        np.testing.assert_allclose(unmet, capacity * (1 - availability))
+
+
+@pytest.mark.unit
 def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
     """Test NGCC cost model calculations."""
     tech_config_dict = {

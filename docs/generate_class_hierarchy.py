@@ -77,6 +77,7 @@ CATEGORY_RULES = [
     ("transporters", ("Transporter", "General")),
     ("control", ("Control", "General")),
     ("simulation", ("Simulation", "General")),
+    ("reliability", ("Reliability", "General")),
     ("tools", ("Tools", "General")),
     ("postprocess", ("Post-processing", "General")),
     ("preprocess", ("Pre-processing", "General")),
@@ -95,6 +96,7 @@ CATEGORY_SHAPES_PYVIS = {
     "Control": "hexagon",
     "Simulation": "triangleDown",
     "Tools": "box",
+    "Reliability": "box",
     "Post-processing": "box",
     "Pre-processing": "box",
 }
