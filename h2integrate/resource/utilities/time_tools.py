@@ -437,7 +437,7 @@ def resample_resource_data_to_dt(
         )
         raise ValueError(msg)
 
-    # Notify (but do not block) the user that resampling is happening.
+    # Notify the user that resampling is happening.
     warnings.warn(
         f"Resampling resource data from a native timestep of {native_dt:g} s to the simulation "
         f"timestep of {float(target_dt):g} s "
