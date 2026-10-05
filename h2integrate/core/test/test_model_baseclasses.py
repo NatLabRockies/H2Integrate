@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 class _DummyPerformanceModel:

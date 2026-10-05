@@ -13,14 +13,31 @@ variants = {
     "half_year": {
         "dt": 900,  # 15 minutes
         "n_timesteps": 17520,
+        # One native year, upsampled from 60-min to 15-min and clipped to half a year.
+        "resource": {
+            "resource_year": 2013,
+            "resource_year_setting": "start_year",
+            "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
+        },
     },
     "annual": {
         "dt": 3600,  # 1 hour
         "n_timesteps": 8760,
+        "resource": {
+            "resource_year": 2013,
+            "resource_year_setting": "start_year",
+            "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
+        },
     },
     "two_year": {
         "dt": 10800,  # 3 hours
         "n_timesteps": 5840,
+        # Two native years, downsampled from 60-min to 3-hour.
+        "resource": {
+            "resource_year": 2012,
+            "resource_year_setting": "year_order",
+            "resource_year_order": [2012, 2013],
+        },
     },
 }
 
@@ -39,6 +56,13 @@ for variant_name, variant in variants.items():
     driver_config.setdefault("general", {})["create_om_reports"] = False
     plant_config["plant"]["simulation"]["dt"] = variant["dt"]
     plant_config["plant"]["simulation"]["n_timesteps"] = variant["n_timesteps"]
+
+    # Replace the solar resource settings so each variant pulls the right number of years.
+    resource_params = plant_config["sites"]["site"]["resources"]["solar_resource"][
+        "resource_parameters"
+    ]
+    resource_params.clear()
+    resource_params.update(variant["resource"])
 
     h2i = H2IntegrateModel(
         {
