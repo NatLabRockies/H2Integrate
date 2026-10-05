@@ -122,7 +122,7 @@ gis = [
   "contextily",
   "reverse_geocoder"
 ]
-ard = ["ard-nrel"]
+ard = ["ard-nrel", "optiwindnet<0.3.1"]
 extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 
