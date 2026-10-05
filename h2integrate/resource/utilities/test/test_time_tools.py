@@ -156,7 +156,7 @@ def test_resample_non_increasing_timestamps_raises():
 def test_upsample_interpolation(subtests):
     # hourly data upsampled to 30-minute resolution
     data = _make_timeseries(5, 3600, values=[0, 1, 2, 3, 4])
-    result = resample_resource_data_to_dt(data, 1800)
+    result = resample_resource_data_to_dt(data, 1800, upsample_method="time")
 
     with subtests.test("upsampled length doubles"):
         assert len(result["wind_speed_100m"]) == 10
@@ -171,7 +171,7 @@ def test_upsample_interpolation(subtests):
 def test_downsample_average(subtests):
     # 30-minute data downsampled to hourly resolution via pandas mean aggregation
     data = _make_timeseries(10, 1800, values=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    result = resample_resource_data_to_dt(data, 3600)
+    result = resample_resource_data_to_dt(data, 3600, downsample_method="mean")
 
     with subtests.test("downsampled length halves"):
         assert len(result["wind_speed_100m"]) == 5
@@ -198,7 +198,7 @@ def test_resample_keeps_leap_day_excluded_at_new_timestep(subtests):
         "minute": idx.minute.to_numpy().astype(float),
     }
 
-    result = resample_resource_data_to_dt(data, 7200)  # 2-hour timestep
+    result = resample_resource_data_to_dt(data, 7200, downsample_method="mean")  # 2-hour timestep
 
     with subtests.test("result length matches excluded leap year at 2 hour dt"):
         assert len(result["wind_speed_100m"]) == 4380
@@ -224,7 +224,7 @@ def test_resample_keeps_leap_day_when_present_at_new_timestep(subtests):
         "minute": idx.minute.to_numpy().astype(float),
     }
 
-    result = resample_resource_data_to_dt(data, 7200)  # 2-hour timestep
+    result = resample_resource_data_to_dt(data, 7200, downsample_method="mean")  # 2-hour timestep
 
     with subtests.test("result length matches leap year at 2 hour dt"):
         assert len(result["wind_speed_100m"]) == 4392
@@ -237,7 +237,7 @@ def test_downsample_preserves_mean():
     rng = np.random.default_rng(0)
     values = rng.random(24)
     data = _make_timeseries(24, 900, values=values)  # 15-min data
-    result = resample_resource_data_to_dt(data, 3600)  # hourly
+    result = resample_resource_data_to_dt(data, 3600, downsample_method="mean")  # hourly
 
     assert len(result["wind_speed_100m"]) == 6
     # overall mean is conserved by the averaging
@@ -262,7 +262,7 @@ def test_downsample_with_calendar_gap_preserves_mean(subtests):
         "hour": idx.hour.to_numpy().astype(float),
         "minute": idx.minute.to_numpy().astype(float),
     }
-    result = resample_resource_data_to_dt(data, 7200)  # to 2-hour
+    result = resample_resource_data_to_dt(data, 7200, downsample_method="mean")  # to 2-hour
 
     with subtests.test("downsampled length matches expected bins"):
         assert len(result["wind_speed_100m"]) == 4
@@ -275,7 +275,7 @@ def test_downsample_with_calendar_gap_preserves_mean(subtests):
 @pytest.mark.unit
 def test_resample_scalar_metadata_preserved(subtests):
     data = _make_timeseries(5, 3600, values=[0, 1, 2, 3, 4])
-    result = resample_resource_data_to_dt(data, 1800)
+    result = resample_resource_data_to_dt(data, 1800, upsample_method="time")
     with subtests.test("units preserved"):
         assert result["units"] == {"wind_speed_100m": "m/s"}
     with subtests.test("site latitude preserved"):
@@ -299,3 +299,32 @@ def test_resample_unknown_downsample_method_raises():
     # on the offending method name that is common to all versions.
     with pytest.raises((AttributeError, ValueError), match="not_a_method"):
         resample_resource_data_to_dt(data, 3600, downsample_method="not_a_method")
+
+
+@pytest.mark.unit
+def test_resample_upsampling_without_method_raises():
+    # A finer sim dt than the native timestep needs upsampling; without an explicit method
+    # resampling must not happen silently.
+    data = _make_timeseries(5, 3600)
+    with pytest.raises(ValueError, match="requires upsampling"):
+        resample_resource_data_to_dt(data, 1800)
+
+
+@pytest.mark.unit
+def test_resample_downsampling_without_method_raises():
+    # A coarser sim dt than the native timestep needs downsampling; without an explicit
+    # method resampling must not happen silently.
+    data = _make_timeseries(10, 1800)
+    with pytest.raises(ValueError, match="requires downsampling"):
+        resample_resource_data_to_dt(data, 3600)
+
+
+@pytest.mark.unit
+def test_resample_warns_when_resampling(subtests):
+    # Resampling notifies the user (but does not block) so the timestep change is visible.
+    with subtests.test("upsampling warns"):
+        with pytest.warns(UserWarning, match="upsampling"):
+            resample_resource_data_to_dt(_make_timeseries(5, 3600), 1800, upsample_method="time")
+    with subtests.test("downsampling warns"):
+        with pytest.warns(UserWarning, match="downsampling"):
+            resample_resource_data_to_dt(_make_timeseries(10, 1800), 3600, downsample_method="mean")

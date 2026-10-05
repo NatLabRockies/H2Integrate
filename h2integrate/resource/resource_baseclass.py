@@ -106,9 +106,10 @@ class ResourceBaseAPIConfig(BaseConfig):
         ),
     )
     resource_year_order: list | None = field(default=None)
-    # Resampling methods used when the resource data's native timestep differs from the sim dt.
-    upsample_method: str = field(default="time")
-    downsample_method: str = field(default="mean")
+    # Resampling is opt-in: a method must be set to up/down sample when the resource data's
+    # native timestep differs from the simulation dt, otherwise an error is raised.
+    upsample_method: str | None = field(default=None)
+    downsample_method: str | None = field(default=None)
 
     def __attrs_post_init__(self):
         if self.resource_year_setting == "year_order":

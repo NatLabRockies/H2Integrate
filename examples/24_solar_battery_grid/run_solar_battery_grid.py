@@ -18,6 +18,7 @@ variants = {
             "resource_year": 2013,
             "resource_year_setting": "start_year",
             "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
+            "upsample_method": "time",
         },
     },
     "annual": {
@@ -37,6 +38,7 @@ variants = {
             "resource_year": 2012,
             "resource_year_setting": "year_order",
             "resource_year_order": [2012, 2013],
+            "downsample_method": "mean",
         },
     },
 }

@@ -1,3 +1,4 @@
+import warnings
 from datetime import timezone, timedelta
 
 import numpy as np
@@ -312,8 +313,8 @@ def _regenerate_time_columns_at_dt(
 def resample_resource_data_to_dt(
     data: dict,
     target_dt,
-    upsample_method: str = "time",
-    downsample_method: str = "mean",
+    upsample_method: str | None = None,
+    downsample_method: str | None = None,
 ):
     """Resample resource timeseries from its native timestep to ``target_dt``.
 
@@ -333,11 +334,14 @@ def resample_resource_data_to_dt(
     Args:
         data (dict): resource data dictionary with timeseries arrays and time columns.
         target_dt (int | float): desired simulation timestep in seconds.
-        upsample_method (str): interpolation method passed to
-            :meth:`pandas.DataFrame.interpolate` when upsampling. Defaults to ``"time"``.
-        downsample_method (str): aggregation passed to
-            :meth:`pandas.core.resample.Resampler.agg` when downsampling. Defaults to
-            ``"mean"``.
+        upsample_method (str | None): interpolation method passed to
+            :meth:`pandas.DataFrame.interpolate` when upsampling. No default; when upsampling
+            is required this must be set (for example ``"time"``) or a ``ValueError`` is
+            raised, so resampling never happens automatically.
+        downsample_method (str | None): aggregation passed to
+            :meth:`pandas.core.resample.Resampler.agg` when downsampling. No default; when
+            downsampling is required this must be set (for example ``"mean"``) or a
+            ``ValueError`` is raised, so resampling never happens automatically.
 
     Returns:
         dict: resource data resampled to ``target_dt``.
@@ -412,7 +416,38 @@ def resample_resource_data_to_dt(
         {k: np.asarray(data[k], dtype=float) for k in data_keys}, index=native_index
     )
 
-    if native_dt > float(target_dt):
+    # Resampling changes the data, so a method must be chosen explicitly; up/down sampling
+    # never happens automatically without the user specifying how to resample.
+    upsampling = native_dt > float(target_dt)
+    downsampling = native_dt < float(target_dt)
+    if upsampling and upsample_method is None:
+        msg = (
+            f"Resource data has a native timestep of {native_dt:g} s but the simulation uses a "
+            f"finer timestep of {float(target_dt):g} s, which requires upsampling. Resampling is "
+            "not performed automatically: set the resource `upsample_method` (for example "
+            "'time') to explicitly enable upsampling."
+        )
+        raise ValueError(msg)
+    if downsampling and downsample_method is None:
+        msg = (
+            f"Resource data has a native timestep of {native_dt:g} s but the simulation uses a "
+            f"coarser timestep of {float(target_dt):g} s, which requires downsampling. Resampling "
+            "is not performed automatically: set the resource `downsample_method` (for example "
+            "'mean') to explicitly enable downsampling."
+        )
+        raise ValueError(msg)
+
+    # Notify (but do not block) the user that resampling is happening.
+    warnings.warn(
+        f"Resampling resource data from a native timestep of {native_dt:g} s to the simulation "
+        f"timestep of {float(target_dt):g} s "
+        f"({'upsampling' if upsampling else 'downsampling'} with method "
+        f"'{upsample_method if upsampling else downsample_method}').",
+        UserWarning,
+        stacklevel=2,
+    )
+
+    if upsampling:
         # Upsample: interpolate onto the (finer) target grid
         union_index = frame.index.union(target_index)
         resampled_frame = (
