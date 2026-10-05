@@ -1,15 +1,32 @@
-"""Tests for the resource conform/concatenate helpers in ``time_tools``."""
-
 import numpy as np
 import pandas as pd
 import pytest
 
 from h2integrate.resource.utilities.time_tools import (
+    is_leap_year,
     process_leap_day,
-    concatenate_resource_years,
     resample_resource_data_to_dt,
-    conform_resource_data_to_n_timesteps,
+    get_number_of_resource_years_needed,
 )
+
+
+# from h2integrate.resource.utilities.time_tools import (
+#     add_resource_start_end_times,
+#     get_n_timesteps_from_year_list
+# )
+# TODO: add test for check_data_length
+
+
+@pytest.mark.unit
+def test_is_leap_year(subtests):
+    with subtests.test("2012 is a leap year"):
+        assert is_leap_year(2012)
+    with subtests.test("2000 is a leap year"):
+        assert is_leap_year(2000)
+    with subtests.test("2014 is not a leap year"):
+        assert not is_leap_year(2014)
+    with subtests.test("1900 is not a leap year"):
+        assert not is_leap_year(1900)
 
 
 def _feb_mar_days(year, include_feb29):
@@ -19,6 +36,7 @@ def _feb_mar_days(year, include_feb29):
         dates = pd.date_range(f"{year}-02-28", f"{year}-03-01", freq="1D")
     else:
         dates = pd.DatetimeIndex([pd.Timestamp(f"{year}-02-28"), pd.Timestamp(f"{year}-03-01")])
+
     return {
         "year": dates.year.to_numpy().astype(float),
         "month": dates.month.to_numpy().astype(float),
@@ -53,239 +71,30 @@ def test_leap_day_kept_when_wanted(subtests):
 
 
 @pytest.mark.unit
-def test_missing_leap_day_in_leap_year_raises_when_wanted():
-    data = _feb_mar_days(2012, include_feb29=False)  # 2012 is a leap year
-    with pytest.raises(ValueError, match="does not contain a leap day"):
-        process_leap_day(data, include_leap_day=True)
-
-
-@pytest.mark.unit
 def test_non_leap_year_no_error_when_wanted():
     data = _feb_mar_days(2013, include_feb29=False)  # 2013 is not a leap year
     result = process_leap_day(data, include_leap_day=True)
     assert len(result["day"]) == 2
 
 
-def _make_annual_data(native_len=8760, year=2012):
-    """Build a minimal one-year resource data dictionary for testing."""
-    index = np.arange(native_len)
-    hours = index % 24
-    days = (index // 24) % 28 + 1
-    months = (index // (24 * 28)) % 12 + 1
-    return {
-        "wind_speed_100m": index.astype(float),
-        "temperature_2m": (index * 0.1).astype(float),
-        "year": np.full(native_len, float(year)),
-        "month": months.astype(float),
-        "day": days.astype(float),
-        "hour": hours.astype(float),
-        "minute": np.zeros(native_len),
-        # scalar metadata that must be preserved unchanged
-        "site_lat": 35.2,
-        "site_lon": -101.9,
-        "units": {"wind_speed_100m": "m/s"},
-        "filepath": "dummy.csv",
-    }
-
-
 @pytest.mark.unit
-def test_no_op_when_length_matches():
-    data = _make_annual_data(8760)
-    result = conform_resource_data_to_n_timesteps(data, 8760)
-    assert result is data
+def test_number_of_years_needed_without_leap(subtests):
+    dt = 3600
+    n_years = get_number_of_resource_years_needed(dt, 8760 * 4, False)
+    with subtests.test("4 years without leap"):
+        assert n_years == 4
 
+    n_years = get_number_of_resource_years_needed(dt, 8760 * 10, False)
+    with subtests.test("10 years without leap"):
+        assert n_years == 10
 
-@pytest.mark.unit
-def test_slices_for_sub_annual_horizon(subtests):
-    data = _make_annual_data(8760)
-    result = conform_resource_data_to_n_timesteps(data, 4380)
+    n_years = get_number_of_resource_years_needed(dt, 8760 * (1 / 3), False)
+    with subtests.test("1/3 year without leap"):
+        assert n_years == 1
 
-    with subtests.test("wind length matches horizon"):
-        assert len(result["wind_speed_100m"]) == 4380
-    with subtests.test("temperature length matches horizon"):
-        assert len(result["temperature_2m"]) == 4380
-    with subtests.test("wind values are sliced from the front"):
-        np.testing.assert_array_equal(result["wind_speed_100m"], np.arange(4380, dtype=float))
-
-
-@pytest.mark.unit
-def test_slices_multiyear_data_down_to_horizon():
-    # Two real years concatenated (17520) sliced to a slightly shorter horizon
-    data = _make_annual_data(2 * 8760)
-    result = conform_resource_data_to_n_timesteps(data, 2 * 8760 - 240)
-
-    assert len(result["wind_speed_100m"]) == 2 * 8760 - 240
-
-
-@pytest.mark.unit
-def test_raises_when_not_enough_data():
-    data = _make_annual_data(8760)
-    with pytest.raises(ValueError, match="Not enough resource data"):
-        conform_resource_data_to_n_timesteps(data, 2 * 8760)
-
-
-@pytest.mark.unit
-def test_scalar_metadata_preserved(subtests):
-    data = _make_annual_data(8760)
-    result = conform_resource_data_to_n_timesteps(data, 4380)
-
-    with subtests.test("site latitude preserved"):
-        assert result["site_lat"] == 35.2
-    with subtests.test("site longitude preserved"):
-        assert result["site_lon"] == -101.9
-    with subtests.test("units preserved"):
-        assert result["units"] == {"wind_speed_100m": "m/s"}
-    with subtests.test("filepath preserved"):
-        assert result["filepath"] == "dummy.csv"
-
-
-@pytest.mark.unit
-def test_returns_input_when_n_timesteps_is_none():
-    data = _make_annual_data(8760)
-    assert conform_resource_data_to_n_timesteps(data, None) is data
-
-
-@pytest.mark.unit
-def test_infers_length_without_time_columns(subtests):
-    data = {
-        "wind_speed_100m": np.arange(10, dtype=float),
-        "temperature_2m": np.arange(10, dtype=float),
-        "site_lat": 1.0,
-    }
-    result = conform_resource_data_to_n_timesteps(data, 5)
-
-    with subtests.test("wind length inferred and sliced"):
-        assert len(result["wind_speed_100m"]) == 5
-    with subtests.test("temperature length inferred and sliced"):
-        assert len(result["temperature_2m"]) == 5
-    with subtests.test("scalar metadata preserved"):
-        assert result["site_lat"] == 1.0
-
-
-@pytest.mark.unit
-def test_concatenate_single_year_is_passthrough():
-    data = _make_annual_data(8760)
-    assert concatenate_resource_years([data]) is data
-
-
-@pytest.mark.unit
-def test_concatenate_multiple_years_combines_timeseries(subtests):
-    year1 = _make_annual_data(8760, year=2012)
-    year2 = _make_annual_data(8760, year=2013)
-    combined = concatenate_resource_years([year1, year2])
-
-    with subtests.test("combined wind length"):
-        assert len(combined["wind_speed_100m"]) == 2 * 8760
-    with subtests.test("second year values appended in order"):
-        np.testing.assert_array_equal(combined["wind_speed_100m"][8760:], year2["wind_speed_100m"])
-    with subtests.test("scalar metadata comes from first year"):
-        assert combined["units"] == {"wind_speed_100m": "m/s"}
-
-
-@pytest.mark.unit
-def test_concatenate_leap_removed_preserves_real_timestamps_minus_feb29(subtests):
-    # With the leap day removed, the concatenated timestamps must match the real
-    # downloaded calendar with only February 29 missing -- every other timestamp is
-    # preserved, and the series stays strictly increasing across the year boundary.
-
-    def _real_year(year, remove_leap=False):
-        idx = pd.date_range(f"{year}-01-01 00:30", f"{year}-12-31 23:30", freq="1h")
-        if remove_leap:
-            idx = idx[~((idx.month == 2) & (idx.day == 29))]
-        data = {
-            "wind_speed_100m": np.arange(len(idx), dtype=float),
-            "year": idx.year.to_numpy().astype(float),
-            "month": idx.month.to_numpy().astype(float),
-            "day": idx.day.to_numpy().astype(float),
-            "hour": idx.hour.to_numpy().astype(float),
-            "minute": idx.minute.to_numpy().astype(float),
-        }
-        return data, idx
-
-    y2012, idx2012 = _real_year(2012, remove_leap=True)  # leap year, leap day removed -> 8760
-    y2013, idx2013 = _real_year(2013)  # non-leap -> 8760
-    combined = concatenate_resource_years([y2012, y2013])
-
-    result = pd.to_datetime(
-        {k: combined[k].astype(int) for k in ("year", "month", "day", "hour", "minute")}
-    )
-    expected = idx2012.append(idx2013)
-
-    with subtests.test("timestamps match downloaded calendar except feb 29"):
-        np.testing.assert_array_equal(result.to_numpy(), expected.to_numpy())
-    with subtests.test("february 29 removed"):
-        assert not (
-            (combined["month"] == 2) & (combined["day"] == 29) & (combined["year"] == 2012)
-        ).any()
-    with subtests.test("timestamps remain strictly increasing"):
-        assert (result.diff().dropna() > pd.Timedelta(0)).all()
-
-
-@pytest.mark.unit
-def test_concatenate_mixed_leap_and_non_leap_years_preserves_all_data(subtests):
-    # A leap year (leap day retained, 8784 hourly) followed by a non-leap year (8760).
-    leap = _make_annual_data(8784, year=2012)
-    non_leap = _make_annual_data(8760, year=2013)
-    combined = concatenate_resource_years([leap, non_leap])
-
-    with subtests.test("combined length preserves both years"):
-        assert len(combined["wind_speed_100m"]) == 8784 + 8760
-    with subtests.test("leap year values preserved"):
-        np.testing.assert_array_equal(combined["wind_speed_100m"][:8784], leap["wind_speed_100m"])
-    with subtests.test("non leap year values preserved"):
-        np.testing.assert_array_equal(
-            combined["wind_speed_100m"][8784:], non_leap["wind_speed_100m"]
-        )
-
-
-@pytest.mark.unit
-def test_concatenate_non_leap_then_leap_preserves_all_data(subtests):
-    # Order reversed: non-leap year first, then a leap year with the leap day retained.
-    non_leap = _make_annual_data(8760, year=2013)
-    leap = _make_annual_data(8784, year=2016)
-    combined = concatenate_resource_years([non_leap, leap])
-
-    with subtests.test("combined length preserves both years"):
-        assert len(combined["wind_speed_100m"]) == 8760 + 8784
-    with subtests.test("non leap year values preserved"):
-        np.testing.assert_array_equal(
-            combined["wind_speed_100m"][:8760], non_leap["wind_speed_100m"]
-        )
-    with subtests.test("leap year values preserved"):
-        np.testing.assert_array_equal(combined["wind_speed_100m"][8760:], leap["wind_speed_100m"])
-
-
-@pytest.mark.unit
-def test_concatenate_leap_kept_timestamps_match_real_calendar(subtests):
-    # When the leap day is retained the yearly data is contiguous real calendar, so the
-    # concatenated (rebuilt) time columns must reproduce the real calendar exactly.
-
-    def _year(year):
-        idx = pd.date_range(f"{year}-01-01 00:30", f"{year}-12-31 23:30", freq="1h")
-        return {
-            "wind_speed_100m": np.arange(len(idx), dtype=float),
-            "year": idx.year.to_numpy().astype(float),
-            "month": idx.month.to_numpy().astype(float),
-            "day": idx.day.to_numpy().astype(float),
-            "hour": idx.hour.to_numpy().astype(float),
-            "minute": idx.minute.to_numpy().astype(float),
-        }
-
-    combined = concatenate_resource_years([_year(2012), _year(2013)])  # leap kept, then non-leap
-
-    rebuilt = pd.to_datetime(
-        {k: combined[k].astype(int) for k in ("year", "month", "day", "hour", "minute")}
-    ).to_numpy()
-    real = pd.date_range("2012-01-01 00:30", "2013-12-31 23:30", freq="1h").to_numpy()
-
-    with subtests.test("rebuilt length matches combined years"):
-        assert len(rebuilt) == 8784 + 8760
-    with subtests.test("timestamps match real calendar"):
-        np.testing.assert_array_equal(rebuilt, real)
-    with subtests.test("retained leap day remains present"):
-        assert bool(
-            ((combined["month"] == 2) & (combined["day"] == 29) & (combined["year"] == 2012)).any()
-        )
+    n_years = get_number_of_resource_years_needed(dt, 8760 * 2.5, False)
+    with subtests.test("2.5 year without leap"):
+        assert n_years == 3
 
 
 def _make_timeseries(n, freq_seconds, start="2012-01-01 00:00", values=None):
