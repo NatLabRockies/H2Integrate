@@ -222,6 +222,84 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
 
 
 @pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [24])
+def test_pysam_battery_chemistry_option_changes_results(plant_config, subtests):
+    tech_config_path = Path(__file__).parent / "inputs" / "tech_config.yaml"
+    with tech_config_path.open() as file:
+        tech_config = yaml.safe_load(file)["technologies"]["battery"]
+
+    n_control_window_hours = tech_config["model_inputs"]["control_parameters"][
+        "n_control_window_hours"
+    ]
+    electricity_in = np.concatenate(
+        (
+            np.ones(int(n_control_window_hours / 2)) * 1000.0,
+            np.zeros(int(n_control_window_hours / 2)),
+        )
+    )
+    electricity_demand = np.ones(int(n_control_window_hours)) * 1000.0
+
+    def run_battery(pysam_options):
+        configured_tech = deepcopy(tech_config)
+        if pysam_options:
+            configured_tech["model_inputs"]["performance_parameters"]["pysam_options"] = (
+                pysam_options
+            )
+
+        prob = om.Problem()
+        indep_var_comp = om.IndepVarComp()
+        indep_var_comp.add_output("electricity_in", val=electricity_in, units="kW")
+        indep_var_comp.add_output(
+            "time_step_duration", val=np.ones(n_control_window_hours), units="h"
+        )
+        indep_var_comp.add_output("electricity_set_point", val=electricity_demand, units="kW")
+        indep_var_comp.add_output(
+            "electricity_command_value",
+            val=electricity_demand - electricity_in,
+            units="kW",
+        )
+        prob.model.add_subsystem("inputs", indep_var_comp, promotes=["*"])
+        prob.model.add_subsystem(
+            "pysam_battery",
+            PySAMBatteryPerformanceModel(
+                plant_config=plant_config,
+                tech_config=configured_tech,
+            ),
+            promotes=["*"],
+        )
+        prob.setup()
+        prob.run_model()
+        return prob
+
+    default_prob = run_battery({})
+    iron_flow_prob = run_battery(
+        {
+            "ParamsCell": {
+                "chem": 3,
+                "Qfull_flow": 2.25,
+                "Vnom_default": 1.25,
+                "voltage_matrix": [[0.0, 1.4], [100.0, 1.0]],
+            }
+        }
+    )
+
+    with subtests.test("PySAM chemistry option is applied"):
+        assert iron_flow_prob.model.pysam_battery.system_model.ParamsCell.chem == 3
+
+    with subtests.test("chemistry option changes battery power"):
+        assert not np.allclose(
+            default_prob.get_val("electricity_out", units="kW"),
+            iron_flow_prob.get_val("electricity_out", units="kW"),
+        )
+
+    with subtests.test("chemistry option changes battery SOC"):
+        assert not np.allclose(
+            default_prob.get_val("SOC", units="percent"),
+            iron_flow_prob.get_val("SOC", units="percent"),
+        )
+
+
+@pytest.mark.regression
 def test_battery_config(subtests):
     batt_kw = 5e3
     config_data = {
