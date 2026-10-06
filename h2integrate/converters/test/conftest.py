@@ -4,11 +4,11 @@ Pytest configuration file.
 
 import os
 
-from test.conftest import (  # noqa: F401
-    temp_dir,
-    temp_copy_of_example,
-    pytest_collection_modifyitems,
-)
+# ruff: disable[F401]
+from test.conftest import temp_dir, temp_copy_of_example, pytest_collection_modifyitems
+
+
+# ruff: enable[F401]
 
 
 def pytest_sessionstart(session):

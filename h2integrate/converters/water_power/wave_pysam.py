@@ -64,8 +64,7 @@ class PySAMWavePerformanceConfig(BaseConfig):
     def __attrs_post_init__(self):
         if self.create_model_from == "new" and self.wave_power_matrix is None:
             msg = (
-                "To create a new MhkWave object, please provide a "
-                "wave_power_matrix in the config."
+                "To create a new MhkWave object, please provide a wave_power_matrix in the config."
             )
             raise ValueError(msg)
 

@@ -111,7 +111,7 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
     def compute(self, inputs, outputs):
         ED_inputs = setup_electrodialysis_inputs(self.config)
 
-        co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
+        _co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
             power_profile_w=inputs["electricity_in"],
             initial_tank_volume_m3=self.config.initial_tank_volume_m3,
             electrodialysis_config=ED_inputs,

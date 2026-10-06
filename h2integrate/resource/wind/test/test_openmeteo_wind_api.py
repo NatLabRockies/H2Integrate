@@ -77,7 +77,6 @@ def test_wind_resource_web_download(
     [("OpenMeteoHistoricalWindResource", "wind", 44.04218, -95.19757, 2023, "openmeteo_archive", -6, 449)],  # noqa: E501
     ids=["Non-UTC"],
 )
-# fmt: on
 def test_wind_resource_h2i_download(
     plant_simulation,
     site_config,
@@ -137,7 +136,6 @@ def test_wind_resource_h2i_download(
     [("OpenMeteoHistoricalWindResource", "wind", -28.454864, 114.551749, 2024, "openmeteo_archive", 8, 71.0)],  # noqa: E501
     ids=["Non-UTC Leap Year"],
 )
-# fmt: on
 def test_wind_resource_h2i_download_leap_year(
     plant_simulation,
     site_config,

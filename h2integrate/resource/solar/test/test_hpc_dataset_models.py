@@ -114,7 +114,6 @@ def solar_site_config(lat, lon, model, resource_year):
         "NSRDBDatasetH5-60min-csv",
     ]
 )
-# fmt: on
 def test_nsrdb_dataset_from_csv_pvwatts(
     subtests,
     pysam_performance_model,
@@ -169,7 +168,6 @@ def test_nsrdb_dataset_from_csv_pvwatts(
         "NSRDBDatasetH5-60min",
     ]
 )
-# fmt: on
 def test_nsrdb_dataset_from_dataset_pvwatts(
     subtests,
     pysam_performance_model,

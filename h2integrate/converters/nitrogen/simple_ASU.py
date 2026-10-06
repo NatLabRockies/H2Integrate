@@ -162,7 +162,7 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
                     msg = (
                         f"User defined size for ASU system ({ASU_rated_power_kW} kg N2/hour at "
                         f"{rated_N2_kg_pr_hr} kW) has an efficiency of "
-                        f"{ASU_rated_power_kW/rated_N2_kg_pr_hr} kWh/kg-N2, this does not "
+                        f"{ASU_rated_power_kW / rated_N2_kg_pr_hr} kWh/kg-N2, this does not "
                         f"match the ASU efficiency of {self.config.efficiency_kWh_pr_kg_N2}"
                     )
                     raise ValueError(msg)
