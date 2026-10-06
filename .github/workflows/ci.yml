@@ -53,6 +53,7 @@ jobs:
           miniconda-version: latest
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+          channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate
       - name: Install base conda dependencies
