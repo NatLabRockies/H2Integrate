@@ -105,6 +105,7 @@ class FakeResource(ResourceBaseAPIModel):
         (2012, 17520, False, "f.csv", [2012, 2013], "_filename` cannot be a single"),
         (2012, 17520, False, ["f.csv"], [2012, 2013], "must be the same length"),
         (2012, 17520, False, ["a", "b", "c"], [2012, 2013, 2014], "elements but 2 are requi"),
+        (2019, 26280, False, "", None, "Not enough future resource years"),
     ],
     ids=[
         # Invalid setting with <= 1 year
@@ -122,6 +123,7 @@ class FakeResource(ResourceBaseAPIModel):
         "single-filename_with_yr_order",
         "length-mismatch",
         "incorrect-lengths",
+        "year-bound",
     ],
 )
 def test_setup_errors(input_config, expected_msg):
