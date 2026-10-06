@@ -30,10 +30,10 @@ technologies:
         cost_year: 2019
   paper_mill:
     performance_model:
-      model: PaperMillPerformance
+      model: CustomPaperMillPerformance
       model_location: user_defined_model/paper_mill.py
     cost_model:
-      model: PaperMillCost
+      model: CustomPaperMillCost
       model_location: user_defined_model/paper_mill.py
     finance_model:
       model: PaperMillFinance

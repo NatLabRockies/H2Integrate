@@ -26,7 +26,7 @@ technology_interconnections:
   - [natural_gas_plant, combiner, electricity, cable]
   # combined supply to demand
   - [combiner, electrical_load_demand, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
 plant:

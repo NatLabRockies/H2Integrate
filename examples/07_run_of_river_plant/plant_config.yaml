@@ -18,7 +18,7 @@ sites:
 technology_interconnections: []
 # resource interconnections
 # array of arrays containing left-to-right resource interconnections;
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the river resource to the run-of-river hydro technology
   - [site.river_resource, river, discharge]
 plant:

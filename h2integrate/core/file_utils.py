@@ -1,4 +1,3 @@
-import os
 import re
 import csv
 import copy
@@ -12,6 +11,7 @@ from yaml.composer import Composer
 from yaml.resolver import BaseResolver
 
 from h2integrate import ROOT_DIR, RESOURCE_DEFAULT_DIR, FEEDSTOCK_DEFAULT_DIR
+from h2integrate.core.env_tools import get_environment_variables
 from h2integrate.core.dict_utils import remove_numpy, dict_to_yaml_formatting
 
 
@@ -151,6 +151,28 @@ def find_file(filename: str | Path, root_folder: str | Path | None = None):
     )
 
 
+def load_component_config(config_value, config_path, validator_func):
+    """Load and validate an embedded or file-based component configuration.
+
+    Args:
+        config_value (dict | str | Path): Embedded configuration or configuration path.
+        config_path (Path | None): Path to the main configuration file, when available.
+        validator_func (callable): Function used to load and validate the configuration.
+
+    Returns:
+        tuple: Validated configuration, resolved file path, and its parent directory.
+    """
+    if isinstance(config_value, dict):
+        return validator_func(config_value), None, None
+
+    file_path = (
+        get_path(config_value)
+        if config_path is None
+        else find_file(config_value, config_path.parent)
+    )
+    return validator_func(file_path), file_path, file_path.parent
+
+
 class DuplicateKeyError(Exception):
     """Exception raised when a duplicate YAML key is found.
 
@@ -192,7 +214,10 @@ class Loader(yaml.SafeLoader):
         the ``__line__{key}`` and ``__line__`` keys in the key and value nodes are not represented
         by the schema, and therefore raise an error during validation.
         """
-        numbered_node = copy.deepcopy(node)
+        # A shallow copy with a new value list is enough to keep the shadow nodes out of ``node``;
+        # a deep copy is very slow for mappings that contain long sequences
+        numbered_node = copy.copy(node)
+        numbered_node.value = list(node.value)
         numbered_nodes = []
         for key_node, _ in numbered_node.value:
             shadow_key_node = ScalarNode(
@@ -509,7 +534,8 @@ def check_data_dir(data_type: str, data_dir: str | None = None, data_subdir: str
         return full_dir.absolute()
 
     # Check for user-defined environment variable with resource data_subdir
-    data_dir = os.getenv(f"{data_type.upper()}_DIR")
+    data_env_vars = get_environment_variables(f"{data_type.upper()}_DIR")
+    data_dir = data_env_vars.get(f"{data_type.upper()}_DIR")
     if data_dir is not None:
         if not Path(data_dir).is_dir():
             Path.mkdir(data_dir, parents=True, exist_ok=True)

@@ -104,6 +104,30 @@ def test_generic_storage_with_simple_control_dmd_lessthan_charge_rate(plant_conf
             == performance_model_config["init_soc_fraction"]
         )
 
+    with subtests.test("Headroom is non-negative"):
+        assert np.all(prob.get_val("storage.hydrogen_headroom") >= 0.0)
+
+    with subtests.test("Headroom doesn't exceed rated discharge rate"):
+        # headroom can't exceed the max discharge rate
+        assert np.all(
+            prob.get_val("storage.hydrogen_headroom")
+            <= prob.model.storage.config.max_discharge_rate
+            * prob.model.storage.config.discharge_efficiency
+        )
+
+    with subtests.test("Headroom doesn't exceed liquidatable capacity rate"):
+        # headroom can't exceed liquidatable capacity rate
+        assert np.all(
+            prob.get_val("storage.hydrogen_headroom")
+            <= (
+                prob.model.storage.config.max_capacity
+                * (prob.get_val("storage.SOC") / 100.0 - prob.model.storage.config.min_soc_fraction)
+                / prob.model.storage.dt_hr
+            )
+            * prob.model.storage.config.discharge_efficiency
+            + 1e-9
+        )
+
     indx_soc_increase = np.argwhere(
         np.diff(prob.model.get_val("storage.SOC", units="unitless"), prepend=True) > 0
     ).flatten()

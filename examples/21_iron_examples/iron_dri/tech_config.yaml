@@ -42,9 +42,9 @@ technologies:
         commodity_rate_units: t/h
   iron_mine:
     performance_model:
-      model: MartinIronMinePerformanceComponent
+      model: SimpleIronMinePerformanceComponent
     cost_model:
-      model: MartinIronMineCostComponent
+      model: SimpleIronMineCostComponent
     model_inputs:
       shared_parameters:
         mine: Northshore

@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
@@ -11,14 +10,14 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define(kw_only=True)
-class NuclearPerformanceConfig(BaseConfig):
+class QuinnNuclearPerformanceModelConfig(BaseConfig):
     """Configuration class for the nuclear plant performance model.
 
     Args:
         system_capacity_kw (float): Rated electric capacity in kW.
     """
 
-    system_capacity_kw: float = field(validator=gt_zero)
+    system_capacity_kw: float = field(validator=validators.gt(0))
 
 
 class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
@@ -48,7 +47,7 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = NuclearPerformanceConfig.from_dict(
+        self.config = QuinnNuclearPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -103,12 +102,12 @@ class QuinnNuclearCostModelConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    system_capacity_kw: float = field(validator=gt_zero)
-    capex_per_kw: float = field(validator=gte_zero)
-    fixed_opex_per_kw_year: float = field(validator=gte_zero)
-    variable_opex_per_mwh: float = field(validator=gte_zero)
+    system_capacity_kw: float = field(validator=validators.gt(0))
+    capex_per_kw: float = field(validator=validators.ge(0))
+    fixed_opex_per_kw_year: float = field(validator=validators.ge(0))
+    variable_opex_per_mwh: float = field(validator=validators.ge(0))
     reference_capacity_kw: float | None = field(default=None)
-    capex_scaling_exponent: float = field(default=1.0, validator=gt_zero)
+    capex_scaling_exponent: float = field(default=1.0, validator=validators.gt(0))
 
     def __attrs_post_init__(self):
         if self.reference_capacity_kw is None:

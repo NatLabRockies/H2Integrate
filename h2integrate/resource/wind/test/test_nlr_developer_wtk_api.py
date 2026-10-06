@@ -19,9 +19,12 @@ def wtk_site_config(site_config, lat2, lon2):
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone",
-    [("WTKNLRDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_api_v2", 0)],  # noqa: E501
-    ids=["WTKNLRDeveloperAPIWindResource"],
+    "model,which,lat,lon,lat2,lon2,resource_year,model_name,timezone,minute_of_hour",
+    [
+    ("WTKNLRDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_api_v2", 0, "30"), # noqa: E501
+    ("HRRRMETToolkitWindAPI", "wind", 34.22, -102.75, 37.3376, -105.7076, 2025, "hrrr_met_toolkit", 0, "00"), # noqa: E501
+    ],
+    ids=["WTKNLRDeveloperAPIWindResource", "HRRRMETToolkitWindAPI"],
 )
 # fmt: on
 def test_wind_resource_loaded_from_default_dir(
@@ -32,6 +35,7 @@ def test_wind_resource_loaded_from_default_dir(
     lon,
     model,
     resource_year,
+    minute_of_hour,
 ):
     plant_config = {
         "site": wtk_site_config,
@@ -43,6 +47,9 @@ def test_wind_resource_loaded_from_default_dir(
         resource_config=plant_config["site"]["resources"]["wind_resource"]["resource_parameters"],
         driver_config={},
     )
+
+    wtk_data = {}
+
     prob.model.add_subsystem("resource", comp)
     prob.setup()
     prob.run_model()
@@ -62,12 +69,12 @@ def test_wind_resource_loaded_from_default_dir(
         assert len(wspd_keys) > 0
     with subtests.test("same number of wind direction keys and wind speed"):
         assert len(wdir_keys) == len(wspd_keys)
-    with subtests.test("same number of temperature keys and wind speed"):
-        assert len(temp_keys) == len(wspd_keys)
+    with subtests.test("temperature keys for at least all the wind speed heights"):
+        assert len(temp_keys) >= len(wspd_keys)
     with subtests.test("3 heights for pressure data"):
         assert len(pressure_keys) == len(pressure_keys)
     with subtests.test("Start time"):
-        assert wtk_data["start_time"] == f"{resource_year}/01/01 00:30:00 (+0000)"
+        assert wtk_data["start_time"] == f"{resource_year}/01/01 00:{minute_of_hour}:00 (+0000)"
     with subtests.test("Time step"):
         assert wtk_data["dt"] == plant_simulation["simulation"]["dt"]
 
@@ -75,9 +82,10 @@ def test_wind_resource_loaded_from_default_dir(
     with subtests.test("resource data is 8760 in length"):
         assert all(len(wtk_data[k]) == 8760 for k in data_keys)
 
+    off_hr_minute = "00" if minute_of_hour == "30" else "30"
     # check that minor changes to the data will create a unique hash
     hash_init = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
-    wtk_data["start_time"] = "2013/01/01 00:30:00 (+0000)"
+    wtk_data["start_time"] = f"{resource_year}/01/01 00:{off_hr_minute}:00 (+0000)"
     hash_modified = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
     with subtests.test("Unique hash with modified start time"):
         assert hash_init != hash_modified

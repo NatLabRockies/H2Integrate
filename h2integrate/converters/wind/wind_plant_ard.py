@@ -8,7 +8,7 @@ except ModuleNotFoundError:
     set_up_ard_model = None
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
@@ -16,7 +16,7 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define
-class WindPlantArdModelConfig(BaseConfig):
+class ArdWindPlantModelConfig(BaseConfig):
     """Configuration container for Ard wind plant model inputs.
 
     Attributes:
@@ -47,7 +47,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        self.config = WindPlantArdModelConfig.from_dict(
+        self.config = ArdWindPlantModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
@@ -175,7 +175,7 @@ class ArdWindPlantModel(om.Group):
             raise ModuleNotFoundError(msg)
 
     def setup(self):
-        self.config = WindPlantArdModelConfig.from_dict(
+        self.config = ArdWindPlantModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 

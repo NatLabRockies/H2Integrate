@@ -1,0 +1,5 @@
+name: driver_config
+description: Driver configuration for peak load management storage heuristic control
+general:
+  folder_output: outputs
+  create_om_reports: false

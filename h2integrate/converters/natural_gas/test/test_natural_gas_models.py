@@ -36,8 +36,6 @@ def ngcc_cost_params():
         "capex_per_kw": 1000,  # $/kW
         "fixed_opex_per_kw_per_year": 10.0,  # $/kW/year
         "variable_opex_per_mwh": 2.5,  # $/MWh
-        "heat_rate_mmbtu_per_mwh": 7.5,  # MMBtu/MWh
-        "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
     return cost_params
@@ -50,8 +48,6 @@ def ngct_cost_params():
         "capex_per_kw": 800,  # $/kW
         "fixed_opex_per_kw_per_year": 8.0,  # $/kW/year
         "variable_opex_per_mwh": 3.0,  # $/MWh
-        "heat_rate_mmbtu_per_mwh": 11.5,  # MMBtu/MWh
-        "system_capacity_mw": 100,  # MW
         "cost_year": 2023,
     }
     return cost_params
@@ -167,6 +163,14 @@ def test_ngcc_performance_outputs(plant_config, ngcc_performance_params, subtest
     with subtests.test(f"{commodity}_out length"):
         assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
 
+    # Test that headroom is greater than zero (plant oversized) and less than the rating
+    with subtests.test(f"0 < {commodity}_headroom_out < rated_{commodity}_production"):
+        assert np.all(prob.get_val(f"comp.{commodity}_headroom_out", units="MW") >= 0)
+        assert np.all(
+            prob.get_val(f"comp.{commodity}_headroom_out", units="MW")
+            <= prob.get_val(f"comp.rated_{commodity}_production", units="MW")
+        )
+
     # Test default values
     with subtests.test("operational_life default value"):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
@@ -210,6 +214,13 @@ def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
         # Check average output is 100 MW
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 100.0
 
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCC Headroom Output"):
+        # Headroom should be capacity less expected output (here zero)
+        expected_headroom = ngcc_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
+
 
 @pytest.mark.regression
 def test_ngct_performance(plant_config, ngct_performance_params, subtests):
@@ -247,6 +258,57 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
         # Check average output is 50 MW
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 50.0
 
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCT Headroom Output"):
+        # Headroom should be capacity less expected output
+        expected_headroom = ngct_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
+
+
+@pytest.mark.unit
+def test_ngcc_performance_with_reliability(plant_config, ngcc_performance_params, subtests):
+    """Test that reliability availability derates the NGCC output and headroom."""
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": ngcc_performance_params,
+            "reliability": {
+                "availability_type": "minimum",
+                "failure_model": "WeibullReliability",
+                "failure_parameters": {
+                    "scale": 0.1,
+                    "shape": 1,
+                    "downtime": {"model": "FixedDowntime", "hours": 48},
+                },
+            },
+        }
+    }
+
+    prob = om.Problem()
+    perf_comp = NaturalGasPerformanceModel(plant_config=plant_config, tech_config=tech_config_dict)
+    prob.model.add_subsystem("ng_perf", perf_comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("natural_gas_in", np.full(8760, 750.0))
+    prob.run_model()
+
+    availability = perf_comp.reliability_model.availability
+    capacity = ngcc_performance_params["system_capacity_mw"]
+
+    with subtests.test("Downtime occurs"):
+        assert availability.min() == 0
+
+    with subtests.test("Electricity output is derated by availability"):
+        electricity_out = prob.get_val("electricity_out", units="MW")
+        np.testing.assert_allclose(electricity_out, capacity * availability)
+
+    with subtests.test("No headroom is reported during downtime"):
+        headroom_out = prob.get_val("electricity_headroom_out", units="MW")
+        np.testing.assert_allclose(headroom_out, 0.0)
+
+    with subtests.test("Downtime shows up as unmet demand"):
+        unmet = prob.get_val("unmet_electricity_demand", units="MW")
+        np.testing.assert_allclose(unmet, capacity * (1 - availability))
+
 
 @pytest.mark.unit
 def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
@@ -274,7 +336,7 @@ def test_ngcc_cost(plant_config, ngcc_cost_params, subtests):
     prob.setup()
 
     # Set inputs
-    prob.set_val("system_capacity", system_capacity)
+    prob.set_val("rated_electricity_production", system_capacity)
     prob.set_val("electricity_out", electricity_out)
     prob.run_model()
 
@@ -324,7 +386,7 @@ def test_ngct_cost(plant_config, ngct_cost_params, subtests):
     prob.setup()
 
     # Set inputs
-    prob.set_val("system_capacity", system_capacity)
+    prob.set_val("rated_electricity_production", system_capacity)
     prob.set_val("electricity_out", electricity_out)
     prob.run_model()
 
@@ -397,3 +459,10 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
             pytest.approx(np.max(electricity_out), rel=1e-6)
             == ngcc_performance_params["system_capacity_mw"]
         )
+
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCC Electricity Headroom"):
+        # Headroom should be capacity less expected output (here zero)
+        expected_headroom = ngcc_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)

@@ -8,6 +8,7 @@ import yaml
 import numpy as np
 import pytest
 
+import h2integrate.postprocess.reporting as reporting_module
 import h2integrate.core.h2integrate_model as h2i_model_module
 from h2integrate import (
     ROOT_DIR,
@@ -17,6 +18,13 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
+from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.connection_utils import (
+    create_technology_graph,
+    check_dispatch_connections,
+    validate_technology_interconnections,
+)
+from h2integrate.postprocess.reporting import create_xdsm
 
 
 @pytest.mark.integration
@@ -46,6 +54,68 @@ def test_missing_tech_interconnections(subtests, temp_copy_of_example):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_combiner_naming_dependency(temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    combiner_tech_names = [
+        k
+        for k, v in tech_config["technologies"].items()
+        if v.get("performance_model", "model") == "GenericCombinerPerformanceModel"
+    ]
+    combiner_tech_renames = {k: k.replace("combiner", "unnamed") for k in combiner_tech_names}
+
+    # rename combiners in technology_interconnections
+    new_tech_connections = []
+    for tech_connection in plant_config["technology_interconnections"]:
+        if len(tech_connection) == 4:
+            source, dest, cmod, transport = tech_connection
+            if source in combiner_tech_names:
+                source = combiner_tech_renames[source]
+            if dest in combiner_tech_renames:
+                dest = combiner_tech_renames[dest]
+            new_connection = [source, dest, cmod, transport]
+            new_tech_connections.append(new_connection)
+        else:
+            new_tech_connections.append(tech_connection)
+    plant_config["technology_interconnections"] = new_tech_connections
+    # rename combiners in tech_to_dispatch_connections
+    for i, dispatch_connection in enumerate(plant_config["tech_to_dispatch_connections"]):
+        if dispatch_connection[0] in combiner_tech_names:
+            plant_config["tech_to_dispatch_connections"][i] = [
+                combiner_tech_renames[dispatch_connection[0]],
+                dispatch_connection[1],
+            ]
+
+    # rename combiners in finance_subgroups
+    for subgroup_name, subgroup_params in plant_config["finance_parameters"][
+        "finance_subgroups"
+    ].items():
+        if subgroup_params["commodity_stream"] in combiner_tech_names:
+            plant_config["finance_parameters"]["finance_subgroups"][subgroup_name][
+                "commodity_stream"
+            ] = combiner_tech_renames[subgroup_params["commodity_stream"]]
+
+    # update tech config
+    new_tech_config = {v: tech_config["technologies"][k] for k, v in combiner_tech_renames.items()}
+    new_tech_config |= {
+        k: v for k, v in tech_config["technologies"].items() if k not in combiner_tech_names
+    }
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": {"technologies": new_tech_config},
+        "driver_config": driver_config,
+    }
+
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
 )
@@ -68,13 +138,9 @@ def test_use_commodity_stream_timeseries_finances_error(subtests, temp_copy_of_e
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel(top_level_config)
     err = str(excinfo.value)
-    with subtests.test("Commodity stream name is missing (commodity_stream_output is required)"):
+    with subtests.test("Commodity stream name is missing error message parts"):
         assert "`commodity_stream_output` is a required input" in err
-    with subtests.test(
-        "Commodity stream name is missing (use_commodity_stream_timeseries is True)"
-    ):
         assert "`use_commodity_stream_timeseries` is True" in err
-    with subtests.test("Commodity stream name is missing (finance subgroup `electricity_doc`)"):
         assert "finance subgroup `electricity_doc`" in err
 
 
@@ -130,9 +196,12 @@ def test_check_tech_interconnections(subtests, temp_copy_of_example):
         for i, connection in enumerate(tech_interconnections)
         if connection[0] == "h2_storage" and len(connection) == 4
     ]
-    # update so that the battery is connected to the h2_combiner
+    # Update so that steel (which has no existing L4 connections and does not output
+    # hydrogen) is connected to h2_combiner. This tests that _check_tech_connections
+    # raises a commodity error without triggering the storage topology check that
+    # would fire if we used battery (a storage tech that already has an out-stream).
     tech_interconnections[idx_h2_storage_connect[0]] = [
-        "battery",
+        "steel",
         "h2_combiner",
         "hydrogen",
         "pipe",
@@ -150,9 +219,475 @@ def test_check_tech_interconnections(subtests, temp_copy_of_example):
             h2i.setup()
         err = str(excinfo.value)
         assert "do not output their specified commodity" in err
-        assert "`battery` -> `hydrogen`" in err
+        assert "`steel` -> `hydrogen`" in err
         assert "Update `technology_interconnections`" in err
-        assert "Update `technology_interconnections`" in err
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
+def test_validate_technology_interconnections(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    base_interconnections = plant_config["technology_interconnections"].copy()
+
+    def _make_model(interconnections):
+        cfg = {
+            "plant_config": {**plant_config, "technology_interconnections": interconnections},
+            "technology_config": tech_config,
+            "driver_config": driver_config,
+        }
+        return H2IntegrateModel(cfg)
+
+    # --- Check 1: discouraged length-3 [commodity_out, commodity_in] connection ---
+    with subtests.test("length-3 _out/_in pair raises error"):
+        bad_connections = [
+            *base_interconnections,
+            ["electrolyzer", "steel", ["hydrogen_out", "hydrogen_in"]],
+        ]
+        h2i = _make_model(bad_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "Use a length-4 connection instead" in err
+        assert "hydrogen" in err
+
+    # --- Check 2a: storage tech with 0 inputs raises error ---
+    with subtests.test("storage tech with no inputs raises error"):
+        # Remove the connection that feeds h2_storage
+        no_input_connections = [
+            c
+            for c in base_interconnections
+            if not (c[0] == "electrolyzer" and c[1] == "h2_storage")
+        ]
+        h2i = _make_model(no_input_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "h2_storage" in err
+        assert "has no input connections in" in err
+    with subtests.test("storage tech with 2 outputs raises error"):
+        extra_out_connections = [
+            *base_interconnections,
+            ["h2_storage", "steel", "hydrogen", "pipe"],
+        ]
+        h2i = _make_model(extra_out_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "h2_storage" in err
+        assert "but should have at most 1." in err
+
+    # --- Check 2c: upstream of storage with >2 outputs raises error ---
+    with subtests.test("upstream tech of storage with >2 outputs raises error"):
+        extra_upstream_connections = [
+            *base_interconnections,
+            ["electrolyzer", "steel", "hydrogen", "pipe"],
+        ]
+        h2i = _make_model(extra_upstream_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "electrolyzer" in err
+        assert "feeds storage technology" in err
+        assert "at most 2 output streams" in err
+    with subtests.test("technology with 2 outputs (no storage) raises error"):
+        # Add a second output from wind (which is not a splitter and not upstream of storage)
+        extra_wind_connections = [
+            *base_interconnections,
+            ["wind", "h2_combiner", "electricity", "cable"],
+        ]
+        h2i = _make_model(extra_wind_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "Consider using a splitter component." in err
+    with subtests.test("technology with 2 inputs raises error"):
+        # Use h2_combiner as the second source so that the source itself (being a combiner)
+        # is excluded from check #3, allowing the per-commodity source check to fire on
+        # electrolyzer (which already receives electricity from elec_combiner).
+        extra_input_connections = [
+            *base_interconnections,
+            ["h2_combiner", "electrolyzer", "electricity", "cable"],
+        ]
+        h2i = _make_model(extra_input_connections)
+        with pytest.raises(ValueError) as excinfo:
+            h2i.setup()
+        err = str(excinfo.value)
+        assert "electrolyzer" in err
+        assert "Consider using a combiner component." in err
+
+
+# ---------------------------------------------------------------------------
+# Lightweight unit tests for _validate_technology_interconnections
+#
+# These tests bypass OpenMDAO setup entirely by constructing a minimal fake
+# model object that only carries the three attributes that the validator
+# reads: ``plant_config``, ``technology_graph``, and
+# ``tech_control_classifiers``.  This allows complex multi-commodity
+# topologies to be exercised without needing real H2I component classes.
+# ---------------------------------------------------------------------------
+
+import types
+
+
+def _make_fake_model(interconnections, classifiers):
+    """Build a minimal stub for testing _validate_technology_interconnections.
+
+    Args:
+        interconnections: list of technology interconnection entries (same
+            format as ``plant_config["technology_interconnections"]``).
+        classifiers: dict mapping tech name to its ``_control_classifier``
+            string (e.g. ``{"battery": "storage", "combiner": "combiner"}``).
+
+    Returns:
+        types.SimpleNamespace: object with ``plant_config``,
+            ``technology_graph``, and ``tech_control_classifiers`` set.
+    """
+    fake = types.SimpleNamespace()
+    fake.plant_config = {"technology_interconnections": interconnections}
+    fake.technology_graph = create_technology_graph(interconnections)
+    fake.tech_control_classifiers = classifiers
+    return fake
+
+
+def _run_interconnection_validation(fake):
+    validate_technology_interconnections(
+        fake.plant_config["technology_interconnections"],
+        fake.technology_graph,
+        fake.tech_control_classifiers,
+    )
+
+
+@pytest.mark.unit
+def test_validate_interconnections_multi_commodity_storage(subtests):
+    """Storage tech with two different-commodity inputs should be allowed.
+
+    Models a future storage that accepts both electricity (for charging) and
+    hydrogen (as the stored commodity) from two separate upstream technologies.
+    Each commodity has exactly one source, so no error should be raised.
+    """
+    interconnections = [
+        ["source_elec", "storage", "electricity", "cable"],
+        ["source_h2", "storage", "hydrogen", "pipe"],
+        ["storage", "h2_combiner", "hydrogen", "pipe"],
+    ]
+    classifiers = {
+        "storage": "storage",
+        "h2_combiner": "combiner",
+    }
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("two-commodity storage passes validation"):
+        _run_interconnection_validation(fake)  # must not raise
+
+    # Same commodity (hydrogen) from two different sources into storage must fail.
+    bad_interconnections = [
+        ["source_h2_a", "storage", "hydrogen", "pipe"],
+        ["source_h2_b", "storage", "hydrogen", "pipe"],
+    ]
+    bad = _make_fake_model(bad_interconnections, {"storage": "storage"})
+
+    with subtests.test("duplicate hydrogen sources into storage raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(bad)
+        err = str(excinfo.value)
+        assert "storage" in err
+        assert "but should receive it from at most 1." in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_multi_in_multi_out_converter(subtests):
+    """Converter with two different input commodities and two different output
+    commodities should pass validation.
+
+    Models an ammonia-synloop-style converter that consumes hydrogen and
+    nitrogen and produces both ammonia and a purge-gas stream.  Each commodity
+    flows from/to exactly one technology, so no topology error should occur.
+    """
+    interconnections = [
+        ["h2_source", "converter", "hydrogen", "pipe"],
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "ammonia_dest", "ammonia", "pipe"],
+        ["converter", "purge_dest", "purge_gas", "pipe"],
+    ]
+    classifiers = {"converter": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("two-in two-out converter passes validation"):
+        _run_interconnection_validation(fake)  # must not raise
+
+    # Same commodity to two destinations without a splitter must fail.
+    bad_interconnections = [
+        ["h2_source", "converter", "hydrogen", "pipe"],
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "dest_a", "ammonia", "pipe"],
+        ["converter", "dest_b", "ammonia", "pipe"],  # ammonia goes to two places
+    ]
+    bad = _make_fake_model(bad_interconnections, {"converter": "dispatchable"})
+
+    with subtests.test("same output commodity to two destinations raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(bad)
+        err = str(excinfo.value)
+        assert "converter" in err
+        assert "Consider using a splitter component." in err
+
+    # Same commodity from two sources into converter must also fail.
+    bad_interconnections_in = [
+        ["h2_source_a", "converter", "hydrogen", "pipe"],
+        ["h2_source_b", "converter", "hydrogen", "pipe"],  # duplicate hydrogen source
+        ["n2_source", "converter", "nitrogen", "pipe"],
+        ["converter", "ammonia_dest", "ammonia", "pipe"],
+    ]
+    bad_in = _make_fake_model(bad_interconnections_in, {"converter": "dispatchable"})
+
+    with subtests.test("same input commodity from two sources raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(bad_in)
+        err = str(excinfo.value)
+        assert "converter" in err
+        assert "Consider using a combiner component." in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_splitter_combiner_exempt(subtests):
+    """Splitter and combiner technologies are exempt from the per-commodity
+    max-1 checks because by design they fan out or merge streams.
+
+    A splitter sending the same commodity to multiple destinations, and a
+    combiner receiving the same commodity from multiple sources, must both
+    pass without error.
+    """
+    interconnections = [
+        # splitter fans one hydrogen stream out to two consumers
+        ["h2_source", "h2_splitter", "hydrogen", "pipe"],
+        ["h2_splitter", "consumer_a", "hydrogen", "pipe"],
+        ["h2_splitter", "consumer_b", "hydrogen", "pipe"],
+        # combiner merges two electricity sources into one
+        ["wind", "elec_combiner", "electricity", "cable"],
+        ["solar", "elec_combiner", "electricity", "cable"],
+        ["elec_combiner", "electrolyzer", "electricity", "cable"],
+    ]
+    classifiers = {
+        "h2_splitter": "splitter",
+        "elec_combiner": "combiner",
+        "consumer_a": "dispatchable",
+        "consumer_b": "dispatchable",
+        "electrolyzer": "dispatchable",
+    }
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("splitter and combiner exempt from max-1 checks"):
+        _run_interconnection_validation(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_validate_interconnections_storage_no_inputs_raises(subtests):
+    """Storage technology with no L4 inputs must raise a clear error."""
+    # Only an output connection; no input to storage
+    interconnections = [
+        ["storage", "combiner", "hydrogen", "pipe"],
+    ]
+    classifiers = {"storage": "storage", "combiner": "combiner"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("storage with no inputs raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake)
+        err = str(excinfo.value)
+        assert "storage" in err
+        assert "has no input connections in" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_length3_commodity_pair_raises(subtests):
+    """A length-3 connection whose parameter list matches [X_out, X_in] must
+    raise an error directing the user to use the length-4 format."""
+    interconnections = [
+        ["wind", "electrolyzer", ["electricity_out", "electricity_in"]],
+    ]
+    classifiers = {"electrolyzer": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("length-3 _out/_in pair raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake)
+        err = str(excinfo.value)
+        assert "electricity" in err
+        assert "Use a length-4 connection instead" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_length3_commodity_pair_with_slices_raises(subtests):
+    """A length-3 [X_out[...], X_in[...]] parameter pair must raise the
+    same guidance to use a length-4 commodity connection."""
+    interconnections = [
+        ["wind", "electrolyzer", ["electricity_out[0:4]", "electricity_in[0:4]"]],
+    ]
+    classifiers = {"electrolyzer": "dispatchable"}
+    fake = _make_fake_model(interconnections, classifiers)
+
+    with subtests.test("length-3 _out/_in pair with slices raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake)
+        err = str(excinfo.value)
+        assert "electricity" in err
+        assert "Use a length-4 connection instead" in err
+
+
+@pytest.mark.unit
+def test_validate_interconnections_demand_component_not_counted_as_destination(subtests):
+    """A source sending a commodity to both a real consumer and a demand-classified
+    reporting component must pass validation.
+
+    Demand components are observers/sinks that report on a commodity stream
+    but do not consume it in a topology sense. They should not count against
+    the source's per-commodity output-destination limit, allowing a pattern like:
+
+        wind -> electricity -> electrolyzer   (real consumer)
+        wind -> electricity -> demand_reporter (reporting only)
+
+    The two-real-consumer case (no demand component involved) must still fail.
+    """
+    interconnections_valid = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+    ]
+    classifiers_valid = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+    }
+    fake_valid = _make_fake_model(interconnections_valid, classifiers_valid)
+
+    with subtests.test("source to real consumer + demand reporter passes validation"):
+        _run_interconnection_validation(fake_valid)  # must not raise
+
+    # Demand can pass UNUSED commodity to storage while the source also serves a
+    # real consumer directly. This should be allowed and mirrors the pattern:
+    # [demand_comp, battery, [unused_electricity_out, electricity_in]]
+    interconnections_storage_passthrough = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["grid", "battery", "electricity", "cable"],
+        ["demand_reporter", "battery", ["unused_electricity_out", "electricity_in"]],
+    ]
+    classifiers_storage_passthrough = {
+        "wind": "flexible",
+        "grid": "dispatchable",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "battery": "storage",
+    }
+    fake_storage_passthrough = _make_fake_model(
+        interconnections_storage_passthrough, classifiers_storage_passthrough
+    )
+
+    with subtests.test("source direct consumer plus demand unused_out->storage passes"):
+        _run_interconnection_validation(fake_storage_passthrough)
+
+    # Two real (non-demand) consumers of the same commodity from one source must still fail.
+    interconnections_bad = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "grid", "electricity", "cable"],
+    ]
+    classifiers_bad = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "grid": "dispatchable",
+    }
+    fake_bad = _make_fake_model(interconnections_bad, classifiers_bad)
+
+    with subtests.test("source to two real consumers still raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake_bad)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "Consider using a splitter component." in err
+
+    # Sending to a demand component that re-emits to a real consumer is valid on its
+    # own; wind routes all electricity through the demand component to grid_sell.
+    interconnections_demand_passthrough = [
+        ["wind", "demand_comp", "electricity", "cable"],
+        ["demand_comp", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_demand_passthrough = {
+        "wind": "flexible",
+        "demand_comp": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_passthrough = _make_fake_model(
+        interconnections_demand_passthrough, classifiers_demand_passthrough
+    )
+
+    with subtests.test("demand component acting as pass-through to real consumer passes"):
+        _run_interconnection_validation(fake_passthrough)  # must not raise
+
+    # Double-counting: wind sends electricity to electrolyzer directly AND through a
+    # demand component to grid_sell. The same electricity is counted in both paths.
+    interconnections_double_count = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_double_count = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_double_count = _make_fake_model(interconnections_double_count, classifiers_double_count)
+
+    with subtests.test("source to direct real consumer AND outputting demand raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake_double_count)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "double-count" in err
+
+    # Daisy-chain through two demand components then to a real consumer is valid as
+    # long as wind does not also have a competing direct path to a real consumer.
+    interconnections_daisy_valid = [
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "nested_demand", "electricity", "cable"],
+        ["nested_demand", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_daisy_valid = {
+        "wind": "flexible",
+        "demand_reporter": "demand",
+        "nested_demand": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_daisy_valid = _make_fake_model(interconnections_daisy_valid, classifiers_daisy_valid)
+
+    with subtests.test("daisy-chained demand components as sole path to real consumer passes"):
+        _run_interconnection_validation(fake_daisy_valid)  # must not raise
+
+    # Same daisy-chain but wind also has a direct real consumer - should fail.
+    interconnections_daisy_double = [
+        ["wind", "electrolyzer", "electricity", "cable"],
+        ["wind", "demand_reporter", "electricity", "cable"],
+        ["demand_reporter", "nested_demand", "electricity", "cable"],
+        ["nested_demand", "grid_sell", "electricity", "cable"],
+    ]
+    classifiers_daisy_double = {
+        "wind": "flexible",
+        "electrolyzer": "dispatchable",
+        "demand_reporter": "demand",
+        "nested_demand": "demand",
+        "grid_sell": "dispatchable",
+    }
+    fake_daisy_double = _make_fake_model(interconnections_daisy_double, classifiers_daisy_double)
+
+    with subtests.test("daisy-chained demand with competing direct path raises error"):
+        with pytest.raises(ValueError) as excinfo:
+            _run_interconnection_validation(fake_daisy_double)
+        err = str(excinfo.value)
+        assert "wind" in err
+        assert "double-count" in err
 
 
 @pytest.mark.unit
@@ -383,10 +918,7 @@ def test_check_time_step_with_model_bounds_allows_supported_dt():
     class DummyModel:
         _time_step_bounds = (900, 3600)
 
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 1800}}}
-
-    model._check_time_step("DummyModel", DummyModel)
+    check_model_time_step("DummyModel", DummyModel, 1800)
 
 
 @pytest.mark.unit
@@ -397,9 +929,6 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
             3600,
         )  # (min, max) time step lengths (in seconds) compatible with this model
 
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = {"plant": {"simulation": {"dt": 7200}}}
-
     with pytest.raises(
         ValueError,
         match=(
@@ -407,7 +936,26 @@ def test_check_time_step_with_model_bounds_raises_for_unsupported_dt():
             r"900 \(s\) and 3600 \(s\), but a time step of 7200 \(s\) was specified"
         ),
     ):
-        model._check_time_step("DummyModel", DummyModel)
+        check_model_time_step("DummyModel", DummyModel, 7200)
+
+
+@pytest.mark.unit
+def test_check_control_classifier_only_requires_classifier_for_slc():
+    class UnclassifiedModel:
+        pass
+
+    check_model_control_classifier("UnclassifiedModel", UnclassifiedModel, False)
+
+    with pytest.raises(ValueError, match="missing a control classifier"):
+        check_model_control_classifier("UnclassifiedModel", UnclassifiedModel, True)
+
+
+@pytest.mark.unit
+def test_check_control_classifier_accepts_classified_model():
+    class ClassifiedModel:
+        _control_classifier = "dispatchable"
+
+    check_model_control_classifier("ClassifiedModel", ClassifiedModel, True)
 
 
 @pytest.mark.unit
@@ -477,7 +1025,7 @@ def test_resource_connection_error_missing_connection(temp_dir):
     plant_config_data = load_plant_yaml(temp_plant_config)
 
     # Remove resource to tech connection
-    plant_config_data.pop("resource_to_tech_connections")
+    plant_config_data.pop("site_to_tech_connections")
 
     # Save the modified tech_config YAML back
     with temp_plant_config.open("w") as f:
@@ -540,7 +1088,7 @@ def test_resource_connection_error_missing_resource(temp_dir):
 
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel(temp_highlevel_yaml)
-        assert "Missing resource(s) are ['wind_resource']." in str(excinfo.value)
+    assert "Missing resource(s) are ['site.wind_resource']." in str(excinfo.value)
 
     # Clean up temporary YAML files
     temp_plant_config.unlink(missing_ok=True)
@@ -557,11 +1105,11 @@ def test_no_resource_connection_error_resource_to_multiple_techs(temp_dir):
     # Add a second wind technology
     wind_tech = tech_config["technologies"]["wind"]
     tech_config["technologies"].update({"wind_plant2": wind_tech})
-    resource_to_tech_connections = [
+    site_to_tech_connections = [
         ["site.wind_resource", "wind", "wind_resource_data"],
         ["site.wind_resource", "wind_plant2", "wind_resource_data"],
     ]
-    plant_config["resource_to_tech_connections"] = resource_to_tech_connections
+    plant_config["site_to_tech_connections"] = site_to_tech_connections
     input_config = {
         "plant_config": plant_config,
         "technology_config": tech_config,
@@ -650,6 +1198,50 @@ def test_reports_turned_off(temp_dir):
 
 
 @pytest.mark.unit
+def test_invalid_site_to_tech_connections(subtests):
+    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
+    tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
+    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
+    valid_connection = plant_config.pop("site_to_tech_connections")
+
+    invalid_connection = ["site", "wind", ["latitude", "dest_longitude"]]
+    plant_config["site_to_tech_connections"] = [*valid_connection, invalid_connection]
+    h2i_config = {
+        "driver_config": driver_config,
+        "technology_config": tech_config,
+        "plant_config": plant_config,
+    }
+
+    with subtests.test("Test invalid connection of latitude to longitude"):
+        expected_msg_part = "Invalid connection of latitude to longitude"
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
+
+    # Connecting latitude but missing connection for longitude
+    valid_but_missing_connection = ["site", "wind", ["latitude", "dest_latitude"]]
+    plant_config["site_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["site_to_tech_connections"]
+
+    with subtests.test("Test missing connection for longitude (3rd element is list)"):
+        expected_msg_part = "latitude is connected between site and wind, but longitude is not."
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
+
+    # Connecting latitude but missing connection for longitude
+    valid_but_missing_connection = ["site", "wind", "longitude"]
+    plant_config["site_to_tech_connections"] = [*valid_connection, valid_but_missing_connection]
+    h2i_config["plant_config"]["site_to_tech_connections"]
+
+    with subtests.test("Test missing connection for latitude"):
+        expected_msg_part = "longitude is connected between site and wind, but latitude is not."
+        with pytest.raises(ValueError) as excinfo:
+            H2IntegrateModel(h2i_config)
+        assert expected_msg_part in str(excinfo.value)
+
+
+@pytest.mark.unit
 def test_invalid_finance_group_combination(subtests):
     driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml")
@@ -657,6 +1249,7 @@ def test_invalid_finance_group_combination(subtests):
 
     invalid_finance_subgroup = {
         "commodity": "steel",
+        "commodity_stream": "steel",
         "finance_groups": ["steel", "profast_model"],
         "technologies": ["steel"],
     }
@@ -684,7 +1277,7 @@ def test_invalid_finance_group_combination(subtests):
         with pytest.raises(ValueError) as excinfo:
             h2i = H2IntegrateModel(h2i_config)
             h2i.setup()
-            assert expected_msg == str(excinfo.value)
+        assert expected_msg == str(excinfo.value)
 
 
 @pytest.mark.unit
@@ -754,21 +1347,21 @@ def test_system_order(subtests):
 
     expected_names = [
         "wind",
-        "wind_to_combiner_cable",
+        "electricity_wind_to_combiner_cable",
         "solar",
-        "solar_to_combiner_cable",
+        "electricity_solar_to_combiner_cable",
         "combiner",
-        "combiner_to_elec_combiner_cable",
-        "combiner_to_battery_cable",
+        "electricity_combiner_to_elec_combiner_cable",
+        "electricity_combiner_to_battery_cable",
         "battery",
-        "battery_to_elec_combiner_cable",
+        "electricity_battery_to_elec_combiner_cable",
         "elec_combiner",
-        "elec_combiner_to_electrolyzer_cable",
+        "electricity_elec_combiner_to_electrolyzer_cable",
         "electrolyzer",
-        "electrolyzer_to_h2_combiner_pipe",
-        "electrolyzer_to_h2_storage_pipe",
+        "hydrogen_electrolyzer_to_h2_combiner_pipe",
+        "hydrogen_electrolyzer_to_h2_storage_pipe",
         "h2_storage",
-        "h2_storage_to_h2_combiner_pipe",
+        "hydrogen_h2_storage_to_h2_combiner_pipe",
         "h2_combiner",
         "steel",
         "finance_subgroup_electricity",
@@ -809,66 +1402,246 @@ def test_no_sites_entry(temp_dir):
 
 
 @pytest.mark.unit
-def test_create_xdsm_calls_create_xdsm_from_config_default_outfile():
+def test_create_xdsm_uses_default_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
-        model.create_xdsm()
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
+        create_xdsm(plant_config)
 
-    mock_fn.assert_called_once_with(plant_config, output_file="connections_xdsm")
+    mock_xdsm.return_value.write.assert_called_once_with("connections_xdsm", quiet=True)
 
 
 @pytest.mark.unit
-def test_create_xdsm_calls_create_xdsm_from_config_custom_outfile():
+def test_create_xdsm_uses_custom_outfile():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
     outfile = "my_custom_xdsm"
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
-        model.create_xdsm(outfile=outfile)
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
+        create_xdsm(plant_config, outfile=outfile)
 
-    mock_fn.assert_called_once_with(plant_config, output_file=outfile)
+    mock_xdsm.return_value.write.assert_called_once_with(outfile, quiet=True)
 
 
 @pytest.mark.unit
 def test_create_xdsm_raises_when_no_interconnections():
     plant_config = {"technology_interconnections": []}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         with pytest.raises(ValueError, match="requires technology interconnections"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
 
-    mock_fn.assert_not_called()
+    mock_xdsm.assert_not_called()
 
 
 @pytest.mark.unit
 def test_create_xdsm_raises_when_interconnections_key_missing():
     plant_config = {}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
-    with patch.object(h2i_model_module, "create_xdsm_from_config") as mock_fn:
+    with patch.object(reporting_module, "XDSM") as mock_xdsm:
         with pytest.raises(ValueError, match="requires technology interconnections"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
 
-    mock_fn.assert_not_called()
+    mock_xdsm.assert_not_called()
 
 
 @pytest.mark.unit
 def test_create_xdsm_propagates_file_not_found_error():
     plant_config = {"technology_interconnections": [("wind", "electrolyzer", "electricity")]}
-    model = object.__new__(H2IntegrateModel)
-    model.plant_config = plant_config
 
     with patch.object(
-        h2i_model_module,
-        "create_xdsm_from_config",
+        reporting_module,
+        "XDSM",
         side_effect=FileNotFoundError("latex not found"),
     ):
         with pytest.raises(FileNotFoundError, match="latex not found"):
-            model.create_xdsm()
+            create_xdsm(plant_config)
+
+
+@pytest.mark.unit
+def test_post_process_print_results_flag_calls_reporting_utility():
+    model = object.__new__(H2IntegrateModel)
+    model.state = h2i_model_module.State.RUN
+    model.prob = types.SimpleNamespace(model=object())
+    model.recorder_path = None
+    model.performance_models = []
+
+    with patch.object(h2i_model_module, "print_model_results") as mock_print_results:
+        model.post_process(print_results=True)
+
+    mock_print_results.assert_called_once_with(
+        model.prob.model,
+        excludes=["*resource_data"],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Lightweight unit tests for _check_dispatch_connections
+#
+# These bypass OpenMDAO entirely by constructing a minimal fake model object
+# carrying only the attributes the validator reads: ``technology_config``,
+# ``plant_config``, ``supported_models``, and ``technology_graph``.
+# ---------------------------------------------------------------------------
+
+
+class _FakeOpenLoopController:
+    """Stand-in for an open-loop `control_strategy` class (not Pyomo-based)."""
+
+
+def _make_dispatch_fake_model(technologies, tech_to_dispatch_connections, interconnections=None):
+    """Build a minimal stub for testing `_check_dispatch_connections`.
+
+    Args:
+        technologies (dict): value for `technology_config["technologies"]`.
+        tech_to_dispatch_connections (list | None): value for
+            `plant_config["tech_to_dispatch_connections"]`. Omitted from `plant_config`
+            entirely if ``None``.
+        interconnections (list, optional): `technology_interconnections` entries used to
+            build the technology graph. Defaults to an empty list.
+
+    Returns:
+        types.SimpleNamespace: stub with `technology_config`, `plant_config`,
+            `supported_models`, and `technology_graph` set.
+    """
+    from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+        PyomoStorageControllerBaseClass,
+    )
+
+    class _FakePyomoStorageController(PyomoStorageControllerBaseClass):
+        pass
+
+    fake = types.SimpleNamespace()
+    fake.technology_config = {"technologies": technologies}
+    plant_config = {}
+    if tech_to_dispatch_connections is not None:
+        plant_config["tech_to_dispatch_connections"] = tech_to_dispatch_connections
+    fake.plant_config = plant_config
+    fake.supported_models = {
+        "PyomoStorageController": _FakePyomoStorageController,
+        "OpenLoopController": _FakeOpenLoopController,
+    }
+    fake.technology_graph = create_technology_graph(interconnections or [])
+    return fake
+
+
+def _run_dispatch_connection_check(fake):
+    check_dispatch_connections(
+        fake.technology_config,
+        fake.plant_config.get("tech_to_dispatch_connections"),
+        fake.supported_models,
+        fake.technology_graph,
+    )
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_valid_heuristic_style_passes():
+    """combiner (dispatch_rule_set) -> battery (dispatch_rule_set + Pyomo controller),
+    both registered in `tech_to_dispatch_connections`, must not raise."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["combiner", "battery"], ["battery", "battery"]],
+        interconnections,
+    )
+    _run_dispatch_connection_check(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_valid_standalone_pyomo_controller_passes():
+    """A Pyomo storage controller that needs no `dispatch_rule_set` anywhere (e.g.
+    optimization-based controllers) is valid as long as it is listed."""
+    technologies = {
+        "feedstock": {"performance_model": {"model": "FeedstockPerformanceModel"}},
+        "battery": {"control_strategy": {"model": "PyomoStorageController"}},
+    }
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["feedstock", "battery"], ["battery", "battery"]],
+    )
+    _run_dispatch_connection_check(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_no_op_when_key_absent():
+    """No `tech_to_dispatch_connections` and no `dispatch_rule_set` should be a no-op."""
+    technologies = {"wind": {"performance_model": {"model": "SomeWindModel"}}}
+    fake = _make_dispatch_fake_model(technologies, None)
+    _run_dispatch_connection_check(fake)  # must not raise
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_extraneous_raises():
+    """A dispatching tech using an open-loop controller (no `dispatch_rule_set`, no Pyomo
+    `control_strategy`) left over in `tech_to_dispatch_connections` must raise."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {"control_strategy": {"model": "OpenLoopController"}},
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["combiner", "battery"], ["battery", "battery"]],
+        interconnections,
+    )
+    with pytest.raises(ValueError) as excinfo:
+        _run_dispatch_connection_check(fake)
+    err = str(excinfo.value)
+    assert "plant config references ['battery'], but this technology does not" in err
+    assert "corresponding entries for ['battery'] from `tech_to_dispatch_connections`" in err
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_missing_raises():
+    """A technology declaring `dispatch_rule_set` but missing from
+    `tech_to_dispatch_connections` must raise and suggest the expected connection."""
+    technologies = {
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [["combiner", "battery", "electricity", "cable"]]
+    fake = _make_dispatch_fake_model(
+        technologies,
+        [["battery", "battery"]],  # missing the [combiner, battery] entry
+        interconnections,
+    )
+    with pytest.raises(ValueError) as excinfo:
+        _run_dispatch_connection_check(fake)
+    err = str(excinfo.value)
+    assert "Technology ['combiner'] declare a `dispatch_rule_set` but" in err
+    assert "(at least): [['combiner', 'battery']]." in err
+
+
+@pytest.mark.unit
+def test_check_dispatch_connections_missing_key_entirely_raises():
+    """A technology declaring `dispatch_rule_set` with `tech_to_dispatch_connections`
+    missing entirely from the plant config must also raise."""
+    technologies = {
+        "wave": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "combiner": {"dispatch_rule_set": {"model": "PyomoDispatchGenericConverter"}},
+        "battery": {
+            "dispatch_rule_set": {"model": "PyomoRuleStorageBaseclass"},
+            "control_strategy": {"model": "PyomoStorageController"},
+        },
+    }
+    interconnections = [
+        ["wave", "combiner", "electricity", "cable"],
+        ["combiner", "battery", "electricity", "cable"],
+    ]
+    fake = _make_dispatch_fake_model(technologies, None, interconnections)
+    with pytest.raises(ValueError) as excinfo:
+        _run_dispatch_connection_check(fake)
+    err = str(excinfo.value)
+    assert "Technologies ['battery', 'combiner', 'wave'] declare a `dispatch_rule_set` but" in err
+    assert (
+        "(at least): [['battery', 'battery'], ['combiner', 'battery'], "
+        "['wave', 'combiner']]." in err
+    )

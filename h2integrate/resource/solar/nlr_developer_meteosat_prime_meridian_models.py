@@ -1,14 +1,13 @@
 from pathlib import Path
 
-from attrs import field, define
+from attrs import field, define, validators
 
-from h2integrate.core.validators import contains, range_val
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
-class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
+class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-download/>`_.
     This dataset covers regions covered by the Meteosat Prime Meridian satellite (Africa and Europe)
@@ -34,7 +33,7 @@ class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2005, 2022))
+    resource_year: int = field(converter=int, validator=(validators.ge(2005), validators.le(2022)))
     dataset_desc: str = "nsrdb_msg_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [15, 30, 60])
@@ -51,7 +50,7 @@ class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-download.csv?"
         )
         # create the resource config
-        self.config = MeteosatPrimeMeridianAPIConfig.from_dict(
+        self.config = MeteosatPrimeMeridianSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -59,7 +58,7 @@ class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
+class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian TMY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tmy-download/>`_,
     `Meteosat Prime Meridian TDY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tdy-download/>`_,
@@ -88,7 +87,7 @@ class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
 
     resource_year: str = field(
         converter=str.lower,
-        validator=contains(
+        validator=validators.in_(
             [
                 "tmy-2014",
                 "tdy-2014",
@@ -120,7 +119,7 @@ class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = MeteosatPrimeMeridianTMYAPIConfig.from_dict(
+        self.config = MeteosatPrimeMeridianTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

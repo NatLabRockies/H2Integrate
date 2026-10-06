@@ -1,7 +1,7 @@
 (solar_resource:openmeteo_historical)=
 # Solar Resource: Open-Meteo Historical Solar Data
 
-This resource class downloads solar resource data from the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api)
+The resource class `OpenMeteoHistoricalSolarResource` downloads solar resource data from the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api)
 
 This dataset allows for solar resource data to be downloaded for:
 - **resource years** from 1940 to year before the current calendar year.

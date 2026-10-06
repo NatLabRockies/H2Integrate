@@ -48,8 +48,10 @@ supported_models = _ModelRegistry(
     {
         # Resources
         "TidalResource": "resource.tidal:TidalResource",
+        "WaveResource": "resource.wave:WaveResource",
         "RiverResource": "resource.river:RiverResource",
         "WTKNLRDeveloperAPIWindResource": "resource.wind:WTKNLRDeveloperAPIWindResource",
+        "HRRRMETToolkitWindAPI": "resource.wind:HRRRMETToolkitWindAPI",
         "OpenMeteoHistoricalWindResource": "resource.wind:OpenMeteoHistoricalWindResource",
         "OpenMeteoHistoricalSolarResource": "resource.solar:OpenMeteoHistoricalSolarResource",
         "GOESAggregatedSolarAPI": "resource.solar:GOESAggregatedSolarAPI",
@@ -61,6 +63,9 @@ supported_models = _ModelRegistry(
         "Himawari7SolarAPI": "resource.solar:Himawari7SolarAPI",
         "Himawari8SolarAPI": "resource.solar:Himawari8SolarAPI",
         "HimawariTMYSolarAPI": "resource.solar:HimawariTMYSolarAPI",
+        # HPC or HSDS Resources
+        "NSRDBDatasetH5": "resource.solar:NSRDBDatasetH5",
+        "WTKHRRRMETDatasetH5": "resource.wind:WTKHRRRMETDatasetH5",
         # Converters
         "GenericConverterCostModel": "converters:GenericConverterCostModel",
         "ATBWindPlantCostModel": "converters.wind:ATBWindPlantCostModel",
@@ -71,6 +76,7 @@ supported_models = _ModelRegistry(
         "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
         "ATBResComPVCostModel": "converters.solar:ATBResComPVCostModel",
         "PySAMTidalPerformanceModel": "converters.water_power:PySAMTidalPerformanceModel",
+        "PySAMWavePerformanceModel": "converters.water_power:PySAMWavePerformanceModel",
         "PySAMMarineCostModel": "converters.water_power:PySAMMarineCostModel",
         "RunOfRiverHydroPerformanceModel": "converters.water_power:RunOfRiverHydroPerformanceModel",
         "RunOfRiverHydroCostModel": "converters.water_power:RunOfRiverHydroCostModel",
@@ -82,14 +88,17 @@ supported_models = _ModelRegistry(
         "CustomElectrolyzerCostModel": "converters.hydrogen:CustomElectrolyzerCostModel",
         "WOMBATElectrolyzerModel": "converters.hydrogen:WOMBATElectrolyzerModel",
         "LinearH2FuelCellPerformanceModel": "converters.hydrogen:LinearH2FuelCellPerformanceModel",
+        "PEMH2FuelCellPerformanceModel": "converters.hydrogen:PEMH2FuelCellPerformanceModel",
         "H2FuelCellCostModel": "converters.hydrogen:H2FuelCellCostModel",
         "SteamMethaneReformerPerformanceModel": "converters.hydrogen:SteamMethaneReformerPerformanceModel",
         "SteamMethaneReformerCostModel": "converters.hydrogen:SteamMethaneReformerCostModel",
+        "SONGFuelCellPerformanceModel": "converters.natural_gas:SONGFuelCellPerformanceModel",
         "SimpleASUCostModel": "converters.nitrogen:SimpleASUCostModel",
         "SimpleASUPerformanceModel": "converters.nitrogen:SimpleASUPerformanceModel",
-        "HOPPComponent": "converters.hopp:HOPPComponent",
-        "MartinIronMinePerformanceComponent": "converters.iron:MartinIronMinePerformanceComponent",
-        "MartinIronMineCostComponent": "converters.iron:MartinIronMineCostComponent",
+        "SimpleIronMinePerformanceComponent": "converters.iron:SimpleIronMinePerformanceComponent",
+        "SimpleIronMineCostComponent": "converters.iron:SimpleIronMineCostComponent",
+        "NRRIIronMinePerformanceComponent": "converters.iron:NRRIIronMinePerformanceComponent",
+        "NRRIIronMineCostComponent": "converters.iron:NRRIIronMineCostComponent",
         "NaturalGasIronReductionPlantPerformanceComponent": "converters.iron:NaturalGasIronReductionPlantPerformanceComponent",
         "NaturalGasIronReductionPlantCostComponent": "converters.iron:NaturalGasIronReductionPlantCostComponent",
         "HydrogenIronReductionPlantPerformanceComponent": "converters.iron:HydrogenIronReductionPlantPerformanceComponent",
@@ -135,16 +144,23 @@ supported_models = _ModelRegistry(
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
         "ShellTubeHXPerformanceModel": "converters.heat.shell_tube_hx:ShellTubeHXPerformanceModel",
         "ShellTubeHXCostModel": "converters.heat.shell_tube_hx_cost_model:ShellTubeHXCostModel",
+        "PaperMillPerformanceModel": "converters.paper_mill:PaperMillPerformanceModel",
+        "PaperMillCostModel": "converters.paper_mill:PaperMillCostModel",
+        "SAFPerformanceModel": "converters.saf:SAFPerformanceModel",
+        "SAFCostModel": "converters.saf:SAFCostModel",
+        "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
+        "DieselGeneratorPerformanceModel": "converters.diesel:DieselGeneratorPerformanceModel",
+        "DieselGeneratorCostModel": "converters.diesel:DieselGeneratorCostModel",
         # Transport
         "cable": "transporters:CablePerformanceModel",
         "pipe": "transporters:PipePerformanceModel",
         "GenericCombinerPerformanceModel": "transporters:GenericCombinerPerformanceModel",
         "GenericSplitterPerformanceModel": "transporters:GenericSplitterPerformanceModel",
         "GenericTransporterPerformanceModel": "transporters:GenericTransporterPerformanceModel",
+        "LinearDistanceCostModel": "transporters:LinearDistanceCostModel",
+        "LinearMassTransportCostModel": "transporters:LinearMassTransportCostModel",
         "IronTransportPerformanceComponent": "converters.iron:IronTransportPerformanceComponent",
         "IronTransportCostComponent": "converters.iron:IronTransportCostComponent",
-        # Simple Summers
-        "GenericSummerPerformanceModel": "transporters:GenericSummerPerformanceModel",
         # Storage
         "PySAMBatteryPerformanceModel": "storage.battery:PySAMBatteryPerformanceModel",
         "StoragePerformanceModel": "storage:StoragePerformanceModel",
@@ -167,6 +183,7 @@ supported_models = _ModelRegistry(
         "OptimizedDispatchStorageController": "control.control_strategies.storage:OptimizedDispatchStorageController",
         "GenericDemandComponent": "demand:GenericDemandComponent",
         "FlexibleDemandComponent": "demand:FlexibleDemandComponent",
+        "PLMHeuristicOpenLoopConverterController": "control.control_strategies.converters:PLMHeuristicOpenLoopConverterController",
         # Dispatch
         "PyomoDispatchGenericConverter": "control.control_rules.converters:PyomoDispatchGenericConverter",
         "PyomoRuleStorageBaseclass": "control.control_rules.storage:PyomoRuleStorageBaseclass",
@@ -210,8 +227,10 @@ no_cost_models = {
     "GasStreamCombinerPerformanceModel",
     "CablePerformanceModel",
     "PipePerformanceModel",
+    "GenericTransporterPerformanceModel",
 }
 
 no_replacement_schedule_models = {
     "IronTransportPerformanceComponent",
+    "GenericTransporterPerformanceModel",
 }

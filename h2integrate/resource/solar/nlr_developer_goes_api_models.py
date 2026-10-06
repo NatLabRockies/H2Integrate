@@ -1,14 +1,11 @@
-from pathlib import Path
+from attrs import field, define, validators
 
-from attrs import field, define
-
-from h2integrate.core.validators import contains, range_val
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
-class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
+class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Aggregated PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
@@ -16,12 +13,6 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1998 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -33,13 +24,10 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(1998, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2024)))
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -48,7 +36,7 @@ class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
 
         self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
         # create the resource config
-        self.config = GOESAggregatedAPIConfig.from_dict(
+        self.config = GOESAggregatedSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -56,7 +44,7 @@ class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESConusAPIConfig(ResourceBaseAPIConfig):
+class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Conus PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
     This dataset covers regions within the continental United States at a spatial resolution of
@@ -65,12 +53,6 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -82,13 +64,10 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -99,7 +78,7 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESConusAPIConfig.from_dict(
+        self.config = GOESConusSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -107,7 +86,7 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
+class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 2 km.
@@ -115,12 +94,6 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -132,13 +105,10 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=range_val(2018, 2024))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
 
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
@@ -149,7 +119,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESFullDiscAPIConfig.from_dict(
+        self.config = GOESFullDiscSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -157,7 +127,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESTMYAPIConfig(ResourceBaseAPIConfig):
+class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
@@ -166,12 +136,6 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
         resource_year (str): Year to use for resource data. Can be any of the following:
             tmy-2022, tdy-2022, tgy-2022, tmy-2023, tdy-2023, tgy-2023, tmy-2024, tdy-2024,
             or tgy-2024.
-        resource_data (dict | object, optional): Dictionary of user-input resource data.
-            Defaults to an empty dictionary.
-        resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
-        resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -185,7 +149,7 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
 
     resource_year: str = field(
         converter=str.lower,
-        validator=contains(
+        validator=validators.in_(
             [
                 "tmy-2022",
                 "tdy-2022",
@@ -202,9 +166,6 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
     dataset_desc: str = "goes_tmy_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
-    resource_data: dict | object = field(default={})
-    resource_filename: Path | str = field(default="")
-    resource_dir: Path | str | None = field(default=None)
 
     def __attrs_post_init__(self):
         if "tmy" in self.resource_year:
@@ -223,7 +184,7 @@ class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESTMYAPIConfig.from_dict(
+        self.config = GOESTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )

@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+from openmdao.utils.units import simplify_unit
 
 from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
@@ -11,8 +12,8 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase
 from h2integrate.core.inputs.validation import write_yaml
+from h2integrate.finances.profast_baseclass import ProFastBase
 
 
 class ProFastLCO(ProFastBase):
@@ -103,22 +104,26 @@ class ProFastLCO(ProFastBase):
 
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[self.LCO_str]["units"]
-        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
-        pf = self.populate_profast(inputs)
+        non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
+        has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
 
-        if "system_level_control" in self.options["plant_config"] and np.all(
-            inputs["capacity_factor"] == 0.0
-        ):
+        if non_pos_prod or has_zero_cf:
+            bug_desc = "capacity" if non_pos_prod else "capacity factor"
             outputs[self.LCO_str] = 1e12
             msg = (
-                f"Commodity stream for finance group has a zero capacity factor. "
-                "If you recieve this warning multiple times, there may be a problem "
+                f"Commodity stream for finance group has a zero {bug_desc}. "
+                "If you receive this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
                 f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
             )
             warnings.warn(msg, UserWarning)
             return
+
+        # populate ProFAST
+        pf = self.populate_profast(inputs)
+
         # simulate ProFAST
         sol, summary, price_breakdown = run_profast(pf)
 

@@ -1,4 +1,4 @@
-from h2integrate.converters.steel.steel_eaf_base import (
+from h2integrate.converters.steel.steel_eaf_baseclass import (
     ElectricArcFurnacePlantBaseCostComponent,
     ElectricArcFurnacePlantBasePerformanceComponent,
 )

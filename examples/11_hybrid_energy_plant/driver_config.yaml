@@ -1,39 +1,42 @@
 name: driver_config
-description: Runs a wind, pv, and battery plant with optimization
+description: Optimize a wind, PV, and battery hybrid plant using native H2I models
 general:
   folder_output: wind_pv_battery_run
 driver:
   optimization:
     flag: true
-    tol: 0.1
+    tol: 0.01
     max_iter: 6
     solver: COBYLA
-    rhobeg: 1.0
-    debug_print: false
+    rhobeg: 0.2
+    debug_print: true
+    autoscaler: bounds
 design_variables:
-  hopp:
-    wind_turbine_rating_kw:
+  wind:
+    wind_turbine_rating:
       flag: true
       lower: 0.0
-      upper: 5.
-      units: MW
-    pv_capacity_kw:
+      upper: 5000.0
+      units: kW
+  solar:
+    system_capacity_DC:
       flag: true
       lower: 0.0
-      upper: 22.
-      units: MW
-    battery_capacity_kw:
+      upper: 22000.0
+      units: kW
+  battery:
+    max_charge_rate:
       flag: true
       lower: 0.0
-      upper: 22.
-      units: MW
-    battery_capacity_kwh:
+      upper: 22000.0
+      units: kW
+    storage_capacity:
       flag: true
       lower: 0.0
-      upper: 22.
-      units: MW*h
+      upper: 22000.0
+      units: kW*h
 constraints:
-  hopp:
+  electrical_load_demand:
     percent_load_missed:
       flag: true
       lower: 20.
@@ -42,17 +45,10 @@ constraints:
       flag: true
       lower: 20.0
       units: percent
-    battery_duration:
+  battery:
+    storage_duration:
       flag: true
       upper: 10
       units: h
-    power_capacity_to_interconnect_ratio:
-      flag: true
-      lower: 0.2
-      units: unitless
-    annual_energy_to_interconnect_potential_ratio:
-      flag: true
-      lower: 0.2
-      units: unitless
 objective:
   name: finance_subgroup_default.LCOE

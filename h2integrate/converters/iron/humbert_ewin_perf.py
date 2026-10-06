@@ -9,21 +9,20 @@ and TEA literature for three different types of iron electrowinning:
 - Molten Oxide Electrolysis (MOE)
 
 Classes:
-    HumbertEwinConfig: Sets the required model_inputs fields.
+    HumbertEwinPerformanceComponentConfig: Sets the required model_inputs fields.
     HumbertEwinPerformanceComponent: Defines initialize(), setup(), and compute() methods.
 
 """
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 @define
-class HumbertEwinConfig(BaseConfig):
+class HumbertEwinPerformanceComponentConfig(BaseConfig):
     """Configuration class for the Humbert iron electrowinning performance model.
 
     Args:
@@ -37,7 +36,9 @@ class HumbertEwinConfig(BaseConfig):
     """
 
     electrolysis_type: str = field(
-        kw_only=True, converter=(str.lower, str.strip), validator=contains(["ahe", "mse", "moe"])
+        kw_only=True,
+        converter=(str.lower, str.strip),
+        validator=validators.in_(["ahe", "mse", "moe"]),
     )  # product selection
     ore_fe_wt_pct: float = field(kw_only=True)
     capacity_mw: float = field(kw_only=True)
@@ -88,7 +89,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         super().initialize()
 
     def setup(self):
-        self.config = HumbertEwinConfig.from_dict(
+        self.config = HumbertEwinPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
         )

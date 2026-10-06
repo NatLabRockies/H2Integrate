@@ -58,7 +58,6 @@ CATEGORY_RULES = [
     ("converters/grid", ("Converter", "Grid")),
     ("converters/water_power", ("Converter", "Water Power")),
     ("converters/natural_gas", ("Converter", "Natural Gas")),
-    ("converters/hopp", ("Converter", "HOPP")),
     # --- Chemical converters ---
     ("converters/hydrogen", ("Converter", "Hydrogen")),
     ("converters/ammonia", ("Converter", "Ammonia")),
@@ -78,6 +77,7 @@ CATEGORY_RULES = [
     ("transporters", ("Transporter", "General")),
     ("control", ("Control", "General")),
     ("simulation", ("Simulation", "General")),
+    ("reliability", ("Reliability", "General")),
     ("tools", ("Tools", "General")),
     ("postprocess", ("Post-processing", "General")),
     ("preprocess", ("Pre-processing", "General")),
@@ -96,6 +96,7 @@ CATEGORY_SHAPES_PYVIS = {
     "Control": "hexagon",
     "Simulation": "triangleDown",
     "Tools": "box",
+    "Reliability": "box",
     "Post-processing": "box",
     "Pre-processing": "box",
 }
@@ -109,7 +110,6 @@ PRODUCT_TO_GROUP = {
     "Wind": "Renewables",
     "Solar": "Renewables",
     "Water Power": "Renewables",
-    "HOPP": "Renewables",
     "Nuclear": "Other Elec. Generators",
     "Grid": "Other Elec. Generators",
     "Natural Gas": "Other Elec. Generators",

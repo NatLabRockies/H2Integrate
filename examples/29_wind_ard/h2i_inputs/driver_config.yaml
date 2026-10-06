@@ -38,13 +38,13 @@ design_variables:
       lower: -3000
       upper: 3000
       units: m
-      scaler: 1E-2
+      scaler: 1.0e-2
     y_substations:
       flag: true
       lower: -3000
       upper: 3000
       units: m
-      scaler: 1E-2
+      scaler: 1.0e-2
 constraints:
   wind:
     boundary_distances:

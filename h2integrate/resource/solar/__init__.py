@@ -14,3 +14,4 @@ from h2integrate.resource.solar.nlr_developer_himawari_api_models import (
     Himawari8SolarAPI,
     HimawariTMYSolarAPI,
 )
+from h2integrate.resource.solar.nlr_nsrdb_dataset_model import NSRDBDatasetH5

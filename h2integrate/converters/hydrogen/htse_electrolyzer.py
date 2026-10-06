@@ -1,9 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     ResizeablePerformanceModelBaseConfig,
 )
@@ -15,7 +14,7 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
 
 
 @define(kw_only=True)
-class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
+class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """Configuration class for the HTSE performance model.
 
     Args:
@@ -31,12 +30,12 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
             stay on (unitless). Defaults to ``0.1``.
     """
 
-    n_clusters: int = field(validator=gt_zero)
-    nominal_heat_required: float = field(validator=gt_zero)
-    nominal_electricity_required: float = field(validator=gt_zero)
-    cluster_rating_MW: float = field(validator=gt_zero)
-    uptime_hours_until_eol: int = field(default=80000, validator=gt_zero)
-    turndown_ratio: float = field(default=0.1, validator=gt_zero)
+    n_clusters: int = field(validator=validators.gt(0))
+    nominal_heat_required: float = field(validator=validators.gt(0))
+    nominal_electricity_required: float = field(validator=validators.gt(0))
+    cluster_rating_MW: float = field(validator=validators.gt(0))
+    uptime_hours_until_eol: int = field(default=80000, validator=validators.gt(0))
+    turndown_ratio: float = field(default=0.1, validator=validators.gt(0))
 
 
 class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
@@ -66,7 +65,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
 
     def setup(self) -> None:
-        self.config = HTSEElectrolyzerPerformanceModelConfig.from_dict(
+        self.config = HTSEPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -274,7 +273,7 @@ class HTSECostModelConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
     """
 
-    unit_capex: float = field(validator=gt_zero)
+    unit_capex: float = field(validator=validators.gt(0))
     fixed_opex: float | None = field(default=None)
     fixed_capex: float | None = field(default=None)
     cost_year: int = field(default=2025, converter=int)

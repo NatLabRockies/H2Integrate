@@ -1,8 +1,7 @@
 import ProFAST
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import must_equal
 from h2integrate.converters.steel.steel_baseclass import (
     SteelCostBaseClass,
     SteelPerformanceBaseClass,
@@ -58,7 +57,7 @@ class SteelCostAndFinancialModelConfig(BaseConfig):
     # Financial parameters - flattened from the nested structure
     grid_prices: dict = field()
     financial_assumptions: dict = field()
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
     # Feedstock parameters - flattened from the nested structure
     excess_oxygen: float = field(default=395)

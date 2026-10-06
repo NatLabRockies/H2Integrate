@@ -2,11 +2,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 from pyomo.util.check_units import assert_units_consistent
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val
 from h2integrate.control.control_rules.plant_dispatch_model import PyomoDispatchPlantModel
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
@@ -64,13 +63,17 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
     """
 
     max_charge_rate: int | float = field()
-    charge_efficiency: float = field(validator=range_val(0, 1), default=None)
-    discharge_efficiency: float = field(validator=range_val(0, 1), default=None)
+    charge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=None)
+    discharge_efficiency: float = field(
+        validator=(validators.ge(0), validators.le(1)), default=None
+    )
     cost_per_production: float = field(default=None)
     cost_per_charge: float = field(default=None)
     cost_per_discharge: float = field(default=None)
     commodity_met_value: float = field(default=None)
-    time_weighting_factor: float = field(validator=range_val(0, 1), default=0.995)
+    time_weighting_factor: float = field(
+        validator=(validators.ge(0), validators.le(1)), default=0.995
+    )
     time_duration: float = field(default=1.0)  # hours
 
     def make_dispatch_inputs(self):
@@ -125,11 +128,11 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             desc="Storage capacity",
         )
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
 
         super().setup()
 
-        self.n_control_window_hours = self.config.n_control_window_hours
+        self.n_control_window_hours = int(self.config.n_control_window_hours)
         self.updated_initial_soc = self.config.init_soc_fraction
 
         # Is this the best place to put this???
@@ -154,7 +157,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
         # initialize the pyomo model
         self.pyomo_model = pyomo.ConcreteModel()
 
-        pyomo.Set(initialize=range(self.config.n_control_window_hours))
+        pyomo.Set(initialize=range(self.n_control_window_hours))
 
         self.source_techs = []
         self.dispatch_tech = []
@@ -226,9 +229,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             soc = np.zeros(self.n_timesteps)
 
             # get the starting index for each control window
-            window_start_indices = list(
-                range(0, self.n_timesteps, self.config.n_control_window_hours)
-            )
+            window_start_indices = list(range(0, self.n_timesteps, self.n_control_window_hours))
 
             # Initialize parameters for optimized dispatch strategy
             self.initialize_parameters(inputs)
@@ -237,10 +238,10 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
             for t in window_start_indices:
                 # get the inputs over the current control window
                 commodity_in = inputs[f"{self.config.commodity}_in"][
-                    t : t + self.config.n_control_window_hours
+                    t : t + self.n_control_window_hours
                 ]
                 demand_in = inputs[f"{commodity_name}_set_point"][
-                    t : t + self.config.n_control_window_hours
+                    t : t + self.n_control_window_hours
                 ]
 
                 # Progress report
@@ -270,7 +271,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
                 self.updated_initial_soc = soc_control_window[-1] / 100  # turn into ratio
 
                 # get a list of all time indices belonging to the current control window
-                window_indices = list(range(t, t + self.config.n_control_window_hours))
+                window_indices = list(range(t, t + self.n_control_window_hours))
 
                 # loop over all time steps in the current control window
                 for j in window_indices:
@@ -359,7 +360,7 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
         #################################
         model.forecast_horizon = pyomo.Set(
             doc="Set of time periods in time horizon",
-            initialize=range(self.config.n_control_window_hours),
+            initialize=range(self.n_control_window_hours),
         )
         for tech in self.source_techs:
             if tech == self.dispatch_tech[0]:

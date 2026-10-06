@@ -70,7 +70,7 @@ demonstrated below to replacing all relevant packages and their versions.
 -->
   | Package | Version |
   | ------- | ------- |
-  | hopp | <3.1.1> |
+  | h2integrate | <0.8.0> |
   | numpy | <1.26.4> |
   | Pyomo | <6.8.0> |
   | scipy | <1.14.1> |

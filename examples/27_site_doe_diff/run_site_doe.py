@@ -10,7 +10,7 @@ from h2integrate import H2IntegrateModel
 os.chdir(Path(__file__).parent)
 
 # Create an H2I model
-h2i = H2IntegrateModel("23_wind_solar_site_doe.yaml")
+h2i = H2IntegrateModel("27_wind_solar_site_doe.yaml")
 
 # Run the model
 h2i.run()
@@ -19,7 +19,7 @@ h2i.run()
 h2i.post_process(summarize_sql=True)
 
 # Specify the filepath to the sql file, the folder and filename are in the driver_config
-sql_fpath = Path(__file__).parent / "ex_23_out" / "cases.sql"
+sql_fpath = Path(__file__).parent / "ex_27_out" / "cases.sql"
 
 # load the cases
 cr = om.CaseReader(sql_fpath)

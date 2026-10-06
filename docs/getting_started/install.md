@@ -111,7 +111,7 @@ pip install -e ".[all]"
 4. Install H2Integrate and its dependencies:
 
     ```bash
-    conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
+    conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12 highspy
     ```
 
     - If you want to just use H2Integrate:

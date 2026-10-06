@@ -17,9 +17,6 @@ def input_config(temp_dir):
     driver_config = load_driver_yaml(EXAMPLE_DIR / "25_sizing_modes" / "driver_config.yaml")
     plant_config = load_plant_yaml(EXAMPLE_DIR / "25_sizing_modes" / "plant_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
-    tech_config["technologies"]["hopp"]["model_inputs"]["performance_parameters"]["cache_dir"] = (
-        temp_dir
-    )
     input_config = {
         "name": "H2Integrate_config",
         "system_summary": "hybrid plant containing ammonia plant and electrolyzer",
@@ -52,7 +49,7 @@ def test_resize_by_max_feedstock(input_config, subtests):
                 model.prob.get_val("electrolyzer.electrolyzer_size_mw", units="MW")[0],
                 rel=1e-3,
             )
-            == 1080
+            == 1040
         )
 
 
@@ -69,11 +66,12 @@ def test_resize_by_max_commodity(input_config, subtests):
         "performance_parameters"
     ]["max_commodity_ratio"] = 1.0
     input_config["plant_config"]["technology_interconnections"] = [
-        ["hopp", "electrolyzer", "electricity", "cable"],
+        ["electricity_feedstock", "electricity_splitter", "electricity", "cable"],
+        ["electricity_splitter", "electrolyzer", "electricity", "cable"],
         ["electrolyzer", "ammonia", "hydrogen", "pipe"],
         ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
         ["n2_feedstock", "ammonia", "nitrogen", "pipe"],
-        ["electricity_feedstock", "ammonia", "electricity", "cable"],
+        ["electricity_splitter", "ammonia", "electricity", "cable"],
     ]
     model = H2IntegrateModel(input_config)
     model.run()

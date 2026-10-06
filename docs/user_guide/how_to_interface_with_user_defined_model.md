@@ -25,8 +25,8 @@ You can combine an existing H2Integrate model and a custom model for the same te
 
 To demonstrate this capability, we include a minimal example of a custom technology model: a **paper mill**. This example includes:
 
-- A `PaperMillPerformance` model that converts electricity input to paper output.
-- A `PaperMillCost` model that estimates capital and operational expenditures.
+- A `CustomPaperMillPerformance` model that converts electricity input to paper output.
+- A `CustomPaperMillCost` model that estimates capital and operational expenditures.
 - A `PaperMillFinance` technology finance model that computes the levelized cost of paper production (LCOP).
 
 Refer to the [Paper Mill Model Example](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/06_custom_tech/) for a complete walkthrough.
