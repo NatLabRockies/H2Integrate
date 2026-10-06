@@ -8,7 +8,7 @@ from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, Resour
 
 
 @pytest.fixture
-def input_config(n_timesteps, resource_year, include_leap, yr_setting, resource_fname, yr_order):
+def input_config(n_timesteps, resource_year, include_leap, resource_fname, yr_order):
     plant = {
         "plant_life": 30,
         "simulation": {
@@ -23,7 +23,6 @@ def input_config(n_timesteps, resource_year, include_leap, yr_setting, resource_
         "longitude": -95.0,
         "resource_year": resource_year,
         "include_leap_day": include_leap,
-        "resource_year_setting": yr_setting,
         "resource_year_order": yr_order,
         "resource_filename": resource_fname,
         "timezone": 0,
@@ -86,60 +85,32 @@ class FakeResource(ResourceBaseAPIModel):
             "units": {"ws": "m/s"},
         }
 
-    # def create_filename(self, latitude, longitude, resource_year):
-    #     return f"{latitude}_{longitude}_Y{resource_year}_60min_fake.csv"
-
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,expected_msg",
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order,expected_msg",
     [
-        (2015, 8760, False, "year_order", "", None, "`resource_year_order` is required."),
-        (2015, 8760, False, "filenames", "", None, "`resource_filename` must be a list."),
-        (2015, 8760, False, "start_year", "", [2015, 2016], "`resource_year_order` is an extran"),
-        (2015, 8760, False, "start_year", [""], None, "`resource_filename` must be a single"),
-        (2015, 8760, False, "start_year", [""], [2015, 2016], "Invalid inputs provided"),
-        (2015, 8760, False, "filenames", [""], [2015, 2016], "`resource_year_order` is an extran"),
-        (2015, 8760, False, "year_order", [""], [2015, 2016], "`resource_filename` is an extran"),
+        # Invalid setting with <= 1 year
+        (2015, 8760, False, "", [2015, 2016], "`resource_year_order` is an extran"),
+        (2015, 8760, False, [""], None, "`resource_filename` must be a single"),
+        (2012, 4380, False, "", [2012], "`resource_year_order` is an extran"),
+        (2012, 8784, True, [""], None, "`resource_filename` must be a single"),
+        # Not enough inputs
+        (2012, 17520, False, "", [2012], "2 resource years are req"),
+        (2012, 17520, False, [""], None, "2 resource filenames are req"),
+        # Too many inputs
+        (2012, 17520, False, "", [2012, 2012, 2012], "2 resource years are req"),
+        (2012, 17520, False, ["", "", ""], None, "2 resource filenames are req"),
+        # Invalid combination for filename and year order
+        (2012, 17520, False, "f.csv", [2012, 2013], "_filename` cannot be a single"),
+        (2012, 17520, False, ["f.csv"], [2012, 2013], "must be the same length"),
+        (2012, 17520, False, ["a", "b", "c"], [2012, 2013, 2014], "elements but 2 are requi"),
     ],
     ids=[
-        "yr_order-missing",
-        "filenames-missing",
+        # Invalid setting with <= 1 year
         "start_year-extra_attr",
         "start_year-invalid_type",
-        "start_year-two_invalid",
-        "filenames-extra_attr",
-        "yr_order-extra_attr",
-    ],
-)
-def test_config_attribute_errors(input_config, expected_msg, yr_setting):
-    with pytest.raises(AttributeError) as excinfo:
-        FakeResourceConfig.from_dict(input_config["site"])
-    assert expected_msg in str(excinfo.value)
-    assert f"`resource_year_setting` of '{yr_setting}'" in str(excinfo.value)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,expected_msg",
-    [
-        # Invalid setting with <= 1 year
-        (2012, 4380, False, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
-        (2012, 8760, False, "filenames", [""], None, "_year_setting` must be 'start_year'"),
-        (2012, 8784, True, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
-        (2012, 8784, True, "filenames", [""], None, "_year_setting` must be 'start_year'"),
-        # Not enough inputs
-        (2012, 17520, False, "year_order", "", [2012], "2 resource years are req"),
-        (2012, 17520, False, "filenames", [""], None, "2 resource filenames are req"),
-        # Too many inputs
-        (2012, 17520, False, "year_order", "", [2012, 2012, 2012], "2 resource years are req"),
-        (2012, 17520, False, "filenames", ["", "", ""], None, "2 resource filenames are req"),
-    ],
-    ids=[
-        # Invalid setting with <= 1 year
         "yr_order-0.5yr",
-        "filenames-1yr",
-        "yr_order-1yr-leap",
         "filenames-1yr-leap",
         # Not enough inputs
         "yr_order-too_short",
@@ -147,12 +118,15 @@ def test_config_attribute_errors(input_config, expected_msg, yr_setting):
         # Too many inputs
         "yr_order-too_long",
         "filenames-too_long",
+        # Invalid
+        "single-filename_with_yr_order",
+        "length-mismatch",
+        "incorrect-lengths",
     ],
 )
 def test_setup_errors(input_config, expected_msg):
     # this test is pretty dependent on the function
     # `get_number_of_resource_years_needed`
-    error_type = AttributeError if "must be 'start_year'" in expected_msg else ValueError
 
     prob = om.Problem()
     comp = FakeResource(
@@ -162,7 +136,7 @@ def test_setup_errors(input_config, expected_msg):
     )
     prob.model.add_subsystem("resource", comp)
 
-    with pytest.raises(error_type) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         prob.setup()
     assert expected_msg in str(excinfo.value)
 
@@ -186,8 +160,8 @@ def test_setup_errors(input_config, expected_msg):
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order",
-    [(2012, 17544, True, "filenames", ["data_2013.csv", "data_2012.csv"], None)],
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2012, 17544, True, ["data_2013.csv", "data_2012.csv"], None)],
 )
 def test_get_data_filenames(subtests, input_config):
     # This is testing whether the resource years are properly estimated from the first call

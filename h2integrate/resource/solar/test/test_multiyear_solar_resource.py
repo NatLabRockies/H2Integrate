@@ -13,27 +13,27 @@ from h2integrate.resource.solar.nlr_developer_himawari_api_models import Himawar
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "lat,lon,resource_year,tz,dt,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,model",
+    "lat,lon,resource_year,tz,dt,n_timesteps,include_leap,resource_fname,yr_order,model",
     [
         # --- Multiple years ---
-        (-27.3649,152.67935,2012,0,3600,17544,True,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,17520,False,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,26280,False,"year_order","",[2012,2013,2012],Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,26304,True,"year_order","",[2012,2013,2013],Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,17544,True,"filenames",["-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv","-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv"],None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,17520,False,"filenames",["-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv","-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv"],None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,17544,True,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,17520,False,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,26280,False,"",[2012,2013,2012],Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,26304,True,"",[2012,2013,2013],Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,17544,True,["-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv","-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv"],None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,17520,False,["-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv","-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv"],None,Himawari7SolarAPI),
         # --- TMY ---
-        (47.5233,-92.5366,"tmy-2022",-1,3600,17520,False,"start_year","",None,GOESTMYSolarAPI),
-        (47.5233,-92.5366,"tmy-2022",-1,3600,26280,False,"year_order","",["tmy-2022","tmy-2023","tmy-2022"],GOESTMYSolarAPI),
-        (47.5233,-92.5366,"tmy-2022",-1,3600,17520,False,"filenames",["47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv","47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv"],None,GOESTMYSolarAPI),
+        (47.5233,-92.5366,"tmy-2022",-1,3600,17520,False,"",None,GOESTMYSolarAPI),
+        (47.5233,-92.5366,"tmy-2022",-1,3600,26280,False,"",["tmy-2022","tmy-2023","tmy-2022"],GOESTMYSolarAPI),
+        (47.5233,-92.5366,"tmy-2022",-1,3600,17520,False,["47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv","47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv"],None,GOESTMYSolarAPI),
         # --- Partial years ---
-        (-27.3649,152.67935,2012,0,3600,13164,True,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,13140,False,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,4380,False,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,4404,True,"start_year","",None,Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,21900,False,"year_order","",[2013,2012,2013],Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,21948,True,"year_order","",[2012,2013,2012],Himawari7SolarAPI),
-        (-27.3649,152.67935,2012,0,3600,4404,True,"start_year","-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,13164,True,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,13140,False,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,4380,False,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,4404,True,"",None,Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,21900,False,"",[2013,2012,2013],Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,21948,True,"",[2012,2013,2012],Himawari7SolarAPI),
+        (-27.3649,152.67935,2012,0,3600,4404,True,"-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv",None,Himawari7SolarAPI),
 
         ],
     ids=[
@@ -98,11 +98,11 @@ def test_solar_resource_nonannual(
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "lat,lon,resource_year,tz,dt,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,model",
+    "lat,lon,resource_year,tz,dt,n_timesteps,include_leap,resource_fname,yr_order,model",
     [
-        (34.22,-102.75,2012,0,3600,17520,False,"start_year","",None,GOESAggregatedSolarAPI),
-        (34.22,-102.75,2012,0,3600,17520,False,"year_order","",[2013, 2012],GOESAggregatedSolarAPI),
-        (34.22,-102.75,2012,0,3600,17520,False,"filenames",["34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv","34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv"],None,GOESAggregatedSolarAPI),
+        (34.22,-102.75,2012,0,3600,17520,False,"",None,GOESAggregatedSolarAPI),
+        (34.22,-102.75,2012,0,3600,17520,False,"",[2013, 2012],GOESAggregatedSolarAPI),
+        (34.22,-102.75,2012,0,3600,17520,False,["34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv","34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv"],None,GOESAggregatedSolarAPI),
     ],
     ids=[
         "GOESAggregated-2year-start_year",
@@ -117,7 +117,6 @@ def test_solar_resource_multiyear_site_change(
     resource_config_multiyear,
     site_config_multiyear,
     plant_simulation_multiyear,
-    yr_setting,
     ):
     # Test based on Example 22
     # 2012 and 2013 used for resource data
