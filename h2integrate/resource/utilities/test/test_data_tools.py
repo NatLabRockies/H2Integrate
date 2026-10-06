@@ -11,14 +11,14 @@ from h2integrate.resource.utilities.data_tools import (
 
 
 @pytest.mark.unit
-def test_separate_data(subtests):
+def test_separate_timeseries_and_metadata(subtests):
     fake_meta_data = {
-        "site_id": 4400,  # int
-        "is_data": True,  # bool
-        "site_lat": 41.88,  # float
-        "site_lon": np.max([-102.74, -103.00]),  # np.float64,
-        "units": {"a": "m", "c": "deg/s"},  # dict
-        "country": "USA",  # str
+        "site_id": 4400,
+        "is_data": True,
+        "site_lat": 41.88,
+        "site_lon": np.float64(-102.74),
+        "units": {"a": "m", "c": "deg/s"},
+        "country": "USA",
     }
     fake_timeseries_data = {"ghi": (1, 2, 3), "dhi": [1, 2, 3], "dni": np.array([1, 2, 3])}
 
@@ -46,17 +46,19 @@ def test_append_timeseries_data(subtests):
         "list_data": [6],
     }
 
-    with subtests.test("metadata is retained by default"):
-        result = append_timeseries_data(data_full, new_data)
+    result = append_timeseries_data(data_full, new_data)
+    with subtests.test("metadata is retained from the original data"):
         assert result["site_id"] == 4400
+
+    with subtests.test("array and list timeseries data are appended"):
         np.testing.assert_array_equal(result["array_data"], [1, 2, 5])
         assert result["list_data"] == [3, 4, 6]
 
     with subtests.test("metadata can be omitted"):
-        result = append_timeseries_data(data_full, new_data, return_with_metadata=False)
-        assert set(result) == {"array_data", "list_data"}
-        np.testing.assert_array_equal(result["array_data"], [1, 2, 5])
-        assert result["list_data"] == [3, 4, 6]
+        timeseries_only = append_timeseries_data(data_full, new_data, return_with_metadata=False)
+        assert set(timeseries_only) == {"array_data", "list_data"}
+        np.testing.assert_array_equal(timeseries_only["array_data"], result["array_data"])
+        assert timeseries_only["list_data"] == result["list_data"]
 
 
 @pytest.mark.unit
@@ -114,6 +116,10 @@ def test_clip_data_to_resource_year(subtests):
         assert result["Year"].tolist() == [2013]
         assert result["ghi"].tolist() == [2.0]
 
+    with subtests.test("single-year data is returned unchanged"):
+        single_year_data = {"year": [2012, 2012], "ghi": [1.0, 2.0]}
+        assert clip_data_to_resource_year(single_year_data, resource_year=2012) is single_year_data
+
     with subtests.test("TMY data is returned unchanged"):
         tmy_data = {"year": [2001], "ghi": [1.0]}
         assert clip_data_to_resource_year(tmy_data, resource_year="tmy-2020") is tmy_data
@@ -124,50 +130,33 @@ def test_clip_data_to_resource_year(subtests):
 
 
 @pytest.mark.unit
-def test_append_timeseries_data_warning(subtests):
-    fake_data_1 = {
+@pytest.mark.parametrize(
+    "full_data_has_extra_key,expected_site_id,expected_state",
+    [(True, 4400, False), (False, 4401, True)],
+    ids=["extra-key-in-full-data", "extra-key-in-new-data"],
+)
+def test_append_timeseries_data_warns_and_drops_unshared_keys(
+    full_data_has_extra_key, expected_site_id, expected_state
+):
+    data_with_extra_key = {
         "site_id": 4400,
-        "ghi": np.ones(8760),
-        "dni": np.ones(8760),
-        "ws": np.ones(8760),
-        "year": [2012] * 8760,
+        "ghi": np.array([1.0, 2.0]),
+        "ws": np.array([3.0, 4.0]),
     }
-    fake_data_2 = {
+    data_without_extra_key = {
         "site_id": 4401,
         "state": "colorado",
-        "ghi": np.zeros(8760),
-        "dni": np.zeros(8760),
-        "year": [2013] * 8760,
+        "ghi": np.array([5.0, 6.0]),
     }
+    data_full, new_data = (
+        (data_with_extra_key, data_without_extra_key)
+        if full_data_has_extra_key
+        else (data_without_extra_key, data_with_extra_key)
+    )
 
-    with subtests.test("Add-on data has missing key"):
-        with pytest.warns(UserWarning) as excinfo:
-            combined_data = append_timeseries_data(
-                fake_data_1, fake_data_2, return_with_metadata=True
-            )
-        assert "['ws'] will be removed" in str(excinfo.list[0].message)
+    with pytest.warns(UserWarning, match=r"\['ws'\] will be removed"):
+        combined_data = append_timeseries_data(data_full, new_data)
 
-    with subtests.test("Meta data contains site id 4400"):
-        assert combined_data["site_id"] == 4400
-
-    with subtests.test("Meta data does not contain state"):
-        assert "state" not in combined_data
-
-    with subtests.test("Shared timeseries data is appended"):
-        assert len(combined_data["ghi"]) == 17520
-        assert np.all(combined_data["ghi"][:8760] == 1)
-        assert np.all(combined_data["ghi"][8760:] == 0)
-        assert combined_data["year"] == [2012] * 8760 + [2013] * 8760
-
-    with subtests.test("Full data has missing key"):
-        with pytest.warns(UserWarning) as excinfo:
-            combined_data = append_timeseries_data(
-                fake_data_2, fake_data_1, return_with_metadata=True
-            )
-        assert "['ws'] will be removed" in str(excinfo.list[0].message)
-
-    with subtests.test("Meta data contains site id 4401"):
-        assert combined_data["site_id"] == 4401
-
-    with subtests.test("Meta data contains state"):
-        assert "state" in combined_data
+    assert combined_data["site_id"] == expected_site_id
+    assert ("state" in combined_data) is expected_state
+    assert "ws" not in combined_data
