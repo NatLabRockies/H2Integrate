@@ -3075,6 +3075,9 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
 
     with subtests.test("Battery SOC stays within bounds"):
         soc = model.prob.get_val("battery.SOC", units="percent")
+        import pdb
+
+        pdb.set_trace()
         assert soc.max() <= 90.0 + 1e-3
         assert soc.min() >= 10.0 - 1e-3
 
