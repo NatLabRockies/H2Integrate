@@ -122,6 +122,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         if self.resource_year_setting == "filenames":
             self.inferred_resource_years = []
+            self.resource_year_filenames_processed = False
 
     def check_config_inputs(self):
         # Calculate the number of resource years needed to achieve the simulation length
@@ -134,7 +135,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # and resource_filenames cannot be a list
             if self.config.resource_year_order is not None:
                 msg = (
-                    f"Recieved extraneous input `resource_year_order` of "
+                    f"Received extraneous input `resource_year_order` of "
                     f"{self.config.resource_year_order}`. When running a simulation for <= 1 year, "
                     "`resource_year_order` is an extraneous input. "
                 )
@@ -142,7 +143,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             if isinstance(self.config.resource_filename, list):
                 msg = (
-                    "Recived invalid input type for `resource_filename`. "
+                    "Received invalid input type for `resource_filename`. "
                     "When running a simulation for <= 1 year, "
                     "`resource_filename` must be a single filename (not a list)."
                 )
@@ -165,7 +166,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # Provided resource_year_order and a list of filenames
 
             if len(self.config.resource_filename) != len(self.config.resource_year_order):
-                # If they arent the same length, throw an error
+                # If they aren't the same length, throw an error
                 err_msg = (
                     "If providing `resource_year_order` and `resource_filename` as a list, they "
                     f"must be the same length. `resource_year_order` is length "
@@ -244,13 +245,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if isinstance(resource_year, str):
                 # resource_year is already a string, like 'tmy-2020'
                 if resource_year not in year_options:
-                    msg = f"Invalid resource year '{resource_year}', " f"options are {year_options}"
+                    msg = f"Invalid resource year '{resource_year}', options are {year_options}"
                     raise ValueError(msg)
 
             if isinstance(resource_year, int):
                 year_str = f"{init_resource_year.split('-')[0]}-{resource_year}"
                 if year_str not in year_options:
-                    msg = f"Invalid resource year '{year_str}', " f"options are {year_options}"
+                    msg = f"Invalid resource year '{year_str}', options are {year_options}"
                     raise ValueError(msg)
 
             return
@@ -269,7 +270,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         if resource_year < first_yr or resource_year > last_yr:
             msg = (
-                f"Invaild resource year of {resource_year}. "
+                f"Invalid resource year of {resource_year}. "
                 f"Resource year must be between {first_yr} and {last_yr}"
             )
             raise ValueError(msg)
@@ -290,7 +291,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
-            # to accomodate tmy solar resource models
+            # to accommodate tmy solar resource models
             year_options = self.config.__attrs_attrs__.resource_year.validator.options
             if isinstance(resource_starting_year, str):
                 # resource_year is formatted like `tmy-2020`
@@ -632,7 +633,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
             infer_years_from_files = (
-                self.config.resource_year_order is None and len(self.inferred_resource_years) == 0
+                self.config.resource_year_order is None
+                and not self.resource_year_filenames_processed
             )
             if self.config.resource_year_order is not None:
                 resource_years = self.config.resource_year_order
@@ -645,6 +647,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 resource_years = [self.config.resource_year] * len(self.config.resource_filename)
                 # Prepare to handle discrepancies if site changes
                 self.inferred_resource_years = []
+                self.resource_year_filenames_processed = True
                 self.raise_error_if_site_change = False
                 self.error_msg_details = ""
                 infer_years_from_files = True

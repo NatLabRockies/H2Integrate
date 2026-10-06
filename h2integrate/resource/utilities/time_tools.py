@@ -26,7 +26,8 @@ def contains_leap_day(data):
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
     # Check if data includes leap day
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
     return data_has_leap_day
 
 
@@ -72,7 +73,8 @@ def check_data_length(data, n_timesteps: int):
 
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
 
     # Check if data is the same length as the number of timesteps
     if len(data) != n_timesteps:
@@ -120,7 +122,8 @@ def process_leap_day(data: dict, include_leap_day: bool):
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
     # Check if data includes leap day
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
 
     # Remove leap day if needed
     if not include_leap_day and data_has_leap_day:
