@@ -154,11 +154,26 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # Running multiple years
         provided_yr_order = self.config.resource_year_order is not None
         provided_filenames = isinstance(self.config.resource_filename, list)
+        provided_filename = (
+            isinstance(self.config.resource_filename, str) and self.config.resource_filename != ""
+        ) or isinstance(self.config.resource_filename, Path)
 
         if not provided_filenames and not provided_yr_order:
             # Didn't provide either, using resource_year as the start-year
             # Check that enough future-years are available from the start-year
             self.get_resource_years_from_start_year(self.config.resource_year)
+            # NOTE: should check if `resource_filename` is not an empty string
+
+            # Cannot provide a single filename when running multiple years
+            if provided_filename:
+                msg = (
+                    f"A single `resource_filename` ({self.config.resource_filename}) cannot be "
+                    f"used for a simulation requiring {n_data_years} resource years. "
+                    "Please either specify `resource_filename` as a list of of filenames or "
+                    "leave it as an empty string. "
+                )
+                raise ValueError(msg)
+
             return "start_year"
 
         if provided_filenames and provided_yr_order:
@@ -186,9 +201,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             return "filenames"
 
-        provided_filename = (
-            isinstance(self.config.resource_filename, str) and self.config.resource_filename != ""
-        ) or isinstance(self.config.resource_filename, Path)
         if provided_yr_order and provided_filename:
             # Provided year order and provided a filename (not a list of filenames)
             msg = (

@@ -122,7 +122,9 @@ def clip_data_to_resource_year(data, resource_year):
 
 def estimate_resource_year_from_data(data):
     """Estimate the resource year from the resource data. Returns
-    the most common year in the resource data timeseries.
+    the most common year in the resource data timeseries. This is primarily
+    useful for OpenMeteo dataset models, which download resource data for some buffer
+    hours preceeding and following the specified resource year.
 
     Args:
         data (dict): resource data loaded from a single file (should not contain multiple years)
