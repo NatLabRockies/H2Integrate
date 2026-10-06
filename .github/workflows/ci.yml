@@ -71,6 +71,9 @@ jobs:
           conda install -y -c conda-forge glpk highspy coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
           pip install ".[develop${{ matrix.optional && ',extras' || '' }}]"
+      - name: List conda packages
+        shell: bash -el {0}
+        run: conda list
       - name: Create env file
         run: |
           touch .env
