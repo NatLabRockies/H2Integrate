@@ -125,7 +125,7 @@ class ProFastLCO(ProFastBase):
         pf = self.populate_profast(inputs)
 
         # simulate ProFAST
-        sol, summary, price_breakdown = run_profast(pf)
+        sol, _summary, price_breakdown = run_profast(pf)
 
         # populate outputs
         # Output names based on naming convention for finance subgroups
@@ -141,7 +141,7 @@ class ProFastLCO(ProFastBase):
         pf_config_dict = convert_pf_to_dict(pf)
 
         # make LCO cost breakdown
-        lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
         # Check whether to export profast object to .yaml file

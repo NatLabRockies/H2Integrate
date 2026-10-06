@@ -6,13 +6,17 @@ import os
 
 from h2integrate import EXAMPLE_DIR
 
-from test.conftest import (  # noqa: F401
+# ruff: disable[F401]
+from test.conftest import (
     temp_dir,
     temp_dir_module,
     temp_copy_of_example,
     pytest_collection_modifyitems,
     temp_copy_of_example_module_scope,
 )
+
+
+# ruff: enable[F401]
 
 
 def pytest_sessionstart(session):

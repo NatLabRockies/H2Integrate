@@ -9,9 +9,7 @@ _DEPRECATION_MSG = (
     "Please use '{new}' instead. The nrel.gov API domain has moved to nlr.gov."
 )
 
-_ENV_MISSING_MSG = (
-    "{new} (or {old}) has not been set. " "Please set the {new} environment variable."
-)
+_ENV_MISSING_MSG = "{new} (or {old}) has not been set. Please set the {new} environment variable."
 
 
 def get_nlr_developer_api_credential(
