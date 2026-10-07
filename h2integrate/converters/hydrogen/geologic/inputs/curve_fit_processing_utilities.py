@@ -269,7 +269,7 @@ def plot_curve_fit(
         new_h2_out_surf = z_surf * y_grid
     elif output_name == "Steam [kt/h]":
         z_surf = STEAM_CONSTANT / h2_out_surf if h2_out_surf is not None else z_surf
-    elif output_name not in ["H2 Conc Out [% mol]"]:
+    elif output_name != "H2 Conc Out [% mol]":
         if h2_out_surf is not None:
             z_surf = z_surf * y_grid / h2_out_surf
 

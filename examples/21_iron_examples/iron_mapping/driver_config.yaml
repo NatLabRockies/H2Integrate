@@ -39,5 +39,8 @@ recorder:
   file: cases.sql
   overwrite_recorder: true
   flag: true
-  includes: [site.latitude, site.longitude, finance_subgroup_sponge_iron.LCOS]
+  includes:
+    - site.latitude
+    - site.longitude
+    - finance_subgroup_sponge_iron.LCOS
   excludes: ['*']

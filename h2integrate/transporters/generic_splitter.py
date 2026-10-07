@@ -30,7 +30,7 @@ class GenericSplitterPerformanceConfig(BaseConfig):
         if self.split_mode == "fraction":
             if self.fraction_to_priority_tech is None:
                 raise ValueError(
-                    "fraction_to_priority_tech is required" " when split_mode is 'fraction'"
+                    "fraction_to_priority_tech is required when split_mode is 'fraction'"
                 )
         if self.split_mode == "prescribed_commodity":
             if self.prescribed_commodity_to_priority_tech is None:

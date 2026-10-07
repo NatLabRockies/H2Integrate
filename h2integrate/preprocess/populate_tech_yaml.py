@@ -303,7 +303,7 @@ def extract_model_inputs(
 
         except (AttributeError, KeyError, TypeError, ValueError) as e:
             raise RuntimeError(
-                f"Failed to introspect {config_class_name} for '{model_name}'. " f"Error: {e}"
+                f"Failed to introspect {config_class_name} for '{model_name}'. Error: {e}"
             ) from e
 
     # Clean up numpy types for YAML serialization

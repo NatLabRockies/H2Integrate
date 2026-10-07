@@ -193,7 +193,7 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
         OAE_inputs = setup_ocean_alkalinity_enhancement_inputs(self.config)
 
         # Call the OAE calculation method from the echem_oae module
-        range_outputs, oae_outputs = echem_oae.run_ocean_alkalinity_enhancement_physics_model(
+        _range_outputs, oae_outputs = echem_oae.run_ocean_alkalinity_enhancement_physics_model(
             power_profile_w=inputs["electricity_in"],
             power_capacity_w=max(
                 inputs["electricity_in"]

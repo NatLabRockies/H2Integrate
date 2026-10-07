@@ -238,7 +238,6 @@ ignore = [
   "D401",
   "PERF203",
   "PD011",
-  "PD901",
   "RUF015",
   "N806",  # NOTE: many variable names use an uppercase for legitimate reasons
   "N802",  # NOTE: many function names use an uppercase for legitimate reasons
@@ -251,6 +250,9 @@ ignore = [
   "B006",
   "B008",
   "B023",
+
+  # TODO: should be fixed, but requires discussion
+  "A005",
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -63,8 +63,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 
         if self.create_model_from == "new" and self.tidal_power_curve is None:
             msg = (
-                "To create a new MhkTidal object, please provide a "
-                "tidal_power_curve in the config."
+                "To create a new MhkTidal object, please provide a tidal_power_curve in the config."
             )
             raise ValueError(msg)
 
