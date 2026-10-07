@@ -6,6 +6,7 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.converters.tools import check_pysam_lifetime_options
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -123,6 +124,7 @@ class PySAMWavePerformanceConfig(BaseConfig):
         return design_dict
 
 
+@register
 class PySAMWavePerformanceModel(PerformanceModelBaseClass):
     """An OpenMDAO component that wraps the PySAM MhkWave model.
 

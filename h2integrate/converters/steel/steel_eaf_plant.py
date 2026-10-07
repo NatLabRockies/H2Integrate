@@ -1,9 +1,11 @@
+from h2integrate.core.supported_models import register
 from h2integrate.converters.steel.steel_eaf_baseclass import (
     ElectricArcFurnacePlantBaseCostComponent,
     ElectricArcFurnacePlantBasePerformanceComponent,
 )
 
 
+@register
 class HydrogenEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
     """Cost component for hydrogen-based electric arc furnace (EAF) plant
     using the Rosner cost model.
@@ -24,6 +26,7 @@ class HydrogenEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
         super().setup()
 
 
+@register
 class NaturalGasEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
     """Cost component for natural gas-based electric arc furnace (EAF) plant
     using the Rosner cost model.
@@ -44,6 +47,7 @@ class NaturalGasEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
         super().setup()
 
 
+@register
 class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanceComponent):
     """Performance component for hydrogen-based electric arc furnace (EAF) plant
     using the Rosner performance model.
@@ -72,6 +76,7 @@ class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanc
         super().setup()
 
 
+@register
 class NaturalGasEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanceComponent):
     """Performance component for natural gas-based electric arc furnace (EAF) plant
     using the Rosner performance model.

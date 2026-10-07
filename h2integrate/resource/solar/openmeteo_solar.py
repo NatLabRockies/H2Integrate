@@ -8,6 +8,7 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 from h2integrate.resource.utilities.data_tools import (
     clip_data_to_resource_year,
@@ -51,6 +52,7 @@ class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
     verify_download: bool = field(default=False)
 
 
+@register
 class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalSolarAPIConfig

@@ -19,6 +19,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define
@@ -44,6 +45,7 @@ class HumbertEwinPerformanceComponentConfig(BaseConfig):
     capacity_mw: float = field(kw_only=True)
 
 
+@register
 class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
     """OpenMDAO component for the Humbert iron electrowinning performance model.
 

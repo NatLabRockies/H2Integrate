@@ -8,6 +8,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -67,6 +68,7 @@ class SimpleASUPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     """Simple linear converter to model nitrogen production from an
     Air Separation Unit.
@@ -291,6 +293,7 @@ class SimpleASUCostConfig(CostModelBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleASUCostModel(CostModelBaseClass):
     _time_step_bounds = (
         3600,

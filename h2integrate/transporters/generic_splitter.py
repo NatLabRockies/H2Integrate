@@ -3,6 +3,7 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -45,6 +46,7 @@ class GenericSplitterPerformanceConfig(BaseConfig):
             self.fraction_to_priority_tech = 0.0
 
 
+@register(no_cost=True)
 class GenericSplitterPerformanceModel(om.ExplicitComponent):
     """Split a commodity stream from one source into two outputs.
 

@@ -6,6 +6,7 @@ from floris import TimeSeries, FlorisModel
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CacheBaseClass, CacheBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
     average_wind_data_for_hubheight,
@@ -97,6 +98,7 @@ class FlorisWindPlantPerformanceModelConfig(CacheBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     """
     An OpenMDAO component that wraps a Floris model.
