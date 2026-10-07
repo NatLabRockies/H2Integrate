@@ -425,7 +425,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         system_model.Turbine.calculate_powercurve(
             turbine_rating_kw,
-            int(rotor_diameter),
+            rotor_diameter,
             self.power_curve_config.elevation,
             self.power_curve_config.wind_default_max_cp,
             self.power_curve_config.wind_default_max_tip_speed,
@@ -450,9 +450,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             )
             system_model.value("wind_turbine_ct_curve", tuple(resampled_ct.tolist()))
 
-        success = False
-        if max(system_model.value("wind_turbine_powercurve_powerout")) == float(turbine_rating_kw):
-            success = True
+        max_power_from_curve = max(system_model.value("wind_turbine_powercurve_powerout"))
+        success = np.isclose(max_power_from_curve, float(turbine_rating_kw), rtol=1e-12, atol=1e-9)
+
         return success
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -495,8 +495,8 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         # if power-curve could not be adjusted to match input values
         if not success:
             msg = (
-                "Could not adjust turbine powercurve to match turbine rating of ",
-                f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters",
+                "Could not adjust turbine powercurve to match turbine rating of "
+                f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters"
             )
             raise ValueError(msg)
 
