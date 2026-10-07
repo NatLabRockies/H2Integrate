@@ -125,6 +125,16 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             self.resource_year_filenames_processed = False
 
     def check_config_inputs(self):
+        """Check that the config does not have inputs that conflict with eachother or
+        the simulation parameters and infer the "setting" from the config inputs.
+
+        Raises:
+            ValueError: if the input config has attribute values that conflict with
+                eachother or the simulation parameters
+
+        Returns:
+            str: the resource year 'setting' inferred from the user-inputs
+        """
         # Calculate the number of resource years needed to achieve the simulation length
         n_data_years = get_number_of_resource_years_needed(
             self.dt, self.n_timesteps, self.config.include_leap_day
@@ -596,7 +606,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         1) Check if resource data was input. If not, continue to Step 2.
         2) Determine the resource years and resource filenames to loop through based on
             ``config.resource_year_setting``
-        3) Loop through the resource years and resource filenames, calling ``get_data()``
+        3) Loop through the resource years and resource filenames, calling ``get_data_for_year()``
             for each iteration
 
         Args:
@@ -642,19 +652,22 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         elif self.resource_year_setting == "filenames":
             # NOTE: trusting that the site, timezone, and timestep is consistent across files
+            # intentionally allowing for some flexibility as long as site doesn't change
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
+            # see if we need to infer years from filenames or file data
             infer_years_from_files = (
                 self.config.resource_year_order is None
                 and not self.resource_year_filenames_processed
             )
             if self.config.resource_year_order is not None:
+                # use user-provided year order
                 resource_years = self.config.resource_year_order
             if not infer_years_from_files:
+                # we've already inferred years on a previous loop
                 resource_years = self.inferred_resource_years
             if infer_years_from_files:
                 # likely when first_call is True
-                # if first_call:
                 # resource_years are not used on first call since the filename is provided
                 resource_years = [self.config.resource_year] * len(self.config.resource_filename)
                 # Prepare to handle discrepancies if site changes
@@ -662,13 +675,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 self.resource_year_filenames_processed = True
                 self.raise_error_if_site_change = False
                 self.error_msg_details = ""
-                infer_years_from_files = True
-            # else:
-            #     # not first call, use resource years that were estimated from earlier run
-            #     resource_years = self.inferred_resource_years
-            #     if site_changed:
-            #         resource_filenames = [""] * len(self.config.resource_filename)
+                infer_years_from_files = True  # flag to infer years from files
+
             if not first_call and site_changed:
+                # NOTE: maybe this should be moved outside of the
+                # 'filenames' resource setting if statement
+
+                # don't use input resource filenames if site changes
                 resource_filenames = [""] * len(self.config.resource_filename)
 
             if site_changed and self.raise_error_if_site_change:
@@ -684,7 +697,8 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
             resource_years = self.config.resource_year_order
-            # config.resource_filename is an empty string (based on earlier checks)
+            # config.resource_filename is an empty string if running multiple years
+            # (based on checks in ``check_config_inputs()``)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
         timeseries_data = {}
