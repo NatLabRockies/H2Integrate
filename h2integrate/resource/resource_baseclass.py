@@ -123,6 +123,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if self.resource_year_setting == "filenames":
             self.inferred_resource_years = []
             self.resource_year_filenames_processed = False
+            self.raise_error_if_site_change = False
 
     def check_config_inputs(self):
         """Check that the config does not have inputs that conflict with eachother or
@@ -660,12 +661,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 self.config.resource_year_order is None
                 and not self.resource_year_filenames_processed
             )
-            if self.config.resource_year_order is not None:
-                # use user-provided year order
-                resource_years = self.config.resource_year_order
-            if not infer_years_from_files:
-                # we've already inferred years on a previous loop
-                resource_years = self.inferred_resource_years
             if infer_years_from_files:
                 # likely when first_call is True
                 # resource_years are not used on first call since the filename is provided
@@ -676,6 +671,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 self.raise_error_if_site_change = False
                 self.error_msg_details = ""
                 infer_years_from_files = True  # flag to infer years from files
+            if not infer_years_from_files and self.resource_year_filenames_processed:
+                # we've already inferred years on a previous loop
+                resource_years = self.inferred_resource_years
+            if self.config.resource_year_order is not None:
+                # use user-provided year order
+                resource_years = self.config.resource_year_order
 
             if not first_call and site_changed:
                 # NOTE: maybe this should be moved outside of the
@@ -704,6 +705,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         timeseries_data = {}
         meta_data = {}
 
+        assert len(resource_years) == len(resource_filenames)
         # 3) Loop through the resource years
         for year, filename in zip(resource_years, resource_filenames):
             is_leap = False  # leap year is always false for TMY datasets

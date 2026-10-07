@@ -103,11 +103,13 @@ def test_solar_resource_nonannual(
         (34.22,-102.75,2012,0,3600,17520,False,"",None,GOESAggregatedSolarAPI),
         (34.22,-102.75,2012,0,3600,17520,False,"",[2013, 2012],GOESAggregatedSolarAPI),
         (34.22,-102.75,2012,0,3600,17520,False,["34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv","34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv"],None,GOESAggregatedSolarAPI),
+        (34.22,-102.75,2012,0,3600,17520,False,["34.22_-102.75_2012_goes_aggregated_v4_60min_utc_tz.csv","34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv"],[2013,2012],GOESAggregatedSolarAPI),
     ],
     ids=[
         "GOESAggregated-2year-start_year",
         "GOESAggregated-2year-year_order",
-        "GOESAggregated-2year-filenames",
+        "GOESAggregated-2year-filenames-with-inferred",
+        "GOESAggregated-2year-filenames-with-diff-yr-order",
         ]
 )
 # fmt: on
@@ -117,6 +119,8 @@ def test_solar_resource_multiyear_site_change(
     resource_config_multiyear,
     site_config_multiyear,
     plant_simulation_multiyear,
+    yr_order,
+    resource_fname
     ):
     # Test based on Example 22
     # 2012 and 2013 used for resource data
@@ -163,14 +167,45 @@ def test_solar_resource_multiyear_site_change(
         driver_config={},
     )
 
+    if yr_order is not None and isinstance(resource_fname,list):
+        # using filenames with yr_order as back-up
+        # this is the test id "GOESAggregated-2year-filenames-with-diff-yr-order"
+        # in this case, the year-order is different when the site changes
+        expected_site0_yr_order = [2012, 2013] # this is from filenames
+        expected_site1_yr_order = [2013, 2012] # this is from yr_order
+    elif yr_order is not None and isinstance(resource_fname, str):
+        # using yr_order without filenames.
+        # this is for the test id "GOESAggregated-2year-year_order"
+        expected_site0_yr_order = yr_order
+        expected_site1_yr_order = yr_order
+    elif yr_order is None and isinstance(resource_fname, list):
+        # inferring years from resource files
+        # this is for test id "GOESAggregated-2year-filenames-with-inferred"
+        expected_site0_yr_order = [2012, 2013]
+        expected_site1_yr_order = [2012, 2013]
+    else:
+        expected_site0_yr_order = [2012, 2013]
+        expected_site1_yr_order = [2012, 2013]
+        # this is for test id "GOESAggregated-2year-start_year"
+
+
     prob.model.add_subsystem("resource", comp)
     prob.setup()
     prob.run_model()
     data_site0 = prob.get_val("resource.solar_resource_data").copy()
     idx_2012 = np.argwhere(data_site0["year"]==2012).flatten()
     idx_2013 = np.argwhere(data_site0["year"]==2013).flatten()
+    if idx_2012[0] < idx_2013[0]:
+        # 2012 happens before 2013
+        site0_yr_order = [2012, 2013]
+    else:
+        site0_yr_order = [2013, 2012]
+
     # check site0 results
     site0_meta = {k:v for k,v in data_site0.items() if k in site0_expected_meta_data}
+
+    with subtests.test("starting site rersource year order"):
+        assert expected_site0_yr_order == site0_yr_order
 
     with subtests.test("starting site id, lat, lon, elevation"):
         assert site0_expected_meta_data == site0_meta
@@ -194,7 +229,17 @@ def test_solar_resource_multiyear_site_change(
     idx_2012 = np.argwhere(data_site1["year"]==2012).flatten()
     idx_2013 = np.argwhere(data_site1["year"]==2013).flatten()
 
+    if idx_2012[0] < idx_2013[0]:
+        # 2012 happens before 2013
+        site1_yr_order = [2012, 2013]
+    else:
+        site1_yr_order = [2013, 2012]
+
     site1_meta = {k:v for k,v in data_site1.items() if k in site1_expected_meta_data}
+    with subtests.test("changed site rersource year order"):
+        assert expected_site1_yr_order == site1_yr_order
+
+
     with subtests.test("changed site id, lat, lon, elevation"):
         assert site1_expected_meta_data == site1_meta
     with subtests.test("changed site average GHI in 2012"):
