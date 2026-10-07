@@ -55,6 +55,7 @@
 - Standardized base class module file names on the `_baseclass.py` suffix, including renaming `h2integrate/core/model_baseclasses.py` to `h2integrate/core/model_baseclass.py`; imports from the old module paths must be updated. [PR 900](https://github.com/NatLabRockies/H2Integrate/pull/900)
 - Allow the PySAM battery performance model to configure additional BatteryStateful parameters through `pysam_options`. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Updates to all GH Actions, pre-commit, isort, and ruff versioning. [PR 904](https://github.com/NatLabRockies/H2Integrate/pull/904)
+- Update API resource models to be able to be able to handle nonannual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
 
 ## 0.9 [August 10, 2026]
 
