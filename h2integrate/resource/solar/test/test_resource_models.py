@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import numpy as np
@@ -317,6 +316,6 @@ def test_forced_download(plant_simulation,site_config,model):
     )
     prob.model.add_subsystem("resource", comp)
 
-    with pytest.raises(json.JSONDecodeError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         prob.setup()
-    assert "Expecting value: line 1 column 1 (char 0)" in str(excinfo.value)
+    assert "NLR_API_EMAIL (or NREL_API_EMAIL) has not been set" in str(excinfo.value)
