@@ -126,12 +126,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             self.raise_error_if_site_change = False
 
     def check_config_inputs(self):
-        """Check that the config does not have inputs that conflict with eachother or
+        """Check that the config does not have inputs that conflict with each other or
         the simulation parameters and infer the "setting" from the config inputs.
 
         Raises:
             ValueError: if the input config has attribute values that conflict with
-                eachother or the simulation parameters
+                each other or the simulation parameters
 
         Returns:
             str: the resource year 'setting' inferred from the user-inputs
@@ -603,12 +603,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
             inputs are different than the previous latitude and longitude values. If resource data
-            has not been already loaded for the, continue to Step 1.
+            has not already been loaded, continue to Step 1.
         1) Check if resource data was input. If not, continue to Step 2.
-        2) Determine the resource years and resource filenames to loop through based on
-            ``config.resource_year_setting``
-        3) Loop through the resource years and resource filenames, calling ``get_data_for_year()``
-            for each iteration
+        2) Determine the resource years and filenames from the configuration inputs.
+        3) Load data for each resource year by calling ``get_data_for_year()`` with its filename.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
