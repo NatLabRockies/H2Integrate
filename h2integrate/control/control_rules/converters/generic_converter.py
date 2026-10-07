@@ -3,6 +3,7 @@ from attrs import define
 from pyomo.network import Port
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_rules.pyomo_rule_baseclass import (
     PyomoRuleBaseClass,
     PyomoRuleBaseConfig,
@@ -16,6 +17,7 @@ class PyomoDispatchGenericConverterConfig(PyomoRuleBaseConfig):
     pass
 
 
+@register
 class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
     _time_step_bounds = (
         3600,

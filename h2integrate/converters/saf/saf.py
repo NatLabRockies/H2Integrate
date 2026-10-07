@@ -3,6 +3,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -12,6 +13,7 @@ class SAFPerformanceModelConfig(BaseConfig):
     lignin_consumption: float = field(default=1650.0)  # kg lignin/t SAF
 
 
+@register
 class SAFPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a saf plant.
@@ -102,6 +104,7 @@ class SAFCostModelConfig(BaseConfig):
     water_disposal_rate: float = field(default=0)  # TODO: Change assumption
 
 
+@register
 class SAFCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with saf production.

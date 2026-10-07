@@ -1,9 +1,11 @@
+from h2integrate.core.supported_models import register
 from h2integrate.converters.iron.iron_dri_baseclass import (
     IronReductionPlantBaseCostComponent,
     IronReductionPlantBasePerformanceComponent,
 )
 
 
+@register
 class HydrogenIronReductionPlantCostComponent(IronReductionPlantBaseCostComponent):
     """Cost component for hydrogen-based direct reduced iron (DRI) plant
     using the Rosner cost model.
@@ -25,6 +27,7 @@ class HydrogenIronReductionPlantCostComponent(IronReductionPlantBaseCostComponen
         super().setup()
 
 
+@register
 class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostComponent):
     """Cost component for natural gas-based direct reduced iron (DRI) plant
     using the Rosner cost model.
@@ -46,6 +49,7 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
         super().setup()
 
 
+@register
 class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerformanceComponent):
     """Performance component for hydrogen-based direct reduced iron (DRI) plant
     using the Rosner performance model.
@@ -74,6 +78,7 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
         super().setup()
 
 
+@register
 class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePerformanceComponent):
     """Performance component for natural gas-based direct reduced iron (DRI) plant
     using the Rosner performance model.

@@ -1,20 +1,16 @@
 import pytest
 
-from h2integrate.resource.test.conftest import (  # noqa: F401
+# ruff: disable[F401]
+from h2integrate.resource.test.conftest import (
     site_config,
     plant_simulation,
     pytest_sessionstart,
     pytest_sessionfinish,
 )
 
-from test.conftest import (  # noqa: F401
-    temp_dir,
-    temp_copy_of_example,
-    pytest_collection_modifyitems,
-)
+from test.conftest import temp_dir, temp_copy_of_example, pytest_collection_modifyitems
 
 
-# docs fencepost start: DO NOT REMOVE
 @pytest.fixture
 def plant_simulation_multiyear(tz, n_timesteps, dt):
     plant = {
@@ -39,19 +35,16 @@ def site_config_multiyear(lat, lon):
 
 
 @pytest.fixture
-def resource_config_multiyear(
-    lat, lon, resource_year, include_leap, yr_setting, resource_fname, yr_order
-):
+def resource_config_multiyear(lat, lon, resource_year, include_leap, resource_fname, yr_order):
     resource_config = {
         "latitude": lat,
         "longitude": lon,
         "resource_year": resource_year,
         "include_leap_day": include_leap,
-        "resource_year_setting": yr_setting,
         "resource_year_order": yr_order,
         "resource_filename": resource_fname,
     }
     return resource_config
 
 
-# docs fencepost end: DO NOT REMOVE
+# ruff: enable[F401]

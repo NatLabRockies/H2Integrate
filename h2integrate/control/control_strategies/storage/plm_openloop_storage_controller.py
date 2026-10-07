@@ -11,6 +11,7 @@ from h2integrate.core.utilities import (
     merge_shared_inputs,
     build_time_series_from_plant_config,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -91,6 +92,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControl
         self.common_post_init_operations()
 
 
+@register
 class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
     """
     Peak-load management storage controller implementing an open-loop control strategy.

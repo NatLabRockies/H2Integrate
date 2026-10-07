@@ -3,6 +3,7 @@ from attrs import field, define
 from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.methanol.methanol_baseclass import (
     MethanolCostConfig,
     MethanolCostBaseClass,
@@ -29,6 +30,7 @@ class CO2HMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
     elec_consume_ratio: float = field()
 
 
+@register
 class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of a CO2 Hydrogenation (CO2H) methanol
@@ -152,6 +154,7 @@ class CO2HMethanolPlantCostModelConfig(MethanolCostConfig):
     co2_price: float = field()
 
 
+@register
 class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
     """
     An OpenMDAO component for modeling the cost of a CO2 hydrogenation (CO2H) methanol plant.
@@ -221,6 +224,7 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
         outputs["OpEx"] = foc_usd_y + voc_usd_y + meoh_cat + ng_cost + co2_cost
 
 
+@register
 class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
     An OpenMDAO component for modeling the financing of a CO2 Hydrogenation (CO2H) methanol plant.

@@ -5,9 +5,11 @@ import numpy as np
 from openmdao.utils.units import convert_units, simplify_unit
 
 from h2integrate.finances.tools import _compute_rate_units
+from h2integrate.core.supported_models import register
 from h2integrate.finances.profast_baseclass import ProFastBase
 
 
+@register
 class ProFastNPV(ProFastBase):
     """Calculates the Net Present Value (NPV) of a commodity using ProFAST.
 

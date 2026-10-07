@@ -5,6 +5,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import ResizeablePerformanceModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerPerformanceBaseClass
@@ -52,6 +53,7 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
     electrolyzer_capex: int = field()
 
 
+@register
 class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
     An OpenMDAO component that wraps the PEM electrolyzer model.
@@ -144,7 +146,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         elif size_mode != "normal":
             raise NotImplementedError("Sizing mode '%s' not implemented".format())
 
-        n_pem_clusters = int(math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW))
+        n_pem_clusters = math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW)
 
         electrolyzer_actual_capacity_MW = n_pem_clusters * self.config.cluster_rating_MW
         pem_param_dict = {
@@ -155,7 +157,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         }
 
         energy_to_electrolyzer_kw = inputs["electricity_in"]
-        H2_Results, h2_ts, h2_tot, power_to_electrolyzer_kw = run_h2_PEM(
+        H2_Results, h2_ts, _h2_tot, _power_to_electrolyzer_kw = run_h2_PEM(
             electrical_generation_timeseries=energy_to_electrolyzer_kw,
             electrolyzer_size=electrolyzer_size_mw,
             useful_life=self.plant_life,
