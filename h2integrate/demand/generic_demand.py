@@ -1,7 +1,9 @@
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.demand.demand_baseclass import DemandComponentBase, DemandComponentBaseConfig
 
 
+@register
 class GenericDemandComponent(DemandComponentBase):
     """Component for for converting input supply into met demand.
 

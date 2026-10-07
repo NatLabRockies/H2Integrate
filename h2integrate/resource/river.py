@@ -5,6 +5,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -12,6 +13,7 @@ class RiverResourceConfig(BaseConfig):
     filename: str | Path = field()
 
 
+@register
 class RiverResource(om.ExplicitComponent):
     """
     A resource component for processing river discharge data from a CSV file.

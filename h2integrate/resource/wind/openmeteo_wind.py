@@ -7,8 +7,12 @@ import openmeteo_requests
 from attrs import field, define, validators
 from retry_requests import retry
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
-from h2integrate.resource.utilities.time_tools import process_leap_day
+from h2integrate.resource.utilities.data_tools import (
+    clip_data_to_resource_year,
+    estimate_resource_year_from_data,
+)
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
 from h2integrate.resource.wind.wind_resource_baseclass import WindResourceBase
 
@@ -49,6 +53,7 @@ class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
     verify_download: bool = field(default=False)
 
 
+@register
 class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalWindAPIConfig
@@ -96,7 +101,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
         # add resource data dictionary as an out
         self.add_discrete_output("wind_resource_data", val=data, desc="Dict of wind resource data")
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_openmeteo_archive_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -115,12 +120,12 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
@@ -130,8 +135,8 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
         Returns:
             str: url to use for API call.
         """
-        start_year = int(self.config.resource_year - 1)
-        end_year = int(self.config.resource_year + 1)
+        start_year = int(resource_year - 1)
+        end_year = int(resource_year + 1)
 
         input_data = {
             "latitude": latitude,
@@ -292,11 +297,7 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
         data["Hour"] = time.hour
         data["Minute"] = time.minute
 
-        data = data[data["Year"] == self.config.resource_year]
-
         data = data.reset_index(drop=True)
-
-        data = process_leap_day(data, self.config.include_leap_day, self.n_timesteps)
 
         data, data_units = self.format_timeseries_data(data)
         # make units for data in openmdao-compatible units
@@ -306,6 +307,10 @@ class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
 
         # update wind resource data with site data
         data.update(site_data)
+
+        # remove any excess or trailing resource data
+        resource_year = estimate_resource_year_from_data(data)
+        data = clip_data_to_resource_year(data, resource_year)
 
         return data | {"units": data_units}
 
