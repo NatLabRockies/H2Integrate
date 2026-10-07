@@ -142,6 +142,8 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "ShellTubeHXPerformanceModel": "converters.heat.shell_tube_hx:ShellTubeHXPerformanceModel",
+        "ShellTubeHXCostModel": "converters.heat.shell_tube_hx_cost_model:ShellTubeHXCostModel",
         "PaperMillPerformanceModel": "converters.paper_mill:PaperMillPerformanceModel",
         "PaperMillCostModel": "converters.paper_mill:PaperMillCostModel",
         "SAFPerformanceModel": "converters.saf:SAFPerformanceModel",
@@ -170,6 +172,8 @@ supported_models = _ModelRegistry(
         "PipeStorageCostModel": "storage.hydrogen:PipeStorageCostModel",
         "ATBBatteryCostModel": "storage.battery:ATBBatteryCostModel",
         "GenericStorageCostModel": "storage:GenericStorageCostModel",
+        "ETESPerformanceModel": "storage.heat.etes:ETESPerformanceModel",
+        "ETESCostModel": "storage.heat.etes_cost_model:ETESCostModel",
         # Control
         "SimpleStorageOpenLoopController": "control.control_strategies.storage:SimpleStorageOpenLoopController",
         "DemandOpenLoopStorageController": "control.control_strategies.storage:DemandOpenLoopStorageController",
