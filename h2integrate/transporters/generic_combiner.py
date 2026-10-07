@@ -45,6 +45,8 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
 
     _control_classifier = "combiner"
 
+    _is_steppable = True
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

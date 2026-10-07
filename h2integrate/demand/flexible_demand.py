@@ -288,5 +288,5 @@ class FlexibleDemandComponent(DemandComponentBase):
             outputs[f"{self.commodity}_flexible_demand_profile"] = flexible_demand_profile
 
             outputs = self.calculate_outputs(
-                inputs[f"{self.commodity}_in"], flexible_demand_profile, outputs
+                inputs[f"{self.commodity}_in"], flexible_demand_profile, inputs, outputs
             )

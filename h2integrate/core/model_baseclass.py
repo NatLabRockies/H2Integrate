@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import functools
 from pathlib import Path
 
 import dill
@@ -10,7 +11,58 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 
 
+class SkippableComputeMixin:
+    """Mixin that lets a component's ``compute()`` be skipped via an option.
+
+    Any subclass's ``compute()`` is automatically wrapped so it is skipped
+    whenever ``self.options["skip_compute"]`` is True. This lets the
+    concurrent/steppable simulation solver
+    (:class:`~h2integrate.core.concurrent_nl_solver.ConcurrentPlantNLSolver`)
+    avoid recomputing timestep-independent quantities (e.g. cost and finance
+    models) on every intermediate simulation step, without requiring each
+    model to check the flag itself.
+    """
+
+    def initialize(self):
+        super().initialize()
+
+        self.options.declare(
+            "skip_compute",
+            types=bool,
+            default=False,
+            desc=(
+                "When True, compute() is skipped entirely. Set by the concurrent "
+                "simulation solver to avoid recomputing timestep-independent "
+                "quantities during intermediate simulation steps."
+            ),
+        )
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Skip the rest of this setup if subclass is flagged as steppable
+        if getattr(cls, "_is_steppable", False):
+            return
+
+        user_compute = cls.__dict__.get("compute")
+        if user_compute is None or getattr(user_compute, "_skips_when_flagged", False):
+            return
+
+        @functools.wraps(user_compute)
+        def compute(self, *args):
+            if self.options["skip_compute"]:
+                return None
+            return user_compute(self, *args)
+
+        compute._skips_when_flagged = True
+        cls.compute = compute
+
+
 class PerformanceModelBaseClass(om.ExplicitComponent):
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # subclass performance model is capable of steppable simulation.
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
@@ -31,6 +83,11 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+
+        # n_steps_per_compute is the number of timesteps simulated per compute call
+        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
+            "n_steps_per_compute", self.n_timesteps
+        )
 
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
@@ -62,6 +119,9 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 "documentation."
             )
             raise NotImplementedError(msg)
+
+        # The index to start the simulation slice when compute is called.
+        self.add_input("timestep_index", val=0, desc="Time step index")
 
         # timeseries profiles
         self.add_output(
@@ -116,6 +176,20 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 desc=f"Full (uncurtailed) {self.commodity} output",
             )
 
+    def _get_compute_time_range(self, time_index):
+        """
+        This method gets the range of timestep indices that are simulated in a
+        single call to compute call.
+
+        Args:
+            time_index (numpy array): Starting time index of the simulation range.
+
+        Returns:
+            range: range of time indices
+        """
+        ti = int(time_index[0])
+        return range(ti, ti + self.n_steps_per_compute)
+
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
@@ -155,7 +229,7 @@ class CostModelBaseConfig(BaseConfig):
     cost_year: int = field(converter=int)
 
 
-class CostModelBaseClass(om.ExplicitComponent):
+class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
     """Baseclass to be used for all cost models. The built-in outputs
     are used by the finance model and must be outputted by all cost models.
 
@@ -169,9 +243,17 @@ class CostModelBaseClass(om.ExplicitComponent):
     Discrete Outputs:
         - cost_year (int): dollar-year corresponding to CapEx and OpEx values.
             This may be inherent to the cost model, or may depend on user provided input values.
+
+    Options:
+        - skip_compute (bool): see :class:`SkippableComputeMixin`.
     """
 
+    # Flag to indicate steppability. This flag should be overwritten by a subclass when that
+    # subclass cost model is capable of steppable simulation.
+    _is_steppable = False
+
     def initialize(self):
+        super().initialize()
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
