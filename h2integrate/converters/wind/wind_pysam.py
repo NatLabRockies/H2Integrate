@@ -425,7 +425,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         system_model.Turbine.calculate_powercurve(
             turbine_rating_kw,
-            rotor_diameter,
+            int(rotor_diameter),
             self.power_curve_config.elevation,
             self.power_curve_config.wind_default_max_cp,
             self.power_curve_config.wind_default_max_tip_speed,

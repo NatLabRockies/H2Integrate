@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import openmdao.api as om
 
+from h2integrate import H2I_LIBRARY_DIR, load_yaml
 from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
 
@@ -450,4 +451,61 @@ def test_wind_plant_pysam_change_n_turbines(plant_config_wtk, wind_plant_config,
                 prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
             )
             == expected_farm_capacity_MW
+        )
+
+
+@pytest.mark.regression
+def test_wind_plant_pysam_change_turbine_design(plant_config_wtk, wind_plant_config, subtests):
+    prob = om.Problem()
+    # pysam_options = load_yaml(H2I_LIBRARY_DIR/"pysam_options_6MW.yaml")
+    wind_resource = WTKNLRDeveloperAPIWindResource(
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
+        driver_config={},
+    )
+
+    wind_plant_config["pysam_options"] = load_yaml(H2I_LIBRARY_DIR / "pysam_options_6MW.yaml")
+    wind_plant_config["run_recalculate_power_curve"] = True
+    wind_plant = PYSAMWindPlantPerformanceModel(
+        plant_config=plant_config_wtk,
+        tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+    prob.setup()
+    # below are from the NREL 5 MW
+    new_rating_MW = 5.0
+    new_rot_diam = 126
+    new_hub_ht = 90.0
+    prob.set_val("wind_plant.wind_turbine_rating", new_rating_MW, units="MW")
+    prob.set_val("wind_plant.rotor_diameter", new_rot_diam, units="m")
+    prob.set_val("wind_plant.hub_height", new_hub_ht, units="m")
+    prob.run_model()
+
+    expected_farm_capacity_MW = wind_plant_config["num_turbines"] * new_rating_MW
+
+    with subtests.test("wind farm capacity"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.rated_electricity_production", units="MW")[0], rel=1e-6
+            )
+            == expected_farm_capacity_MW
+        )
+
+    with subtests.test("wind AEP matches electricity out"):
+        assert pytest.approx(
+            prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0], rel=1e-6
+        ) == np.sum(prob.get_val("wind_plant.electricity_out", units="MW"))
+
+    with subtests.test("wind AEP value"):
+        assert (
+            pytest.approx(
+                prob.get_val("wind_plant.annual_electricity_produced", units="MW*h/year")[0],
+                rel=1e-6,
+            )
+            == 651355.1859674307
         )
