@@ -31,7 +31,6 @@ from h2integrate.core.supported_models import supported_models
         "MeteosatPrimeMeridianTMYSolarAPI",
     ]
 )
-# fmt: on
 def test_nlr_solar_resource_file_downloads(
     subtests,
     plant_simulation,
@@ -150,7 +149,6 @@ def test_goes_resource_models(
     [("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 0)],  # noqa: E501
     ids=["OpenMeteoHistoricalSolarResource"]
 )
-# fmt: on
 def test_solar_resource_h2i_download(
     plant_simulation,
     site_config,
@@ -208,7 +206,6 @@ def test_solar_resource_h2i_download(
     [("OpenMeteoHistoricalSolarResource", "solar",  -28.454864, 114.551749, 2024, "openmeteo_archive_solar", 8)],  # noqa: E501
     ids=["OpenMeteoHistoricalSolarResource-LeapYear"]
 )
-# fmt: on
 def test_solar_resource_h2i_download_leap_year(
     plant_simulation,
     site_config,

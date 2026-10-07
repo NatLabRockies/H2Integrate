@@ -203,8 +203,7 @@ def create_xdsm(plant_config, outfile="connections_xdsm"):
     """
     if not plant_config.get("technology_interconnections", []):
         raise ValueError(
-            "Generating an XDSM diagram requires technology interconnections, "
-            "but none were found."
+            "Generating an XDSM diagram requires technology interconnections, but none were found."
         )
     if XDSM is None:
         raise ImportError("pyXDSM is required to generate an XDSM diagram.")

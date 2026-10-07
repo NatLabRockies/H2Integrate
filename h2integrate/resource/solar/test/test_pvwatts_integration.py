@@ -87,7 +87,6 @@ def pysam_performance_model(timezone=0):
         "Himawari8SolarAPI-LocalTz",
     ]
 )
-# fmt: on
 def test_pvwatts_integration(
     subtests,
     pysam_performance_model,

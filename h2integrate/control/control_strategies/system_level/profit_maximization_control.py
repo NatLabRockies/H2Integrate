@@ -74,7 +74,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             price = group.get("model_inputs", {}).get("commodity_sell_price", None)
             if price is None:
                 raise ValueError(
-                    f"Finance group '{raw}' does not contain " f"model_inputs.commodity_sell_price."
+                    f"Finance group '{raw}' does not contain model_inputs.commodity_sell_price."
                 )
             return price
         return raw

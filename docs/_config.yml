@@ -65,8 +65,7 @@ sphinx:
     # pytest ``conftest.py`` submodules from the generated stubs (they can't be
     # imported outside a pytest session, so autosummary would emit "failed to
     # import" warnings for every one).
-    templates_path:
-      - _templates
+    templates_path: [_templates]
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
     # Render "Attributes:" sections with the :ivar: role instead of separate
@@ -95,7 +94,6 @@ sphinx:
     # toctrees are how ``autosummary :recursive:`` links its child module
     # pages together and can't be moved into ``_toc.yml``, so the warnings
     # are noise rather than a real problem to fix.
-    suppress_warnings:
-      - etoc.toctree
+    suppress_warnings: [etoc.toctree]
     nb_merge_streams: true
     nb_execution_raise_on_error: true
