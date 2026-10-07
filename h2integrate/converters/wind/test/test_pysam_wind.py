@@ -109,6 +109,13 @@ def test_pysam_wind_outputs(plant_config_wtk, wind_plant_config, subtests):
 
 @pytest.mark.unit
 def test_pysam_wind_with_lifetime_performance(plant_config_wtk, wind_plant_config, subtests):
+
+    wind_plant_no_deg = PYSAMWindPlantPerformanceModel(
+        plant_config=plant_config_wtk,
+        tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+        driver_config={},
+    )
+
     wind_plant_config = wind_plant_config.copy()
     wind_plant_config["pysam_options"] = {
         **wind_plant_config["pysam_options"],
@@ -132,8 +139,12 @@ def test_pysam_wind_with_lifetime_performance(plant_config_wtk, wind_plant_confi
         tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
         driver_config={},
     )
-    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
-    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+
+    prob.model.add_subsystem("wind_resource", wind_resource)
+    prob.model.add_subsystem("wind_plant_no_deg", wind_plant_no_deg)
+    prob.model.add_subsystem("wind_plant", wind_plant)
+    prob.model.connect("wind_resource.wind_resource_data", "wind_plant.wind_resource_data")
+    prob.model.connect("wind_resource.wind_resource_data", "wind_plant_no_deg.wind_resource_data")
 
     with pytest.warns(UserWarning, match="analysis_period"):
         with pytest.warns(UserWarning, match="ac_degradation"):
@@ -142,7 +153,7 @@ def test_pysam_wind_with_lifetime_performance(plant_config_wtk, wind_plant_confi
 
     n_timesteps = plant_config_wtk["plant"]["simulation"]["n_timesteps"]
     plant_life = plant_config_wtk["plant"]["plant_life"]
-    generation = np.asarray(wind_plant.system_model.Outputs.gen)
+    generation = np.asarray(prob.model.get_val("wind_plant_no_deg.electricity_out", units="kW"))
     degradation = np.resize([0.0, 0.5], plant_life)
     expected_degradation_factors = 1 - degradation / 100
     annual_energy = generation[:n_timesteps].sum() * expected_degradation_factors
