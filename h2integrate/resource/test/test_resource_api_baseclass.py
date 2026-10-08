@@ -26,6 +26,8 @@ def input_config(n_timesteps, resource_year, include_leap, resource_fname, yr_or
         "include_leap_day": include_leap,
         "resource_year_order": yr_order,
         "resource_filename": resource_fname,
+        "upsample_method": "time",
+        "downsample_method": "mean",
         "timezone": 0,
     }
 
@@ -86,7 +88,7 @@ class FakeResource(ResourceBaseAPIModel):
             "month": dates.month.to_numpy().astype(float),
             "day": dates.day.to_numpy().astype(float),
             "hour": dates.hour.to_numpy().astype(float),
-            "minute": dates.hour.to_numpy().astype(float),
+            "minute": dates.minute.to_numpy().astype(float),
             "ws": np.arange(len(dates), dtype=float),
             "latitude": latitude,
             "longitude": longitude,
@@ -304,6 +306,7 @@ def test_get_data_tmy_filenames_require_years_for_site_change(input_config):
     [(2013, 2, False, "", None)],
 )
 def test_process_final_resource_data(subtests, input_config):
+    input_config["plant"]["simulation"]["dt"] = 172800
     _, comp = _setup_resource_component(FakeResource, input_config)
     dates = pd.to_datetime(["2012-02-28", "2012-02-29", "2012-03-01"])
     data = {
