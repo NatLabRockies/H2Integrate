@@ -16,6 +16,7 @@ cd "$SCRIPT_DIR"
 
 if [[ "${1:-}" == "--clean" ]]; then
     rm -rf _build
+    shift
 fi
 
 # Always remove the autosummary-generated stubs before building. These files
@@ -25,12 +26,10 @@ fi
 # "document isn't included in any toctree" warnings on every subsequent build.
 rm -rf _autosummary
 
-# Generate the interactive class hierarchy diagram
+# Generate ignored documentation artifacts before Sphinx reads the table of contents.
 python generate_class_hierarchy.py
 
-# Refresh the auto-generated section of docs/user_guide/model_overview.md from
-# the live supported_models registry. Run this before jupyter-book so the
-# rendered overview always matches what the package actually exposes.
+# Generate the ignored model registry page from the live supported_models registry.
 python generate_model_overview.py
 
-jupyter-book build --keep-going --warningiserror .
+jupyter-book build --keep-going --warningiserror "$@" .

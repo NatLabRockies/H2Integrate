@@ -72,6 +72,8 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_static/class_hierarchy.html
+docs/user_guide/model_registry.md
 
 # PyBuilder
 target/

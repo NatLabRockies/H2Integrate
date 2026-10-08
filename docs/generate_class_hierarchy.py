@@ -10,11 +10,10 @@ Visual encoding:
   - **Color**  → product / application group (electricity, chemical, metal, etc.)
   - **Border width** → inheritance depth (thicker = higher-level parent)
 
-Usage:
-    python docs/generate_class_hierarchy.py
+This script is invoked automatically by ``docs/build_book.sh`` before Jupyter Book runs.
 
 Outputs:
-    docs/_static/class_hierarchy.html  — interactive graph
+    docs/_static/class_hierarchy.html  — ignored build-time interactive graph
 """
 
 import os
