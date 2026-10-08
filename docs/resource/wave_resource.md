@@ -3,7 +3,7 @@
 
 The wave resource model reads and processes ocean wave data for use in the H2I framework. It expects a CSV file containing timeseries significant wave height (Hs) and energy period (Te) data, and outputs hourly arrays suitable for the {ref}`wave_performance` model.
 
-The wave resource file format follows the [DOE Water Power Technologies Office (WPTO) US Wave Dataset](https://developer.nrel.gov/docs/wave/wave-hindcast-download-v1/) convention. Wave resource files for US coastal locations can be downloaded via the [MHKiT-Python](https://mhkit-software.github.io/MHKiT/) library or the WPTO Hindcast dataset API.
+The wave resource file format follows the DOE Water Power Technologies Office (WPTO) US Wave Dataset convention. Wave resource files for US coastal locations can be downloaded via the [MHKiT-Python](https://mhkit-software.github.io/MHKiT/) library.
 
 ```{note}
 H2I expects the wave resource data to be in a timeseries format (not a joint probability distribution).

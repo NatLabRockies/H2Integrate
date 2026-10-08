@@ -128,9 +128,7 @@ failing test cases.
   - [ ] Write docstrings using the [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
   - [ ] Model documentation page added to the appropriate `docs/` section
     - [ ] Path to model documentation page is added to the `_toc.yml`
-  - [ ] Update the class hierarchy diagram `docs/_static/class_hierarchy.html` by doing one of the below options:
-    - [ ] Navigate to `docs` folder and run `sh build_book.sh`
-    - [ ] Run `generate_class_hierarchy.py` to update the class hierarchy diagram in `docs/developer_guide/class_structure.md`. You may need to delete the `_autosummary` folder before doing this.
+  - [ ] Confirm the documentation build generates the class hierarchy and model registry; these outputs are not committed.
 
 
 
