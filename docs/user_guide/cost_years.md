@@ -1,46 +1,40 @@
 (cost:cost_years)=
-# Cost year of Cost Models
-Some cost models are derived from literature and output costs (CapEx and OpEx) in a specific dollar-year.
-Some cost models require users to input the key cost information and the output costs are in the same cost year as the user-provided costs.
-For [cost models with a built-in cost year](#cost-models-with-inherent-cost-year), the cost year is not required as an input for the cost model.
-For [cost models based on user-provided costs](#cost-models-with-user-input-cost-year), the `cost_year` should be included in the tech_config for that technology.
+# Cost year of cost models
+Cost models report the dollar year associated with their cost outputs. Plant-level finance parameters can adjust these costs to a common `target_dollar_year`. Some models use fixed source years; others require a year alongside user-provided cost data.
 
 (cost-models-with-inherent-cost-year)=
 ## Cost models with inherent cost year
 
-### Summary of cost models that are based around a cost year
-| Cost Model              | Cost Year  |
-| :---------------------- | :---------------: |
-| `BasicElectrolyzerCostModel`|  2016    |
-| `pem_electrolyzer_cost`|  2021    |
-| `SingliticoCostModel`|  2021    |
-| `h2_storage`  with `'mch'` storage type  |  2024    |
-| `h2_storage` for geologic storage or buried pipe | 2018 |
-| `simple_ammonia_cost`   |  2022    |
-| `DOCCostModel` | 2023 |
-| `OAECostModel` | 2024 |
-| `OAECostAndFinancialModel` | 2024 |
-| `SteelCostAndFinancialModel`            |  2022    |
+### Models with fixed source cost years
+| Registered cost model | Source cost year |
+| :--- | :---: |
 | `ReverseOsmosisCostModel` | 2013 |
-| `AmmoniaSynLoopCostModel`  |  N/A (adjusts costs to `target_dollar_year` within cost model)  |
+| `BasicElectrolyzerCostModel` | 2016 |
+| `CompressedGasStorageCostModel`, `LinedRockCavernStorageCostModel`, `PipeStorageCostModel`, `SaltCavernStorageCostModel` | 2018 |
+| `HumbertStinnEwinCostComponent` | 2018 |
+| `SingliticoCostModel` | 2021 |
+| `CMUElectricArcFurnaceCostModel`, `PySAMMarineCostModel`, `SimpleAmmoniaCostModel`, `SteelCostAndFinancialModel` | 2022 |
+| `DOCCostModel` | 2023 |
+| `PaperMillCostModel`, `SAFCostModel` | 2023 |
+| `MCHTOLStorageCostModel`, `OAECostModel`, `OAECostAndFinancialModel` | 2024 |
+
+`SimpleIronMineCostComponent` and `NRRIIronMineCostComponent` use 2021 source costs and adjust them to the plant's `target_dollar_year`.
 
 (cost-models-with-user-input-cost-year)=
 ## Cost models with user input cost year
 
-### Summary of cost models that have user-input cost year
-| Cost Model              |
-| :---------------------- |
-| `wind_plant_cost` |
-| `ATBUtilityPVCostModel` |
-| `ATBResComPVCostModel` |
-| `SimpleASUCostModel` |
-| `RunOfRiverHydroCostModel` |
-| `SMRMethanolPlantCostModel` |
-| `stimulated_geoh2_cost` |
-| `natural_geoh2_cost`    |
-| `WOMBATElectrolyzerModel`                |
-| `CustomElectrolyzerCostModel` |
-| `QuinnNuclearCostModel` |
+### Models with user-provided cost years
+Provide the cost year for user-supplied cost data in `model_inputs.cost_parameters`. `AmmoniaSynLoopCostModel` uses the parameter `base_cost_year` for its source data. The following registered models use a configurable cost year:
+
+| Model area | Registered cost models |
+| :--- | :--- |
+| ATB-based costs | `ATBBatteryCostModel`, `ATBResComPVCostModel`, `ATBUtilityPVCostModel`, `ATBWindPlantCostModel` |
+| Carbon, feedstocks, and generic costs | `AspenGeoH2SurfaceCostModel`, `CO2HMethanolPlantCostModel`, `EIANaturalGasFeedstockCostModel`, `FeedstockCostModel`, `GenericConverterCostModel`, `GenericStorageCostModel`, `GridCostModel`, `NaturalGasCostModel` |
+| Hydrogen | `CustomElectrolyzerCostModel`, `GeoH2SubsurfaceCostModel`, `H2FuelCellCostModel`, `HTSECostModel`, `SMRMethanolPlantCostModel`, `SteamMethaneReformerCostModel`, `WOMBATElectrolyzerModel` |
+| Iron and steel | `HydrogenEAFPlantCostComponent`, `HydrogenIronReductionPlantCostComponent`, `IronTransportCostComponent`, `NaturalGasEAFPlantCostComponent`, `NaturalGasIronReductionPlantCostComponent` |
+| Other generation, transport, and storage | `DieselGeneratorCostModel`, `LinearDistanceCostModel`, `LinearMassTransportCostModel`, `QuinnNuclearCostModel`, `RunOfRiverHydroCostModel`, `SimpleASUCostModel`, `SimpleThermalNuclearReactorCostModel` |
+
+Some configurable models provide a default year, such as `HTSECostModel` and `SimpleThermalNuclearReactorCostModel`; confirm that it matches the year of the costs you provide.
 
 ### Example tech_config input for user-input cost year
 ```yaml

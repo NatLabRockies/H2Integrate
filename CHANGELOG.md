@@ -59,6 +59,7 @@
 - Updates to all GH Actions, pre-commit, isort, and ruff versioning. [PR 904](https://github.com/NatLabRockies/H2Integrate/pull/904)
 - Update API resource models to be able to be able to handle nonannual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
 - Move PySAM model instantiation for wind and solar performance models to the `compute()` method, and validate recalculated wind power curves. [PR 909](https://github.com/NatLabRockies/H2Integrate/pull/909)
+- Updated the docs throughout, removing stale references and ensuring consistency with the latest model and configuration changes. [PR 910](https://github.com/NatLabRockies/H2Integrate/pull/910)
 
 ## 0.9 [August 10, 2026]
 

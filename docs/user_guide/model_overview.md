@@ -70,7 +70,7 @@ more details.
 -->
 
 (technology-models-overview)=
-# Technology Models Overview
+## Technology Models Overview
 
 The tables below are generated at docs build time from
 [`supported_models.py`](../../h2integrate/core/supported_models.py)
@@ -79,7 +79,7 @@ are actually registered with H2Integrate. Each class name links to its
 auto-generated API page.
 
 (resource-models)=
-## Resource models
+### Resource models
 
 - `river`
   - other components:
@@ -115,7 +115,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource`
 
 (converter-models)=
-## Converter models
+### Converter models
 
 - `ammonia`: ammonia synthesis
   - performance models:
@@ -274,7 +274,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.converters.wind.wind_plant_ard.ArdWindPlantModel` - OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
 (transport-models)=
-## Transport models
+### Transport models
 
 - `transport`: commodity transporters, combiners, and splitters
   - cost models:
@@ -289,7 +289,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.transporters.pipe.PipePerformanceModel` (registered as `pipe`) - Pass-through pipe with no losses.
 
 (storage-models)=
-## Storage models
+### Storage models
 
 - `battery`: battery storage
   - performance models:
@@ -313,7 +313,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.SaltCavernStorageCostModel` - Capital and operational cost model for salt cavern hydrogen storage.
 
 (control-models)=
-## Control models
+### Control models
 
 - `control_strategies`
   - controllers:
@@ -345,7 +345,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.control.control_strategies.system_level.profit_maximization_control.ProfitMaximizationControl` - Profit-maximizing system-level controller.
 
 (demand-models)=
-## Demand models
+### Demand models
 
 - `demand`: demand components
   - performance models:
@@ -353,7 +353,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.demand.generic_demand.GenericDemandComponent` - Component for for converting input supply into met demand.
 
 (feedstock-models)=
-## Feedstock models
+### Feedstock models
 
 - `feedstocks`: feedstock supply
   - cost models:
@@ -363,7 +363,7 @@ auto-generated API page.
     + {py:class}`~h2integrate.feedstocks.feedstocks.FeedstockPerformanceModel`
 
 (finance-models)=
-## Finance models
+### Finance models
 
 - `finances`: finance models (LCO/NPV)
   - financial models:

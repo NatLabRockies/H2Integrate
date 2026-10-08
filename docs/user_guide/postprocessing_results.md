@@ -10,48 +10,17 @@ Streamlining the postprocessing of results is an ongoing effort in H2Integrate -
 
 ## Automatically generated results
 
-At the conclusion of a simulation, H2Integrate automatically prints a list of all the inputs and outputs for the model to the terminal.
-Here is a snippet of the output from a simulation:
+At the conclusion of a simulation, H2Integrate automatically prints a list of model inputs and outputs to the terminal. The report groups results by technology and model. This illustrative excerpt shows the structure; exact model names, output counts, values, and units depend on the configuration:
 
 ```text
-37 Explicit Output(s) in 'model'
-
-varname                               val                  units     prom_name
-------------------------------------  -------------------  --------  -----------------------------------------------
+varname             val       units      prom_name
+------------------  --------  ---------  ---------------------------
 plant
-  wind
-    PYSAMWindPlantPerformanceModel
-      electricity_out                 |85694382.72934064|   kW         wind.electricity_out
-    ATBWindPlantCostModel
-      CapEx                           [4.00631628e+09]      USD        wind.CapEx
-      OpEx                            [70417369.71000001]   USD/year   wind.OpEx
-  wind_to_steel_cable
-    electricity_out                   |85694382.72934064|   kW         wind_to_steel_cable.electricity_out
-  wind_to_electrolyzer_cable
-    electricity_out                   |85694382.72934064|   kW         wind_to_electrolyzer_cable.electricity_out
-  electrolyzer
-    ECOElectrolyzerPerformanceModel
-      hydrogen_out                    |1100221.2561732|     kg/h       electrolyzer.hydrogen_out
-      time_until_replacement          [47705.10433122]      h          electrolyzer.time_until_replacement
-      total_hydrogen_produced         [89334697.48304178]   kg/year    electrolyzer.total_hydrogen_produced
-      efficiency                      [0.54540813]          None       electrolyzer.efficiency
-      rated_h2_production_kg_pr_hr    [14118.38052482]      kg/h       electrolyzer.rated_h2_production_kg_pr_hr
-    eco_pem_electrolyzer_cost
-      CapEx                           [6.75464089e+08]      USD        electrolyzer.CapEx
-      OpEx                            [16541049.81608545]   USD/year   electrolyzer.OpEx
-<...>
-  finance_subgroup_default
-    ProFastComp_0
-      LCOH                            [7.47944016]          USD/kg     finance_subgroup_default.LCOH
-    ProFastComp_1
-      LCOE                            [0.09795931]          USD/(kW*h)   finance_subgroup_default.LCOE
-  steel
-    SteelPerformanceModel
-      steel                           |9615.91147134|       t/year     steel.steel
-    SteelCostAndFinancialModel
-      CapEx                           [5.78060014e+08]      USD        steel.CapEx
-      OpEx                            [1.0129052e+08]       USD/year   steel.OpEx
-      LCOS                            [1213.87728644]       USD/t      steel.LCOS
+  technology_name
+    PerformanceModel
+      commodity_out  |...|     units      technology_name.commodity_out
+    CostModel
+      CapEx          [...]     USD        technology_name.CapEx
 ```
 
 Anywhere that the value is listed as a magnitude (e.g. `|85854400.89803042|`), this indicates that the value reported is the magnitude of the array.

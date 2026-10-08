@@ -15,8 +15,8 @@ sites:
     latitude: 34.22
     longitude: -102.75
     resources:
-      wind_resource: #resource model name
-        resource_model: "wind_toolkit_v2_api"
+      wind_resource: #resource name
+        resource_model: "WTKNLRDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 ```
@@ -113,8 +113,8 @@ sites:
     latitude: 34.22
     longitude: -102.75
     resources:
-      wind_resource: #resource model name
-        resource_model: "wind_toolkit_v2_api"
+      wind_resource: #resource name
+        resource_model: "WTKNLRDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 site_to_tech_connections: [
@@ -139,12 +139,12 @@ sites:
     latitude: 34.22
     longitude: -102.75
     resources:
-      wind_resource: #resource model name for wind resource
-        resource_model: "wind_toolkit_v2_api"
+      wind_resource: #resource name for wind resource
+        resource_model: "WTKNLRDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
-      solar_resource: #resource model name for solar resource
-        resource_model: "goes_aggregated_solar_v4_api"
+      solar_resource: #resource name for solar resource
+        resource_model: "GOESAggregatedSolarAPI"
         resource_parameters:
           resource_year: 2012
 site_to_tech_connections: [
@@ -168,16 +168,16 @@ sites:
     latitude: 44.04218
     longitude: -95.19757
     resources:
-      wind_resource: #resource model name for distributed_wind_site
-        resource_model: "openmeteo_wind_api"
+      wind_resource: #resource name for distributed_wind_site
+        resource_model: "OpenMeteoHistoricalWindResource"
         resource_parameters:
           resource_year: 2023
   utility_wind_site: # name of utility site
     latitude: 35.2018863
     longitude: -101.945027
     resources:
-      wind_resource: #resource model name for utility_wind_site
-        resource_model: "wind_toolkit_v2_api"
+      wind_resource: #resource name for utility_wind_site
+        resource_model: "WTKNLRDeveloperAPIWindResource"
         resource_parameters:
           resource_year: 2012
 site_to_tech_connections: [

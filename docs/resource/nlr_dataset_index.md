@@ -3,7 +3,7 @@
 
 These resource models use the [REsource eXtraction tool (rex)](https://github.com/NatLabRockies/rex) to load resource data from NLR datasets. Internal users can access these datasets on the [NLR HPC](https://www.nlr.gov/hpc/). External users can access these datasets through AWS S3 on your local computer using an [NLR API Key](https://developer.nlr.gov/signup/) (additional set-up and packages may be required, please see the 'External Users' section for more information)
 
-# Model Overview
+## Model Overview
 
 ## Wind Resource Models
 - `WTKHRRRMETDatasetH5`: dataset extraction equivalent of the [`HRRRMETToolkitWindAPI` API resource model](#wind_resource:hrrr_met_data)
@@ -13,7 +13,7 @@ These resource models use the [REsource eXtraction tool (rex)](https://github.co
 - `NSRDBDatasetH5`: dataset extraction equivalent of the [`GOESConusSolarAPI` API resource model](#solar_resource:goes_v4_api)
 
 
-# External Users
+## External Users
 
 External users should follow the install and set-up instructions [available here](https://natlabrockies.github.io/rex/misc/examples.nlr_data.html#data-location-external-users). Additional set-up information and examples are available [here](https://natlabrockies.github.io/rex/misc/examples.hsds.html). If running with a local HSDS server, please set `use_hsds` to True in the `resource_parameters`. Also note that the `hsds_enpoint` in the rex documentation should be set as `hs_endpoint = https://developer.nlr.gov/api/hsds`
 
@@ -27,7 +27,7 @@ The S3 files can also be accessed using [`fsspec`](https://natlabrockies.github.
 
 
 
-# References
+## References
 
 [1] Bodini, N., Buster, G., & Pinchuk, P. (2026). *HRRR Meteorology, Energy, and Transmission (MET) Toolkit*. [Data set]. Open Energy Data Initiative (OEDI). National Laboratory of the Rockies (NLR). https://data.openei.org/submissions/8636
 

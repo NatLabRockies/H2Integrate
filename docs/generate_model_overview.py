@@ -420,7 +420,7 @@ def render_category(category: str, subcats: dict[str, list[ModelEntry]]) -> str:
     spec = CATEGORIES[category]
     lines: list[str] = []
     lines.append(f"({spec.anchor})=")
-    lines.append(f"## {spec.heading}")
+    lines.append(f"### {spec.heading}")
     lines.append("")
 
     # Sort subcategories by label so the rendered output is stable and
@@ -467,7 +467,7 @@ def render_overview(grouped: dict[str, dict[str, list[ModelEntry]]]) -> str:
         "    label or description, edit ``SUBCATEGORY_LABELS`` in the generator.\n"
         "-->\n\n"
         "(technology-models-overview)=\n"
-        "# Technology Models Overview\n\n"
+        "## Technology Models Overview\n\n"
         "The tables below are generated at docs build time from\n"
         "[`supported_models.py`](../../h2integrate/core/supported_models.py)\n"
         "and the package source tree, so they always reflect the models that\n"
