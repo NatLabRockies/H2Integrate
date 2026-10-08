@@ -58,6 +58,7 @@
 - Allow the PySAM battery performance model to configure additional BatteryStateful parameters through `pysam_options`. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Updates to all GH Actions, pre-commit, isort, and ruff versioning. [PR 904](https://github.com/NatLabRockies/H2Integrate/pull/904)
 - Update API resource models to be able to be able to handle nonannual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
+- Move PySAM model instantiation for wind and solar performance models to the `compute()` method, and validate recalculated wind power curves. [PR 909](https://github.com/NatLabRockies/H2Integrate/pull/909)
 
 ## 0.9 [August 10, 2026]
 
