@@ -526,6 +526,72 @@ def test_pvwatts_singleowner_withtilt(
 
 
 @pytest.mark.unit
+def test_pvwatts_singleowner_withtilt_dc(
+    basic_pysam_options, solar_resource_dict, plant_config, subtests
+):
+    """Test PYSAMSolarPlantPerformanceModel with tilt angle calculated using 'lat-func' option.
+    The AEP of this test should be higher than the AEP in `test_pvwatts_singleowner_notilt`.
+    """
+
+    pv_design_dict = {
+        "pv_capacity_kWdc": 250000.0,
+        "dc_ac_ratio": 1.23,
+        "create_model_from": "default",
+        "config_name": "PVWattsSingleOwner",
+        "tilt_angle_setting": "lat-func",
+        "electricity_type": "dc",
+        "pysam_options": basic_pysam_options,
+    }
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": pv_design_dict,
+        }
+    }
+
+    prob = om.Problem()
+    solar_resource = GOESAggregatedSolarAPI(
+        plant_config=plant_config,
+        resource_config=solar_resource_dict,
+        driver_config={},
+    )
+    comp = PYSAMSolarPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+    prob.model.add_subsystem("solar_resource", solar_resource, promotes=["*"])
+    prob.model.add_subsystem("pv_perf", comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")[0]
+    system_capacity_AC = prob.get_val("pv_perf.system_capacity_AC", units="kW")[0]
+    system_capacity_DC = prob.get_val("pv_perf.system_capacity_DC", units="kW")[0]
+
+    with subtests.test("AEP"):
+        assert pytest.approx(aep, rel=1e-6) == 585253792.4
+
+    with subtests.test("dc AEP > ac AEP"):
+        assert aep > 556443491
+
+    with subtests.test("Capacity in kW-AC"):
+        assert (
+            pytest.approx(system_capacity_AC, rel=1e-6)
+            == system_capacity_DC / pv_design_dict["dc_ac_ratio"]
+        )
+
+    with subtests.test("Capacity in kW-DC"):
+        assert pytest.approx(system_capacity_DC, rel=1e-6) == pv_design_dict["pv_capacity_kWdc"]
+
+    with subtests.test("Rated Capacity is DC"):
+        assert (
+            prob.model.get_val("pv_perf.rated_electricity_production", units="kW")[0]
+            == system_capacity_DC
+        )
+
+
+@pytest.mark.unit
 def test_pvwatts_input_tilt_azimuth(
     basic_pysam_options, solar_resource_dict, plant_config, subtests
 ):
@@ -682,6 +748,88 @@ def test_pvwatts_with_lifetime_performance(
         assert pytest.approx(aep[0], rel=1e-6) == 527216534.92436135
     with subtests.test("AEP year 30"):
         assert pytest.approx(aep[-1], rel=1e-6) == 523444808.25535893
+    with subtests.test("AEP is always decreasing"):
+        assert all(v < 0 for v in np.diff(aep))
+    with subtests.test("CF is always decreasing"):
+        assert all(v < 0 for v in np.diff(cf))
+
+
+@pytest.mark.unit
+def test_pvwatts_with_lifetime_performance_dc(
+    basic_pysam_options, solar_resource_dict, plant_config, subtests
+):
+    """Test `PYSAMSolarPlantPerformanceModel` with a basic input scenario:
+
+    - `pysam_options` is provided
+    - `create_model_from` is set to 'default'
+    - `config_name` is 'PVWattsSingleOwner', this is used to create the starting system model
+        because `create_model_from` is default.
+    - `tilt_angle_setting` is "input" and tilt is provided (in two separate places) as zero.
+    """
+
+    basic_pysam_options["SystemDesign"].update({"tilt": 0.0})
+    basic_pysam_options["Lifetime"] = {
+        "system_use_lifetime_output": 1,
+        "analysis_period": 30,
+        "dc_degradation": np.cumsum(np.full(30, 0.025)).tolist(),
+    }
+    pv_design_dict = {
+        "pv_capacity_kWdc": 250000.0,
+        "dc_ac_ratio": 1.23,
+        "create_model_from": "default",
+        "config_name": "PVWattsSingleOwner",
+        "tilt": 0.0,
+        "tilt_angle_setting": "input",  # "lat-func",
+        "pysam_options": basic_pysam_options,
+        "electricity_type": "dc",
+    }
+
+    tech_config_dict = {
+        "model_inputs": {
+            "performance_parameters": pv_design_dict,
+        }
+    }
+
+    prob = om.Problem()
+    solar_resource = GOESAggregatedSolarAPI(
+        plant_config=plant_config,
+        resource_config=solar_resource_dict,
+        driver_config={},
+    )
+    comp = PYSAMSolarPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config=tech_config_dict,
+        driver_config={},
+    )
+    prob.model.add_subsystem("solar_resource", solar_resource, promotes=["*"])
+    prob.model.add_subsystem("pv_perf", comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.get_val("pv_perf.annual_electricity_produced", units="kW*h/year")
+    cf = prob.get_val("pv_perf.capacity_factor", units="unitless")
+    prob.get_val("pv_perf.rated_electricity_production", units="kW")
+
+    with subtests.test("rated capacity is dc capacity"):
+        assert prob.get_val("pv_perf.rated_electricity_production", units="kW") == prob.get_val(
+            "pv_perf.system_capacity_DC", units="kW"
+        )
+
+    with subtests.test("AEP at year 0 < AEP at year 1"):
+        assert aep[1] < aep[0]
+
+    with subtests.test("AEP year 0"):
+        assert pytest.approx(aep[0], rel=1e-6) == 547103050.3820837
+    with subtests.test("AEP year 30"):
+        assert pytest.approx(aep[-1], rel=1e-6) == 543135561.3945668
+
+    # the AEP values here are > than the AEP values in the test
+    # test_pvwatts_with_lifetime_performance
+    # which is also validating that the DC output is working
+    with subtests.test("AEP (dc) year 0 > AEP (ac) year 0"):
+        assert aep[0] > 527216534.92436135
+    with subtests.test("AEP (dc) year 30 > AEP (ac) year 30"):
+        assert aep[-1] > 523444808.25535893
     with subtests.test("AEP is always decreasing"):
         assert all(v < 0 for v in np.diff(aep))
     with subtests.test("CF is always decreasing"):
