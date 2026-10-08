@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
@@ -13,6 +14,7 @@ class ProfitMaximizationControlConfig(BaseConfig):
     cost_per_tech: dict = field(default={})
 
 
+@register
 class ProfitMaximizationControl(SystemLevelControlBase):
     """Profit-maximizing system-level controller.
 
@@ -74,7 +76,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             price = group.get("model_inputs", {}).get("commodity_sell_price", None)
             if price is None:
                 raise ValueError(
-                    f"Finance group '{raw}' does not contain " f"model_inputs.commodity_sell_price."
+                    f"Finance group '{raw}' does not contain model_inputs.commodity_sell_price."
                 )
             return price
         return raw

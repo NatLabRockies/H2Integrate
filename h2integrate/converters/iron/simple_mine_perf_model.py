@@ -6,6 +6,7 @@ from openmdao.utils import units
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -31,6 +32,7 @@ class SimpleIronMinePerformanceComponentConfig(BaseConfig):
     )
 
 
+@register
 class SimpleIronMinePerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,

@@ -3,6 +3,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -43,6 +44,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class ATBBatteryCostModel(CostModelBaseClass):
     """This cost model is based on the equations in the "Utility-Scale Battery Storage"
     sheet in the ATB 2024 workbook.
@@ -104,8 +106,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
             storage_duration_hrs = max_capacity_kWh / max_charge_rate_kW
         if max_charge_rate_kW < 0:
             msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{max_charge_rate_kW} kW"
+                f"max_charge_rate cannot be less than zero and has value of {max_charge_rate_kW} kW"
             )
             raise UserWarning(msg)
         # CapEx equation from Cell E29

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import openmdao.api as om
-from attrs import field, define, validators
+from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import check_resource_dir
@@ -60,21 +60,12 @@ class ResourceBaseAPIConfig(BaseConfig):
             load resource files from. Defaults to "".
         resource_filename (str | list, optional): Filename(s) to save resource data to or load
             resource data from. Defaults to "". Can only be a list of filenames if
-            `resource_year_setting` is 'filenames' and running a simulation requiring
-            multiple resource years.
+            running a simulation requiring multiple resource years.
         include_leap_day (bool, optional): If False, remove data from leap day if the
             resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
-        resource_year_setting (str, optional): what setting to use if running a simulation
-            for multiple resource years. Must be 'start_year' if running a simulation with
-            <=1 resource year. Options are:
-
-            - 'start_year' (default): use `resource_year` as the starting resource year and pull
-                future resource years if/as needed.
-            - 'year_order': use a list of resource years provided in ``resource_year_order``
-            - 'filenames': use a list of filenames provided in ``resource_filename``
-
-        resource_year_order (list, optional): Only used if `resource_year_setting` is 'year_order'.
-            List of resource years in-order, such as [2012, 2011, 2013]. Defaults to None.
+        resource_year_order (list, optional): Only used running a simulation requiring multiple
+            resource years. List of resource years in-order, such as [2012, 2011, 2013].
+            Defaults to None.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -94,72 +85,10 @@ class ResourceBaseAPIConfig(BaseConfig):
     resource_filename: Path | str | list = field(default="")
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
-    resource_year_setting: str = field(
-        default="start_year",
-        converter=str.lower,
-        validator=validators.in_(
-            [
-                "year_order",
-                "start_year",
-                "filenames",
-            ]
-        ),
-    )
     resource_year_order: list | None = field(default=None)
     # Resampling methods used when the resource data's native timestep differs from the sim dt.
-    upsample_method: str = field(default="time")
-    downsample_method: str = field(default="mean")
-
-    def __attrs_post_init__(self):
-        if self.resource_year_setting == "year_order":
-            # Check for missing inputs
-            if self.resource_year_order is None:
-                msg = (
-                    "With `resource_year_setting` of 'year_order', "
-                    "the attribute `resource_year_order` is required. "
-                    "Please provide a list of resource years for the attribute "
-                    "'resource_year_order'."
-                )
-                raise AttributeError(msg)
-            # Check for extraneous or extra inputs
-            if isinstance(self.resource_filename, list) or self.resource_filename != "":
-                msg = (
-                    "With `resource_year_setting` of 'year_order', "
-                    "the attribute `resource_filename` is an extraneous input. "
-                )
-                raise AttributeError(msg)
-
-        if self.resource_year_setting == "filenames":
-            # Check for missing inputs
-            if not isinstance(self.resource_filename, list):
-                msg = (
-                    "With `resource_year_setting` of 'filenames', "
-                    "the attribute `resource_filename` must be a list. "
-                    "Please provide a list of filenames for the attribute "
-                    "'resource_filename'."
-                )
-                raise AttributeError(msg)
-            # Check for extraneous inputs
-            if self.resource_year_order is not None:
-                msg = (
-                    "With `resource_year_setting` of 'filenames', "
-                    "the attribute `resource_year_order` is an extraneous input. "
-                )
-                raise AttributeError(msg)
-
-        if self.resource_year_setting == "start_year":
-            # Check for extraneous inputs
-            invalid_inputs = ""
-            if isinstance(self.resource_filename, list):
-                invalid_inputs += "`resource_filename` must be a single filename and not a list. "
-            if self.resource_year_order is not None:
-                invalid_inputs += "`resource_year_order` is an extraneous input. "
-            if len(invalid_inputs) > 0:
-                msg = (
-                    "Invalid inputs provided for `resource_year_setting` of 'start_year': \n"
-                    f"{invalid_inputs}"
-                )
-                raise AttributeError(msg)
+    upsample_method: str | None = field(default=None)
+    downsample_method: str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -193,36 +122,131 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         self.add_input("latitude", self.config.latitude, units="deg")
         self.add_input("longitude", self.config.longitude, units="deg")
 
+        self.resource_year_setting = self.check_config_inputs()
+
+        if self.resource_year_setting == "filenames":
+            self.inferred_resource_years = []
+            self.resource_year_filenames_processed = False
+            self.raise_error_if_site_change = False
+
+    def check_config_inputs(self):
+        """Check that the config does not have inputs that conflict with each other or
+        the simulation parameters and infer the "setting" from the config inputs.
+
+        Raises:
+            ValueError: if the input config has attribute values that conflict with
+                each other or the simulation parameters
+
+        Returns:
+            str: the resource year 'setting' inferred from the user-inputs
+        """
         # Calculate the number of resource years needed to achieve the simulation length
         n_data_years = get_number_of_resource_years_needed(
             self.dt, self.n_timesteps, self.config.include_leap_day
         )
 
-        # If only running 1 year, then only valid option is 'start_year'
-        if n_data_years == 1 and self.config.resource_year_setting != "start_year":
-            msg = (
-                "Invalid resource_year_setting when simulating 1 year. `resource_year_setting` "
-                "must be 'start_year' when only using 1 year of resource data."
-            )
-            raise AttributeError(msg)
-
-        # If using filenames, check that the correct number of files were included
-        if self.config.resource_year_setting == "filenames":
-            if len(self.config.resource_filename) != n_data_years:
+        if n_data_years == 1:
+            # If only running 1 year, then resource_year_order must be None
+            # and resource_filenames cannot be a list
+            if self.config.resource_year_order is not None:
                 msg = (
-                    f"{n_data_years} resource filenames are required to "
-                    f"but {len(self.config.resource_filename)} were provided."
+                    f"Received extraneous input `resource_year_order` of "
+                    f"{self.config.resource_year_order}`. When running a simulation for <= 1 year, "
+                    "`resource_year_order` is an extraneous input. "
                 )
                 raise ValueError(msg)
-        # If using a resource_year list, check that the correct number of files were included
-        if self.config.resource_year_setting == "year_order":
+
+            if isinstance(self.config.resource_filename, list):
+                msg = (
+                    "Received invalid input type for `resource_filename`. "
+                    "When running a simulation for <= 1 year, "
+                    "`resource_filename` must be a single filename (not a list)."
+                )
+
+                raise ValueError(msg)
+
+            return "start_year"
+
+        # Running multiple years
+        provided_yr_order = self.config.resource_year_order is not None
+        provided_filenames = isinstance(self.config.resource_filename, list)
+        provided_filename = (
+            isinstance(self.config.resource_filename, str) and self.config.resource_filename != ""
+        ) or isinstance(self.config.resource_filename, Path)
+
+        if not provided_filenames and not provided_yr_order:
+            # Didn't provide either, using resource_year as the start-year
+            # Check that enough future-years are available from the start-year
+            self.get_resource_years_from_start_year(self.config.resource_year)
+            # NOTE: should check if `resource_filename` is not an empty string
+
+            # Cannot provide a single filename when running multiple years
+            if provided_filename:
+                msg = (
+                    f"A single `resource_filename` ({self.config.resource_filename}) cannot be "
+                    f"used for a simulation requiring {n_data_years} resource years. "
+                    "Please either specify `resource_filename` as a list of of filenames or "
+                    "leave it as an empty string. "
+                )
+                raise ValueError(msg)
+
+            return "start_year"
+
+        if provided_filenames and provided_yr_order:
+            # Provided resource_year_order and a list of filenames
+
+            if len(self.config.resource_filename) != len(self.config.resource_year_order):
+                # If they aren't the same length, throw an error
+                err_msg = (
+                    "If providing `resource_year_order` and `resource_filename` as a list, they "
+                    f"must be the same length. `resource_year_order` is length "
+                    f"{len(self.config.resource_year_order)} and `resource_filename` is length "
+                    f"{len(self.config.resource_filename)}. Please ensure these both have length "
+                    f"{n_data_years}"
+                )
+                raise ValueError(err_msg)
+            # resource_filename and resource_year_order are the same length,
+            # but not the correct length
+            if len(self.config.resource_year_order) != n_data_years:
+                err_msg = (
+                    f"`resource_year_order` and `resource_filename` both contain "
+                    f"{len(self.config.resource_year_order)} elements but {n_data_years} "
+                    "are required for the simulation. "
+                )
+                raise ValueError(err_msg)
+
+            return "filenames"
+
+        if provided_yr_order and provided_filename:
+            # Provided year order and provided a filename (not a list of filenames)
+            msg = (
+                "`resource_filename` cannot be a single value when `resource_year_order` is a "
+                "list. Please either provide `resource_filename` as a list of filenames or as "
+                "an empty string."
+            )
+            raise ValueError(msg)
+
+        if provided_yr_order:
+            # NOTE: could double check with get_n_timesteps_from_year_list
+            # (only if not using TMY dataset)
             if len(self.config.resource_year_order) != n_data_years:
                 msg = (
                     f"{n_data_years} resource years are required to "
-                    f"but {len(self.config.resource_year_order)} were provided."
-                    f"Please ensure that 'resource_year_order' has {n_data_years} years"
+                    f"but {len(self.config.resource_year_order)} were provided. "
+                    f"Please ensure that `resource_year_order` has {n_data_years} years"
                 )
                 raise ValueError(msg)
+            return "year_order"
+
+        if provided_filenames:
+            if len(self.config.resource_filename) != n_data_years:
+                msg = (
+                    f"{n_data_years} resource filenames are required to "
+                    f"but {len(self.config.resource_filename)} were provided. "
+                    f"Please ensure that `resource_filename` has {n_data_years} filenames"
+                )
+                raise ValueError(msg)
+            return "filenames"
 
     def _check_resource_year(self, resource_year):
         """Check if the input resource year is valid based on the config validator.
@@ -248,13 +272,13 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             if isinstance(resource_year, str):
                 # resource_year is already a string, like 'tmy-2020'
                 if resource_year not in year_options:
-                    msg = f"Invalid resource year '{resource_year}', " f"options are {year_options}"
+                    msg = f"Invalid resource year '{resource_year}', options are {year_options}"
                     raise ValueError(msg)
 
             if isinstance(resource_year, int):
                 year_str = f"{init_resource_year.split('-')[0]}-{resource_year}"
                 if year_str not in year_options:
-                    msg = f"Invalid resource year '{year_str}', " f"options are {year_options}"
+                    msg = f"Invalid resource year '{year_str}', options are {year_options}"
                     raise ValueError(msg)
 
             return
@@ -273,7 +297,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         if resource_year < first_yr or resource_year > last_yr:
             msg = (
-                f"Invaild resource year of {resource_year}. "
+                f"Invalid resource year of {resource_year}. "
                 f"Resource year must be between {first_yr} and {last_yr}"
             )
             raise ValueError(msg)
@@ -294,7 +318,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """
         resource_year_validator = type(self.config.__attrs_attrs__.resource_year.validator).__name__
         if resource_year_validator == "_InValidator":
-            # to accomodate tmy solar resource models
+            # to accommodate tmy solar resource models
             year_options = self.config.__attrs_attrs__.resource_year.validator.options
             if isinstance(resource_starting_year, str):
                 # resource_year is formatted like `tmy-2020`
@@ -588,12 +612,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
         0) If this is not the first resource call of the simulation, check if latitude and longitude
             inputs are different than the previous latitude and longitude values. If resource data
-            has not been already loaded for the, continue to Step 1.
+            has not already been loaded, continue to Step 1.
         1) Check if resource data was input. If not, continue to Step 2.
-        2) Determine the resource years and resource filenames to loop through based on
-            ``config.resource_year_setting``
-        3) Loop through the resource years and resource filenames, calling ``get_data()``
-            for each iteration
+        2) Determine the resource years and filenames from the configuration inputs.
+        3) Load data for each resource year by calling ``get_data_for_year()`` with its filename.
 
         Args:
             latitude (float): latitude corresponding to location for resource data
@@ -629,27 +651,46 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             return data
 
+        infer_years_from_files = False
         # 2) Determine the resource years and resource filenames to loop
-        if self.config.resource_year_setting == "start_year":
+        if self.resource_year_setting == "start_year":
+            # if running multiple years, resource_filename an empty string (based on earlier checks)
             resource_years = self.get_resource_years_from_start_year(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
-        elif self.config.resource_year_setting == "filenames":
+        elif self.resource_year_setting == "filenames":
             # NOTE: trusting that the site, timezone, and timestep is consistent across files
+            # intentionally allowing for some flexibility as long as site doesn't change
             resource_years = [self.config.resource_year] * len(self.config.resource_filename)
             resource_filenames = self.config.resource_filename
-            if first_call:
+            # see if we need to infer years from filenames or file data
+            infer_years_from_files = (
+                self.config.resource_year_order is None
+                and not self.resource_year_filenames_processed
+            )
+            if infer_years_from_files:
+                # likely when first_call is True
                 # resource_years are not used on first call since the filename is provided
                 resource_years = [self.config.resource_year] * len(self.config.resource_filename)
                 # Prepare to handle discrepancies if site changes
-                self.resource_years_from_files = []
+                self.inferred_resource_years = []
+                self.resource_year_filenames_processed = True
                 self.raise_error_if_site_change = False
                 self.error_msg_details = ""
-            else:
-                # not first call, use resource years that were estimated from earlier run
-                resource_years = self.resource_years_from_files
-                if site_changed:
-                    resource_filenames = [""] * len(self.config.resource_filename)
+                infer_years_from_files = True  # flag to infer years from files
+            if not infer_years_from_files and self.resource_year_filenames_processed:
+                # we've already inferred years on a previous loop
+                resource_years = self.inferred_resource_years
+            if self.config.resource_year_order is not None:
+                # use user-provided year order
+                resource_years = self.config.resource_year_order
+
+            if not first_call and site_changed:
+                # NOTE: maybe this should be moved outside of the
+                # 'filenames' resource setting if statement
+
+                # don't use input resource filenames if site changes
+                resource_filenames = [""] * len(self.config.resource_filename)
 
             if site_changed and self.raise_error_if_site_change:
                 msg = (
@@ -660,15 +701,18 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 )
                 raise ValueError(msg)
 
-        elif self.config.resource_year_setting == "year_order":
+        elif self.resource_year_setting == "year_order":
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
             resource_years = self.config.resource_year_order
+            # config.resource_filename is an empty string if running multiple years
+            # (based on checks in ``check_config_inputs()``)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
         timeseries_data = {}
         meta_data = {}
 
+        assert len(resource_years) == len(resource_filenames)
         # 3) Loop through the resource years
         for year, filename in zip(resource_years, resource_filenames):
             is_leap = False  # leap year is always false for TMY datasets
@@ -693,7 +737,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             # Very specific handling - if first call and using filenames,
             # then estimate resource year for future loops
-            if self.config.resource_year_setting == "filenames" and first_call:
+            if infer_years_from_files:
                 # record the resource year order in case site changes in later calls
                 if isinstance(year, str):
                     # using a TMY dataset, infer from filename (only possible way)
@@ -706,7 +750,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                             # not going to check if valid resource year here,
                             # will be checked if site changes
                             successful_match = True
-                            self.resource_years_from_files.append(match_pattern[0])
+                            self.inferred_resource_years.append(match_pattern[0])
                             continue
                     if not successful_match:
                         # Flag to throw an error if the site changes
@@ -715,7 +759,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 else:
                     # year can be easily pulled from timeseries data
                     year = estimate_resource_year_from_data(ts)
-                    self.resource_years_from_files.append(year)
+                    self.inferred_resource_years.append(year)
                     # update whether its a leap year for leap-year checks
                     is_leap = is_leap_year(year)
 

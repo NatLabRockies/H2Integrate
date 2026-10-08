@@ -4,11 +4,12 @@ import pytest
 import openmdao.api as om
 from attrs import field, define, validators
 
+import h2integrate.resource.resource_baseclass as resource_baseclass
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel, ResourceBaseAPIConfig
 
 
 @pytest.fixture
-def input_config(n_timesteps, resource_year, include_leap, yr_setting, resource_fname, yr_order):
+def input_config(n_timesteps, resource_year, include_leap, resource_fname, yr_order):
     plant = {
         "plant_life": 30,
         "simulation": {
@@ -23,9 +24,10 @@ def input_config(n_timesteps, resource_year, include_leap, yr_setting, resource_
         "longitude": -95.0,
         "resource_year": resource_year,
         "include_leap_day": include_leap,
-        "resource_year_setting": yr_setting,
         "resource_year_order": yr_order,
         "resource_filename": resource_fname,
+        "upsample_method": "time",
+        "downsample_method": "mean",
         "timezone": 0,
     }
 
@@ -41,10 +43,20 @@ class FakeResourceConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
 
 
+@define(kw_only=True)
+class FakeTMYResourceConfig(ResourceBaseAPIConfig):
+    resource_year: str = field(validator=validators.in_(["tmy-2020", "tmy-2021", "tmy-2022"]))
+    dataset_desc: str = "fake_tmy_api"
+    resource_type: str = "fake_tmy"
+    valid_intervals: list[int] = field(factory=lambda: [60])
+
+
 class FakeResource(ResourceBaseAPIModel):
+    config_class = FakeResourceConfig
+
     def setup(self):
         resource_specs = self.helper_setup_method()
-        self.config = FakeResourceConfig.from_dict(
+        self.config = self.config_class.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -76,7 +88,7 @@ class FakeResource(ResourceBaseAPIModel):
             "month": dates.month.to_numpy().astype(float),
             "day": dates.day.to_numpy().astype(float),
             "hour": dates.hour.to_numpy().astype(float),
-            "minute": dates.hour.to_numpy().astype(float),
+            "minute": dates.minute.to_numpy().astype(float),
             "ws": np.arange(len(dates), dtype=float),
             "latitude": latitude,
             "longitude": longitude,
@@ -86,60 +98,75 @@ class FakeResource(ResourceBaseAPIModel):
             "units": {"ws": "m/s"},
         }
 
-    # def create_filename(self, latitude, longitude, resource_year):
-    #     return f"{latitude}_{longitude}_Y{resource_year}_60min_fake.csv"
+
+class FakeTMYResource(FakeResource):
+    config_class = FakeTMYResourceConfig
+
+    def setup(self):
+        self.requested_resource_years = []
+        super().setup()
+
+    def get_data_for_year(
+        self, latitude, longitude, resource_year, resource_filename="", forced_download=False
+    ):
+        self.requested_resource_years.append((resource_year, resource_filename))
+        dates = pd.date_range(start="2001-01-01", periods=8760, freq="1h")
+
+        return {
+            "year": dates.year.to_numpy().astype(float),
+            "month": dates.month.to_numpy().astype(float),
+            "day": dates.day.to_numpy().astype(float),
+            "hour": dates.hour.to_numpy().astype(float),
+            "minute": dates.minute.to_numpy().astype(float),
+            "ws": np.arange(len(dates), dtype=float),
+            "latitude": latitude,
+            "longitude": longitude,
+            "filename": resource_filename,
+            "forced_download": forced_download,
+            "id": 1111,
+            "units": {"ws": "m/s"},
+        }
+
+
+def _setup_resource_component(resource_class, input_config):
+    prob = om.Problem()
+    comp = resource_class(
+        plant_config=input_config,
+        resource_config=input_config["site"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+    prob.setup()
+    return prob, comp
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,expected_msg",
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order,expected_msg",
     [
-        (2015, 8760, False, "year_order", "", None, "`resource_year_order` is required."),
-        (2015, 8760, False, "filenames", "", None, "`resource_filename` must be a list."),
-        (2015, 8760, False, "start_year", "", [2015, 2016], "`resource_year_order` is an extran"),
-        (2015, 8760, False, "start_year", [""], None, "`resource_filename` must be a single"),
-        (2015, 8760, False, "start_year", [""], [2015, 2016], "Invalid inputs provided"),
-        (2015, 8760, False, "filenames", [""], [2015, 2016], "`resource_year_order` is an extran"),
-        (2015, 8760, False, "year_order", [""], [2015, 2016], "`resource_filename` is an extran"),
+        # Invalid setting with <= 1 year
+        (2015, 8760, False, "", [2015, 2016], "`resource_year_order` is an extran"),
+        (2015, 8760, False, [""], None, "`resource_filename` must be a single"),
+        (2012, 4380, False, "", [2012], "`resource_year_order` is an extran"),
+        (2012, 8784, True, [""], None, "`resource_filename` must be a single"),
+        # Not enough inputs
+        (2012, 17520, False, "", [2012], "2 resource years are req"),
+        (2012, 17520, False, [""], None, "2 resource filenames are req"),
+        # Too many inputs
+        (2012, 17520, False, "", [2012, 2012, 2012], "2 resource years are req"),
+        (2012, 17520, False, ["", "", ""], None, "2 resource filenames are req"),
+        # Invalid combination for filename and year order
+        (2012, 17520, False, "f.csv", [2012, 2013], "_filename` cannot be a single"),
+        (2012, 17520, False, ["f.csv"], [2012, 2013], "must be the same length"),
+        (2012, 17520, False, ["a", "b", "c"], [2012, 2013, 2014], "elements but 2 are requi"),
+        (2019, 26280, False, "", None, "Not enough future resource years"),
+        (2012, 17520, False, "f.csv", None, "A single `resource_filename` (f.csv)"),
     ],
     ids=[
-        "yr_order-missing",
-        "filenames-missing",
+        # Invalid setting with <= 1 year
         "start_year-extra_attr",
         "start_year-invalid_type",
-        "start_year-two_invalid",
-        "filenames-extra_attr",
-        "yr_order-extra_attr",
-    ],
-)
-def test_config_attribute_errors(input_config, expected_msg, yr_setting):
-    with pytest.raises(AttributeError) as excinfo:
-        FakeResourceConfig.from_dict(input_config["site"])
-    assert expected_msg in str(excinfo.value)
-    assert f"`resource_year_setting` of '{yr_setting}'" in str(excinfo.value)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order,expected_msg",
-    [
-        # Invalid setting with <= 1 year
-        (2012, 4380, False, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
-        (2012, 8760, False, "filenames", [""], None, "_year_setting` must be 'start_year'"),
-        (2012, 8784, True, "year_order", "", [2012], "_year_setting` must be 'start_year'"),
-        (2012, 8784, True, "filenames", [""], None, "_year_setting` must be 'start_year'"),
-        # Not enough inputs
-        (2012, 17520, False, "year_order", "", [2012], "2 resource years are req"),
-        (2012, 17520, False, "filenames", [""], None, "2 resource filenames are req"),
-        # Too many inputs
-        (2012, 17520, False, "year_order", "", [2012, 2012, 2012], "2 resource years are req"),
-        (2012, 17520, False, "filenames", ["", "", ""], None, "2 resource filenames are req"),
-    ],
-    ids=[
-        # Invalid setting with <= 1 year
         "yr_order-0.5yr",
-        "filenames-1yr",
-        "yr_order-1yr-leap",
         "filenames-1yr-leap",
         # Not enough inputs
         "yr_order-too_short",
@@ -147,12 +174,17 @@ def test_config_attribute_errors(input_config, expected_msg, yr_setting):
         # Too many inputs
         "yr_order-too_long",
         "filenames-too_long",
+        # Invalid
+        "single-filename_with_yr_order",
+        "length-mismatch",
+        "incorrect-lengths",
+        "year-bound",
+        "sngle_filename-multiyear",
     ],
 )
 def test_setup_errors(input_config, expected_msg):
     # this test is pretty dependent on the function
     # `get_number_of_resource_years_needed`
-    error_type = AttributeError if "must be 'start_year'" in expected_msg else ValueError
 
     prob = om.Problem()
     comp = FakeResource(
@@ -162,33 +194,218 @@ def test_setup_errors(input_config, expected_msg):
     )
     prob.model.add_subsystem("resource", comp)
 
-    with pytest.raises(error_type) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         prob.setup()
     assert expected_msg in str(excinfo.value)
 
 
-# @pytest.mark.unit
-# def test_check_resource_year(subtests):
-#     pass
-
-# @pytest.mark.unit
-# def test_get_resource_years_from_start_year(subtests):
-#     pass
-
-# @pytest.mark.unit
-# def test_process_final_resource_data(subtests):
-#     pass
-
-# @pytest.mark.unit
-# def test_process_final_resource_data(subtests):
-#     pass
-
-
-@pytest.mark.parametrize(
-    "resource_year,n_timesteps,include_leap,yr_setting,resource_fname,yr_order",
-    [(2012, 17544, True, "filenames", ["data_2013.csv", "data_2012.csv"], None)],
-)
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order,expected_years",
+    [
+        (2018, 26280, False, "", None, [2018, 2019, 2020]),
+        (2019, 17544, True, "", None, [2019, 2020]),
+    ],
+)
+def test_get_resource_years_from_start_year(input_config, expected_years):
+    _, comp = _setup_resource_component(FakeResource, input_config)
+
+    assert comp.get_resource_years_from_start_year(comp.config.resource_year) == expected_years
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2020, 8760, False, "", None)],
+)
+def test_get_resource_years_from_start_year_insufficient_years(input_config):
+    _, comp = _setup_resource_component(FakeResource, input_config)
+    comp.n_timesteps = 17520
+
+    with pytest.raises(ValueError, match="Not enough future resource years"):
+        comp.get_resource_years_from_start_year(2020)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [("tmy-2020", 17520, False, "", None)],
+)
+def test_get_resource_years_from_start_year_tmy(input_config):
+    _, comp = _setup_resource_component(FakeTMYResource, input_config)
+
+    assert comp.get_resource_years_from_start_year("tmy-2020") == ["tmy-2020", "tmy-2021"]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2012, 8760, False, "", None)],
+)
+def test_check_resource_year(input_config):
+    _, comp = _setup_resource_component(FakeResource, input_config)
+    comp._check_resource_year(2012)
+
+    with pytest.raises(ValueError, match="between 2010 and 2020"):
+        comp._check_resource_year(2009)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [("tmy-2020", 8760, False, "", None)],
+)
+def test_check_resource_year_tmy(input_config):
+    _, comp = _setup_resource_component(FakeTMYResource, input_config)
+    comp._check_resource_year("tmy-2021")
+    comp._check_resource_year(2022)
+
+    with pytest.raises(ValueError, match="Invalid resource year 'tmy-2019'"):
+        comp._check_resource_year("tmy-2019")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [
+        (
+            "tmy-2020",
+            17520,
+            False,
+            ["site_tmy-2020.csv", "site_tmy-2021.csv"],
+            None,
+        )
+    ],
+)
+def test_get_data_infers_tmy_years_from_filenames(input_config):
+    _, comp = _setup_resource_component(FakeTMYResource, input_config)
+
+    assert comp.inferred_resource_years == ["tmy-2020", "tmy-2021"]
+
+    data = comp.get_data(35.0, -100.0, first_call=False)
+
+    assert comp.requested_resource_years[-2:] == [("tmy-2020", ""), ("tmy-2021", "")]
+    assert len(data["year"]) == 17520
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [("tmy-2020", 17520, False, ["first.csv", "second.csv"], None)],
+)
+def test_get_data_tmy_filenames_require_years_for_site_change(input_config):
+    _, comp = _setup_resource_component(FakeTMYResource, input_config)
+
+    with pytest.raises(ValueError, match="standard naming convention"):
+        comp.get_data(35.0, -100.0, first_call=False)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2013, 2, False, "", None)],
+)
+def test_process_final_resource_data(subtests, input_config):
+    input_config["plant"]["simulation"]["dt"] = 172800
+    _, comp = _setup_resource_component(FakeResource, input_config)
+    dates = pd.to_datetime(["2012-02-28", "2012-02-29", "2012-03-01"])
+    data = {
+        "site_id": 4400,
+        "year": dates.year.to_numpy(),
+        "month": dates.month.to_numpy(),
+        "day": dates.day.to_numpy(),
+        "hour": dates.hour.to_numpy(),
+        "minute": dates.minute.to_numpy(),
+        "ws": np.array([1.0, 2.0, 3.0]),
+    }
+
+    result = comp.process_final_resource_data(data)
+
+    with subtests.test("leap day is removed and data is clipped"):
+        assert result["site_id"] == 4400
+        np.testing.assert_array_equal(result["day"], [28, 1])
+        np.testing.assert_array_equal(result["ws"], [1.0, 3.0])
+        assert len(result["year"]) == 2
+
+    with subtests.test("start and end times are populated"):
+        assert result["start_time"] == "2012/02/28 00:00:00 (+0000)"
+        assert result["end_time"] == "2012/03/01 00:00:00 (+0000)"
+
+    with subtests.test("incorrect final length raises"):
+        comp.n_timesteps = 3
+        with pytest.raises(ValueError, match="Resource data is not the same length"):
+            comp.process_final_resource_data(data)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2012, 8760, False, "", None)],
+)
+def test_get_data_for_year_loads_and_forces_download(input_config, monkeypatch, tmp_path):
+    _, comp = _setup_resource_component(FakeResource, input_config)
+    resource_file = tmp_path / "existing.csv"
+    resource_file.touch()
+    monkeypatch.setattr(
+        resource_baseclass,
+        "check_resource_dir",
+        lambda data_dir=None, data_subdir=None: tmp_path,
+    )
+    loaded_data = {"ws": np.array([1.0])}
+    loaded_files = []
+    download_calls = []
+    monkeypatch.setattr(comp, "load_data", lambda fpath: loaded_files.append(fpath) or loaded_data)
+    monkeypatch.setattr(comp, "create_url", lambda latitude, longitude, year: "fake-url")
+    monkeypatch.setattr(
+        comp,
+        "download_data",
+        lambda url, fpath: download_calls.append((url, fpath)) or True,
+    )
+
+    result = ResourceBaseAPIModel.get_data_for_year(
+        comp, 40.0, -95.0, 2012, resource_filename="existing.csv"
+    )
+    assert result is loaded_data
+    assert loaded_files == [resource_file]
+    assert download_calls == []
+
+    result = ResourceBaseAPIModel.get_data_for_year(
+        comp, 40.0, -95.0, 2012, resource_filename="existing.csv", forced_download=True
+    )
+    assert result is loaded_data
+    assert download_calls == [("fake-url", resource_file)]
+    assert loaded_files == [resource_file, resource_file]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2012, 8760, False, "", None)],
+)
+def test_get_data_for_year_warns_and_raises_on_download_failure(
+    input_config, monkeypatch, tmp_path
+):
+    _, comp = _setup_resource_component(FakeResource, input_config)
+    monkeypatch.setattr(
+        resource_baseclass,
+        "check_resource_dir",
+        lambda data_dir=None, data_subdir=None: tmp_path,
+    )
+    monkeypatch.setattr(comp, "create_url", lambda latitude, longitude, year: "fake-url")
+    monkeypatch.setattr(comp, "download_data", lambda url, fpath: False)
+
+    with pytest.warns(UserWarning, match="not found"):
+        with pytest.raises(ValueError, match="Did not successfully download"):
+            ResourceBaseAPIModel.get_data_for_year(
+                comp, 40.0, -95.0, 2012, resource_filename="missing.csv"
+            )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
+    [(2012, 17544, True, ["data_2013.csv", "data_2012.csv"], None)],
+)
 def test_get_data_filenames(subtests, input_config):
     # This is testing whether the resource years are properly estimated from the first call
 

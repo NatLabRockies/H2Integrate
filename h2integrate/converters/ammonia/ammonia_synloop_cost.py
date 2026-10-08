@@ -2,6 +2,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 
 
@@ -91,6 +92,7 @@ class AmmoniaSynLoopCostConfig(CostModelBaseConfig):
     oxygen_price_base: float = field()
 
 
+@register
 class AmmoniaSynLoopCostModel(CostModelBaseClass):
     """
     OpenMDAO component modeling the cost of an ammonia synthesis loop.

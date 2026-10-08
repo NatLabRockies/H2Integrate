@@ -19,6 +19,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.core.commodity_stream_definitions import (
     add_multivariable_input,
     add_multivariable_output,
@@ -49,6 +50,7 @@ class SimpleGasProducerPerformanceConfig(BaseConfig):
     random_seed: int | None = field(default=None)
 
 
+@register
 class SimpleGasProducerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
@@ -132,6 +134,7 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
         )
 
 
+@register
 class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
@@ -213,6 +216,7 @@ class SimpleGasProducerCostConfig(CostModelBaseConfig):
     opex: float = field(default=50_000.0, validator=validators.ge(0))
 
 
+@register
 class SimpleGasProducerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas producer.
@@ -249,6 +253,7 @@ class SimpleGasConsumerCostConfig(CostModelBaseConfig):
     opex: float = field(default=100_000.0, validator=validators.ge(0))
 
 
+@register
 class SimpleGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.

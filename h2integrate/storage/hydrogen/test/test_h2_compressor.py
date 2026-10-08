@@ -21,7 +21,7 @@ class TestH2Compressor:
             n_compressors=self.n_compressors,
         )
         comp.compressor_power()
-        total_capex, total_OM = comp.compressor_costs()
+        total_capex, _total_OM = comp.compressor_costs()
         assert total_capex == approx(680590.3412708649)
 
     @pytest.mark.regression
@@ -33,7 +33,7 @@ class TestH2Compressor:
             n_compressors=self.n_compressors,
         )
         comp.compressor_power()
-        total_capex, total_OM = comp.compressor_costs()
+        _total_capex, total_OM = comp.compressor_costs()
         assert total_OM == approx(200014.00244504173)
 
     @pytest.mark.regression

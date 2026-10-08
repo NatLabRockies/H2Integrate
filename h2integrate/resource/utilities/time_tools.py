@@ -1,3 +1,4 @@
+import warnings
 from datetime import timezone, timedelta
 
 import numpy as np
@@ -26,7 +27,8 @@ def contains_leap_day(data):
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
     # Check if data includes leap day
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
     return data_has_leap_day
 
 
@@ -72,7 +74,8 @@ def check_data_length(data, n_timesteps: int):
 
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
 
     # Check if data is the same length as the number of timesteps
     if len(data) != n_timesteps:
@@ -120,7 +123,8 @@ def process_leap_day(data: dict, include_leap_day: bool):
     data = data.rename(columns={"month": "Month", "day": "Day"})
 
     # Check if data includes leap day
-    data_has_leap_day = int(data[data["Month"] == 2]["Day"].max()) == 29
+    february_days = data[data["Month"] == 2]["Day"]
+    data_has_leap_day = not february_days.empty and february_days.max() == 29
 
     # Remove leap day if needed
     if not include_leap_day and data_has_leap_day:
@@ -312,8 +316,8 @@ def _regenerate_time_columns_at_dt(
 def resample_resource_data_to_dt(
     data: dict,
     target_dt,
-    upsample_method: str = "time",
-    downsample_method: str = "mean",
+    upsample_method: str | None = None,
+    downsample_method: str | None = None,
 ):
     """Resample resource timeseries from its native timestep to ``target_dt``.
 
@@ -333,11 +337,12 @@ def resample_resource_data_to_dt(
     Args:
         data (dict): resource data dictionary with timeseries arrays and time columns.
         target_dt (int | float): desired simulation timestep in seconds.
-        upsample_method (str): interpolation method passed to
-            :meth:`pandas.DataFrame.interpolate` when upsampling. Defaults to ``"time"``.
-        downsample_method (str): aggregation passed to
-            :meth:`pandas.core.resample.Resampler.agg` when downsampling. Defaults to
-            ``"mean"``.
+        upsample_method (str | None): interpolation method passed to
+            :meth:`pandas.DataFrame.interpolate` when upsampling. Must be explicitly set when
+            upsampling is needed; otherwise a ``ValueError`` is raised.
+        downsample_method (str | None): aggregation passed to
+            :meth:`pandas.core.resample.Resampler.agg` when downsampling. Must be explicitly
+            set when downsampling is needed; otherwise a ``ValueError`` is raised.
 
     Returns:
         dict: resource data resampled to ``target_dt``.
@@ -381,7 +386,7 @@ def resample_resource_data_to_dt(
     exclude_leap_day = spans_leap_year and not has_feb29
 
     native_len = len(calendar_index)
-    target_n = int(round(native_len * native_dt / float(target_dt)))
+    target_n = round(native_len * native_dt / float(target_dt))
     if target_n < 1:
         msg = (
             f"Cannot resample resource data to a timestep of {target_dt} s: it is larger than "
@@ -412,13 +417,39 @@ def resample_resource_data_to_dt(
         {k: np.asarray(data[k], dtype=float) for k in data_keys}, index=native_index
     )
 
-    if native_dt > float(target_dt):
+    upsampling = native_dt > float(target_dt)
+    downsampling = native_dt < float(target_dt)
+    if upsampling and upsample_method is None:
+        raise ValueError(
+            f"Resource data has a native timestep of {native_dt:g} s but the simulation uses a "
+            f"finer timestep of {float(target_dt):g} s, which requires upsampling. Resampling is "
+            "not performed automatically: set the resource `upsample_method` (for example "
+            "'time') to explicitly enable upsampling."
+        )
+    if downsampling and downsample_method is None:
+        raise ValueError(
+            f"Resource data has a native timestep of {native_dt:g} s but the simulation uses a "
+            f"coarser timestep of {float(target_dt):g} s, which requires downsampling. Resampling "
+            "is not performed automatically: set the resource `downsample_method` (for example "
+            "'mean') to explicitly enable downsampling."
+        )
+
+    method = upsample_method if upsampling else downsample_method
+    direction = "upsampling" if upsampling else "downsampling"
+    warnings.warn(
+        f"Resampling resource data from a native timestep of {native_dt:g} s to the simulation "
+        f"timestep of {float(target_dt):g} s ({direction} with method '{method}').",
+        UserWarning,
+        stacklevel=2,
+    )
+
+    if upsampling:
         # Upsample: interpolate onto the (finer) target grid
         union_index = frame.index.union(target_index)
         resampled_frame = (
             frame.reindex(union_index).interpolate(method=upsample_method).reindex(target_index)
         )
-    else:
+    elif downsampling:
         # Downsample: aggregate native samples within each (coarser) target interval
         resampled_frame = (
             frame.resample(target_freq, origin="start").agg(downsample_method).reindex(target_index)

@@ -10,6 +10,7 @@ from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path, check_feedstock_dir
 from h2integrate.core.model_baseclass import BaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
 
 
@@ -117,6 +118,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             self.feedstock_dir = fd
 
 
+@register
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     """Feedstock cost model based on the EIA natural gas price API results that uses
     annual or monthly data to model an hourly time step for a single year to model the
