@@ -70,3 +70,8 @@ $$
 
 ### API details
 For API details, see the [`SimpleThermalNuclearReactorPerformanceModel` and `SimpleThermalNuclearReactorCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant_thermal).
+
+## Integrated nuclear and HTSE example
+
+[Example 36: Nuclear Reactor and HTSE](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/36_nuclear_reactor_htse)
+connects thermal nuclear output to the high-temperature steam electrolyzer.

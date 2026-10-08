@@ -17,6 +17,23 @@ The models implemented in H2I are:
   - `HydrogenEAFPlantPerformanceComponent`
   - `HydrogenEAFPlantCostComponent`
 
+## Simple steel plant
+
+The separate `SteelPerformanceModel` represents annual steel production using a configured plant
+capacity and capacity factor. `SteelCostAndFinancialModel` calculates capital and operating costs
+and reports levelized cost of steel (`LCOS`). Both use hourly time steps. These models are distinct
+from the natural-gas and hydrogen EAF performance components described above.
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.steel.steel.SteelPerformanceModelConfig
+  :members:
+  :no-index:
+
+.. autoclass:: h2integrate.converters.steel.steel.SteelCostAndFinancialModelConfig
+  :members:
+  :no-index:
+```
+
 ```{note}
 The EAF model use sponge iron as an input rather than pig iron, which is lower in carbon content. The LBNL model calls the input to the EAF pig iron, but that's typically produced using a blast furnace rather than through the DRI process and has higher carbon impurities.
 ```

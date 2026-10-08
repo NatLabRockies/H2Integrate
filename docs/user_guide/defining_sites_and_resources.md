@@ -23,6 +23,10 @@ sites:
 
 Further information on the available resource models can be found [here](https://h2integrate.readthedocs.io/en/latest/resource/resource_index.html)
 
+Some API resource models support simulations spanning multiple years when the requested data and
+simulation time range are compatible. See the [Resource Model Index](../resource/resource_index.md)
+for details, and set `plant.simulation.n_timesteps` and `dt` to match the desired simulation range.
+
 ## Site-to-resource connections overview
 
 The `site_to_tech_connections` section in your plant configuration file defines how technologies are connected to site data and resource outputs for that site. This includes resource data such as wind or solar time series and site parameters such as latitude and longitude.
