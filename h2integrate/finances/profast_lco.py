@@ -12,10 +12,12 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.core.inputs.validation import write_yaml
 from h2integrate.finances.profast_baseclass import ProFastBase
 
 
+@register
 class ProFastLCO(ProFastBase):
     """Calculate the Levelized Cost of Commodity (LCO) with ProFAST.
 
@@ -125,7 +127,7 @@ class ProFastLCO(ProFastBase):
         pf = self.populate_profast(inputs)
 
         # simulate ProFAST
-        sol, summary, price_breakdown = run_profast(pf)
+        sol, _summary, price_breakdown = run_profast(pf)
 
         # populate outputs
         # Output names based on naming convention for finance subgroups
@@ -141,7 +143,7 @@ class ProFastLCO(ProFastBase):
         pf_config_dict = convert_pf_to_dict(pf)
 
         # make LCO cost breakdown
-        lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
         # Check whether to export profast object to .yaml file

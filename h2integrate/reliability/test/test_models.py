@@ -431,7 +431,7 @@ def test_PerformanceReliability(subtests):
         msg = (
             "Failure and maintenance models must have the same number of components when using"
             f" 'fractional' availability: {config['failure_parameters']['n_components']}"
-            f' != {config["maintenance_parameters"]["n_components"]}'
+            f" != {config['maintenance_parameters']['n_components']}"
         )
         with pytest.raises(ValueError, match=msg):
             reliability = PerformanceReliability.from_dict(config)

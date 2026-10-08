@@ -46,13 +46,14 @@ jobs:
             test-type: integration
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+          channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate
       - name: Install base conda dependencies

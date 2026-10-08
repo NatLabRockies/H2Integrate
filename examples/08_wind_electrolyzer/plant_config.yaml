@@ -11,8 +11,10 @@ sites:
           resource_year: 2012
 plant:
   plant_life: 30
-technology_interconnections: [[wind, electrolyzer, electricity, cable]]
-site_to_tech_connections: [[site.wind_resource, wind, wind_resource_data]]
+technology_interconnections:
+  - [wind, electrolyzer, electricity, cable]
+site_to_tech_connections:
+  - [site.wind_resource, wind, wind_resource_data]
 finance_parameters:
   finance_groups:
     custom_model:

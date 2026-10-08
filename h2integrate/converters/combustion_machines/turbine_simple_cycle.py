@@ -7,6 +7,7 @@ import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
 from h2integrate.reliability import PerformanceReliability
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -54,6 +55,7 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
     )  # TODO: add more here...
 
 
+@register
 class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for simple Brayton-cycle turbines.

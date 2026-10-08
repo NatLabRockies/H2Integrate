@@ -219,7 +219,13 @@ properties:
             description: >-
               Case generator used to build the sweep. Matching is case
               insensitive.
-            enum: [uniform, fullfact, plackettburman, boxbehnken, latinhypercube, csvgen]
+            enum:
+              - uniform
+              - fullfact
+              - plackettburman
+              - boxbehnken
+              - latinhypercube
+              - csvgen
           num_samples:
             type: integer
             description: Number of samples, used by the uniform and latinhypercube generators

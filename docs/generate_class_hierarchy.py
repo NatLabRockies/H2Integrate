@@ -455,7 +455,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
     n_cats = len(used_categories)
     CLUSTER_RADIUS = 600
     INTRA_SCATTER = 180
-    _cat_counter: dict[str, int] = {c: 0 for c in used_categories}
+    _cat_counter: dict[str, int] = dict.fromkeys(used_categories, 0)
 
     # Determine node sizes based on out-degree
     max_degree = max((G.out_degree(n) for n in G.nodes), default=1) or 1

@@ -6,6 +6,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -23,6 +24,7 @@ class SimpleAmmoniaPerformanceModelConfig(BaseConfig):
     plant_capacity_factor: float = field()
 
 
+@register
 class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an ammonia plant.
@@ -106,6 +108,7 @@ class SimpleAmmoniaCostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
+@register
 class SimpleAmmoniaCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with ammonia production.

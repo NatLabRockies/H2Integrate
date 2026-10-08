@@ -580,8 +580,8 @@ class ThermodynamicCycleResult:
         for idx_state, state in self.states.items():
             print(f"{(idx_state):>3d}:", end="")
             print(f" T={state.temperature:.2f}°C;", end="")
-            print(f" h={state.enthalpy/1.0e3:.2f} MJ/kg;", end="")
-            print(f" P={state.pressure/1.0e3:.2f} kPa;", end="")
+            print(f" h={state.enthalpy / 1.0e3:.2f} MJ/kg;", end="")
+            print(f" P={state.pressure / 1.0e3:.2f} kPa;", end="")
             print(f" rho={state.density:.2f} kg/m**3;", end="")
             print()
 
@@ -599,8 +599,8 @@ class ThermodynamicCycleResult:
             output += (
                 f"\t\t{idx_state} ({state_name}): "
                 f"T={state.temperature:.2f}°C ({celsius_to_kelvin(state.temperature):.2f} K), "
-                f"h={state.enthalpy/1.0e3:.2f} MJ/kg, "
-                f"P={state.pressure/1.0e3:.2f} kPa, "
+                f"h={state.enthalpy / 1.0e3:.2f} MJ/kg, "
+                f"P={state.pressure / 1.0e3:.2f} kPa, "
                 f"rho={state.density:.2f} kg/m**3\n"
             )
 

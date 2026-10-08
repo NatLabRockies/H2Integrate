@@ -2,6 +2,7 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
@@ -42,6 +43,7 @@ class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -114,6 +116,7 @@ class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "nsrdb_msg_tgy_v4"
 
 
+@register
 class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -123,6 +126,13 @@ class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
 
         self.base_url = f"https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-{self.config.resource_year.split('-')[0]}-download.csv?"
 
