@@ -12,6 +12,9 @@ from h2integrate.core.utilities import BaseConfig
 
 
 class PerformanceModelBaseClass(om.ExplicitComponent):
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
@@ -426,6 +429,9 @@ class CostModelBaseClass(om.ExplicitComponent):
         - cost_year (int): dollar-year corresponding to CapEx and OpEx values.
             This may be inherent to the cost model, or may depend on user provided input values.
     """
+
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
