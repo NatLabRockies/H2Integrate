@@ -40,8 +40,9 @@ def append_timeseries_data(data_full, new_data, return_with_metadata=True):
     meta_data, ts_data_full = separate_timeseries_and_meta_data(data_full)
     _, new_ts_data = separate_timeseries_and_meta_data(new_data)
     shared_keys = set(ts_data_full) & set(new_ts_data)
-    if len(shared_keys) != len(set(ts_data_full)):
-        missing_data = (set(new_ts_data) - shared_keys) & (set(ts_data_full) - shared_keys)
+    missing_data = (set(new_ts_data) - shared_keys) | (set(ts_data_full) - shared_keys)
+
+    if bool(missing_data):
         msg = (
             "Mismatch in timeseries data. Non-shared data keys of "
             f"{sorted(missing_data)} will be removed. "
@@ -120,8 +121,10 @@ def clip_data_to_resource_year(data, resource_year):
 
 
 def estimate_resource_year_from_data(data):
-    """Estimate the resource data from the resource data. Returns
-    the most common year in the resource data timeseries.
+    """Estimate the resource year from the resource data. Returns
+    the most common year in the resource data timeseries. This is primarily
+    useful for OpenMeteo dataset models, which download resource data for some buffer
+    hours preceeding and following the specified resource year.
 
     Args:
         data (dict): resource data loaded from a single file (should not contain multiple years)
@@ -132,9 +135,9 @@ def estimate_resource_year_from_data(data):
     Returns:
         int | None: most common resource data year if found. None otherwise
     """
+
     if ("year" in data) or ("Year" in data):
         yr_col = "year" if "year" in data else "Year"
-
     else:
         msg = "Mising 'year' or 'Year' key in data dictionary"
         raise ValueError(msg)
@@ -142,14 +145,23 @@ def estimate_resource_year_from_data(data):
     # get a list of the unique resource years in the data
     unique_years = sorted(set(data[yr_col]))
     if len(unique_years) == 1:
+        # only one year is in the resource data
         return unique_years[0]
 
+    # count the number of timeteps that each year exists in the data
     yr_to_cnts = {y: list(data[yr_col]).count(y) for y in unique_years}
+    # get the year(s) with the most amount of timesteps
     most_often_yr = [y for y, v in yr_to_cnts.items() if v == max(yr_to_cnts.values())]
     if len(most_often_yr) == 1:
+        # only 1 year has the most amount of timesteps, assume thats the resource year
+        # this is the case for Open-Meteo models, because those download data for some
+        # buffer hours in the bounding resource years
         return most_often_yr[0]
 
     if len(most_often_yr) > 1:
+        # multiple years have the same number of timesteps, warn user and return None
+        # this means this function was used improperly
+        # (such as for a TMY dataset or for multi-year resource data)
         msg = (
             f"Multiple years have the same number of data entries "
             f"(years {most_often_yr}). This function should only be "

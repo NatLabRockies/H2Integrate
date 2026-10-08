@@ -16,7 +16,6 @@ variants = {
         # One native year, upsampled from 60-min to 15-min and clipped to half a year.
         "resource": {
             "resource_year": 2013,
-            "resource_year_setting": "start_year",
             "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
             "upsample_method": "time",
         },
@@ -26,7 +25,6 @@ variants = {
         "n_timesteps": 8760,
         "resource": {
             "resource_year": 2013,
-            "resource_year_setting": "start_year",
             "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
         },
     },
@@ -36,7 +34,6 @@ variants = {
         # Two native years, downsampled from 60-min to 3-hour.
         "resource": {
             "resource_year": 2012,
-            "resource_year_setting": "year_order",
             "resource_year_order": [2012, 2013],
             "downsample_method": "mean",
         },

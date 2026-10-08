@@ -699,7 +699,7 @@ def test_custom_resource_model(subtests, temp_copy_of_example):
 
     from h2integrate.resource.river import RiverResource
 
-    resource_model_fpath_parts = [ROOT_DIR] + RiverResource.__module__.split(".")[1:]
+    resource_model_fpath_parts = [ROOT_DIR, *RiverResource.__module__.split(".")[1:]]
     resource_model_fpath_parts[-1] = f"{resource_model_fpath_parts[-1]}.py"
 
     # Make folder to hold custom resource model
@@ -899,14 +899,13 @@ def test_unsupported_simulation_parameters(temp_dir):
 
     plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
-    # Sub-year and multi-year horizons are now supported as long as they are positive
-    # and do not exceed the plant life. A ~half-year horizon should load without error.
+    # Sub-year and multi-year horizons are supported when positive and within plant life.
     plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
     with temp_plant_config_ntimesteps.open("w") as f:
         yaml.safe_dump(plant_config_data_ntimesteps, f)
     load_plant_yaml(temp_plant_config_ntimesteps)
 
-    # A multi-year horizon (2 years of hourly data) should also load without error.
+    # A two-year hourly horizon should also load without error.
     plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
     with temp_plant_config_dt.open("w") as f:
         yaml.safe_dump(plant_config_data_dt, f)
@@ -1204,9 +1203,9 @@ def test_reports_turned_off(temp_dir):
     report_dirs = [f for f in new_files if f.is_dir() and "reports" in f.name.lower()]
 
     # Assert that no report directories were created due to create_om_reports=False
-    assert (
-        len(report_dirs) == 0
-    ), f"Report directories were created despite create_om_reports=False: {report_dirs}"
+    assert len(report_dirs) == 0, (
+        f"Report directories were created despite create_om_reports=False: {report_dirs}"
+    )
 
 
 @pytest.mark.unit

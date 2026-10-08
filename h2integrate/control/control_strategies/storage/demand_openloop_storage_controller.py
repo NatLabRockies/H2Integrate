@@ -5,6 +5,7 @@ from attrs import define
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -36,6 +37,7 @@ class DemandOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
         self.common_post_init_operations()
 
 
+@register
 class DemandOpenLoopStorageController(OpenLoopControlBase):
     """
     A controller that manages commodity flow based on demand and storage constraints.

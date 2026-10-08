@@ -11,7 +11,6 @@ sites:
           # Defaults for a single-year run; the runner overrides these per variant to
           # demonstrate sub-annual, annual, and multi-year resource handling.
           resource_year: 2013
-          resource_year_setting: start_year
           resource_filename: 34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections

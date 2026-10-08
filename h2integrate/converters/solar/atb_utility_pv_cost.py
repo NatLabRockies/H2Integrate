@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -24,6 +25,7 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
     opex_per_kWac_per_year: float | int = field(validator=validators.gt(0))
 
 
+@register
 class ATBUtilityPVCostModel(CostModelBaseClass):
     _time_step_bounds = (
         900,

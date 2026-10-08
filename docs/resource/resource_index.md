@@ -19,6 +19,22 @@ OpenMeteo data can be downloaded directly from the web instead of using the mode
 ```
 
 
+## Specifying multiple resource years for API resource models
+
+If running a simulation that is longer than 1 year, then there are a few options for specifying the resource years to use during the simulation. These options depend on the user inputs and are explained below:
+
+1. Use `resource_year` as the starting year. This option is enabled when `resource_filename` and `resource_year_order` are not provided. With this option, the first year of resource data is for `resource_year` and following years are calculated based on the number of years resource data is needed for the simulation.
+2. Use resource data from a list of filenames. This option is enabled when `resource_filename` is a list. The list must be the same length as the number of years needed for the simulation. The filenames provided as `resource_filename` are **not used if the site changes from the site defined in the configuration file**. This can be used with `resource_year_order`, where `resource_year_order` is used if the site changes. If `resource_year_order` is not specified, the year order is inferred from the data in the provided files under the 'year' column (unless using a TMY dataset, in which case the year order is inferred from the filename). Supplying `resource_year_order` alongside `resource_filename` avoids inferring the years and makes the replacement years explicit. The inferred or provided `resource_year_order` is used instead of `resource_year`.
+3. Use a specified order of resource years. This option is enabled when `resource_year_order` is a list of resource years and `resource_filename` is an empty string (or not provided). The list must be the same length as the number of years needed for the simulation. The `resource_year_order` is used instead of `resource_year`. As mentioned above, this can be used with the `resource_filename` option.
+
+## Resampling resource data
+
+API resource data may have a different native timestep from the simulation, but H2I does not resample it by default. You may explicitly choose a pandas interpolation method for upsampling or a pandas aggregation method for downsampling in the resource's `resource_parameters`.
+
+Set `upsample_method` or `downsample_method` in `resource_parameters` to explicitly select the pandas operation. If the data timestep and simulation timestep already match, neither setting is needed. When resampling is requested, H2I emits a warning naming the source timestep, target timestep, direction, and method. If a mismatch requires resampling but no corresponding method is set, H2I raises an error. See {py:func}`h2integrate.resource.utilities.time_tools.resample_resource_data_to_dt` for method details.
+
+
+
 ## Setting resource data for a technology
 
 There are two ways to supply resource data to a technology:

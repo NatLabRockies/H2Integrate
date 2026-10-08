@@ -30,7 +30,6 @@ from h2integrate.core.supported_models import supported_models
         "MeteosatPrimeMeridianTMYSolarAPI",
     ]
 )
-# fmt: on
 def test_nlr_solar_resource_file_downloads(
     subtests,
     plant_simulation,
@@ -149,7 +148,6 @@ def test_goes_resource_models(
     [("OpenMeteoHistoricalSolarResource", "solar", 44.04218, -95.19757, 2023, "openmeteo_archive_solar", 0)],  # noqa: E501
     ids=["OpenMeteoHistoricalSolarResource"]
 )
-# fmt: on
 def test_solar_resource_h2i_download(
     plant_simulation,
     site_config,
@@ -207,7 +205,6 @@ def test_solar_resource_h2i_download(
     [("OpenMeteoHistoricalSolarResource", "solar",  -28.454864, 114.551749, 2024, "openmeteo_archive_solar", 8)],  # noqa: E501
     ids=["OpenMeteoHistoricalSolarResource-LeapYear"]
 )
-# fmt: on
 def test_solar_resource_h2i_download_leap_year(
     plant_simulation,
     site_config,
@@ -296,3 +293,29 @@ def test_multi_year_solar_resource(subtests):
 
     with subtests.test("timeseries is 17544"):
         assert all(len(solar_resource[k])==17544 for k in ts_keys)
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "model,which,lat,lon,resource_year,model_name,timezone",
+    [("MeteosatPrimeMeridianSolarAPI", "solar", 41.9077, 12.4368, 2008, "nsrdb_msg_v4", 0)],
+)
+def test_forced_download(plant_simulation,site_config,model):
+    site_config["include_leap_day"] = True
+    plant_simulation["simulation"]["n_timesteps"] = 8784
+
+    plant_config = {
+        "site": site_config,
+        "plant": plant_simulation,
+    }
+
+    prob = om.Problem()
+    comp = supported_models[model](
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["solar_resource"]["resource_parameters"],
+        driver_config={},
+    )
+    prob.model.add_subsystem("resource", comp)
+
+    with pytest.raises(ValueError) as excinfo:
+        prob.setup()
+    assert "NLR_API_EMAIL (or NREL_API_EMAIL) has not been set" in str(excinfo.value)

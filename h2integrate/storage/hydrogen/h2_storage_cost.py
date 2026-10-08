@@ -4,6 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.storage.hydrogen.h2_transport.h2_compression import Compressor
 
 
@@ -163,6 +164,7 @@ class HydrogenStorageBaseCostModel(CostModelBaseClass):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
 
+@register
 class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for lined rock cavern hydrogen storage.
 
@@ -254,7 +256,7 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
             compressor_type=comp_type,
         )
         storage_compressor.compressor_power()
-        motor_rating, power = storage_compressor.compressor_system_power()
+        motor_rating, _power = storage_compressor.compressor_system_power()
         # Check if motor rating exceeds maximum, add additional compressor if needed
         if motor_rating > 1600:
             n_compressors += 1
@@ -262,8 +264,8 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
                 outlet_pressure, system_flow_rate, n_compressors=n_compressors
             )
             storage_compressor.compressor_power()
-            motor_rating, power = storage_compressor.compressor_system_power()
-        comp_capex, comp_OM = storage_compressor.compressor_costs()
+            motor_rating, _power = storage_compressor.compressor_system_power()
+        comp_capex, _comp_OM = storage_compressor.compressor_costs()
         cepci = 1.36 / 1.29  # convert from $2016 to $2018
         comp_capex = comp_capex * cepci
 
@@ -297,6 +299,7 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for salt cavern hydrogen storage.
 
@@ -388,7 +391,7 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
             compressor_type=comp_type,
         )
         storage_compressor.compressor_power()
-        motor_rating, power = storage_compressor.compressor_system_power()
+        motor_rating, _power = storage_compressor.compressor_system_power()
         # Check if motor rating exceeds maximum, add additional compressor if needed
         if motor_rating > 1600:
             n_compressors += 1
@@ -396,8 +399,8 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
                 outlet_pressure, system_flow_rate, n_compressors=n_compressors
             )
             storage_compressor.compressor_power()
-            motor_rating, power = storage_compressor.compressor_system_power()
-        comp_capex, comp_OM = storage_compressor.compressor_costs()
+            motor_rating, _power = storage_compressor.compressor_system_power()
+        comp_capex, _comp_OM = storage_compressor.compressor_costs()
         cepci = 1.36 / 1.29  # convert from $2016 to $2018
         comp_capex = comp_capex * cepci
 
@@ -431,6 +434,7 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class PipeStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for underground pipeline hydrogen storage.
 
@@ -536,7 +540,7 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
             compressor_type=comp_type,
         )
         storage_compressor.compressor_power()
-        motor_rating, power = storage_compressor.compressor_system_power()
+        motor_rating, _power = storage_compressor.compressor_system_power()
         # Check if motor rating exceeds maximum, add additional compressor if needed
         if motor_rating > 1600:
             n_compressors += 1
@@ -544,8 +548,8 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
                 outlet_pressure, system_flow_rate, n_compressors=n_compressors
             )
             storage_compressor.compressor_power()
-            motor_rating, power = storage_compressor.compressor_system_power()
-        comp_capex, comp_OM = storage_compressor.compressor_costs()
+            motor_rating, _power = storage_compressor.compressor_system_power()
+        comp_capex, _comp_OM = storage_compressor.compressor_costs()
         cepci = 1.36 / 1.29  # convert from $2016 to $2018
         comp_capex = comp_capex * cepci
 
@@ -579,6 +583,7 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
         outputs["OpEx"] = total_om
 
 
+@register
 class CompressedGasStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for compressed gas hydrogen storage.
 
@@ -642,7 +647,7 @@ class CompressedGasStorageCostModel(HydrogenStorageBaseCostModel):
 
         # Storage Compressor
         storage_compressor.compressor_power()
-        unit_power_kw, system_power_kw = storage_compressor.compressor_system_power()
+        _unit_power_kw, _system_power_kw = storage_compressor.compressor_system_power()
         comp_capex_2016, _ = storage_compressor.compressor_costs()
         comp_capex = comp_capex_2016 * 1.36013289036545 / 1.2890365448505
         # Values taken from CEPCI table in "Feedstock & Utility Prices"

@@ -3,6 +3,7 @@ from attrs import field, define
 from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.methanol.methanol_baseclass import (
     MethanolCostConfig,
     MethanolCostBaseClass,
@@ -28,6 +29,7 @@ class SMRMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
     elec_produce_ratio: float = field()
 
 
+@register
 class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of a steam methane reforming (SMR) methanol
@@ -135,6 +137,7 @@ class SMRMethanolPlantCostModelConfig(MethanolCostConfig):
     cost_year: int = field(converter=int)
 
 
+@register
 class SMRMethanolPlantCostModel(MethanolCostBaseClass):
     """
     An OpenMDAO component for modeling the cost of a steam methane (SMR) reforming methanol plant.
@@ -209,6 +212,7 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
         outputs["OpEx"] = foc_usd_y + voc_usd_y + meoh_cat + atr_cat + ng_cost - elec_rev
 
 
+@register
 class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
     An OpenMDAO component for modeling the financing of a steam methane reforming (SMR) methanol

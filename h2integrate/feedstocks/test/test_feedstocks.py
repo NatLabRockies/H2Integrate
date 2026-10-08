@@ -210,7 +210,7 @@ def test_single_feedstock_natural_gas(plant_config):
 def test_eia_natural_gas_feedstock(plant_config, eia_ng_feedstock_tech_config):
     """Test a single natural gas feedstock with basic parameters."""
     tech_config = eia_ng_feedstock_tech_config
-    _, driver_config = create_basic_feedstock_config()
+    _, _driver_config = create_basic_feedstock_config()
 
     # Test performance model
     perf_model = FeedstockPerformanceModel(
@@ -491,5 +491,5 @@ def test_per_year_pricing_invalid_length(plant_config):
     prob = om.Problem()
     prob.model.add_subsystem("feedstock_cost", cost_model)
 
-    with pytest.raises(ValueError, match="must match n_timesteps.*or plant_life"):
+    with pytest.raises(ValueError, match="must match n_timesteps.*or plant_life"):  # noqa: RUF043
         prob.setup()

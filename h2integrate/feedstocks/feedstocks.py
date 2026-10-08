@@ -4,6 +4,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -22,6 +23,7 @@ class FeedstockPerformanceConfig(BaseConfig):
     rated_capacity: float = field()
 
 
+@register
 class FeedstockPerformanceModel(om.ExplicitComponent):
     _time_step_bounds = (
         3600,
@@ -88,6 +90,7 @@ class FeedstockCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class FeedstockCostModel(CostModelBaseClass):
     _time_step_bounds = (
         3600,

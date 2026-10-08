@@ -122,7 +122,8 @@ gis = [
   "contextily",
   "reverse_geocoder"
 ]
-ard = ["ard-nrel"]
+# optiwindnet 0.3.1 made set_problem arguments keyword-only, which breaks ard-nrel 0.1.0b5
+ard = ["ard-nrel", "optiwindnet<0.3.1"]
 extras = ["h2integrate[gis,ard]"]
 all = ["h2integrate[develop,extras,examples]"]
 
@@ -237,7 +238,6 @@ ignore = [
   "D401",
   "PERF203",
   "PD011",
-  "PD901",
   "RUF015",
   "N806",  # NOTE: many variable names use an uppercase for legitimate reasons
   "N802",  # NOTE: many function names use an uppercase for legitimate reasons
@@ -250,11 +250,13 @@ ignore = [
   "B006",
   "B008",
   "B023",
+
+  # TODO: should be fixed, but requires discussion
+  "A005",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "*/__init__.py" = ["E501", "D104", "F401"]
-"*/supported_models.py" = ["E501"]
 "test/*" = ["D100", "D101", "D102", "D103"]
 "*/test/test_wave_pysam.py" = ["E501"]
 
