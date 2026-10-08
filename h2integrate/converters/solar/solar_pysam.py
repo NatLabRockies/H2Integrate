@@ -5,7 +5,11 @@ import PySAM.Pvwattsv8 as Pvwatts
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.converters.tools import check_pysam_input_params, check_pysam_lifetime_options
+from h2integrate.converters.tools import (
+    check_pysam_input_params,
+    check_pysam_lifetime_options,
+    apply_non_native_lifetime_degradation,
+)
 from h2integrate.core.supported_models import register
 from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseClass
 
@@ -41,6 +45,8 @@ class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
         azimuth_angle_setting (str):
             - 'lat-func': calculate azimuth angle based on site latitude
             - 'input': set 'azimuth_angle' as an openmdao input and use value from inputs
+        electricity_type (str): whether to use the DC or AC electricity generation as the output
+            electricity. Options include 'ac' or 'dc', defaults to 'ac'.
         pysam_options (dict, optional): dictionary of Pvwatts input parameters with
             top-level keys corresponding to the different Pvwattsv8 variable groups.
             (please refer to Pvwattsv8 documentation
@@ -78,6 +84,12 @@ class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     azimuth_angle_setting: str = field(
         default="lat-func",
         validator=validators.in_(["lat-func", "input"]),
+        converter=(str.strip, str.lower),
+    )
+
+    electricity_type: str = field(
+        default="ac",
+        validator=validators.in_(["ac", "dc"]),
         converter=(str.strip, str.lower),
     )
 
@@ -489,18 +501,35 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         pv_capacity_kWdc = system_model.value("system_capacity")
         dc_ac_ratio = system_model.value("dc_ac_ratio")
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
-        outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
+
+        if self.config.electricity_type == "ac":
+            outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
+        else:
+            outputs["rated_electricity_production"] = pv_capacity_kWdc
 
         if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
+            if self.config.electricity_type == "ac":
+                generation = np.array(system_model.Outputs.gen)  # this is in kW-AC
+            else:
+                # convert from W-DC to kW-DC
+                # generation_dc is only 8760
+                generation_dc = np.array(system_model.Outputs.dc) / 1e3
+
+                # PvWatts doesnt output lifetime results for dc power,
+                # have to apply it manually
+                generation = apply_non_native_lifetime_degradation(
+                    generation_dc, system_model.Lifetime.dc_degradation, self.plant_life
+                )
+
             # using lifetime results
             # split the generation profile to have results per-year
-            generation_per_year = np.split(np.array(system_model.Outputs.gen), self.plant_life)
+            generation_per_year = np.split(generation, self.plant_life)
             # sum the generation per-year
             aep_per_year = np.array(generation_per_year).sum(axis=1)
             # get the number of timesteps per year (should be the same for all years)
             n_timesteps_per_year = np.array([len(k) for k in generation_per_year])
             # output the first n_timesteps of the generation profile
-            outputs["electricity_out"] = np.array(system_model.Outputs.gen)[: self.n_timesteps]
+            outputs["electricity_out"] = generation[: self.n_timesteps]
             # make production is the max production per-year
             max_production = (
                 outputs["rated_electricity_production"] * n_timesteps_per_year * (self.dt / 3600)
@@ -512,12 +541,17 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
         else:
+            # get the ac or dc generation profile and convert to kW
+            generation = np.array(getattr(system_model.Outputs, self.config.electricity_type)) / 1e3
+
             # not using lifetime output, use results as-is
-            outputs["electricity_out"] = system_model.Outputs.gen  # kW-AC
+            outputs["electricity_out"] = generation  # kW
             max_production = (
                 outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
             )
-            outputs["annual_electricity_produced"] = system_model.value("ac_annual")
+            outputs["annual_electricity_produced"] = (
+                generation.sum() * (self.dt / 3600) / self.fraction_of_year_simulated
+            )
             outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
                 self.dt / 3600
             )
