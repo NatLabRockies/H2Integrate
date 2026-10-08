@@ -32,8 +32,8 @@ from h2integrate import ROOT_DIR
 # Configuration
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = ROOT_DIR.parent
-OUTPUT_HTML = REPO_ROOT / "docs" / "_static" / "class_hierarchy.html"
+DOCS_DIR = Path(__file__).resolve().parent
+OUTPUT_HTML = DOCS_DIR / "_static" / "class_hierarchy.html"
 
 # Directories / path fragments that indicate test code (case-insensitive check)
 TEST_INDICATORS = {"test", "tests", "conftest", "test_"}
