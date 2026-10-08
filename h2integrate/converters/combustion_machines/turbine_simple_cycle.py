@@ -4,7 +4,6 @@ import numpy as np
 from attrs import field, define, validators
 
 import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
-from h2integrate.reliability import PerformanceReliability
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
@@ -118,7 +117,6 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
-        self.reliability_model = None
 
     def setup(self):
         super().setup()
@@ -242,21 +240,6 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         ]
         self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
 
-        if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
-            # TODO: enforce "minimum" for availability_type since we're composing this
-            # as a single, repeated system
-            plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
-            simulation_config = {
-                "simulation": {
-                    "dt": plant_simulation_config.get("dt", 3600),
-                    "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
-                },
-            }
-            config = self.options["tech_config"]["model_inputs"]["reliability"]
-            use_reliability = config.get("use_reliability", use_reliability)
-            self.reliability_model = PerformanceReliability.from_dict(config | simulation_config)
-        self.use_reliability = use_reliability
-
     def compute(self, inputs, outputs, discrete_inputs, _discrete_outputs):
         # working variables for inputs
         num_turbines = float(inputs["num_turbines"][0])
@@ -339,20 +322,6 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         turbine_net_heat_input_vec = np.array(
             [m * q for m, q in zip(turbine_mass_flowrates, unit_mass_net_heat_input_vec)]
         )  # kJ/s
-
-        # Cap work by system availability
-        turbine_available_work = turbine_net_work_vec
-        if self.use_reliability:
-            # Model the availability as N systems by running the model N times and extracting the
-            # results of each run to ensure variations in system availability, recreating the
-            # fractional availability calculation to get availability in the correct shape
-            availability = []
-            for _ in range(np.ceil(num_turbines)):
-                self.reliability_model.run()
-                availability.append(self.reliability_model.availability.reshape(1, -1))
-
-            # TODO: break this out to 2 steps and save the availability for later use?
-            turbine_available_work *= np.vstack(availability).sum(axis=0) / len(availability)
 
         # get the maximum net work the system could do given current conditions
         turbine_max_net_work_vec = np.array(
