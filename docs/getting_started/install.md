@@ -8,6 +8,14 @@ If you just want to use H2Integrate and aren't developing new models, you should
 pip install h2integrate
 ```
 
+Pyomo is installed with H2Integrate, but solver software is installed separately. If you use a
+Pyomo dispatch or optimization model, install at least one supported solver, such as GLPK, CBC, or
+HiGHS. These are available from conda-forge:
+
+```bash
+conda install -y -c conda-forge glpk "coin-or-cbc>=2.10.12" highspy
+```
+
 ## Installing from Source
 
 If you want to develop new models or contribute to H2Integrate, you can install it from source.
@@ -59,10 +67,10 @@ If you want to develop new models or contribute to H2Integrate, you can install 
 4. Create a conda environment and install H2Integrate and all its dependencies. Please read the
    following two notes about modified installation steps.
 
-    1. If on a Unix machine, uncomment line 8 in `environment.yml` to install Cbc. Windows
-      users will need to manually install from <https://github.com/coin-or/Cbc>.
-    2. If you plan to use Ard, please uncomment line 9 in `environment.yml` to ensure WISDEM (an Ard
-      dependency) is installed from conda to avoid installation issues with some systems.
+     1. The environment specification already installs GLPK, CBC, and HiGHS from conda-forge; no
+       solver lines need to be uncommented.
+     2. If you plan to use Ard, uncomment the `wisdem` dependency in `environment.yml` so it is
+       installed from conda and avoids installation issues on some systems.
 
     ```bash
     conda env create -f environment.yml
@@ -111,7 +119,7 @@ pip install -e ".[all]"
 4. Install H2Integrate and its dependencies:
 
     ```bash
-    conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12 highspy
+    conda install -y -c conda-forge glpk "coin-or-cbc>=2.10.12" highspy
     ```
 
     - If you want to just use H2Integrate:

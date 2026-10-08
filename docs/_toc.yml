@@ -125,10 +125,10 @@ parts:
       - file: developer_guide/class_structure
       - file: developer_guide/technology_model_types
       - file: developer_guide/testing
-      - file: developer_guide/features_not_currently_implemented
   - caption: Miscellaneous Resources
     chapters:
       - file: misc_resources/FAQ
+      - file: misc_resources/changelog
       - file: misc_resources/glossary
       - file: misc_resources/defining_filepaths
       - file: misc_resources/turbine_models_library_preprocessing
