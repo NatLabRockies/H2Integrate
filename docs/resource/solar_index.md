@@ -22,7 +22,7 @@ Please refer to the [Setting Environment Variables](../getting_started/environme
 
 (solarresource:overview)=
 (solar-resource-output-data)=
-# Solar Resource: Output Data
+## Solar Resource: Output Data
 
 Solar resource models may output solar resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a solar resource model.
 

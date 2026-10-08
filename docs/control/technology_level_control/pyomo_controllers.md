@@ -68,7 +68,7 @@ The Pyomo control framework currently supports both a simple heuristic method an
 The simple heuristic method is specified by setting the storage control to `HeuristicLoadFollowingStorageController`. When using the Pyomo framework, a `dispatch_rule_set` for each technology connected to the storage technology must also be specified. These will typically be `PyomoDispatchGenericConverter` for generating technologies, and `PyomoRuleStorageBaseclass` for storage technologies. More complex rule sets may be developed as needed.
 
 For an example of how to use the heuristic Pyomo control framework with the `HeuristicLoadFollowingStorageController`, see
-- `examples/18_pyomo_heuristic_wind_battery_dispatch`
+- `examples/18_pyomo_heuristic_dispatch`
 
 
 (optimized-load-following-controller)=
@@ -93,7 +93,7 @@ We have exposed the optimization cost (weighting) values to the user in this imp
 ```
 
 For an example of how to use the optimized Pyomo control framework with the `OptimizedDispatchStorageController`, see
-- `examples/27_pyomo_optimized_dispatch`
+- `examples/30_pyomo_optimized_dispatch`
 
 
 This controller only allows one incoming electricity stream and does not apply optimal dispatch of that stream back through the upstream technologies (no feedback). The dispatch can handle more than one generation technology, but the incoming electricity must be combined using an H2I combiner before going to the storage component, and the `cost_per_production`, which is defined in the storage technology section, needs to include the cost of production for all production technologies. This could be done using the following:
@@ -266,7 +266,7 @@ $$
 $$
 
 
-Example 34 performs the optimization with a synthetic LMP signal and demand signal. The look-ahead horizon (`n_control_window_hours`) controls how many hours are optimized at once. Larger values improve solution quality but increase solve time. See the figure below for results.
+Example 34 performs the optimization with a synthetic LMP signal and demand signal. The look-ahead horizon (`n_control_window_hours`) controls how many hours are optimized at once. Larger values improve solution quality but increase solve time. See the [Example 34 configuration](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/34_plm_optimized_dispatch) and figure below for results.
 
 ![](./figures/plm_optimized_dispatch.png)
 

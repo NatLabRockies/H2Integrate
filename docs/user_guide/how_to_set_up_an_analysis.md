@@ -74,7 +74,7 @@ Here is an example of a technology config that is defining an energy system with
 :linenos: true
 ```
 
-Here, we have defined a wind plant using the `pysam_wind_plant_performance` and `atb_wind_cost` models, and an electrolyzer using the `eco_pem_electrolyzer_performance` and `singlitico_electrolyzer_cost` models.
+Here, the wind plant uses `PYSAMWindPlantPerformanceModel` and `ATBWindPlantCostModel`, while the electrolyzer uses `ECOElectrolyzerPerformanceModel` and `SingliticoCostModel`.
 The `performance_model` and `cost_model` keys define the models used for the performance and cost calculations, respectively.
 The `model_inputs` key contains the inputs for the models, which are organized into sections for shared parameters, performance parameters, cost parameters, and financial parameters.
 
@@ -84,14 +84,9 @@ The `performance_parameters` section contains parameters that are specific to th
 The `cost_parameters` section contains parameters that are specific to the cost model, such as the capital costs and replacement costs.
 The `financial_parameters` section contains parameters that are specific to the financial model, such as the replacement costs and financing terms.
 
-```{note}
-There are no default values for the parameters in the technology config file.
-You must define all the parameters for the models you are using in the analysis.
-```
-
-Based on which models you choose to use, the inputs will vary.
-Each model has its own set of inputs, which are defined in the source code for the model.
-Because there are no default values for the parameters, we suggest you look at an existing example that uses the model you are interested in to see what inputs are required or look at the source code for the model.
+Model inputs vary by model. Configuration classes may provide defaults for some parameters and
+require others. Use [`populate_tech_yaml`](populate_tech_yaml.md) to generate a configuration
+template, and see the model documentation for parameter details and valid values.
 The available models are registered with the `@register` decorator from `h2integrate/core/supported_models.py`; see the {ref}`technology models overview <technology-models-overview>` for the full list.
 
 ```{note}
