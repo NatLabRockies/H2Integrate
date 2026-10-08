@@ -257,11 +257,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             desc="turbine hub-height in meters",
         )
 
-        if self.config.create_model_from == "default":
-            Windpower.default(self.config.config_name)
-        elif self.config.create_model_from == "new":
-            Windpower.new()
-
         design_dict = self.config.create_input_dict()
         if bool(self.config.pysam_options):
             for group, group_parameters in self.config.pysam_options.items():

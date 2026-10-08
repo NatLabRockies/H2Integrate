@@ -202,11 +202,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         self.add_output("system_capacity_AC", val=0.0, units="kW", desc="PV rated capacity in AC")
 
-        if self.config.create_model_from == "default":
-            system_model = Pvwatts.default(self.config.config_name)
-        elif self.config.create_model_from == "new":
-            system_model = Pvwatts.new(self.config.config_name)
-
         design_dict = self.config.create_input_dict()
 
         # update design_dict if user provides non-empty design information
@@ -222,7 +217,17 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         check_pysam_lifetime_options(design_dict, self.plant_life, "dc_degradation")
 
         self.design_dict = design_dict
-        system_model.assign(design_dict)
+
+        # Unset input angles use the configured default model as their fallback
+        needs_default_angle = self.config.create_model_from == "default" and (
+            (self.config.tilt_angle_setting == "input" and self.config.tilt is None)
+            or (self.config.azimuth_angle_setting == "input" and self.config.azimuth is None)
+        )
+        system_model = None
+        if needs_default_angle:
+            system_model = Pvwatts.default(self.config.config_name)
+            # Apply user options before reading the configured angle defaults
+            system_model.assign(design_dict)
 
         if self.config.tilt_angle_setting == "input":
             tilt = self.get_initial_angle_value("tilt", system_model)
