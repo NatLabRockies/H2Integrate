@@ -18,7 +18,11 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_control_classifier,
+    check_model_simulation_duration,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -897,20 +901,31 @@ def test_unsupported_simulation_parameters(temp_dir):
     plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
     # docs fencepost end: DO NOT REMOVE
 
-    # Modify the n_timesteps entry for the temp_plant_config_ntimesteps
-    plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 8759
-    # Modify the dt entry for the temp_plant_config_dt
-    plant_config_data_dt["plant"]["simulation"]["dt"] = 3601
+    plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
-    # Save the modified plant_configs YAML back
+    # Sub-year and multi-year horizons are supported when positive and within plant life.
+    plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
     with temp_plant_config_ntimesteps.open("w") as f:
         yaml.safe_dump(plant_config_data_ntimesteps, f)
+    load_plant_yaml(temp_plant_config_ntimesteps)
+
+    # A two-year hourly horizon should also load without error.
+    plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
     with temp_plant_config_dt.open("w") as f:
         yaml.safe_dump(plant_config_data_dt, f)
+    load_plant_yaml(temp_plant_config_dt)
 
-    # check that error is thrown when loading config with invalid number of timesteps
-    with pytest.raises(ValueError, match="greater than 1-year"):
-        load_plant_yaml(plant_config_data_ntimesteps)
+    # A horizon longer than the plant life is not supported and must raise.
+    over_life = deepcopy(plant_config_data_dt)
+    over_life["plant"]["simulation"]["n_timesteps"] = (plant_life + 1) * 8760
+    with pytest.raises(ValueError, match="longer than the plant"):
+        load_plant_yaml(over_life)
+
+    # A non-positive horizon is invalid and must raise.
+    non_positive = deepcopy(plant_config_data_dt)
+    non_positive["plant"]["simulation"]["dt"] = 0
+    with pytest.raises(ValueError, match="must be positive"):
+        load_plant_yaml(non_positive)
 
 
 @pytest.mark.unit
@@ -956,6 +971,41 @@ def test_check_control_classifier_accepts_classified_model():
         _control_classifier = "dispatchable"
 
     check_model_control_classifier("ClassifiedModel", ClassifiedModel, True)
+
+
+@pytest.mark.unit
+def test_check_simulation_duration_defaults_to_annual_only():
+    class DummyModel:
+        pass
+
+    # Exactly one year (8760 h at 1 h steps) is allowed by default.
+    check_model_simulation_duration("DummyModel", DummyModel, 8760, 3600)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Model DummyModel is compatible with simulation durations between "
+            r"1.0 and 1.0 years, but a simulation duration of 2 years"
+        ),
+    ):
+        check_model_simulation_duration("DummyModel", DummyModel, 2 * 8760, 3600)
+
+
+@pytest.mark.unit
+def test_check_simulation_duration_respects_model_bounds():
+    class MultiYearModel:
+        # (min, max) permitted simulation duration in years
+        _simulation_duration_bounds = (0.0, 5.0)
+
+    # Half a year and two years are both within the model's supported range.
+    check_model_simulation_duration("MultiYearModel", MultiYearModel, 4380, 3600)
+    check_model_simulation_duration("MultiYearModel", MultiYearModel, 2 * 8760, 3600)
+
+    with pytest.raises(
+        ValueError,
+        match=r"compatible with simulation durations between 0.0 and 5.0 years",
+    ):
+        check_model_simulation_duration("MultiYearModel", MultiYearModel, 6 * 8760, 3600)
 
 
 @pytest.mark.unit

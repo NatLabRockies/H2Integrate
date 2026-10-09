@@ -8,4 +8,3 @@ We are listing them here:
 - saving results elegantly for plant components so they do not always need to be rerun
 - detailing the required inputs and outputs for different model types (e.g. electrolyzer) so that users can more easily add their own subsystems
 - splitters and combiners for when resources are used or produced by multiple components
-- simulating different timespans than one year at hourly timesteps (8760s)

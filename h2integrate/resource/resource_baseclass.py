@@ -21,6 +21,7 @@ from h2integrate.resource.utilities.time_tools import (
     check_data_length,
     contains_leap_day,
     add_resource_start_end_times,
+    resample_resource_data_to_dt,
     get_number_of_resource_years_needed,
 )
 from h2integrate.resource.utilities.download_tools import download_from_api
@@ -65,6 +66,12 @@ class ResourceBaseAPIConfig(BaseConfig):
         resource_year_order (list, optional): Only used running a simulation requiring multiple
             resource years. List of resource years in-order, such as [2012, 2011, 2013].
             Defaults to None.
+        upsample_method (str | None, optional): Pandas interpolation method to use when the
+            simulation timestep is finer than the resource data timestep. Required only when
+            upsampling is needed; otherwise defaults to None and no automatic resampling occurs.
+        downsample_method (str | None, optional): Pandas resampling aggregation to use when the
+            simulation timestep is coarser than the resource data timestep. Required only when
+            downsampling is needed; otherwise defaults to None and no automatic resampling occurs.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -85,6 +92,9 @@ class ResourceBaseAPIConfig(BaseConfig):
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
     resource_year_order: list | None = field(default=None)
+    # Resampling methods used when the resource data's native timestep differs from the sim dt.
+    upsample_method: str | None = field(default=None)
+    downsample_method: str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -559,7 +569,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # filepath, and a new download isn't forced, then load data using `load_data()`
         if filepath.is_file() and not forced_download:
             data = self.load_data(filepath)
-            # NOTE: this where we could up/downsample
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -571,7 +580,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 6) Load data from the file created in Step 5 using `load_data()`
             data = self.load_data(filepath)
-            # NOTE: this where we could up/downsample
             return data
 
         else:
@@ -591,8 +599,15 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             dict: resource_data after final processing and checks
         """
-        # NOTE: we could up/downsample here also
+        # Remove leap day (if needed) on the native data, resample to the simulation
+        # timestep, then clip to the number of timesteps requested by the simulation.
         resource_data = process_leap_day(resource_data, self.config.include_leap_day)
+        resource_data = resample_resource_data_to_dt(
+            resource_data,
+            self.dt,
+            self.config.upsample_method,
+            self.config.downsample_method,
+        )
         resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
         resource_data = add_resource_start_end_times(resource_data)
         check_data_length(resource_data, self.n_timesteps)

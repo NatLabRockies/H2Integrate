@@ -39,6 +39,8 @@ def site_config(which, lat, lon, model, resource_year, model_name):
                 "resource_model": model,
                 "resource_parameters": {
                     "resource_year": resource_year,
+                    "upsample_method": "time",
+                    "downsample_method": "mean",
                 },
             }
         },
