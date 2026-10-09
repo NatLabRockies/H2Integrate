@@ -69,6 +69,8 @@ class ATBBatteryCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model. The ATB
     # cost model is time-step independent (it only uses storage capacity and charge
     # rate), so it accepts any sub-hourly-to-hourly time step.
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = ATBBatteryCostConfig.from_dict(

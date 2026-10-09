@@ -13,6 +13,8 @@ class CablePerformanceModel(om.ExplicitComponent):
         1,
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def initialize(self):
         self.options.declare("transport_item", values=["electricity"])

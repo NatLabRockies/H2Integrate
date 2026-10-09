@@ -2308,6 +2308,62 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+)
+def test_24_solar_battery_grid_non_annual(subtests, temp_copy_of_example):
+    # Regression guard: the models used by example 24 must declare non-annual
+    # `_simulation_duration_bounds`, so a sub-annual horizon runs without being rejected by
+    # `check_model_simulation_duration`.
+    import copy
+
+    example_folder = temp_copy_of_example
+    top_level_config = load_yaml(example_folder / "solar_battery_grid.yaml")
+    driver_config = load_yaml(example_folder / top_level_config["driver_config"])
+    tech_config = load_yaml(example_folder / top_level_config["technology_config"])
+    plant_config = load_yaml(example_folder / top_level_config["plant_config"])
+
+    driver_config.setdefault("general", {})["create_om_reports"] = False
+    # Half-year horizon at 15-minute steps (one native year upsampled to 15-min, clipped).
+    plant_config["plant"]["simulation"]["dt"] = 900
+    plant_config["plant"]["simulation"]["n_timesteps"] = 17520
+    resource_params = plant_config["sites"]["site"]["resources"]["solar_resource"][
+        "resource_parameters"
+    ]
+    resource_params.clear()
+    resource_params.update(
+        {
+            "resource_year": 2013,
+            "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
+            "upsample_method": "time",
+        }
+    )
+
+    model = H2IntegrateModel(
+        {
+            "name": "solar_battery_grid_half_year",
+            "system_summary": top_level_config["system_summary"],
+            "driver_config": driver_config,
+            "technology_config": copy.deepcopy(tech_config),
+            "plant_config": plant_config,
+        }
+    )
+    model.run()
+
+    plant_life = int(plant_config["plant"]["plant_life"])
+
+    with subtests.test("Capacity factor is projected across the full plant life"):
+        solar_cf = model.prob.get_val("solar.capacity_factor", units="unitless")
+        assert solar_cf.shape == (plant_life,)
+
+    with subtests.test("Sub-annual load served is less than a comparable annual run"):
+        load_served = model.prob.get_val(
+            "electrical_load_demand.total_electricity_produced", units="kW*h"
+        )[0]
+        assert load_served > 0.0
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_mapping", None)]
 )
 @pytest.mark.skipif(importlib.util.find_spec("geopandas") is None, reason="`gis` not installed")

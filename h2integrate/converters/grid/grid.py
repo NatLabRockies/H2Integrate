@@ -54,6 +54,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         1,
         np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
     _control_classifier = "dispatchable"
 
     def initialize(self):
@@ -164,7 +166,6 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
 
-        (inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600))
         outputs["electricity_sell_headroom"] = interconnection_size - electricity_sold
         outputs["electricity_headroom"] = interconnection_size - electricity_bought
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
@@ -241,6 +242,8 @@ class GridCostModel(CostModelBaseClass):
         1,
         np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = GridCostModelConfig.from_dict(

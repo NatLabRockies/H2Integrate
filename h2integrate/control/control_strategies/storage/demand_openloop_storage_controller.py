@@ -51,6 +51,8 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         1,  # 1 second
         86400,  # 24 hours
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = DemandOpenLoopStorageControllerConfig.from_dict(
