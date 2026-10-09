@@ -20,8 +20,9 @@ GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submi
 * Keep style fixes to a separate commit to make your pull request more readable.
 * Docstrings are required and should follow the
   [Google style](https://www.sphinx-doc.org/en/master/usage/extensions/example_google.html).
-* When you start working on a pull request, start by creating a new branch pointing at the latest
-  commit on [main](https://github.com/NatLabRockies/H2Integrate).
+* Contributions are generally made against the `develop` branch. New models use the
+   [`@register` decorator](https://github.com/NatLabRockies/H2Integrate/blob/develop/h2integrate/core/supported_models.py);
+   see [Adding a New Technology](developer_guide/adding_a_new_technology.md) for the model requirements.
 * Code formatting is enforced using pre-commit hooks and is required for any code pushed up to the repository. The pre-commit package is included in the developer install of the repository. The pre-commit hooks can be installed by running
 ```bash
 pre-commit install
@@ -76,22 +77,28 @@ jupytext notebook.md --to .ipynb
 
 ## Tests
 
-The test suite can be run using `pytest tests/h2integrate`. Individual test files can be run by specifying them:
+Run tests from the repository root in an environment with the development dependencies installed.
+Every test must use one of the `unit`, `regression`, `integration`, or `hpc` markers. Collection
+fails for unmarked tests. Common commands are:
 
 ```bash
-pytest tests/h2integrate/test_hybrid.py
+pytest -m unit
+pytest -m regression
+pytest -m integration
+pytest -m hpc
 ```
 
-and individual tests can be run within those files
+To run one test file or test function, provide its path and optional node ID:
 
 ```bash
-pytest tests/h2integrate/test_hybrid.py::test_h2integrate_system
+pytest h2integrate/core/test/test_utilities.py
+pytest h2integrate/core/test/test_utilities.py::test_function_name
 ```
 
-When you push to your fork, or open a PR, your tests will be run against the
-[Continuous Integration (CI)](https://github.com/NatLabRockies/H2Integrate/actions) suite. This will start a build
-that runs all tests on your branch against multiple Python versions, and will also test
-documentation builds.
+See the [Testing Guide](developer_guide/testing.md) for test conventions, marker details, and
+additional commands. Pull requests run the automated test suite through
+[GitHub Actions](https://github.com/NatLabRockies/H2Integrate/actions). The documentation build is
+also checked on every pull request by [Read the Docs](https://h2integrate.readthedocs.io/).
 
 ## Code Review Process
 
