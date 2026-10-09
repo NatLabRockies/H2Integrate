@@ -633,6 +633,9 @@ class ProFastBase(om.ExplicitComponent):
         rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
             "units"
         ]
+        # Convert the rated production (a rate, e.g. kg/h or kW) into commodity amount units by
+        # multiplying by a duration: one day gives ProFAST's daily capacity, one year the annual
+        # production.
         day_amount_per_unit_rate = convert_units(
             86_400,
             "s",

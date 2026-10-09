@@ -80,6 +80,10 @@ from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 class SolarPerformanceClass(PerformanceModelBaseClass):
     # (min, max) time step lengths (in seconds) compatible with this model
     _time_step_bounds = (3600, 3600)
+    # (min, max) simulation duration (in years) supported by this model.
+    # Defaults to annual-only (1.0, 1.0) on the baseclass; override to allow
+    # sub-annual or multi-year simulations.
+    _simulation_duration_bounds = (1.0, 1.0)
     # System-level control classifier; see the control classifier docs.
     _control_classifier = "flexible"
 
@@ -142,6 +146,7 @@ class SolarPerformanceClass(PerformanceModelBaseClass):
 Every model must define the following class attributes. These are typically set on the category baseclass so that all subclasses inherit them, but they can also be set or overridden on individual model classes.
 
 - `_time_step_bounds` (tuple[int, int]): `(min, max)` simulation time-step lengths (in seconds) the model can run at. Use `(3600, 3600)` for hourly-only models and a wider range (e.g. `(300, 3600)`) for models that support sub-hourly time steps. The plant simulation `dt` must lie within every model's bounds.
+- `_simulation_duration_bounds` (tuple[float, float]): `(min, max)` simulation durations (in years) the model can run over. Defaults to `(1.0, 1.0)` (annual-only) on the core baseclasses; override it (e.g. `(0.0, float("inf"))`) for models that support sub-annual or multi-year simulations. The total simulated duration (`n_timesteps * dt`) must lie within every model's bounds.
 
 Performance models must also define the following class attributes:
 - `commodity` (str), `commodity_rate_units` (str), `commodity_amount_units` (str): set in `initialize()` (or before calling `super().setup()`). These define the commodity produced by the model and the units used for its rate (e.g. `"kW"`, `"kg/h"`) and cumulative amount (e.g. `"kW*h"`, `"kg"`). `PerformanceModelBaseClass.setup()` uses them to register all of the standard outputs and will raise `NotImplementedError` if any are missing.

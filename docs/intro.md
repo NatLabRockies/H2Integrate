@@ -37,6 +37,16 @@ Appropriate time step bounds are included as class attributes when non-hourly ti
 Check individual model docs and definitions for time step bounds for individual models. All models in a given simulation must be compatible with the specified time step.
 ```
 
+```{note}
+Simulations are no longer restricted to exactly one year. A simulation may cover any
+positive duration up to the plant life (a fraction of a year, a single year, or multiple
+years), set via `n_timesteps` and `dt` in `plant_config`. Performance, cost, and finance
+results are annualized across the plant life using the simulated horizon. Each model
+declares the durations it supports with a `_simulation_duration_bounds` class attribute
+(min, max in years); the default is annual-only. All models in a given simulation must be
+compatible with the specified duration.
+```
+
 For each technology there are 4 different types of models: control, performance, cost, and finance. These model categories allow for modular pieces to be brought in or re-used throughout H2Integrate, as well as ease of development and organization. Note that the only required models for a technology are performance and cost, while control and finance are optional. The figure below shows these four categories and some of the technologies included in H2Integrate. For a full list of models available, please see [Model Overview](user_guide/model_overview.md).
 ![A representation of a single technology model in H2Integrate](tech-model.png)
 
