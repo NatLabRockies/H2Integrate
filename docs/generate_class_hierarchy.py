@@ -10,11 +10,10 @@ Visual encoding:
   - **Color**  → product / application group (electricity, chemical, metal, etc.)
   - **Border width** → inheritance depth (thicker = higher-level parent)
 
-Usage:
-    python docs/generate_class_hierarchy.py
+This script is invoked automatically by ``docs/build_book.sh`` before Jupyter Book runs.
 
 Outputs:
-    docs/_static/class_hierarchy.html  — interactive graph
+    docs/_static/class_hierarchy.html  — ignored build-time interactive graph
 """
 
 import os
@@ -33,8 +32,8 @@ from h2integrate import ROOT_DIR
 # Configuration
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = ROOT_DIR.parent
-OUTPUT_HTML = REPO_ROOT / "docs" / "_static" / "class_hierarchy.html"
+DOCS_DIR = Path(__file__).resolve().parent
+OUTPUT_HTML = DOCS_DIR / "_static" / "class_hierarchy.html"
 
 # Directories / path fragments that indicate test code (case-insensitive check)
 TEST_INDICATORS = {"test", "tests", "conftest", "test_"}

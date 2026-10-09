@@ -12,7 +12,8 @@ def calculate_air_density(elevation_m: float) -> float:
     """
     Calculate air density based on site elevation using the Barometric formula.
 
-    This function is based on Equation 1 from: https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
+    This function follows the density equations in Wikipedia's article on the barometric formula:
+    https://en.wikipedia.org/wiki/Barometric_formula
     Imported constants are:
 
         - g: acceleration due to gravity (m/s2)

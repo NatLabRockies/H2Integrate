@@ -227,8 +227,8 @@ new_csv_filename.name
 
 Let's see the updates to combinations.
 
-```{literalinclude} ../../examples/20_solar_electrolyzer_doe/csv_doe_cases0.csv
-:language: text
+```{code-cell} ipython3
+print(new_csv_filename.read_text())
 ```
 
 ```{code-cell} ipython3

@@ -79,11 +79,7 @@ The visual encoding uses three dimensions:
 Arrows point from parent to child.
 You can **zoom**, **pan**, **hover** for details, and **drag** nodes to rearrange the layout.
 
-To regenerate this visualization after code changes, run:
-
-```bash
-python docs/generate_class_hierarchy.py
-```
+This diagram is generated automatically when the documentation is built, so it is always up-to-date with available model classes and their inheritance structure.
 
 ```{raw} html
 <div style="width:100%; box-sizing:border-box;">

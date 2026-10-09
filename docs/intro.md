@@ -60,7 +60,7 @@ H2Integrate stands out by offering a modular approach that models the entire ene
 One significant difference is that REopt can accommodate various external loads such as steel or ammonia, as long as the user provides the load profiles for those end-uses.
 H2Integrate models the processes themselves and does not require the user to provide a load profile, instead modeling what the load profile would be based on physics-based or analytical models.
 
-[SAM](https://sam.nrel.gov/) is another relevant tool (that H2Integrate partially uses), which gives more detailed performance and financial modeling capabilities than REopt.
+[SAM](https://sam.nlr.gov/) is another relevant tool (that H2Integrate partially uses), which gives more detailed performance and financial modeling capabilities than REopt.
 Like REopt, SAM also does not model loads or end-uses but accepts timeseries data of the loads for design purposes.
 
 H2Integrate goes into more component-level details than those tools, especially in terms of nonlinear physics-based modeling and design.
