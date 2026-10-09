@@ -18,7 +18,11 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_control_classifier,
+    check_model_simulation_duration,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -967,6 +971,41 @@ def test_check_control_classifier_accepts_classified_model():
         _control_classifier = "dispatchable"
 
     check_model_control_classifier("ClassifiedModel", ClassifiedModel, True)
+
+
+@pytest.mark.unit
+def test_check_simulation_duration_defaults_to_annual_only():
+    class DummyModel:
+        pass
+
+    # Exactly one year (8760 h at 1 h steps) is allowed by default.
+    check_model_simulation_duration("DummyModel", DummyModel, 8760, 3600)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Model DummyModel is compatible with simulation durations between "
+            r"1.0 and 1.0 years, but a simulation duration of 2 years"
+        ),
+    ):
+        check_model_simulation_duration("DummyModel", DummyModel, 2 * 8760, 3600)
+
+
+@pytest.mark.unit
+def test_check_simulation_duration_respects_model_bounds():
+    class MultiYearModel:
+        # (min, max) permitted simulation duration in years
+        _simulation_duration_bounds = (0.0, 5.0)
+
+    # Half a year and two years are both within the model's supported range.
+    check_model_simulation_duration("MultiYearModel", MultiYearModel, 4380, 3600)
+    check_model_simulation_duration("MultiYearModel", MultiYearModel, 2 * 8760, 3600)
+
+    with pytest.raises(
+        ValueError,
+        match=r"compatible with simulation durations between 0.0 and 5.0 years",
+    ):
+        check_model_simulation_duration("MultiYearModel", MultiYearModel, 6 * 8760, 3600)
 
 
 @pytest.mark.unit

@@ -60,6 +60,7 @@
 - Update API resource models to be able to be able to handle nonannual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
 - Move PySAM model instantiation for wind and solar performance models to the `compute()` method, and validate recalculated wind power curves. [PR 909](https://github.com/NatLabRockies/H2Integrate/pull/909)
 - Add data resampling capabilities via pandas methods. [PR 893](https://github.com/NatLabRockies/H2Integrate/pull/893)
+- Add core framework support for non-annual simulation durations. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.9 [August 10, 2026]
 

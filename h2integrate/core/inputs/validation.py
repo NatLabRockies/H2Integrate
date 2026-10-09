@@ -150,6 +150,22 @@ def load_tech_yaml(finput):
 
 
 def load_plant_yaml(finput):
+    """Validate a plant configuration and check its simulation duration.
+
+    The simulation may cover any positive duration (a fraction of a year, a single year, or
+    multiple years); performance, cost, and finance models annualize their results across the
+    plant life. The duration (``n_timesteps * dt``) must be positive and must not exceed the
+    configured ``plant_life``.
+
+    Args:
+        finput (dict | str): plant configuration dictionary or path to the plant config YAML.
+
+    Returns:
+        dict: the validated plant configuration.
+
+    Raises:
+        ValueError: if the simulation horizon is non-positive or longer than the plant life.
+    """
     plant_config = _validate(finput, fschema_plant)
 
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])

@@ -57,6 +57,18 @@ directly) means the baseclass:
     - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
     - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
     - Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+    - Provides `calculate_annual_cf_and_replacement_schedule()` to project annual capacity factors and a replacement schedule across the plant life from a simulated horizon of any length (optionally accounting for degradation).
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
+
+Similarly, inheriting from `CostModelBaseClass` (rather than `om.ExplicitComponent`
+directly) means the baseclass:
+    - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
+    - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
+    - Registers the standard cost outputs `CapEx`, `OpEx`, and `VarOpEx` consumed by the finance models, along with the discrete `cost_year` output and a `marginal_cost` output used for dispatch decisions.
+    - Provides `calculate_annual_varopex()` to annualize timestep-level variable operating costs across the plant life.
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
 
 ### Multiple layers of inheritance
 
