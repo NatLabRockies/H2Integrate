@@ -60,6 +60,7 @@
 - Update API resource models to be able to be able to handle nonannual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
 - Move PySAM model instantiation for wind and solar performance models to the `compute()` method, and validate recalculated wind power curves. [PR 909](https://github.com/NatLabRockies/H2Integrate/pull/909)
 - Updated the docs throughout, removing stale references and ensuring consistency with the latest model and configuration changes. [PR 910](https://github.com/NatLabRockies/H2Integrate/pull/910)
+- Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.9 [August 10, 2026]

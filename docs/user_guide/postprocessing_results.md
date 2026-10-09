@@ -191,3 +191,85 @@ Pass the base name and the function handles the rest:
 # Aggregates cases.sql_0, cases.sql_1, ... into a single DataFrame
 summary_df = convert_sql_to_csv_summary("output_dir/cases.sql")
 ```
+
+## Printing model results
+
+`print_results` prints a hierarchical summary of an OpenMDAO model's inputs and outputs and returns
+a dictionary containing input, explicit-output, and implicit-output metadata. The `includes` and
+`excludes` arguments accept OpenMDAO variable patterns; `show_units` controls whether units are
+included in the report and returned metadata.
+
+```python
+from h2integrate.postprocess.reporting import print_results
+
+model.run()
+result_summary = print_results(
+  model.prob.model,
+  includes="*.hydrogen_out",
+  excludes="*resource_data",
+  show_units=True,
+)
+```
+
+The returned mapping has `inputs`, `explicit_outputs`, and `implicit_outputs` entries.
+
+```{eval-rst}
+.. autofunction:: h2integrate.postprocess.reporting.print_results
+   :no-index:
+```
+
+## Plotting energy and hydrogen flows
+
+The plotting helpers in `h2integrate.tools.plot` read the production `energy_flows.csv` file. They
+accept start and end datetimes, a save path, and flags to display or save the figure. The default
+input path is `./output/data/production/energy_flows.csv`.
+
+```python
+import datetime as dt
+
+from h2integrate.tools.plot import plot_energy_flows, plot_hydrogen_flows
+
+plot_energy_flows(
+  energy_flow_data_path="output/data/production/energy_flows.csv",
+  start_date_time=dt.datetime(2024, 1, 5),
+  end_date_time=dt.datetime(2024, 1, 10),
+  show_fig=False,
+)
+plot_hydrogen_flows(
+  energy_flow_data_path="output/data/production/energy_flows.csv",
+  show_fig=False,
+)
+```
+
+`plot_energy_flows` plots electricity generation and battery charge/discharge.
+`plot_hydrogen_flows` plots hydrogen production, demand, and storage state of charge. The CSV must
+contain the columns expected by the selected plotting function.
+
+```{eval-rst}
+.. autofunction:: h2integrate.tools.plot.plot_energy_flows
+   :no-index:
+
+.. autofunction:: h2integrate.tools.plot.plot_hydrogen_flows
+   :no-index:
+```
+
+## ProFAST helpers
+
+The ProFAST utilities create and populate a `ProFAST` object from a configuration mapping, run its
+price solve, or convert an existing object back to configuration data. They are available from
+`h2integrate.tools.profast_tools`.
+
+- `create_and_populate_profast(pf_config)` builds a ProFAST instance from a configuration mapping.
+- `run_profast(pf)` returns the solved price, summary values, and cost-breakdown DataFrame.
+- `make_price_breakdown(price_breakdown, pf_config)` distributes non-component financial costs
+  across primary cost items and returns a check against the solved levelized cost.
+- `format_profast_price_breakdown_per_year(price_breakdown)` formats a ProFAST cost breakdown by
+  year for reporting.
+- `convert_pf_to_dict(pf)` converts a ProFAST instance into nested configuration data.
+
+```python
+from h2integrate.tools.profast_tools import create_and_populate_profast, run_profast
+
+profast_model = create_and_populate_profast(pf_config)
+solution, summary, price_breakdown = run_profast(profast_model)
+```

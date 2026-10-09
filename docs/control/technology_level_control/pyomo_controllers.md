@@ -77,7 +77,11 @@ The optimized dispatch method is specified by setting the storage control to  `O
 
 The optimized dispatch using Pyomo is implemented differently than the heuristic dispatch in order to be able to properly aggregate the individual Pyomo technology models into a cohesive Pyomo plant model for the optimization solver. The Pyomo plant model is from the perspective of the storage technology and is meant to track inflows of commodities and other parameters that might impact the dispatch of the storage from upstream technologies. Practically, this means that the Pyomo elements of the dispatch (including the individual technology models and the plant model) are not exposed to the main H2I code flow, and do not appear in the N2 diagram. The figure below shows a flow diagram of how the dispatch is implemented. The green blocks below represent what is represented in the N2 diagram of the system. The dispatch routine is currently self-contained within the storage technology of the system, though it includes solving an aggregated plant model in the optimization
 
-```{note} Only the PySAM battery performance model can call Pyomo dispatch at this time.
+```{note}
+Optimized dispatch passes a `pyomo_dispatch_solver` callable to a storage performance model.
+`StoragePerformanceBase` provides this interface, so optimized dispatch is not inherently limited
+to the PySAM battery. Confirm that the selected storage model and controller support the requested
+dispatch mode.
 ```
 
 ![](./figures/Pyomo_dispatch_figure.png)
@@ -93,7 +97,25 @@ We have exposed the optimization cost (weighting) values to the user in this imp
 ```
 
 For an example of how to use the optimized Pyomo control framework with the `OptimizedDispatchStorageController`, see
-- `examples/30_pyomo_optimized_dispatch`
+- [Example 30: Optimized Pyomo Dispatch](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/30_pyomo_optimized_dispatch)
+
+### Minimum operating-cost rules
+
+The optimized controller creates `PyomoDispatchGenericConverterMinOperatingCosts` blocks for
+upstream converter technologies and a `PyomoRuleStorageMinOperatingCosts` block for the dispatching
+storage technology. These registered Pyomo rule classes define the per-technology variables and
+constraints used by the controller; the optimized controller constructs them internally rather than
+requiring them to be added as performance models.
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_rules.converters.generic_converter_min_operating_cost.PyomoDispatchGenericConverterMinOperatingCosts
+  :members: initialize_parameters
+  :no-index:
+
+.. autoclass:: h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost.PyomoRuleStorageMinOperatingCosts
+  :members: initialize_parameters
+  :no-index:
+```
 
 
 This controller only allows one incoming electricity stream and does not apply optimal dispatch of that stream back through the upstream technologies (no feedback). The dispatch can handle more than one generation technology, but the incoming electricity must be combined using an H2I combiner before going to the storage component, and the `cost_per_production`, which is defined in the storage technology section, needs to include the cost of production for all production technologies. This could be done using the following:

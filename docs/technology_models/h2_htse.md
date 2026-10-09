@@ -91,6 +91,9 @@ The current implementation is intentionally simple and should be interpreted as 
 ### API details
 For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documentation](../_autosummary/h2integrate.converters.hydrogen.htse_electrolyzer).
 
+The nuclear heat and electricity integration is demonstrated in
+[Example 36: Nuclear Reactor and HTSE](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/36_nuclear_reactor_htse).
+
 ## Cost Model
 
 To use this model, in your `tech_config.yaml` file, set:

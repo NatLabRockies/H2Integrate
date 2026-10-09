@@ -16,6 +16,10 @@
     - "MeteosatPrimeMeridianTMYSolarAPI"
 - [OpenMeteo Historical API](#solar_resource:openmeteo_historical)
 
+Some API resource models support multi-year simulations when the requested resource data covers
+the configured time range. See the [Resource Model Index](resource_index.md) for details on
+multi-year resource handling.
+
 ```{note}
 Please refer to the [Setting Environment Variables](../getting_started/environment_variables) doc page for information on setting up an NLR API key if you haven't yet.
 ```

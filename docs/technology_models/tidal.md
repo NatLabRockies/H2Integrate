@@ -48,3 +48,8 @@ where:
 
 
 This allows a generic power curve to be adapted to different device ratings.
+
+## Example
+
+[Example 31: Tidal](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/31_tidal)
+shows the tidal resource, plant, and driver configurations.

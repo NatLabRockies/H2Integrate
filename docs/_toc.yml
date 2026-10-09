@@ -13,6 +13,9 @@ parts:
       - file: user_guide/model_overview
       - file: user_guide/model_registry
       - file: user_guide/how_to_set_up_an_analysis
+      - file: user_guide/plant_config_reference
+      - file: user_guide/driver_config_reference
+      - file: user_guide/technology_config_reference
       - file: user_guide/connecting_technologies
       - file: user_guide/defining_sites_and_resources
       - file: user_guide/populate_tech_yaml
@@ -26,6 +29,7 @@ parts:
       - file: user_guide/plotting_geospatial_data_with_geopandas
   - caption: Technology Models
     chapters:
+      - file: technology_models/transport
       - file: technology_models/feedstocks
       - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river
@@ -34,6 +38,8 @@ parts:
       - file: technology_models/natural_gas
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
+      - file: technology_models/pem_electrolyzer
+      - file: technology_models/floris_wind_plant
       - file: technology_models/pvwattsv8_solar_pv.md
       - file: technology_models/windpower_wind_plant.md
       - file: technology_models/atb_costs_pv.md
@@ -41,6 +47,8 @@ parts:
       - file: technology_models/co2.md
       - file: technology_models/methanol.md
       - file: technology_models/ammonia.md
+      - file: technology_models/nitrogen_asu
+      - file: technology_models/desalination
       - file: technology_models/paper_mill.md
       - file: technology_models/saf.md
       - file: technology_models/ammonia_synloop_dynamics
@@ -52,6 +60,7 @@ parts:
       - file: technology_models/h2_htse.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
+      - file: technology_models/iron_transport
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
       - file: technology_models/steel_eaf_cmu.md

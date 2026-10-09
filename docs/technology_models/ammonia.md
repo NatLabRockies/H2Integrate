@@ -6,6 +6,24 @@ Ammonia is a common fertilizer, and also has the potential to serve as a lower-c
 
 2. The synloop ammonia model accepts stream-table measurements (or modeled values) from an ammonia synthesis loop as performance parameters. Its registered models are `AmmoniaSynLoopPerformanceModel` in `h2integrate/converters/ammonia/ammonia_synloop_performance.py` and `AmmoniaSynLoopCostModel` in `h2integrate/converters/ammonia/ammonia_synloop_cost.py`. The example in `examples/12_ammonia_synloop/` uses mostly the same parameters as those used by Reznicek et al., but with updated capital costs for the air separator and synthesis loop derived from an NETL baseline study of ammonia production by [Brasington et al.](https://doi.org/10.2172/1515254).
 
+## Simple ammonia configuration
+
+`SimpleAmmoniaPerformanceModel` uses an annual plant capacity and capacity factor to produce
+ammonia. It accepts a hydrogen feed profile and reports ammonia production and capacity factor.
+`SimpleAmmoniaCostModel` estimates capital and operating cost and includes oxygen by-product
+credits. Both models use one-hour time steps and are demonstrated in
+[Example 02: Texas Ammonia](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/02_texas_ammonia).
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.ammonia.simple_ammonia_model.SimpleAmmoniaPerformanceModelConfig
+  :members:
+  :no-index:
+
+.. autoclass:: h2integrate.converters.ammonia.simple_ammonia_model.SimpleAmmoniaCostModelConfig
+  :members:
+  :no-index:
+```
+
 ## Synloop purge gas output
 
 The Synloop Ammonia Model exposes the purge gas exiting the synthesis loop as a **multivariable stream** called `process_gas_mixture`. This is a general-purpose stream type for process gas mixtures that can be reused by other components. It bundles seven constituent variables into a single connection type:

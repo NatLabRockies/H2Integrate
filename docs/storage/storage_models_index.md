@@ -11,6 +11,21 @@ H2I currently supports the following storage performance models:
 
 The following sections detail the inputs and outputs of the storage performance models.
 
+### Automatic storage sizing
+
+`StorageAutoSizingModel` calculates the storage capacity and charge/discharge rate required to
+balance a commodity production profile against demand, then simulates the storage operation. Set
+`set_demand_as_avg_commodity_in: true` to use average input as demand, or set it to `false` and
+provide `demand_profile`. The model requires either `round_trip_efficiency`, or both
+`charge_efficiency` and `discharge_efficiency`. `min_soc_fraction` and `max_soc_fraction` bound the
+usable state of charge. It supports one-hour time steps.
+
+```{eval-rst}
+.. autoclass:: h2integrate.storage.simple_storage_auto_sizing.StorageSizingModelConfig
+    :members:
+    :no-index:
+```
+
 ```{note}
 The inputs and outputs of storage performance models are generalized here for any commodity. If input and output names include the word `commodity`, the actual variable name would be the commodity defined for that storage model. For example, the `PySAMBatteryPerformanceModel` can only be used for the commodity  `electricity`. Therefore, the `commodity_in` input to the `PySAMBatteryPerformanceModel` is actually named `electricity_in`.
 ```
@@ -61,3 +76,17 @@ The available storage cost models are:
     - `SaltCavernStorageCostModel`
     - `PipeStorageCostModel`
     - `MCHTOLStorageCostModel`
+
+    ### ATB battery cost model
+
+    `ATBBatteryCostModel` uses separate energy and power capital costs from the NLR Annual Technology
+    Baseline battery workbook. It derives storage duration from capacity and charge rate, calculates
+    CapEx from the energy and power cost inputs, and calculates annual OpEx as a fraction of CapEx.
+    `commodity_rate_units` must be a power unit based on watts; the default amount unit is the rate unit
+    multiplied by hours.
+
+    ```{eval-rst}
+    .. autoclass:: h2integrate.storage.battery.atb_battery_cost.ATBBatteryCostConfig
+        :members:
+        :no-index:
+    ```
