@@ -51,7 +51,7 @@ UNDOCUMENTED_MODELS = {
 }
 UNREFERENCED_EXAMPLES = {"04_geo_h2", "31_tidal", "36_nuclear_reactor_htse"}
 CUSTOM_MODEL_NAMES = {"CustomRiverResource", "SimpleLCOFinance"}
-KNOWN_MISSING_PATHS = {("docs/CONTRIBUTING.md", "h2integrate/test_hybrid.py")}
+KNOWN_MISSING_PATHS = set()
 
 
 def _markdown_pages() -> list[Path]:
