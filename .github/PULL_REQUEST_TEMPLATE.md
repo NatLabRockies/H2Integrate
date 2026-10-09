@@ -127,12 +127,7 @@ failing test cases.
 - [ ] **Documentation**:
   - [ ] Write docstrings using the [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
   - [ ] Model documentation page added to the appropriate `docs/` section
-    - [ ] Path to model documentation page is added to the `_toc.yml`
-  - [ ] Confirm the documentation build generates the class hierarchy and model registry; these outputs are not committed.
-
-
-
-
+  - [ ] Path to model documentation page is added to the `_toc.yml`
 
 <!--
 __ For NLR use __

@@ -106,6 +106,11 @@ def _model_references(text: str):
 
 
 def test_yaml_model_references_are_registered():
+    """Prevent copyable YAML examples from naming models users cannot configure.
+
+    Parse fenced YAML, recursively inspect model-valued keys, and compare each name
+    with the model registry, allowing explicitly listed custom models.
+    """
     unknown = []
     for page in _markdown_pages():
         for key, name in _model_references(_page_text(page)):
@@ -116,6 +121,11 @@ def test_yaml_model_references_are_registered():
 
 
 def test_repository_paths_in_docs_exist():
+    """Catch stale repository paths that would send readers to missing files.
+
+    Remove external URLs, scan Markdown for repository path references, and check
+    each file, Python-module shorthand, or glob against the checkout.
+    """
     missing = []
     for page in _markdown_pages():
         page_path = page.relative_to(REPO_ROOT).as_posix()
@@ -140,6 +150,11 @@ def test_repository_paths_in_docs_exist():
 
 
 def test_registered_models_have_narrative_documentation():
+    """Keep registered models discoverable in user-facing documentation.
+
+    Search Markdown outside the generated model registry for every registered
+    model name, excluding only models tracked in the undocumented-model allowlist.
+    """
     text = "\n".join(_page_text(page) for page in _markdown_pages())
     undocumented = {
         name
@@ -155,6 +170,11 @@ def test_registered_models_have_narrative_documentation():
 
 
 def test_example_folders_are_referenced_from_docs():
+    """Ensure numbered runnable examples can be found through the documentation.
+
+    Compare numbered example directories with names mentioned in Markdown, and
+    permit only the example folders recorded in the unreferenced-example allowlist.
+    """
     text = "\n".join(_page_text(page) for page in _markdown_pages())
     example_folders = {
         path.name
