@@ -26,6 +26,7 @@
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
 - Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
 - Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
+- Added a seasonal `control_tier` feature (DBESS "Exclusive Control Months") to `PeakLoadManagementOptimizedStorageController`, layered on top of the existing G&T/Co-op MILP: during Exclusive Control Months (selected via `control_tier` 1-4 and `winter_control_months`/`summer_control_months`) the existing MILP runs with a monthly cycle-energy cap (`max_cycles_per_day`) in place of the event-count cap; outside those months the controller instead solves an independent bill-minimization MILP against the Member's own facility load (`energy_rate`, `demand_charge_rate`, `demand_charge_window`). The two regimes are always solved as separate MILPs, and `setup()` raises if `n_control_window_hours` would let a rolling window straddle the Exclusive-Control/off-month boundary. [PR TBD]
 
 ## 0.9 [August 10, 2026]
 
