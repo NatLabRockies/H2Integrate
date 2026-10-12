@@ -84,10 +84,11 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
             ``p_discharge``/``p_charge`` each timestep at
             ``{commodity}_set_point - {commodity}_in`` (positive = system
             needs discharge, negative = surplus to absorb),
-        control_tier (int): BESS "Exclusive Control" tier (1-4). When set, this layers
-            a seasonal on/off-month split on top of the G&T/Co-op dispatch
-            above, and the two regimes are always solved as two separate
-            MILPs:
+        exclusive_control_months (list[int]): Calendar months (1-12) that
+            are "Exclusive Control Months". When set (including to an
+            empty list), this layers a seasonal on/off-month split on top
+            of the G&T/Co-op dispatch above, and the two regimes are
+            always solved as two separate MILPs:
 
             - During Exclusive Control Months, the MILP above still
               applies unchanged (DR incentive maximization) except that
@@ -98,43 +99,34 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
               Month rather than gated to the daily ``peak_window``.
               ``peak_window`` instead doubles as the utility's Class A
               Peak Period: charging is disallowed inside it.
-            - Outside Exclusive Control Months the Member has control
-              of the BESS, so this controller instead solves a second,
-              independent MILP that minimizes the Member's own bill
-              (energy + demand/transmission charges) against
-              ``demand_signal`` (the Member's own facility load).
-
-            Tiers:
-
-            - ``1``: Exclusive Control all twelve months of the year.
-            - ``2``: Exclusive Control during both ``winter_control_months``
-              and ``summer_control_months``.
-            - ``3``: Exclusive Control during ``summer_control_months`` only.
-            - ``4``: Exclusive Control during ``winter_control_months`` only.
+            - Outside Exclusive Control Months (any month not in this
+              list) the Member has control of the BESS, so this controller
+              instead solves a second, independent MILP that minimizes the
+              Member's own bill (energy + demand/transmission charges)
+              against ``demand_signal`` (the Member's own facility load).
 
             ``n_control_window_hours`` must be chosen so that no rolling
             window straddles an Exclusive Control Month boundary (e.g. a
             window can't contain both late-November and early-December
-            timesteps under tier 4) - ``setup()`` raises ``ValueError`` if
-            one does, since a single window can only be solved as one of
-            the two MILPs above, never a mix of both.
-            Defaults to ``None``.
-        winter_control_months (list[int]): Calendar months (1-12) making up
-            the "Winter Control Months". Defaults to ``[12, 1, 2, 3]``
-            (December-March).
-        summer_control_months (list[int]): Calendar months (1-12) making up
-            the "Summer Control Months". Defaults to ``[6, 7, 8, 9]``
-            (June-September).
+            timesteps when only winter months are listed) -
+            ``setup()`` raises ``ValueError`` if one does, since a single
+            window can only be solved as one of the two MILPs above, never
+            a mix of both.
+            An explicit empty list means zero
+            months are Exclusive Control, so every window solves the
+            off-month bill-minimization MILP instead. Defaults to
+            ``None`` (feature off: no seasonal split, every window solves
+            the DR MILP, matching behavior before this feature existed).
         max_cycles_per_day (float): During Exclusive Control Months, the
             maximum full-cycle-equivalent energy (relative to
             ``max_capacity * (max_soc_fraction - min_soc_fraction)``) that
             may be discharged per calendar day. Only used when
-            ``control_tier`` is set. Defaults to ``1.0`` cycle/day.
+            ``exclusive_control_months`` is set. Defaults to ``1.0`` cycle/day.
         energy_rate (float): Flat energy charge in $/kWh, applied to the
             Member's net metered load (``demand_signal - discharge +
             charge``) during off-months. Required (together with
             ``demand_charge_rate`` and ``demand_charge_window``) whenever
-            ``control_tier`` is set, to run the off-month
+            ``exclusive_control_months`` is set, to run the off-month
             bill-minimization problem described above. ``demand_signal``
             doubles as the Member's own facility load for this purpose -
             there is no separate member load profile field, since it is
@@ -170,9 +162,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
     pyomo_solver_options: dict = field(default={})
     gt2coop_limit: float = field(default=None)
     constrain_dispatch_to_set_point: bool = field(default=False)
-    control_tier: int = field(default=None)
-    winter_control_months: list = field(factory=lambda: [12, 1, 2, 3])
-    summer_control_months: list = field(factory=lambda: [6, 7, 8, 9])
+    exclusive_control_months: list = field(default=None)
     max_cycles_per_day: float = field(default=1.0)
     energy_rate: float = field(default=None)
     demand_charge_rate: float = field(default=None)
@@ -214,8 +204,13 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
                         f"(int or float), got {type(value['val']).__name__}."
                     )
 
-        if self.control_tier is not None and self.control_tier not in (1, 2, 3, 4):
-            raise ValueError(f"control_tier must be one of 1, 2, 3, 4; got {self.control_tier!r}.")
+        if self.exclusive_control_months is not None and any(
+            m not in range(1, 13) for m in self.exclusive_control_months
+        ):
+            raise ValueError(
+                "exclusive_control_months must contain only calendar months 1-12; "
+                f"got {self.exclusive_control_months!r}."
+            )
 
         if self.max_cycles_per_day <= 0:
             raise ValueError(f"max_cycles_per_day must be > 0; got {self.max_cycles_per_day!r}.")
@@ -234,18 +229,18 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
                 "energy_rate, demand_charge_rate, and demand_charge_window must be set "
                 f"together; missing: {missing}."
             )
-        # Control tier is set but none of the peak-shaving fields are set
-        if self.control_tier is not None and n_set == 0:
+        # Exclusive control months are set but none of the peak-shaving fields are set
+        if self.exclusive_control_months is not None and n_set == 0:
             raise ValueError(
-                "control_tier requires energy_rate, demand_charge_rate, and "
+                "exclusive_control_months requires energy_rate, demand_charge_rate, and "
                 "demand_charge_window to be set, to solve the off-month bill-minimization "
                 "problem."
             )
-        # Peak-shaving fields are set but control tier is not set
-        if self.control_tier is None and n_set > 0:
+        # Peak-shaving fields are set but exclusive_control_months is not set
+        if self.exclusive_control_months is None and n_set > 0:
             raise ValueError(
-                "energy_rate/demand_charge_rate/demand_charge_window require control_tier "
-                "to be set."
+                "energy_rate/demand_charge_rate/demand_charge_window require "
+                "exclusive_control_months to be set."
             )
         # Check that demand_charge_window has both 'start' and 'end' keys if it is set
         if self.demand_charge_window is not None:
@@ -270,8 +265,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
     plm_optimized_storage``). Set ``constrain_dispatch_to_set_point=True`` to
     have the SLC's demand signal cap dispatch.
 
-    Setting ``control_tier`` switches on the BESS "Exclusive Control Months"
-    seasonal behavior: each rolling window is solved as either the
+    Setting ``exclusive_control_months`` switches on the BESS "Exclusive
+    Control Months" seasonal behavior: each rolling window is solved as either the
     Exclusive-Control-Month MILP above or the off-month bill-minimization
     MILP, never a combination of both - ``setup()`` raises ``ValueError`` if
     ``n_control_window_hours`` is such that a window would straddle an
@@ -338,7 +333,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         self.in_exclusive_control_month = self._compute_exclusive_control_mask()
         self.days_in_month_lookup = self._compute_days_in_month_lookup()
         self.in_demand_charge_window = self._compute_demand_charge_window_mask()
-        if self.config.control_tier is not None:
+        if self.config.exclusive_control_months is not None:
             self._check_windows_do_not_span_control_boundary()
 
         # Computes the number of timesteps in an event based on event_duration and dt_seconds,
@@ -422,8 +417,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             self.charge_bin_history = np.zeros(self.n_timesteps)
 
             # Track usage per calendar month so each regime's monthly cap is
-            # respected across window boundaries: when
-            # control_tier is None, use events per month, when set use cycled energy (kWh).
+            # respected across window boundaries: when exclusive_control_months is
+            # empty, use events per month, when set use cycled energy (kWh).
             events_used_per_month = {}
             energy_used_per_month = {}
 
@@ -441,7 +436,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             for window_start in window_start_indices:
                 window_len: int = min(n_w, self.n_timesteps - window_start)
                 month_ids_w = self.month_ids[window_start : window_start + window_len]
-                is_exclusive = self.config.control_tier is None or bool(
+                is_exclusive = self.config.exclusive_control_months is None or bool(
                     self.in_exclusive_control_month[window_start]
                 )
                 set_point_w = (
@@ -451,7 +446,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 )
 
                 if is_exclusive:
-                    if self.config.control_tier is not None:
+                    if self.config.exclusive_control_months is not None:
                         # Exclusive Control Months: cap is cycled energy (kWh) per
                         # calendar month
                         E_max = storage_capacity * (
@@ -514,7 +509,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                         self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
                         self.p_tocoop_history[abs_t] = pyomo.value(self.dr_model.p_tocoop[t])
 
-                        if self.config.control_tier is not None:
+                        if self.config.exclusive_control_months is not None:
                             month = int(month_ids_w[t])
                             energy_used_per_month[month] = energy_used_per_month.get(month, 0.0) + (
                                 p_d1 + p_d2
@@ -672,28 +667,20 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
     def _compute_exclusive_control_mask(self) -> np.ndarray:
         """Build a boolean mask that is ``True`` for timesteps in an Exclusive Control Month.
 
-        The set of Exclusive Control Months is determined by ``control_tier``:
-        Tier 1 is all twelve months; Tier 2 is ``winter_control_months`` union
-        ``summer_control_months``; Tier 3 is ``summer_control_months`` only;
-        Tier 4 is ``winter_control_months`` only.
+        A timestep is in an Exclusive Control Month when its calendar month
+        (1-12) is in ``exclusive_control_months``. This is evaluated by
+        calendar month only (the year is ignored), so the same pattern
+        applies to every year of a multi-year simulation.
 
         Returns:
             np.ndarray: Boolean array of shape ``(n_timesteps,)``. All
-            ``False`` when ``control_tier`` is ``None``.
+            ``False`` when ``exclusive_control_months`` is ``None`` or ``[]``
+            (an empty list correctly yields all-``False`` via ``np.isin``,
+            which is what makes every window resolve to bill-minimization).
         """
-        if self.config.control_tier is None:
+        if self.config.exclusive_control_months is None:
             return np.zeros(len(self.month_ids), dtype=bool)
-
-        winter = set(self.config.winter_control_months)
-        summer = set(self.config.summer_control_months)
-        tier_months = {
-            1: set(range(1, 13)),
-            2: winter | summer,
-            3: summer,
-            4: winter,
-        }
-        months = tier_months[self.config.control_tier]
-        return np.isin(self.month_ids, sorted(months))
+        return np.isin(self.month_ids, self.config.exclusive_control_months)
 
     def _compute_demand_charge_window_mask(self) -> np.ndarray:
         """Build a boolean mask that is ``True`` during the demand-charge window.
@@ -898,12 +885,12 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             remaining_budget (dict): Mapping of ``month_id (int)`` to the
                 remaining monthly budget for that month, computed by
                 subtracting usage already dispatched in earlier windows.
-                When ``control_tier`` is ``None`` this is a count of
-                remaining event slots (``n_max_events`` minus events used).
-                When ``control_tier`` is set it is instead a remaining
-                energy budget in kWh (``max_cycles_per_day *
-                days_in_month * E_max`` minus energy already discharged
-                that month).
+                When ``exclusive_control_months`` is ``None`` this is a
+                count of remaining event slots (``n_max_events`` minus
+                events used). When it is set (including to ``[]``) it is
+                instead a remaining energy budget in kWh
+                (``max_cycles_per_day * days_in_month * E_max`` minus
+                energy already discharged that month).
             P_max (float): Maximum charge/discharge rate (kW), taken
                 from OpenMDAO inputs so optimizer changes are reflected.
             storage_capacity (float): Total storage capacity (kWh), taken
@@ -943,8 +930,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         signal_w = np.asarray(self.config.lmp_signal, dtype=float)[w]
         signal_d = np.asarray(self.config.demand_signal, dtype=float)[w]
 
-        control_tier = self.config.control_tier
-        if control_tier is not None:
+        has_exclusive_control_months = self.config.exclusive_control_months is not None
+        if has_exclusive_control_months:
             # Exclusive Control Months:
             # Use percentage threshold to determine eligible timesteps for discharge.
             # Charging is disallowed during the peak window.
@@ -1034,7 +1021,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             rule=lambda mdl, t: mdl.discharge_gt[t] <= int(eligible_t_w[t]),
         )
 
-        if control_tier is not None:
+        if has_exclusive_control_months:
             # Exclusive Control Months: the cap is on cycled energy (kWh) per calendar
             # month, not on discrete events - "total Cycles in
             # each month cannot exceed the equivalent of one Cycle per calendar day".
@@ -1131,8 +1118,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             rule=lambda mdl, t: mdl.discharge_gt[t] + mdl.discharge_coop[t] + mdl.charge[t] <= 1,
         )
 
-        # Can't charge during the dispatch window (or, when control_tier is set, the
-        # Class A Peak Period).
+        # Can't charge during the dispatch window (or, when exclusive_control_months is
+        # set, the Class A Peak Period).
         m.no_charge_in_window = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
@@ -1141,7 +1128,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         )
 
         # Can't follow discharge commands from the co-op during the dispatch window (or,
-        # when control_tier is set, the Class A Peak Period).
+        # when exclusive_control_months is set, the Class A Peak Period).
         m.no_discharge_coop_in_window = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
@@ -1259,12 +1246,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         # Minimize the Member's own bill: flat energy charge on net metered load, plus
         # a combined demand+transmission charge on this window's highest net load
-        # within demand_charge_window, for each month in the window. A flat energy
-        # rate makes any charge/discharge pair that nets to zero energy free in this
-        # objective (it cancels in the first term and never touches peak_demand), so
-        # without a tie-break the solver can pick a degenerate solution with pointless
-        # extra cycling. The tiny throughput penalty below breaks that tie toward the
-        # minimal-cycling solution without measurably affecting the real $ tradeoffs.
+        # within demand_charge_window, for each month in the window. A penalty is added
+        # to the objective to discourage unnecessary cycling of the battery.
         m.objective = pyomo.Objective(
             expr=self.config.energy_rate
             * dt_hours

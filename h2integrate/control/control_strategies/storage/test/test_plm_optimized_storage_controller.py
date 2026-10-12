@@ -717,17 +717,16 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
 def test_exclusive_control_mask_and_window_boundary_check(subtests):
     controller = _make_controller()
 
-    for control_tier, expected_months in [
-        (None, []),
-        (1, list(range(1, 13))),
-        (4, [12, 1, 2, 3]),  # tier 4 = winter_control_months only
+    for exclusive_control_months, expected_months in [
+        (None, []),  # feature off: mask irrelevant, is_exclusive always True elsewhere
+        ([], []),  # feature on, zero DR months: always bill-min
+        (list(range(1, 13)), list(range(1, 13))),
+        ([12, 1, 2, 3], [12, 1, 2, 3]),
     ]:
-        with subtests.test(f"_compute_exclusive_control_mask, control_tier={control_tier}"):
-            controller.config = SimpleNamespace(
-                control_tier=control_tier,
-                winter_control_months=[12, 1, 2, 3],
-                summer_control_months=[6, 7, 8, 9],
-            )
+        with subtests.test(
+            f"_compute_exclusive_control_mask, exclusive_control_months={exclusive_control_months}"
+        ):
+            controller.config = SimpleNamespace(exclusive_control_months=exclusive_control_months)
             controller.month_ids = np.arange(1, 13)
             mask = controller._compute_exclusive_control_mask()
             assert np.array_equal(mask, np.isin(controller.month_ids, expected_months))
@@ -767,7 +766,7 @@ def seasonal_config():
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
-        control_tier=4,
+        exclusive_control_months=[12, 1, 2, 3],
         energy_rate=0.1,
         demand_charge_rate=5.0,
         demand_charge_window={"start": "13:00:00", "end": "21:00:00"},
@@ -775,35 +774,52 @@ def seasonal_config():
 
 
 @pytest.mark.unit
-def test_control_tier_requires_bill_min_fields(seasonal_config):
-    """control_tier without energy_rate/demand_charge_rate/demand_charge_window must raise."""
+def test_exclusive_control_months_requires_bill_min_fields(seasonal_config):
+    """exclusive_control_months without energy_rate/demand_charge_rate/demand_charge_window
+    must raise."""
     kwargs = attrs.asdict(seasonal_config, recurse=False)
     del kwargs["energy_rate"]
     del kwargs["demand_charge_rate"]
     del kwargs["demand_charge_window"]
 
-    with pytest.raises(ValueError, match="control_tier requires"):
+    with pytest.raises(ValueError, match="exclusive_control_months requires"):
         PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.unit
-def test_bill_min_fields_require_control_tier(seasonal_config):
-    """energy_rate/demand_charge_rate/demand_charge_window without control_tier must raise."""
+def test_bill_min_fields_require_exclusive_control_months(seasonal_config):
+    """energy_rate/demand_charge_rate/demand_charge_window without
+    exclusive_control_months must raise."""
     kwargs = attrs.asdict(seasonal_config, recurse=False)
-    del kwargs["control_tier"]
+    del kwargs["exclusive_control_months"]
 
-    with pytest.raises(ValueError, match="require control_tier"):
+    with pytest.raises(ValueError, match="require exclusive_control_months"):
         PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.unit
-def test_invalid_control_tier_raises(seasonal_config):
-    """control_tier must be one of 1, 2, 3, 4."""
+def test_invalid_exclusive_control_months_raises(seasonal_config):
+    """exclusive_control_months must contain only calendar months 1-12."""
     kwargs = attrs.asdict(seasonal_config, recurse=False)
-    kwargs["control_tier"] = 5
+    kwargs["exclusive_control_months"] = [0, 13]
 
-    with pytest.raises(ValueError, match="control_tier must be one of"):
+    with pytest.raises(ValueError, match="exclusive_control_months must contain only"):
         PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
+
+
+@pytest.mark.unit
+def test_empty_exclusive_control_months_is_valid_always_bill_min(subtests, seasonal_config):
+    """exclusive_control_months=[] (distinct from the None default) is valid as long as
+    the bill-min fields are set, and makes every month resolve to the bill-min MILP."""
+    kwargs = attrs.asdict(seasonal_config, recurse=False)
+    kwargs["exclusive_control_months"] = []
+
+    with subtests.test("construction does not raise"):
+        config = PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
+
+    with subtests.test("mask is all off-months"):
+        controller = _make_controller_with_config(config)
+        assert not controller.in_exclusive_control_month.any()
 
 
 @pytest.mark.unit
@@ -855,7 +871,7 @@ def test_build_bill_min_model_respects_soc_and_power_links(subtests, seasonal_co
 
 
 def _seasonal_nov_dec_configs(n_control_window_hours):
-    """Build (plant_config, tech_config) for a 5-day Nov29->Dec3 sim, control_tier=4."""
+    """Build (plant_config, tech_config) for a 5-day Nov29->Dec3 sim, winter-only."""
     n = 24 * 5  # Nov 29 - Dec 3
     plant_config = {
         "plant": {
@@ -894,7 +910,7 @@ def _seasonal_nov_dec_configs(n_control_window_hours):
                 "n_max_events": 24,
                 "signal_threshold_percentile": 0.0,
                 "n_control_window_hours": n_control_window_hours,
-                "control_tier": 4,
+                "exclusive_control_months": [12, 1, 2, 3],
                 "energy_rate": 0.1,
                 "demand_charge_rate": 5.0,
                 "demand_charge_window": {"start": "13:00:00", "end": "21:00:00"},
@@ -926,7 +942,7 @@ def _build_seasonal_problem(n, plant_config, tech_config):
 
 @pytest.mark.regression
 def test_seasonal_dispatch_across_month_boundary(subtests):
-    """End-to-end over a Nov->Dec sim (control_tier=4, winter-only): a window wide
+    """End-to-end over a Nov->Dec sim (exclusive_control_months=winter-only): a window wide
     enough to straddle the boundary raises at setup, while daily windows (aligned to
     midnight) correctly alternate between the Exclusive Control Month MILP and the
     off-month bill-minimization MILP, with SOC staying within bounds throughout."""
