@@ -7,6 +7,7 @@ from h2integrate.resource.utilities.time_tools import (
     process_leap_day,
     check_data_length,
     contains_leap_day,
+    add_resource_start_end_times,
     resample_resource_data_to_dt,
     get_n_timesteps_from_year_list,
     get_number_of_resource_years_needed,
@@ -116,6 +117,21 @@ def test_process_leap_day_without_february():
     result = process_leap_day(data, include_leap_day=False)
 
     np.testing.assert_array_equal(result["day"], [1, 2])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "freq_seconds",
+    [3600, 86_400, 172_800, 259_200],
+    ids=["1-hour", "1-day", "2-day", "3-day"],
+)
+def test_add_resource_start_end_times_reports_dt_in_seconds(freq_seconds):
+    # `timedelta.seconds` drops whole days, so steps of 24 h or more need `total_seconds()`.
+    data = _make_timeseries(4, freq_seconds)
+    result = add_resource_start_end_times(data)
+
+    assert result["dt"] == freq_seconds
+    assert isinstance(result["dt"], int)
 
 
 @pytest.mark.unit

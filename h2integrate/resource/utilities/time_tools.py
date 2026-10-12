@@ -189,7 +189,7 @@ def add_resource_start_end_times(data: dict):
     time_start_end_info = {
         "start_time": f"{start_date} ({tz_str})",
         "end_time": f"{end_date} ({tz_str})",
-        "dt": dt.seconds,
+        "dt": int(dt.total_seconds()),
     }
 
     # Update resource data with time information
