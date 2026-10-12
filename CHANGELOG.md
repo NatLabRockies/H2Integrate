@@ -35,7 +35,7 @@
 - Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
 - Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
 - Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
-- Allow the PySAM battery performance model to configure additional BatteryStateful parameters through `pysam_options`. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Allow the PySAM battery performance model to configure additional BatteryStateful parameters through `pysam_options`. [PR 903](https://github.com/NatLabRockies/H2Integrate/pull/903)
 - Update API resource models to be able to be able to handle non-annual simulations. [PR 897](https://github.com/NatLabRockies/H2Integrate/pull/897)
 - Move PySAM model instantiation for wind and solar performance models to the `compute()` method, and validate recalculated wind power curves. [PR 909](https://github.com/NatLabRockies/H2Integrate/pull/909)
 
