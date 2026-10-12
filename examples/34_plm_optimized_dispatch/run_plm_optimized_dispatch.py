@@ -51,13 +51,13 @@ pw_start_h = pw_start.hour
 pw_end_h = pw_end.hour
 
 # Intermediate MILP decision variables
-u_discharge_gt = controller.discharge_gt_bin_history
-u_discharge_coop = controller.discharge_coop_bin_history
+u_discharge_upstream = controller.discharge_upstream_bin_history
+u_discharge_local = controller.discharge_local_bin_history
 v_charge = controller.charge_bin_history
-p_discharge_gt = controller.p_discharge_gt_history
-p_discharge_coop = controller.p_discharge_coop_history
+p_discharge_upstream = controller.p_discharge_upstream_history
+p_discharge_local = controller.p_discharge_local_history
 p_charge = controller.p_charge_history
-p_tocoop = controller.p_tocoop_history
+p_to_local = controller.p_to_local_history
 
 # Plot outputs
 plotdays = 10
@@ -69,7 +69,7 @@ eventlogmask = [False] * n_timesteps
 for i in range(n_timesteps):
     if i == 0:
         eventlogmask[i] = False
-    elif u_discharge_gt[i] == 1 and u_discharge_gt[i - 1] == 0:
+    elif u_discharge_upstream[i] == 1 and u_discharge_upstream[i - 1] == 0:
         eventlogmask[i] = True
 
 
@@ -136,16 +136,16 @@ ax = axes[2]
 shade_peaks(ax)
 ax.plot(
     time_index[:plot_time_window],
-    p_discharge_gt[:plot_time_window],
+    p_discharge_upstream[:plot_time_window],
     color="green",
-    label="Discharging for G&T",
+    label="Discharging for upstream",
     linewidth=1.0,
 )
 ax.plot(
     time_index[:plot_time_window],
-    p_discharge_coop[:plot_time_window],
+    p_discharge_local[:plot_time_window],
     color="darkorange",
-    label="Discharging for Co-Op",
+    label="Discharging for local",
     linewidth=1.0,
 )
 ax.plot(
@@ -166,7 +166,7 @@ ax.legend(
     ncol=3,  # arrange legend entries horizontally
 )
 
-# Plot demand and power supply from G&T to Co-Op
+# Plot demand and power supply from upstream to local
 ax = axes[3]
 shade_peaks(ax)
 ax.plot(
@@ -178,9 +178,9 @@ ax.plot(
 )
 ax.plot(
     time_index[:plot_time_window],
-    p_tocoop[:plot_time_window],
+    p_to_local[:plot_time_window],
     color="teal",
-    label="G&T to Co-Op",
+    label="Upstream to local",
     linewidth=1.0,
     linestyle="--",
 )

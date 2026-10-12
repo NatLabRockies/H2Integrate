@@ -34,11 +34,12 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
         demand_signal (list[float]): Consumer demand forecast time series (kW).
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
-        GnT_pricingfunction_coeffs (list[float]): Coefficients for G&T pricing function.
-            The coefficients of the polynominal function representing the price G&T charges
-            the Coop based on the LMP. The list contains the coefficients of the polynomial
-            function in decreasing order. (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent
-            1*x^2 + 2*x + 3). This function should be a monotonically non-decreasing function.
+        upstream_pricingfunction_coeffs (list[float]): Coefficients for the upstream
+            pricing function. The coefficients of the polynominal function representing
+            the price the upstream party charges the local party based on the LMP. The
+            list contains the coefficients of the polynomial function in decreasing order.
+            (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent 1*x^2 + 2*x + 3). This
+            function should be a monotonically non-decreasing function.
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in
@@ -79,7 +80,8 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
         pyomo_solver (str): Name of the solver used by pyomo to solve the MILP.
             Can be any of ``highs`` or ``glpk``. Default is ``highs``.
         pyomo_solver_options (dict): A dictionary containing options for pyomo solver.
-        gt2coop_limit (float): Upper limit of power transferred by G&T to Coop (kW)
+        upstream_to_local_limit (float): Upper limit of power transferred from the
+            upstream party to the local party (kW)
         constrain_dispatch_to_set_point (bool): When ``True``, caps
             ``p_discharge``/``p_charge`` each timestep at
             ``{commodity}_set_point - {commodity}_in`` (positive = system
@@ -87,7 +89,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
         exclusive_control_months (list[int]): Calendar months (1-12) that
             are "Exclusive Control Months". When set (including to an
             empty list), this layers a seasonal on/off-month split on top
-            of the G&T/Co-op dispatch above, and the two regimes are
+            of the upstream/local dispatch above, and the two regimes are
             always solved as two separate MILPs:
 
             - During Exclusive Control Months, the MILP above still
@@ -100,10 +102,11 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
               ``peak_window`` instead doubles as the utility's Class A
               Peak Period: charging is disallowed inside it.
             - Outside Exclusive Control Months (any month not in this
-              list) the Member has control of the BESS, so this controller
-              instead solves a second, independent MILP that minimizes the
-              Member's own bill (energy + demand/transmission charges)
-              against ``demand_signal`` (the Member's own facility load).
+              list) the local party has control of the BESS, so this
+              controller instead solves a second, independent MILP that
+              minimizes the local party's own bill (energy +
+              demand/transmission charges) against ``demand_signal`` (the
+              local party's own facility load).
 
             ``n_control_window_hours`` must be chosen so that no rolling
             window straddles an Exclusive Control Month boundary (e.g. a
@@ -123,14 +126,14 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
             may be discharged per calendar day. Only used when
             ``exclusive_control_months`` is set. Defaults to ``1.0`` cycle/day.
         energy_rate (float): Flat energy charge in $/kWh, applied to the
-            Member's net metered load (``demand_signal - discharge +
+            local party's net metered load (``demand_signal - discharge +
             charge``) during off-months. Required (together with
             ``demand_charge_rate`` and ``demand_charge_window``) whenever
             ``exclusive_control_months`` is set, to run the off-month
             bill-minimization problem described above. ``demand_signal``
-            doubles as the Member's own facility load for this purpose -
-            there is no separate member load profile field, since it is
-            the same underlying facility demand either way.
+            doubles as the local party's own facility load for this
+            purpose - there is no separate local load profile field,
+            since it is the same underlying facility demand either way.
         demand_charge_rate (float): Combined demand + transmission charge
             in $/kW-month, applied once per off-month to that month's
             single highest net load within ``demand_charge_window``.
@@ -146,7 +149,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
     lmp_signal: list = field()
     demand_signal: list = field()
     peak_window: dict = field()
-    GnT_pricingfunction_coeffs: list = field()
+    upstream_pricingfunction_coeffs: list = field()
     performance_incentive: float = field(default=None)
     performance_incentive_per_event: float = field(default=None)
     charge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=1.0)
@@ -160,7 +163,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
     min_peak_separation: dict = field(default=None)
     pyomo_solver: str = field(default="highs")
     pyomo_solver_options: dict = field(default={})
-    gt2coop_limit: float = field(default=None)
+    upstream_to_local_limit: float = field(default=None)
     constrain_dispatch_to_set_point: bool = field(default=False)
     exclusive_control_months: list = field(default=None)
     max_cycles_per_day: float = field(default=1.0)
@@ -254,7 +257,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
     Each call to the dispatch solver iterates over the full simulation in
     windows of length ``n_control_window_hours``. For each window it builds
-    and solves a MILP that maximizes incentive revenue and minimizes Co-Op cost.
+    and solves a MILP that maximizes incentive revenue and minimizes local cost.
     It then passes the resulting dispatch commands to the performance model.
     The terminal SOC of each window is carried forward as the initial SOC of
     the next window.
@@ -405,15 +408,15 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             # Per-timestep history of the MILP decision variables, accumulated
             # across all rolling windows. Exposed as attributes so callers
             # (e.g. plotting scripts) can read them via
-            # ``model.control_strategies[i].p_discharge_gt_history`` etc.
-            # Off-month bill-minimization dispatch (Member-controlled, no G&T
-            # interaction) is recorded into the Co-op-side histories.
-            self.p_discharge_gt_history = np.zeros(self.n_timesteps)
-            self.p_discharge_coop_history = np.zeros(self.n_timesteps)
+            # ``model.control_strategies[i].p_discharge_upstream_history`` etc.
+            # Off-month bill-minimization dispatch (local-party-controlled, no
+            # upstream interaction) is recorded into the local-side histories.
+            self.p_discharge_upstream_history = np.zeros(self.n_timesteps)
+            self.p_discharge_local_history = np.zeros(self.n_timesteps)
             self.p_charge_history = np.zeros(self.n_timesteps)
-            self.p_tocoop_history = np.zeros(self.n_timesteps)
-            self.discharge_gt_bin_history = np.zeros(self.n_timesteps)
-            self.discharge_coop_bin_history = np.zeros(self.n_timesteps)
+            self.p_to_local_history = np.zeros(self.n_timesteps)
+            self.discharge_upstream_bin_history = np.zeros(self.n_timesteps)
+            self.discharge_local_bin_history = np.zeros(self.n_timesteps)
             self.charge_bin_history = np.zeros(self.n_timesteps)
 
             # Track usage per calendar month so each regime's monthly cap is
@@ -495,19 +498,19 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                     for t in range(window_len):
                         abs_t = window_start + t
 
-                        d1_val = pyomo.value(self.dr_model.discharge_gt[t])
-                        d2_val = pyomo.value(self.dr_model.discharge_coop[t])
+                        d1_val = pyomo.value(self.dr_model.discharge_upstream[t])
+                        d2_val = pyomo.value(self.dr_model.discharge_local[t])
                         c_val = pyomo.value(self.dr_model.charge[t])
-                        p_d1 = pyomo.value(self.dr_model.p_discharge_gt[t])
-                        p_d2 = pyomo.value(self.dr_model.p_discharge_coop[t])
+                        p_d1 = pyomo.value(self.dr_model.p_discharge_upstream[t])
+                        p_d2 = pyomo.value(self.dr_model.p_discharge_local[t])
 
-                        self.discharge_gt_bin_history[abs_t] = d1_val
-                        self.discharge_coop_bin_history[abs_t] = d2_val
+                        self.discharge_upstream_bin_history[abs_t] = d1_val
+                        self.discharge_local_bin_history[abs_t] = d2_val
                         self.charge_bin_history[abs_t] = c_val
-                        self.p_discharge_gt_history[abs_t] = p_d1
-                        self.p_discharge_coop_history[abs_t] = p_d2
+                        self.p_discharge_upstream_history[abs_t] = p_d1
+                        self.p_discharge_local_history[abs_t] = p_d2
                         self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
-                        self.p_tocoop_history[abs_t] = pyomo.value(self.dr_model.p_tocoop[t])
+                        self.p_to_local_history[abs_t] = pyomo.value(self.dr_model.p_to_local[t])
 
                         if self.config.exclusive_control_months is not None:
                             month = int(month_ids_w[t])
@@ -517,7 +520,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                         else:
                             discharging = d1_val > 0.5
                             prev_discharging = (
-                                t > 0 and pyomo.value(self.dr_model.discharge_gt[t - 1]) > 0.5
+                                t > 0 and pyomo.value(self.dr_model.discharge_upstream[t - 1]) > 0.5
                             )
                             # Detect the rising edge of a discharge event (0 -> 1)
                             # and count it if it occurs in this window.
@@ -527,8 +530,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                                     events_used_per_month.get(month, 0) + 1
                                 )
                 else:
-                    # Off-months: the Member retains control of the DBESS and runs
-                    # its own bill-minimization problem instead of dispatching
+                    # Off-months: the local party retains control of the DBESS and
+                    # runs its own bill-minimization problem instead of dispatching
                     # nothing.
                     self.dr_model = self._build_bill_min_model(
                         window_start=window_start,
@@ -546,11 +549,11 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
                     for t in range(window_len):
                         abs_t = window_start + t
-                        self.p_discharge_coop_history[abs_t] = pyomo.value(
+                        self.p_discharge_local_history[abs_t] = pyomo.value(
                             self.dr_model.p_discharge[t]
                         )
                         self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
-                        self.discharge_coop_bin_history[abs_t] = pyomo.value(
+                        self.discharge_local_bin_history[abs_t] = pyomo.value(
                             self.dr_model.discharge[t]
                         )
                         self.charge_bin_history[abs_t] = pyomo.value(self.dr_model.charge[t])
@@ -855,24 +858,28 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         Decision variables
         ------------------
-        discharge_gt[t] : binary
-            Event indicator — 1 if a discharge event due to G&T is active at timestep t.
-            Used for event counting and window feasibility constraints only.
-        discharge_coop[t] : binary
-            Event indicator — 1 if a discharge event due to Coop is active at timestep t.
-            Used for event counting and window feasibility constraints only.
+        discharge_upstream[t] : binary
+            Event indicator — 1 if a discharge event due to the upstream party is
+            active at timestep t. Used for event counting and window feasibility
+            constraints only.
+        discharge_local[t] : binary
+            Event indicator — 1 if a discharge event due to the local party is
+            active at timestep t. Used for event counting and window feasibility
+            constraints only.
         charge[t] : binary
             Event indicator — 1 if a charge event is active at timestep t.
-        p_discharge_gt[t] : continuous in [0, P_max]
-            Actual discharge power (kW) due to G&T. Linked to the binary via the
-            McCormick upper-bound constraint ``p_discharge_gt[t] <= P_max * discharge_gt[t]``.
-        p_discharge_coop[t] : continuous in [0, P_max]
-            Actual discharge power (kW) due to Coop. Linked to the binary via the
-            McCormick upper-bound constraint ``p_discharge_coop[t] <= P_max * discharge_coop[t]``.
+        p_discharge_upstream[t] : continuous in [0, P_max]
+            Actual discharge power (kW) due to the upstream party. Linked to the
+            binary via the McCormick upper-bound constraint
+            ``p_discharge_upstream[t] <= P_max * discharge_upstream[t]``.
+        p_discharge_local[t] : continuous in [0, P_max]
+            Actual discharge power (kW) due to the local party. Linked to the
+            binary via the McCormick upper-bound constraint
+            ``p_discharge_local[t] <= P_max * discharge_local[t]``.
         p_charge[t] : continuous in [0, P_max]
             Actual charge power (kW). Linked via ``p_charge[t] <= P_max * charge[t]``.
-        p_tocoop[t]: continuous
-            Power supplied (kW) by G&T to Coop
+        p_to_local[t]: continuous
+            Power supplied (kW) by the upstream party to the local party
         soc[t] : continuous in [soc_min, soc_max]
             State of charge (fraction).
 
@@ -954,27 +961,31 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         ## Decision Variables
         # Binary event indicators- used for event counting and window constraints.
-        m.discharge_gt = pyomo.Var(
-            m.T, domain=pyomo.Binary, doc="1 if a discharge to G&T event is active at timestep t"
+        m.discharge_upstream = pyomo.Var(
+            m.T,
+            domain=pyomo.Binary,
+            doc="1 if a discharge to the upstream party event is active at timestep t",
         )
-        m.discharge_coop = pyomo.Var(
-            m.T, domain=pyomo.Binary, doc="1 if a discharge Co-Op event is active at timestep t"
+        m.discharge_local = pyomo.Var(
+            m.T,
+            domain=pyomo.Binary,
+            doc="1 if a discharge to the local party event is active at timestep t",
         )
         m.charge = pyomo.Var(
             m.T, domain=pyomo.Binary, doc="1 if a charge event is active at timestep t"
         )
         # Actual kW dispatched each timestep.
-        m.p_discharge_gt = pyomo.Var(
+        m.p_discharge_upstream = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
             bounds=(0, P_max),
-            doc="Discharge power (kW) due to G&T at timestep t",
+            doc="Discharge power (kW) due to the upstream party at timestep t",
         )
-        m.p_discharge_coop = pyomo.Var(
+        m.p_discharge_local = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
             bounds=(0, P_max),
-            doc="Discharge power due to Co-Op (kW) at timestep t",
+            doc="Discharge power due to the local party (kW) at timestep t",
         )
         m.p_charge = pyomo.Var(
             m.T,
@@ -990,19 +1001,20 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             doc="State of charge SoC_t",
         )
 
-        # Power transmitted to Coop
-        m.p_tocoop = pyomo.Var(
+        # Power transmitted to the local party
+        m.p_to_local = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
-            bounds=(0, self.config.gt2coop_limit),
-            doc="Power supplied by G&T to Co-Op (kW)",
+            bounds=(0, self.config.upstream_to_local_limit),
+            doc="Power supplied by the upstream party to the local party (kW)",
         )
 
         # Objective is maximizing incentive revenue is earned for every kWh discharged and
-        # minimizing the cost of energy for the Coop.
+        # minimizing the cost of energy for the local party.
         m.objective = pyomo.Objective(
-            expr=-incentive * dt_hours * sum(m.p_discharge_gt[t] for t in m.T)
-            + dt_hours * sum(self._GnT_pricingfunction(signal_w[t]) * m.p_tocoop[t] for t in m.T),
+            expr=-incentive * dt_hours * sum(m.p_discharge_upstream[t] for t in m.T)
+            + dt_hours
+            * sum(self._upstream_pricingfunction(signal_w[t]) * m.p_to_local[t] for t in m.T),
             sense=pyomo.minimize,
         )
 
@@ -1011,14 +1023,16 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         m.peak_window_only = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
-                mdl.discharge_gt[t] == 0 if not dispatch_window_w[t] else pyomo.Constraint.Skip
+                mdl.discharge_upstream[t] == 0
+                if not dispatch_window_w[t]
+                else pyomo.Constraint.Skip
             ),
         )
 
         # Discharge can only occur at eligible timesteps.
         m.high_signal_only = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.discharge_gt[t] <= int(eligible_t_w[t]),
+            rule=lambda mdl, t: mdl.discharge_upstream[t] <= int(eligible_t_w[t]),
         )
 
         if has_exclusive_control_months:
@@ -1040,7 +1054,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                     remaining_budget[month] if month in remaining_budget else default_budget_kwh
                 )
                 return (
-                    sum(mdl.p_discharge_gt[t] + mdl.p_discharge_coop[t] for t in ts_in_month)
+                    sum(mdl.p_discharge_upstream[t] + mdl.p_discharge_local[t] for t in ts_in_month)
                     * dt_hours
                     <= budget_kwh
                 )
@@ -1058,18 +1072,18 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 budget_steps = (
                     remaining_budget[month] if month in remaining_budget else N_max
                 ) * self.steps_per_event
-                return sum(mdl.discharge_gt[t] for t in ts_in_month) <= budget_steps
+                return sum(mdl.discharge_upstream[t] for t in ts_in_month) <= budget_steps
 
             m.max_events = pyomo.Constraint(m.M, rule=max_events_rule)
 
         # Power is zero when the binary is 0, and at most P_max when 1.
-        m.discharge_gt_power_link = pyomo.Constraint(
+        m.discharge_upstream_power_link = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.p_discharge_gt[t] <= P_max * mdl.discharge_gt[t],
+            rule=lambda mdl, t: mdl.p_discharge_upstream[t] <= P_max * mdl.discharge_upstream[t],
         )
-        m.discharge_coop_power_link = pyomo.Constraint(
+        m.discharge_local_power_link = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.p_discharge_coop[t] <= P_max * mdl.discharge_coop[t],
+            rule=lambda mdl, t: mdl.p_discharge_local[t] <= P_max * mdl.discharge_local[t],
         )
         m.charge_power_link = pyomo.Constraint(
             m.T,
@@ -1078,13 +1092,13 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         if set_point_w is not None:
             # Cap dispatch at what the system actually needs/can absorb this timestep.
-            m.discharge_set_point_cap_gt = pyomo.Constraint(
+            m.discharge_set_point_cap_upstream = pyomo.Constraint(
                 m.T,
-                rule=lambda mdl, t: mdl.p_discharge_gt[t] <= max(float(set_point_w[t]), 0.0),
+                rule=lambda mdl, t: mdl.p_discharge_upstream[t] <= max(float(set_point_w[t]), 0.0),
             )
-            m.discharge_set_point_cap_coop = pyomo.Constraint(
+            m.discharge_set_point_cap_local = pyomo.Constraint(
                 m.T,
-                rule=lambda mdl, t: mdl.p_discharge_coop[t] <= max(float(set_point_w[t]), 0.0),
+                rule=lambda mdl, t: mdl.p_discharge_local[t] <= max(float(set_point_w[t]), 0.0),
             )
             m.charge_set_point_cap = pyomo.Constraint(
                 m.T,
@@ -1099,23 +1113,25 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 return mdl.soc[t] == (
                     init_soc
                     + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
-                    - mdl.p_discharge_gt[t] * dt_hours / (eta_d * storage_capacity)
-                    - mdl.p_discharge_coop[t] * dt_hours / (eta_d * storage_capacity)
+                    - mdl.p_discharge_upstream[t] * dt_hours / (eta_d * storage_capacity)
+                    - mdl.p_discharge_local[t] * dt_hours / (eta_d * storage_capacity)
                 )
             return mdl.soc[t] == (
                 mdl.soc[t - 1]
                 + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
-                - mdl.p_discharge_gt[t] * dt_hours / (eta_d * storage_capacity)
-                - mdl.p_discharge_coop[t] * dt_hours / (eta_d * storage_capacity)
+                - mdl.p_discharge_upstream[t] * dt_hours / (eta_d * storage_capacity)
+                - mdl.p_discharge_local[t] * dt_hours / (eta_d * storage_capacity)
             )
 
         m.soc_evolution = pyomo.Constraint(m.T, rule=soc_evolution_rule)
 
-        # Can't simultaneously discharge according to both G&T and COOP, or charge and discharge
-        # at the same time.
+        # Can't simultaneously discharge according to both the upstream and local
+        # party, or charge and discharge at the same time.
         m.no_simultaneous = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.discharge_gt[t] + mdl.discharge_coop[t] + mdl.charge[t] <= 1,
+            rule=lambda mdl, t: (
+                mdl.discharge_upstream[t] + mdl.discharge_local[t] + mdl.charge[t] <= 1
+            ),
         )
 
         # Can't charge during the dispatch window (or, when exclusive_control_months is
@@ -1127,12 +1143,12 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ),
         )
 
-        # Can't follow discharge commands from the co-op during the dispatch window (or,
-        # when exclusive_control_months is set, the Class A Peak Period).
-        m.no_discharge_coop_in_window = pyomo.Constraint(
+        # Can't follow discharge commands from the local party during the dispatch
+        # window (or, when exclusive_control_months is set, the Class A Peak Period).
+        m.no_discharge_local_in_window = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
-                mdl.discharge_coop[t] == 0 if charge_restricted_w[t] else pyomo.Constraint.Skip
+                mdl.discharge_local[t] == 0 if charge_restricted_w[t] else pyomo.Constraint.Skip
             ),
         )
 
@@ -1141,9 +1157,9 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             m.T,
             rule=lambda mdl, t: (
                 signal_d[t]
-                == mdl.p_tocoop[t]
-                + mdl.p_discharge_gt[t]
-                + mdl.p_discharge_coop[t]
+                == mdl.p_to_local[t]
+                + mdl.p_discharge_upstream[t]
+                + mdl.p_discharge_local[t]
                 - mdl.p_charge[t]
             ),
         )
@@ -1158,15 +1174,15 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         P_max: float,
         storage_capacity: float,
     ) -> pyomo.ConcreteModel:
-        """Build the off-month Member bill-minimization MILP for a single rolling window.
+        """Build the off-month local-party bill-minimization MILP for a single rolling window.
 
         Solved instead of ``_build_dr_model`` for timesteps outside the
-        Exclusive Control Months, where the Member
+        Exclusive Control Months, where the local party
         has control of the battery.
-        The battery is dispatched purely to reduce the Member's own energy
-        and demand charges against ``demand_signal``. Charging is still
-        disallowed during ``peak_window`` (the Class A Peak Period), same as
-        in ``_build_dr_model``.
+        The battery is dispatched purely to reduce the local party's own
+        energy and demand charges against ``demand_signal``. Charging is
+        still disallowed during ``peak_window`` (the Class A Peak Period),
+        same as in ``_build_dr_model``.
 
         Decision variables
         ------------------
@@ -1244,7 +1260,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                         m.peak_demand[month] >= demand_w[t] - m.p_discharge[t] + m.p_charge[t]
                     )
 
-        # Minimize the Member's own bill: flat energy charge on net metered load, plus
+        # Minimize the local party's own bill: flat energy charge on net metered load, plus
         # a combined demand+transmission charge on this window's highest net load
         # within demand_charge_window, for each month in the window. A penalty is added
         # to the objective to discourage unnecessary cycling of the battery.
@@ -1381,10 +1397,10 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             list[float]: ``p_discharge_t - p_charge_t`` (kW) for each timestep
             in the solved window. Positive = discharge, negative = charge.
         """
-        if hasattr(self.dr_model, "p_discharge_gt"):
+        if hasattr(self.dr_model, "p_discharge_upstream"):
             return [
-                pyomo.value(self.dr_model.p_discharge_gt[t])
-                + pyomo.value(self.dr_model.p_discharge_coop[t])
+                pyomo.value(self.dr_model.p_discharge_upstream[t])
+                + pyomo.value(self.dr_model.p_discharge_local[t])
                 - pyomo.value(self.dr_model.p_charge[t])  # type: ignore[index]
                 for t in self.dr_model.T
             ]
@@ -1393,19 +1409,20 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             for t in self.dr_model.T
         ]
 
-    def _GnT_pricingfunction(self, lmp: float) -> float:
-        """Compute the cost a G&T charges to a Coop based on the current grid price.
+    def _upstream_pricingfunction(self, lmp: float) -> float:
+        """Compute the cost the upstream party charges the local party based on the
+        current grid price.
 
         Args:
             lmp (float): Current grid price (locational marginal price), e.g., in $/kWh.
 
         Returns:
-            float: Cost charged by the G$T in the same units as `lmp`.
+            float: Cost charged by the upstream party in the same units as `lmp`.
         """
-        num_coeffs = len(self.config.GnT_pricingfunction_coeffs)
+        num_coeffs = len(self.config.upstream_pricingfunction_coeffs)
         price = 0.0
         for idx_coeff in range(num_coeffs):
-            price += self.config.GnT_pricingfunction_coeffs[idx_coeff] * lmp ** (
+            price += self.config.upstream_pricingfunction_coeffs[idx_coeff] * lmp ** (
                 num_coeffs - 1 - idx_coeff
             )
 

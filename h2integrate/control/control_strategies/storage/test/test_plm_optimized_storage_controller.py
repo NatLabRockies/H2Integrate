@@ -64,7 +64,7 @@ def base_config():
         lmp_signal=list(range(n)),
         demand_signal=list(range(n)),
         peak_window={"start": "08:00:00", "end": "18:00:00"},
-        GnT_pricingfunction_coeffs=[1.05, 20],
+        upstream_pricingfunction_coeffs=[1.05, 20],
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
@@ -200,7 +200,7 @@ def test_optimizer_dispatch_only_in_peak_window(subtests, base_config):
         in_window = peak_start <= hour.time() <= peak_end
         if not in_window:
             with subtests.test(f"No discharge outside peak window at t={t}"):
-                assert pyomo.value(model.discharge_gt[t]) < 1e-3  # type: ignore[index]
+                assert pyomo.value(model.discharge_upstream[t]) < 1e-3  # type: ignore[index]
 
 
 @pytest.mark.regression
@@ -223,7 +223,7 @@ def test_optimizer_dispatch_only_on_eligible_timesteps(subtests, base_config):
     for t in range(24):
         if not eligible_mask[t]:
             with subtests.test(f"No discharge on ineligible timestep at t={t}"):
-                assert pyomo.value(model.discharge_gt[t]) < 1e-3  # type: ignore[index]
+                assert pyomo.value(model.discharge_upstream[t]) < 1e-3  # type: ignore[index]
 
 
 @pytest.mark.regression
@@ -241,7 +241,7 @@ def test_optimizer_dispatch_respects_event_budget(base_config):
 
     PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
-    total_events = sum(pyomo.value(model.discharge_gt[t]) for t in range(24))  # type: ignore[index]
+    total_events = sum(pyomo.value(model.discharge_upstream[t]) for t in range(24))  # type: ignore[index]
     assert total_events <= 4 + 1e-3, f"Total events {total_events} exceeds budget of 4"
 
 
@@ -267,7 +267,7 @@ def test_optimizer_dispatch_respects_soc_constraints(subtests, base_config):
     soc = base_config.init_soc_fraction
     for t in range(24):
         p_charge = pyomo.value(model.p_charge[t])  # type: ignore[index]
-        p_discharge = pyomo.value(model.p_discharge_gt[t])  # type: ignore[index]
+        p_discharge = pyomo.value(model.p_discharge_upstream[t])  # type: ignore[index]
         if t > 0:
             soc += eta_c * p_charge * dt_hours / E_max - p_discharge * dt_hours / (eta_d * E_max)
         with subtests.test(f"SOC above min at t={t}"):
@@ -341,10 +341,10 @@ def test_optimizer_dispatch_respects_charge_discharge_exclusivity(subtests, base
 
     for t in range(24):
         charge = pyomo.value(model.charge[t])  # type: ignore[index]
-        discharge_gt = pyomo.value(model.discharge_gt[t])  # type: ignore[index]
-        discharge_coop = pyomo.value(model.discharge_coop[t])  # type: ignore[index]
-        with subtests.test(f"No simultaneous charge, discharge_gt or discharge_coop at t={t}"):
-            assert sum(x > 0.5 for x in (charge, discharge_gt, discharge_coop)) <= 1
+        discharge_upstream = pyomo.value(model.discharge_upstream[t])  # type: ignore[index]
+        discharge_local = pyomo.value(model.discharge_local[t])  # type: ignore[index]
+        with subtests.test(f"No simultaneous charge, discharge_upstream, discharge_local at t={t}"):
+            assert sum(x > 0.5 for x in (charge, discharge_upstream, discharge_local)) <= 1
 
 
 @pytest.mark.regression
@@ -363,20 +363,23 @@ def test_power_zero_when_binary_zero(subtests, base_config):
     PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     for t in range(24):
-        u_gt = pyomo.value(model.discharge_gt[t])  # type: ignore[index]
-        pd_gt = pyomo.value(model.p_discharge_gt[t])  # type: ignore[index]
-        u_coop = pyomo.value(model.discharge_coop[t])  # type: ignore[index]
-        pd_coop = pyomo.value(model.p_discharge_coop[t])  # type: ignore[index]
+        u_upstream = pyomo.value(model.discharge_upstream[t])  # type: ignore[index]
+        pd_upstream = pyomo.value(model.p_discharge_upstream[t])  # type: ignore[index]
+        u_local = pyomo.value(model.discharge_local[t])  # type: ignore[index]
+        pd_local = pyomo.value(model.p_discharge_local[t])  # type: ignore[index]
         v = pyomo.value(model.charge[t])  # type: ignore[index]
         p_c = pyomo.value(model.p_charge[t])  # type: ignore[index]
-        with subtests.test(f"p_discharge_gt zero when binary zero at t={t}"):
-            if u_gt < 0.5:
-                assert pd_gt < 1e-6, f"p_discharge_gt[{t}]={pd_gt} but discharge_gt[{t}]={u_gt}"
-        with subtests.test(f"p_discharge_coop zero when binary zero at t={t}"):
-            if u_coop < 0.5:
+        with subtests.test(f"p_discharge_upstream zero when binary zero at t={t}"):
+            if u_upstream < 0.5:
+                assert pd_upstream < 1e-6, (
+                    f"p_discharge_upstream[{t}]={pd_upstream} "
+                    f"but discharge_upstream[{t}]={u_upstream}"
+                )
+        with subtests.test(f"p_discharge_local zero when binary zero at t={t}"):
+            if u_local < 0.5:
                 assert (
-                    pd_coop < 1e-6
-                ), f"p_discharge_coop[{t}]={pd_coop} but discharge_coop[{t}]={u_coop}"
+                    pd_local < 1e-6
+                ), f"p_discharge_local[{t}]={pd_local} but discharge_local[{t}]={u_local}"
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
@@ -403,7 +406,7 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         "max_charge_rate": 1.0,
         "lmp_signal": list(range(24)),
         "demand_signal": list(range(24)),
-        "GnT_pricingfunction_coeffs": [1.05, 20],
+        "upstream_pricingfunction_coeffs": [1.05, 20],
         "peak_window": {"start": "08:00:00", "end": "18:00:00"},
         "n_max_events": 24,
         "signal_threshold_percentile": 0.0,
@@ -434,8 +437,8 @@ def test_performance_incentive_per_event_matches_equivalent_kwh_rate(subtests):
         with subtests.test(f"dispatch match at t={t}"):
             assert (
                 abs(
-                    pyomo.value(model_kwh.p_discharge_gt[t])  # type: ignore[index]
-                    - pyomo.value(model_event.p_discharge_gt[t])  # type: ignore[index]
+                    pyomo.value(model_kwh.p_discharge_upstream[t])  # type: ignore[index]
+                    - pyomo.value(model_event.p_discharge_upstream[t])  # type: ignore[index]
                 )
                 < 1e-4
             ), f"Dispatch mismatch at t={t}"
@@ -459,7 +462,7 @@ def test_optimizer_respects_set_point_cap(subtests):
         max_charge_rate=1.0,
         lmp_signal=list(range(n)),
         demand_signal=list(range(n)),
-        GnT_pricingfunction_coeffs=[1.05, 20],
+        upstream_pricingfunction_coeffs=[1.05, 20],
         # Full-day peak window and zero-percentile threshold so the only binding
         # constraint under test is the new set-point cap, not eligibility.
         peak_window={"start": "00:00:00", "end": "23:59:59"},
@@ -487,15 +490,15 @@ def test_optimizer_respects_set_point_cap(subtests):
     PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
     for t in range(n):
-        p_discharge_gt = pyomo.value(model.p_discharge_gt[t])  # type: ignore[index]
-        p_discharge_coop = pyomo.value(model.p_discharge_coop[t])  # type: ignore[index]
+        p_discharge_upstream = pyomo.value(model.p_discharge_upstream[t])  # type: ignore[index]
+        p_discharge_local = pyomo.value(model.p_discharge_local[t])  # type: ignore[index]
         p_charge = pyomo.value(model.p_charge[t])  # type: ignore[index]
         cap_discharge = max(float(set_point_w[t]), 0.0)
         cap_charge = max(-float(set_point_w[t]), 0.0)
-        with subtests.test(f"discharge_gt capped at t={t}"):
-            assert p_discharge_gt <= cap_discharge + 1e-6
-        with subtests.test(f"discharge_coop capped at t={t}"):
-            assert p_discharge_coop <= cap_discharge + 1e-6
+        with subtests.test(f"discharge_upstream capped at t={t}"):
+            assert p_discharge_upstream <= cap_discharge + 1e-6
+        with subtests.test(f"discharge_local capped at t={t}"):
+            assert p_discharge_local <= cap_discharge + 1e-6
         with subtests.test(f"charge capped at t={t}"):
             assert p_charge <= cap_charge + 1e-6
 
@@ -560,7 +563,7 @@ def om_tech_config():
                 "system_commodity_interface_limit": 1.0e9,
                 "lmp_signal": np.ones(n).tolist(),
                 "demand_signal": np.ones(n).tolist(),
-                "GnT_pricingfunction_coeffs": [1.05, 20],
+                "upstream_pricingfunction_coeffs": [1.05, 20],
                 "peak_window": {"start": "02:00:00", "end": "04:00:00"},
                 "performance_incentive": 10.0,
                 "n_max_events": 24,
@@ -641,7 +644,7 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
 @pytest.mark.regression
 def test_plm_history(subtests, om_plant_config, om_tech_config):
     """
-    The controller's p_discharge_coop_history must match the expected dispatch pattern.
+    The controller's p_discharge_local_history must match the expected dispatch pattern.
     """
     n = om_plant_config["plant"]["simulation"]["n_timesteps"]
 
@@ -673,7 +676,7 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
     prob.run_model()
 
     controller = prob.model._get_subsystem("controller")
-    p_discharge_coop_history = controller.p_discharge_coop_history
+    p_discharge_local_history = controller.p_discharge_local_history
 
     expected_history = np.array(
         [
@@ -704,12 +707,12 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
         ]
     )
 
-    active = p_discharge_coop_history > 0.5
+    active = p_discharge_local_history > 0.5
     expected_active = expected_history > 0.5
 
-    with subtests.test("total coop discharge energy matches"):
-        assert abs(p_discharge_coop_history.sum() - expected_history.sum()) < 1e-4
-    with subtests.test("number of coop discharge steps matches"):
+    with subtests.test("total local discharge energy matches"):
+        assert abs(p_discharge_local_history.sum() - expected_history.sum()) < 1e-4
+    with subtests.test("number of local discharge steps matches"):
         assert active.sum() == expected_active.sum()
 
 
@@ -762,7 +765,7 @@ def seasonal_config():
         lmp_signal=list(range(n)),
         demand_signal=list(range(n)),
         peak_window={"start": "13:00:00", "end": "21:00:00"},
-        GnT_pricingfunction_coeffs=[1.05, 20],
+        upstream_pricingfunction_coeffs=[1.05, 20],
         performance_incentive=10.0,
         n_max_events=24,
         signal_threshold_percentile=0.0,
@@ -835,7 +838,7 @@ def test_invalid_max_cycles_per_day_raises(seasonal_config):
 @pytest.mark.regression
 def test_build_bill_min_model_respects_soc_and_power_links(subtests, seasonal_config):
     """The off-month bill-minimization MILP obeys the same power/SOC constraints
-    as the on-model, using its own (non G&T) variable names."""
+    as the on-model, using its own (non upstream-prefixed) variable names."""
     controller = _make_controller_with_config(seasonal_config)
     model = controller._build_bill_min_model(
         window_start=0,
@@ -904,7 +907,7 @@ def _seasonal_nov_dec_configs(n_control_window_hours):
                 "system_commodity_interface_limit": 1.0e9,
                 "lmp_signal": np.ones(n).tolist(),
                 "demand_signal": np.ones(n).tolist(),
-                "GnT_pricingfunction_coeffs": [1.05, 20],
+                "upstream_pricingfunction_coeffs": [1.05, 20],
                 "peak_window": {"start": "13:00:00", "end": "21:00:00"},
                 "performance_incentive": 10.0,
                 "n_max_events": 24,
