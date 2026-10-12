@@ -17,7 +17,6 @@ tech_config["technologies"]["htse"]["model_inputs"]["capital_items"]["refurb"] =
 
 config["technology_config"] = tech_config
 
-# Create a GreenHEART model
 h2i = H2IntegrateModel(config)
 
 # generate N2 diagram

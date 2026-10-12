@@ -24,6 +24,7 @@ Supported controllers:
 - [`SimpleStorageOpenLoopController`](#pass-through-controller)
 - [`DemandOpenLoopStorageController`](#demand-open-loop-storage-controller)
 - [`PeakLoadManagementHeuristicOpenLoopStorageController`](#peak-load-management-open-loop-storage-controller)
+- [`PLMHeuristicOpenLoopConverterController`](#peak-load-management-open-loop-converter-controller)
 
 (pyomo-control-framework)=
 ## Pyomo control framework
@@ -34,3 +35,4 @@ In the pyomo control framework in H2Integrate, each technology can have control 
 Supported controllers:
 - [`HeuristicLoadFollowingStorageController`](#heuristic-load-following-controller)
 - [`OptimizedDispatchController`](#optimized-load-following-controller)
+- [`PeakLoadManagementOptimizedStorageController`](#optimized-demand-response-controller)

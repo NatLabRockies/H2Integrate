@@ -1,14 +1,14 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -28,11 +28,12 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
             reforming process in kWh/kg.
     """
 
-    system_capacity_tonnes_per_day: float = field(validator=gte_zero)
-    natural_gas_usage_mmbtu_per_kg: float = field(validator=gt_zero)
-    electricity_usage_kwh_per_kg: float = field(validator=gte_zero)
+    system_capacity_tonnes_per_day: float = field(validator=validators.ge(0))
+    natural_gas_usage_mmbtu_per_kg: float = field(validator=validators.gt(0))
+    electricity_usage_kwh_per_kg: float = field(validator=validators.ge(0))
 
 
+@register
 class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for steam methane reforming (SMR) hydrogen production plants.
@@ -260,11 +261,12 @@ class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to input costs.
     """
 
-    capex_per_kw: float | int = field(validator=gte_zero)
-    fixed_opex_per_kw_per_year: float | int = field(validator=gte_zero)
-    variable_opex_per_kwh: float | int = field(validator=gte_zero)
+    capex_per_kw: float | int = field(validator=validators.ge(0))
+    fixed_opex_per_kw_per_year: float | int = field(validator=validators.ge(0))
+    variable_opex_per_kwh: float | int = field(validator=validators.ge(0))
 
 
+@register
 class SteamMethaneReformerCostModel(CostModelBaseClass):
     """
     Cost model for steam methane reforming hydrogen production plants.

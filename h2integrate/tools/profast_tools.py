@@ -156,6 +156,7 @@ def make_price_breakdown(price_breakdown, pf_config):
     )
     remaining_financial = (
         price_breakdown.loc[price_breakdown["Name"] == "Non-depreciable assets", "NPV"].tolist()[0]
+        + price_breakdown.loc[price_breakdown["Name"] == "Sales tax", "NPV"].tolist()[0]
         + price_breakdown.loc[price_breakdown["Name"] == "Cash on hand reserve", "NPV"].tolist()[0]
         + price_breakdown.loc[price_breakdown["Name"] == "Property insurance", "NPV"].tolist()[0]
         - price_breakdown.loc[

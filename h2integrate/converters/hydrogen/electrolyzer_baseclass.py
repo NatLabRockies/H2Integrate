@@ -1,7 +1,4 @@
-from h2integrate.core.model_baseclasses import (
-    CostModelBaseClass,
-    ResizeablePerformanceModelBaseClass,
-)
+from h2integrate.core.model_baseclass import CostModelBaseClass, ResizeablePerformanceModelBaseClass
 
 
 class ElectrolyzerPerformanceBaseClass(ResizeablePerformanceModelBaseClass):

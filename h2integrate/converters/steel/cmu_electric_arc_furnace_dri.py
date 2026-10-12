@@ -1,11 +1,10 @@
 """Electric Arc Furnace performance model based on CMU decarbSTEEL EAF Model"""
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
 from h2integrate.tools.constants import (
     C_MW,
     CO_MW,
@@ -22,11 +21,12 @@ from h2integrate.tools.constants import (
     P_STD_KPA,
     LHV_CH4_MJ_PER_KG,
 )
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define
-class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
+class CMUElectricArcFurnaceDRIPerformanceComponentConfig(BaseConfig):
     """Configuration baseclass for CMUElectricArcFurnaceDRIPerformanceComponent.
 
     Attributes:
@@ -54,10 +54,10 @@ class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
             "SiO2": 1.0 / 100,  # mass fraction SiO2, 'Model Inputs & Outputs!B28'
         }
     )
-    pellet_grade: str = field(default="DR", validator=contains(["DR", "BF", "custom"]))
+    pellet_grade: str = field(default="DR", validator=validators.in_(["DR", "BF", "custom"]))
     pct_DRI: float = field(default=60.0 / 100)  # mass fraction, 'Model Inputs & Outputs!B61'
     DRI_feed_temp: str = field(
-        default="hot", validator=contains(["hot", "cold"])
+        default="hot", validator=validators.in_(["hot", "cold"])
     )  # hot = 873 K or cold = 298 K, 'Model Inputs & Outputs!B63'
     DRI_composition: dict[str, float] | None = None
     SiO2_ratio: float | None = None
@@ -138,6 +138,7 @@ class CMUElectricArcFurnaceDRIPerformanceConfig(BaseConfig):
                 raise ValueError("SiO2_ratio must be provided when pellet_grade='custom'.")
 
 
+@register
 class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,
@@ -154,7 +155,7 @@ class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
     def setup(self):
         super().setup()
 
-        self.config = CMUElectricArcFurnaceDRIPerformanceConfig.from_dict(
+        self.config = CMUElectricArcFurnaceDRIPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,

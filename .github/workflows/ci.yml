@@ -9,6 +9,7 @@ on:
       - ready_for_review
       - review_requested
       - enqueued
+      - auto_merge_enabled
     paths:
       - h2integrate/**.py
   schedule:
@@ -45,29 +46,34 @@ jobs:
             test-type: integration
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+          channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate
-      - name: Install base dependencies
+      - name: Install base conda dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
+      - if: ${{ matrix.optional }}
+        name: Install optional conda dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge wisdem
+      - name: Install H2Integrate
         shell: bash -el {0}
         env:
           SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: true
         run: |
-          conda install -y -c conda-forge glpk coin-or-cbc>=2.10.12
+          conda install -y -c conda-forge glpk highspy coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
-          pip install ".[develop]"
-      - if: ${{ matrix.optional }}
-        name: Install optional dependencies
+          pip install ".[develop${{ matrix.optional && ',extras' || '' }}]"
+      - name: List conda packages
         shell: bash -el {0}
-        run: |
-          conda install -y -c conda-forge wisdem
-          pip install ".[extras]"
+        run: conda list
       - name: Create env file
         run: |
           touch .env

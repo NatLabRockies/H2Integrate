@@ -1,17 +1,17 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
-class SimpleThermalNuclearReactorConfig(BaseConfig):
+class SimpleThermalNuclearReactorPerformanceModelConfig(BaseConfig):
     """Configuration class for the thermal nuclear reactor performance model.
 
     Args:
@@ -31,14 +31,19 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
             Defaults to ``0.0``.
     """
 
-    operating_mode: str = field(validator=contains(["heat", "electricity"]))
-    electricity_command_value: float = field(validator=gt_zero)
-    high_pressure_electrical_efficiency: float = field(validator=range_val(0.0, 1.0))
-    low_pressure_electrical_efficiency: float = field(validator=range_val(0.0, 1.0))
-    rated_capacity: float = field(validator=gt_zero)
+    operating_mode: str = field(validator=validators.in_(["heat", "electricity"]))
+    electricity_command_value: float = field(validator=validators.gt(0))
+    high_pressure_electrical_efficiency: float = field(
+        validator=(validators.ge(0), validators.le(1))
+    )
+    low_pressure_electrical_efficiency: float = field(
+        validator=(validators.ge(0), validators.le(1))
+    )
+    rated_capacity: float = field(validator=validators.gt(0))
     minimum_heat_extract: float = field(default=0.0)
 
 
+@register
 class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
     """Simple thermal nuclear reactor model with heat and electricity outputs.
 
@@ -66,7 +71,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.commodity_amount_units = "MW*h"
 
     def setup(self):
-        self.config = SimpleThermalNuclearReactorConfig.from_dict(
+        self.config = SimpleThermalNuclearReactorPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -194,7 +199,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
+class SimpleThermalNuclearReactorCostModelConfig(CostModelBaseConfig):
     """Configuration class for the thermal nuclear reactor cost model.
 
     Args:
@@ -206,13 +211,14 @@ class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
     """
 
-    rated_capacity: float = field(validator=gt_zero)
-    upfront_cost: float = field(validator=gt_zero)
-    fixed_om_cost: float = field(validator=gt_zero)
-    variable_om_cost: float = field(validator=gt_zero)
+    rated_capacity: float = field(validator=validators.gt(0))
+    upfront_cost: float = field(validator=validators.gt(0))
+    fixed_om_cost: float = field(validator=validators.gt(0))
+    variable_om_cost: float = field(validator=validators.gt(0))
     cost_year: int = field(default=2025, converter=int)
 
 
+@register
 class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     """Simple cost model for the thermal nuclear reactor.
 
@@ -232,7 +238,7 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         self.fraction_of_year_simulated = (self.dt * n_timesteps / 3600.0) / 8760.0
-        self.config = SimpleThermalNuclearReactorCostConfig.from_dict(
+        self.config = SimpleThermalNuclearReactorCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=False,
             additional_cls_name=self.__class__.__name__,

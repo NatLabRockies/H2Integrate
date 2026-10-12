@@ -7,7 +7,8 @@ To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance
 ```yaml
 technologies:
   wind:
-     performance_model: "PYSAMWindPlantPerformanceModel"
+         performance_model:
+             model: "PYSAMWindPlantPerformanceModel"
      model_inputs:
          performance_parameters:
             num_turbines: 10
@@ -44,7 +45,7 @@ technologies:
 
 (windpower-performance-parameters)=
 ## Performance Parameters
-- `num_turbines` (required): number of wind turbines in the wind farm
+- `num_turbines` (required): number of wind turbines in the wind farm. Previously limited to 300 turbines, but this limit has been removed in the latest version.
 - `hub_height` (required): wind turbine hub height in meters
 - `rotor_diameter` (required): wind turbine rotor diameter in meters
 - `turbine_rating_kw` (required): rated power of individual wind turbine in kW

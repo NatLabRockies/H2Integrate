@@ -1,8 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val_or_none
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -46,9 +46,15 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
     set_demand_as_avg_commodity_in: bool = field()
     demand_profile: int | float | list = field(default=0.0)
 
-    charge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    discharge_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
-    round_trip_efficiency: float | None = field(default=None, validator=range_val_or_none(0, 1))
+    charge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    discharge_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
+    round_trip_efficiency: float | None = field(
+        default=None, validator=validators.optional((validators.ge(0), validators.le(1)))
+    )
 
     commodity_amount_units: str = field(default=None)
 
@@ -94,6 +100,7 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class StorageAutoSizingModel(StoragePerformanceBase):
     """Performance model that calculates the storage charge rate and capacity needed
     to either:

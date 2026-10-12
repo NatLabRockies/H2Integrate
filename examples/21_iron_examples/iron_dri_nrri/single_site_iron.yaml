@@ -1,0 +1,5 @@
+name: H2Integrate_config
+system_summary: An iron mine producing ore pellets and a separately-located iron plant performing direct reduction.
+driver_config: driver_config.yaml
+technology_config: tech_config.yaml
+plant_config: plant_config.yaml

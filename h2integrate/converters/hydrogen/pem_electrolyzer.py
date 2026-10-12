@@ -1,11 +1,11 @@
 import math
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
-from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
+from h2integrate.core.model_baseclass import ResizeablePerformanceModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerPerformanceBaseClass
@@ -43,16 +43,17 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
             (https://www.hydrogen.energy.gov/docs/hydrogenprogramlibraries/pdfs/24005-clean-hydrogen-production-cost-pem-electrolyzer.pdf?sfvrsn=8cb10889_1)
     """
 
-    n_clusters: int = field(validator=gt_zero)
-    location: str = field(validator=contains(["onshore", "offshore"]))
-    cluster_rating_MW: float = field(validator=gt_zero)
-    eol_eff_percent_loss: float = field(validator=gt_zero)
-    uptime_hours_until_eol: int = field(validator=gt_zero)
+    n_clusters: int = field(validator=validators.gt(0))
+    location: str = field(validator=validators.in_(["onshore", "offshore"]))
+    cluster_rating_MW: float = field(validator=validators.gt(0))
+    eol_eff_percent_loss: float = field(validator=validators.gt(0))
+    uptime_hours_until_eol: int = field(validator=validators.gt(0))
     include_degradation_penalty: bool = field()
-    turndown_ratio: float = field(validator=gt_zero)
+    turndown_ratio: float = field(validator=validators.gt(0))
     electrolyzer_capex: int = field()
 
 
+@register
 class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
     An OpenMDAO component that wraps the PEM electrolyzer model.
@@ -145,7 +146,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         elif size_mode != "normal":
             raise NotImplementedError("Sizing mode '%s' not implemented".format())
 
-        n_pem_clusters = int(math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW))
+        n_pem_clusters = math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW)
 
         electrolyzer_actual_capacity_MW = n_pem_clusters * self.config.cluster_rating_MW
         pem_param_dict = {
@@ -156,7 +157,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         }
 
         energy_to_electrolyzer_kw = inputs["electricity_in"]
-        H2_Results, h2_ts, h2_tot, power_to_electrolyzer_kw = run_h2_PEM(
+        H2_Results, h2_ts, _h2_tot, _power_to_electrolyzer_kw = run_h2_PEM(
             electrical_generation_timeseries=energy_to_electrolyzer_kw,
             electrolyzer_size=electrolyzer_size_mw,
             useful_life=self.plant_life,

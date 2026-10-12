@@ -1,9 +1,9 @@
-from attrs import field, define
+from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import contains, gte_zero, range_val
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -31,12 +31,12 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
     """
 
-    energy_capex: float | int = field(validator=gte_zero)
-    power_capex: float | int = field(validator=gte_zero)
-    opex_fraction: float = field(validator=range_val(0, 1))
+    energy_capex: float | int = field(validator=validators.ge(0))
+    power_capex: float | int = field(validator=validators.ge(0))
+    opex_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     max_capacity: float = field()
     max_charge_rate: float = field()
-    commodity_rate_units: str = field(validator=contains(["W", "kW", "MW", "GW", "TW"]))
+    commodity_rate_units: str = field(validator=validators.in_(["W", "kW", "MW", "GW", "TW"]))
     commodity_amount_units: str = field(default=None)
 
     def __attrs_post_init__(self):
@@ -44,6 +44,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class ATBBatteryCostModel(CostModelBaseClass):
     """This cost model is based on the equations in the "Utility-Scale Battery Storage"
     sheet in the ATB 2024 workbook.
@@ -105,8 +106,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
             storage_duration_hrs = max_capacity_kWh / max_charge_rate_kW
         if max_charge_rate_kW < 0:
             msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{max_charge_rate_kW} kW"
+                f"max_charge_rate cannot be less than zero and has value of {max_charge_rate_kW} kW"
             )
             raise UserWarning(msg)
         # CapEx equation from Cell E29

@@ -17,7 +17,7 @@ H2Integrate is designed to be flexible and extensible, allowing users to create 
 The tool currently includes renewable energy generation (land-based wind, offshore wind, solar PV, wave, tidal), conventional generation (natural gas combined cycle, combustion turbines, grid electricity), hydrogen production (PEM electrolysis, NG-SMR), energy storage (Li-ion batteries, long-duration energy storage, pumped storage hydropower), fuel cells, and industrial processes (ammonia synthesis, iron ore reduction, steel production, methanol, and more).
 Other elements can also be included as developed by users.
 H2Integrate is continually expanding to serve additional hybrid applications -- if you're interested in seeing what's being actively developed, please see the [current pull requests in the GitHub repository](https://github.com/NatLabRockies/H2Integrate/pulls).
-Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [HOPP](https://github.com/NatLabRockies/HOPP), [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
+Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
 The H2Integrate tool is built on top of [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/), which provides a powerful and flexible environment for modeling and optimization.
 
 ```{note}
@@ -60,19 +60,19 @@ H2Integrate stands out by offering a modular approach that models the entire ene
 One significant difference is that REopt can accommodate various external loads such as steel or ammonia, as long as the user provides the load profiles for those end-uses.
 H2Integrate models the processes themselves and does not require the user to provide a load profile, instead modeling what the load profile would be based on physics-based or analytical models.
 
-[SAM](https://sam.nrl.gov/) is another relevant tool (that H2Integrate partially uses), which gives more detailed performance and financial modeling capabilities than REopt.
+[SAM](https://sam.nlr.gov/) is another relevant tool (that H2Integrate partially uses), which gives more detailed performance and financial modeling capabilities than REopt.
 Like REopt, SAM also does not model loads or end-uses but accepts timeseries data of the loads for design purposes.
 
 H2Integrate goes into more component-level details than those tools, especially in terms of nonlinear physics-based modeling and design.
-
-```{note}
-H2Integrate was previously known as GreenHEART, and some publications or references may refer to it by that name.
-```
 
 ## Publications
 
 For more context about H2Integrate and analyses performed using the tool, see the publications below.
 PDFs are available in the linked titles.
+
+```{note}
+H2Integrate was previously known as GreenHEART, and some publications or references may refer to it by that name.
+```
 
 
 ### Techno-economic analysis of low-carbon hydrogen production pathways for decarbonizing steel and ammonia production

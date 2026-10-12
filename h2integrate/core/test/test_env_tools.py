@@ -91,41 +91,41 @@ def test_load_env_vars_from_file(subtests, temp_dir):
 
     env_vars = load_env_vars_from_file(file_path=env_path)
 
-    with subtests.test("4 environment variables loaded"):
+    with subtests.test("Environment variable values"):
+        # Four valid entries are loaded
         assert len(env_vars) == 4
-    with subtests.test("Credential using = separator without spaces"):
+
+        # Credential using an equals separator
         assert env_vars["TEST_CREDENTIAL"] == "my_credential_value"
-    with subtests.test("Credential using = separator with spaces"):
+
+        # Credential containing an at sign
         assert env_vars["TEST_CREDENTIAL_B"] == "testing@yahoo.fake"
-    with subtests.test("Credential using : separator with spaces"):
-        assert env_vars["TEST_CREDENTIAL_D"] == "testingValue"
-    with subtests.test("Line without separator is not loaded"):
+
+        # Line without a separator is skipped
         assert "TEST_CREDENTIAL_C" not in env_vars
-    with subtests.test("Credential using consecutive delimiter"):
+
+        # Credential using a colon separator with spaces
+        assert env_vars["TEST_CREDENTIAL_D"] == "testingValue"
+
+        # Credential using consecutive delimiters
         assert env_vars["TEST_CREDENTIAL_E"] == ": another_credential"
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("credential_value", ["new_value"])
 def test_get_environment_variables_already_set(subtests, temp_env_var):
-    with subtests.test("TEST_CREDENTIAL environment variable (starting)"):
+    with subtests.test("Environment variables are set before lookup"):
         assert os.environ.get("TEST_CREDENTIAL") == "new_value"
-
-    with subtests.test("NLR_API_KEY environment variable (starting)"):
         assert os.environ.get("NLR_API_KEY") == "a" * 40
 
     env_vars = get_environment_variables("TEST_CREDENTIAL", "NLR_API_KEY", set_variables=False)
 
-    with subtests.test("TEST_CREDENTIAL returned"):
+    with subtests.test("Environment variables are returned"):
         assert env_vars["TEST_CREDENTIAL"] == "new_value"
-
-    with subtests.test("NLR_API_KEY returned"):
         assert env_vars["NLR_API_KEY"] == "a" * 40
 
-    with subtests.test("TEST_CREDENTIAL environment variable (ending)"):
+    with subtests.test("Environment variables remain set after lookup"):
         assert os.environ.get("TEST_CREDENTIAL") == "new_value"
-
-    with subtests.test("NLR_API_KEY environment variable (ending)"):
         assert os.environ.get("NLR_API_KEY") == "a" * 40
 
 
@@ -135,9 +135,8 @@ def test_get_environment_variables_from_filepath(subtests, temp_dir):
     os.environ.pop("TEST_CREDENTIAL_B", None)
 
     # environment variables were properly removed prior to rest of test
-    with subtests.test("TEST_CREDENTIAL_A not an environment variable"):
+    with subtests.test("Environment variables are unset before lookup"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
-    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
     # Make a file containing credentials
@@ -152,17 +151,13 @@ def test_get_environment_variables_from_filepath(subtests, temp_dir):
         "TEST_CREDENTIAL_A", "TEST_CREDENTIAL_B", file_path=env_path, set_variables=False
     )
 
-    with subtests.test("TEST_CREDENTIAL_A value"):
+    with subtests.test("Environment variables are returned from the file"):
         assert env_vars["TEST_CREDENTIAL_A"] == str(temp_dir)
-
-    with subtests.test("TEST_CREDENTIAL_B value"):
         assert env_vars["TEST_CREDENTIAL_B"] == "bees"
 
     # Check that variables were not set as environment variables
-    with subtests.test("TEST_CREDENTIAL_A not set"):
+    with subtests.test("Environment variables remain unset after lookup"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
-
-    with subtests.test("TEST_CREDENTIAL_B not set"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
 
@@ -174,10 +169,8 @@ def test_get_environment_variables_from_default_folder(subtests, temp_dir):
     os.environ.pop("TEST_CREDENTIAL_B", None)
 
     # environment variables were properly removed prior to rest of test
-    with subtests.test("TEST_CREDENTIAL_A not an environment variable"):
+    with subtests.test("Environment variables are unset before lookup"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
-
-    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
     # Make a file containing credentials
@@ -196,17 +189,13 @@ def test_get_environment_variables_from_default_folder(subtests, temp_dir):
             "TEST_CREDENTIAL_A", "TEST_CREDENTIAL_B", file_name="myfile.env", set_variables=False
         )
 
-    with subtests.test("TEST_CREDENTIAL_A value"):
+    with subtests.test("Environment variables are returned from the default folder"):
         assert env_vars["TEST_CREDENTIAL_A"] == str(temp_dir)
-
-    with subtests.test("TEST_CREDENTIAL_B value"):
         assert env_vars["TEST_CREDENTIAL_B"] == "howdyFolks"
 
     # were not set as environment variables
-    with subtests.test("TEST_CREDENTIAL_A not set"):
+    with subtests.test("Environment variables remain unset after lookup"):
         assert os.environ.get("TEST_CREDENTIAL_A") is None
-
-    with subtests.test("TEST_CREDENTIAL_B not set"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
 
 
@@ -216,9 +205,8 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
     os.environ.pop("TEST_CREDENTIAL_C", None)
 
     # environment variables were properly removed prior to rest of test
-    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
+    with subtests.test("Environment variables are unset before lookup"):
         assert os.environ.get("TEST_CREDENTIAL_B") is None
-    with subtests.test("TEST_CREDENTIAL_B not an environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") is None
 
     # Create path to .env file and make the file
@@ -239,17 +227,13 @@ def test_get_environment_variables_from_default_cwd(subtests, temp_dir):
         )
 
     # credentials were found and returned
-    with subtests.test("TEST_CREDENTIAL_B value"):
+    with subtests.test("Environment variables are returned from the default file"):
         assert env_vars["TEST_CREDENTIAL_B"] == "byeFolks"
-
-    with subtests.test("TEST_CREDENTIAL_C value"):
         assert env_vars["TEST_CREDENTIAL_C"] == "i<3H2I"
 
     # credentials were set as environment variables
-    with subtests.test("TEST_CREDENTIAL_B set as environment variable"):
+    with subtests.test("Environment variables are set after lookup"):
         assert os.environ.get("TEST_CREDENTIAL_B") == "byeFolks"
-
-    with subtests.test("TEST_CREDENTIAL_C set as environment variable"):
         assert os.environ.get("TEST_CREDENTIAL_C") == "i<3H2I"
 
     # Change environment variable B to a new value

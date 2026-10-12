@@ -1,13 +1,13 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -21,6 +21,7 @@ class GridPerformanceModelConfig(BaseConfig):
     interconnection_size: float = field()  # kW
 
 
+@register
 class GridPerformanceModel(PerformanceModelBaseClass):
     """Model a grid interconnection point.
 
@@ -46,6 +47,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
+        electricity_sold (array): Power sold to the grid (kW).
     """
 
     _time_step_bounds = (
@@ -99,8 +101,24 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             "electricity_sold",
             val=0.0,
             shape=self.n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_sell_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be bought from the grid",
         )
 
         self.add_output(
@@ -149,6 +167,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         max_production = (
             inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
         )
+        outputs["electricity_sell_headroom"] = interconnection_size - electricity_sold
+        outputs["electricity_headroom"] = interconnection_size - electricity_bought
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
             self.dt / 3600
@@ -184,13 +204,14 @@ class GridCostModelConfig(CostModelBaseConfig):
     electricity_buy_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
     electricity_sell_price: float | list[float] | np.ndarray | None = field(default=None)  # $/kWh
     buy_price_mode: str | None = field(
-        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+        default="per_timestep", validator=validators.in_(["per_year", "per_timestep", "constant"])
     )
     sell_price_mode: str | None = field(
-        default="per_timestep", validator=contains(["per_year", "per_timestep", "constant"])
+        default="per_timestep", validator=validators.in_(["per_year", "per_timestep", "constant"])
     )
 
 
+@register
 class GridCostModel(CostModelBaseClass):
     """
     An OpenMDAO component that computes costs for grid connections.

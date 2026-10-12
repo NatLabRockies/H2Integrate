@@ -1,10 +1,10 @@
 import numpy as np
 import PySAM.BatteryTools as BatteryTools
 import PySAM.BatteryStateful as BatteryStateful
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, range_val
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -29,7 +29,7 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
         chemistry (str):
-            Battery chemistry option. "LDES" has not been brought over from HOPP yet.
+            Battery chemistry option.
             Supported values include:
 
             - PySAM: ``"LFPGraphite"``, ``"LMOLTO"``, ``"LeadAcid"``, ``"NMCGraphite"``
@@ -49,26 +49,30 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             environment [W/m2*K]. Defaults to 20.
         resistance (int | float, optional): Battery internal resistance [Ohm].
             Defaults to 0.001.
+        pysam_options (dict, optional): Additional PySAM BatteryStateful parameters grouped
+            by PySAM group name (for example, ``{"ParamsCell": {"calendar_choice": 1}}``).
     """
 
-    max_capacity: float = field(validator=gt_zero)
-    max_charge_rate: float = field(validator=gt_zero)
+    max_capacity: float = field(validator=validators.ge(0))
+    max_charge_rate: float = field(validator=validators.ge(0))
 
     chemistry: str = field(
-        validator=contains(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
+        validator=validators.in_(["LFPGraphite", "LMOLTO", "LeadAcid", "NMCGraphite"]),
     )
 
-    init_soc_fraction: float = field(validator=range_val(0, 1))
+    init_soc_fraction: float = field(validator=(validators.ge(0), validators.le(1)))
     control_variable: str = field(
-        default="input_power", validator=contains(["input_power", "input_current"])
+        default="input_power", validator=validators.in_(["input_power", "input_current"])
     )
     ref_module_capacity: int | float = field(default=400)
     ref_module_surface_area: int | float = field(default=30)
     Cp: int | float = field(default=900)
     battery_h: int | float = field(default=20)
     resistance: int | float = field(default=0.001)
+    pysam_options: dict = field(factory=dict)
 
 
+@register
 class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component wrapping the PySAM Battery Performance model.
 
@@ -115,6 +119,21 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         # Initialize the PySAM BatteryStateful model with defaults
         self.system_model = BatteryStateful.default(self.config.chemistry)
 
+        reserved_options = {
+            "Controls": {"control_mode", "dt_hr", "input_current", "input_power"},
+            "ParamsCell": {"C_rate", "resistance", "initial_SOC", "minimum_SOC", "maximum_SOC"},
+            "ParamsPack": {"Cp", "h", "mass", "nominal_energy", "nominal_voltage", "surface_area"},
+        }
+        for group, parameters in self.config.pysam_options.items():
+            if group not in self.system_model.export():
+                raise ValueError(f"Unknown PySAM battery options group: {group}")
+            conflicting = reserved_options.get(group, set()).intersection(parameters)
+            if conflicting:
+                raise ValueError(
+                    f"PySAM battery options {group}.{', '.join(sorted(conflicting))} "
+                    "are managed by the battery model configuration."
+                )
+
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the PySAM Battery model for one simulation step.
 
@@ -123,7 +142,19 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         results in OpenMDAO outputs.
         """
 
-        # Size the battery based on inputs -> method brought from HOPP
+        if inputs["max_charge_rate"][0] <= 0 or inputs["storage_capacity"][0] <= 0:
+            outputs[f"{self.commodity}_out"] = np.zeros(self.n_timesteps)
+            outputs["SOC"] = np.full(self.n_timesteps, self.config.init_soc_fraction * 100)
+            outputs[f"storage_{self.commodity}_discharge"] = np.zeros(self.n_timesteps)
+            outputs[f"storage_{self.commodity}_charge"] = np.zeros(self.n_timesteps)
+            outputs["storage_duration"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            return
+
+        # Size the battery based on inputs.
         module_specs = {
             "capacity": self.config.ref_module_capacity,
             "surface_area": self.config.ref_module_surface_area,
@@ -151,6 +182,9 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         self.system_model.value("minimum_SOC", self.config.min_soc_fraction * 100)
         self.system_model.value("maximum_SOC", self.config.max_soc_fraction * 100)
         self.system_model.value("initial_SOC", self.config.init_soc_fraction * 100)
+
+        if self.config.pysam_options:
+            self.system_model.assign(self.config.pysam_options)
 
         # Setup PySAM battery model using PySAM method
         self.system_model.setup()

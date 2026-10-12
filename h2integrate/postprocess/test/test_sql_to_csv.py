@@ -107,9 +107,9 @@ def test_summarize_case_scalar_only(temp_copy_of_example):
         if isinstance(val, str | bool):
             continue
         # numeric scalars should not be arrays with multiple elements
-        assert (
-            not hasattr(val, "__len__") or len([val]) == 1
-        ), f"Variable '{var}' is not scalar: {val}"
+        assert not hasattr(val, "__len__") or len([val]) == 1, (
+            f"Variable '{var}' is not scalar: {val}"
+        )
 
 
 @pytest.mark.unit
@@ -221,9 +221,9 @@ def test_result_contains_expected_columns(temp_copy_of_example):
 
     expected_vars = ["wind.CapEx", "battery.CapEx"]
     for var in expected_vars:
-        assert (
-            var in col_names_no_units
-        ), f"Expected '{var}' in summary columns, got: {col_names_no_units}"
+        assert var in col_names_no_units, (
+            f"Expected '{var}' in summary columns, got: {col_names_no_units}"
+        )
 
 
 @pytest.mark.unit

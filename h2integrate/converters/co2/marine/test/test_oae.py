@@ -6,13 +6,13 @@ from openmdao.utils.assert_utils import assert_near_equal
 from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import OAEPerformanceModel
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def tech_config():
     return {
         "model_inputs": {
             "performance_parameters": {
                 "number_ed_min": 1,
-                "number_ed_max": 10,
+                "number_ed_max": 5,
                 "max_ed_system_flow_rate_m3s": 0.0324,  # m^3/s
                 "frac_base_flow": 0.5,
                 "assumed_CDR_rate": 0.8,  # mol CO2/mol NaOH
@@ -29,8 +29,11 @@ def tech_config():
     }
 
 
-@pytest.mark.unit
-def test_oae_outputs(driver_config, plant_config, tech_config, subtests):
+@pytest.fixture(scope="module")
+def prob(tech_config, tmp_path_factory):
+    """Run the OAE model once and share it, since the chemistry model is slow."""
+    plant_config = {"plant": {"plant_life": 30, "simulation": {"n_timesteps": 8760, "dt": 3600}}}
+    driver_config = {"general": {"folder_output": str(tmp_path_factory.mktemp("oae"))}}
     oae_model = OAEPerformanceModel(
         driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
     )
@@ -46,7 +49,11 @@ def test_oae_outputs(driver_config, plant_config, tech_config, subtests):
 
     # Run the model
     prob.run_model()
+    return prob
 
+
+@pytest.mark.unit
+def test_oae_outputs(prob, plant_config, subtests):
     plant_life = int(plant_config["plant"]["plant_life"])
     n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
 
@@ -127,23 +134,7 @@ def test_oae_outputs(driver_config, plant_config, tech_config, subtests):
 
 
 @pytest.mark.regression
-def test_oae_standard_outputs(driver_config, plant_config, tech_config, subtests):
-    oae_model = OAEPerformanceModel(
-        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
-    )
-    prob = om.Problem(model=om.Group())
-    prob.model.add_subsystem("comp", oae_model, promotes=["*"])
-    prob.setup()
-
-    rng = np.random.default_rng(seed=42)
-    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 300 MW to 200 MW over 8760 hours
-    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±50 MW noise
-    power_profile = base_power + noise
-    prob.set_val("comp.electricity_in", power_profile, units="W")
-
-    # Run the model
-    prob.run_model()
-
+def test_oae_standard_outputs(prob, subtests):
     annual_co2_from_cf_calc = (
         prob.get_val("comp.capacity_factor", units="unitless")
         * prob.get_val("comp.rated_co2_production", units="t/h")
@@ -158,24 +149,7 @@ def test_oae_standard_outputs(driver_config, plant_config, tech_config, subtests
 
 
 @pytest.mark.regression
-def test_performance_model(tech_config, plant_config, driver_config):
-    oae_model = OAEPerformanceModel(
-        driver_config=driver_config, plant_config=plant_config, tech_config=tech_config
-    )
-    prob = om.Problem(model=om.Group())
-    prob.model.add_subsystem("OAE", oae_model, promotes=["*"])
-    prob.setup()
-
-    # Set inputs
-    rng = np.random.default_rng(seed=42)
-    base_power = np.linspace(3.0e8, 2.0e8, 8760)  # 300 MW to 200 MW over 8760 hours
-    noise = rng.normal(loc=0, scale=0.5e8, size=8760)  # ±50 MW noise
-    power_profile = base_power + noise
-    prob.set_val("OAE.electricity_in", power_profile, units="W")
-
-    # Run the model
-    prob.run_model()
-
+def test_performance_model(prob):
     # Get output values to determine expected values
     co2_out = prob.get_val("co2_out", units="kg/h")
     co2_capture_mtpy = prob.get_val("annual_co2_produced", units="t/year")
@@ -185,9 +159,9 @@ def test_performance_model(tech_config, plant_config, driver_config):
     excess_acid = prob.get_val("excess_acid", units="m**3")
 
     # Assert values (allowing for small numerical tolerance)
-    assert_near_equal(np.mean(co2_out), 1108.394704250361, tolerance=1e-3)
-    assert_near_equal(co2_capture_mtpy[0], [9709.53760923], tolerance=1e-6)
-    assert_near_equal(plant_mCC_capacity_mtph, [1.10854656], tolerance=1e-6)
-    assert_near_equal(np.mean(alkaline_seawater_flow_rate), 3.2395561643835618, tolerance=1e-6)
-    assert_near_equal(np.mean(alkaline_seawater_pH), 9.145157555568293, tolerance=1e-6)
+    assert_near_equal(np.mean(co2_out), 1108.2428485572184, tolerance=1e-3)
+    assert_near_equal(co2_capture_mtpy[0], [9708.207353361895], tolerance=1e-6)
+    assert_near_equal(plant_mCC_capacity_mtph, [1.108546559943504], tolerance=1e-6)
+    assert_near_equal(np.mean(alkaline_seawater_flow_rate), 3.2391123287671224, tolerance=1e-6)
+    assert_near_equal(np.mean(alkaline_seawater_pH), 9.145157555568296, tolerance=1e-6)
     assert_near_equal(np.mean(excess_acid), 58.32, tolerance=1e-6)

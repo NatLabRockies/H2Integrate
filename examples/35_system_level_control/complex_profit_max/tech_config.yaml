@@ -45,7 +45,7 @@ technologies:
         dc_ac_ratio: 1.3
         create_model_from: default
         config_name: PVWattsSingleOwner
-        tilt_angle_func: lat-func
+        tilt_angle_setting: lat-func
         pysam_options:
           SystemDesign:
             inv_eff: 96.0
@@ -79,9 +79,9 @@ technologies:
     cost_model:
       model: NaturalGasCostModel
     model_inputs:
-      shared_parameters:
-        heat_rate_mmbtu_per_mwh: 7.5
+      performance_parameters:
         system_capacity_mw: 100.
+        heat_rate_mmbtu_per_mwh: 7.5
       cost_parameters:
         capex_per_kw: 1000
         fixed_opex_per_kw_per_year: 10.0

@@ -1,13 +1,13 @@
-from attrs import field, define
+from attrs import field, define, validators
 from mcm.capture import echem_oae
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val, must_equal
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 def setup_ocean_alkalinity_enhancement_inputs(config):
@@ -47,25 +47,26 @@ class OAEPerformanceConfig(BaseConfig):
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
-    number_ed_min: int = field(validator=gt_zero)
-    number_ed_max: int = field(validator=gt_zero)
+    number_ed_min: int = field(validator=validators.gt(0))
+    number_ed_max: int = field(validator=validators.gt(0))
     use_storage_tanks: bool = field()
-    store_hours: float = field(validator=gte_zero)
-    assumed_CDR_rate: float = field(validator=range_val(0, 1))
-    frac_base_flow: float = field(validator=range_val(0, 1))
-    max_ed_system_flow_rate_m3s: float = field(validator=gt_zero)
-    initial_temp_C: float = field(validator=gte_zero)
-    initial_salinity_ppt: float = field(validator=gte_zero)
-    initial_dic_mol_per_L: float = field(validator=gte_zero)
-    initial_pH: float = field(validator=gte_zero)
-    initial_tank_volume_m3: float = field(validator=gte_zero)
+    store_hours: float = field(validator=validators.ge(0))
+    assumed_CDR_rate: float = field(validator=(validators.ge(0), validators.le(1)))
+    frac_base_flow: float = field(validator=(validators.ge(0), validators.le(1)))
+    max_ed_system_flow_rate_m3s: float = field(validator=validators.gt(0))
+    initial_temp_C: float = field(validator=validators.ge(0))
+    initial_salinity_ppt: float = field(validator=validators.ge(0))
+    initial_dic_mol_per_L: float = field(validator=validators.ge(0))
+    initial_pH: float = field(validator=validators.ge(0))
+    initial_tank_volume_m3: float = field(validator=validators.ge(0))
     acid_disposal_method: str = field(
-        validator=contains(["sell acid", "sell rca", "acid disposal"])
+        validator=validators.in_(["sell acid", "sell rca", "acid disposal"])
     )
     save_outputs: bool = field(default=False)
     save_plots: bool = field(default=False)
 
 
+@register
 class OAEPerformanceModel(PerformanceModelBaseClass):
     """OpenMDAO component for modeling Ocean Alkalinity Enhancement (OAE) performance."""
 
@@ -192,7 +193,7 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
         OAE_inputs = setup_ocean_alkalinity_enhancement_inputs(self.config)
 
         # Call the OAE calculation method from the echem_oae module
-        range_outputs, oae_outputs = echem_oae.run_ocean_alkalinity_enhancement_physics_model(
+        _range_outputs, oae_outputs = echem_oae.run_ocean_alkalinity_enhancement_physics_model(
             power_profile_w=inputs["electricity_in"],
             power_capacity_w=max(
                 inputs["electricity_in"]
@@ -253,9 +254,17 @@ class OAECostModelConfig(CostModelBaseConfig):
         cost_year (int): dollar year corresponding to cost values
     """
 
-    cost_year: int = field(default=2024, converter=int, validator=must_equal(2024))
+    cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
 
 
+@define(kw_only=True)
+class OAECostAndFinancialModelConfig(OAECostModelConfig):
+    """Configuration for the combined OAE cost and finance model."""
+
+    pass
+
+
+@register
 class OAECostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     ocean alkalinity enhancement (OAE) system.
@@ -344,6 +353,7 @@ class OAECostModel(CostModelBaseClass):
         outputs["OpEx"] = results["Annual Operating Cost ($/yr)"]
 
 
+@register
 class OAECostAndFinancialModel(CostModelBaseClass):
     """OpenMDAO component for calculating costs and financial metrics of an
         Ocean Alkalinity Enhancement (OAE) system.
@@ -367,12 +377,12 @@ class OAECostAndFinancialModel(CostModelBaseClass):
 
     def setup(self):
         if "cost" in self.options["tech_config"]["model_inputs"]:
-            self.config = OAECostModelConfig.from_dict(
+            self.config = OAECostAndFinancialModelConfig.from_dict(
                 merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
                 additional_cls_name=self.__class__.__name__,
             )
         else:
-            self.config = OAECostModelConfig.from_dict(
+            self.config = OAECostAndFinancialModelConfig.from_dict(
                 data={},
                 additional_cls_name=self.__class__.__name__,
             )

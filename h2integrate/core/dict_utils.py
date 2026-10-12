@@ -220,6 +220,50 @@ def rename_dict_keys(input_dict, init_keyname, new_keyname):
     return input_dict
 
 
+def separate_shared_parameters(section_params: dict[str, dict]) -> tuple[dict, dict]:
+    """Separate shared keys from section-specific parameter dictionaries.
+
+    This helper identifies keys that appear in more than one section and returns
+    two dictionaries: the shared parameters and the remaining section-local
+    parameters. It preserves the first-seen value for each shared key.
+
+    Args:
+        section_params (dict[str, dict]): Mapping of model-input section names
+            to parameter dictionaries. Expected keys are typically
+            ``performance``, ``control``, ``cost``, and ``dispatch``. For
+            example, ``{"performance": {"capacity": 1, "profile": []},
+            "cost": {"capacity": 2, "cost_year": 2024}}`` produces
+            ``{"capacity": 1}`` as the shared parameters and leaves
+            ``profile`` and ``cost_year`` in their respective sections.
+
+    Returns:
+        tuple[dict, dict]: A ``(shared_parameters, section_only)`` tuple. The
+            first dictionary contains keys found in at least two sections; the
+            second maps each original section name to its non-shared entries.
+    """
+    if not section_params:
+        return {}, {}
+
+    param_counts = Counter()
+    for params in section_params.values():
+        for param_key in params:
+            param_counts[param_key] += 1
+
+    shared_param_keys = {key for key, count in param_counts.items() if count > 1}
+    shared_parameters = {}
+    section_only = {}
+
+    for section_name, params in section_params.items():
+        section_only[section_name] = {
+            key: value for key, value in params.items() if key not in shared_param_keys
+        }
+        for param_key in shared_param_keys:
+            if param_key in params and param_key not in shared_parameters:
+                shared_parameters[param_key] = params[param_key]
+
+    return shared_parameters, section_only
+
+
 def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
     """Check the user-input technology configuration inputs against the
     instantiated technology configuration classes to ensure that:
@@ -252,7 +296,6 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
     if not overlap.difference(minimal_keys):
         return
 
-    msg = None
     control_sys = None
     dispatch_sys = None
     cost_sys = None
@@ -284,13 +327,18 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
 
     # Check for overlapping keys between any two sets of configurations to reconstruct
     # the shared parameters, and create a restructured configuration
-    all_parameters = (control_params, dispatch_params, cost_params, performance_params)
-    _share_check = Counter([x for el in all_parameters for x in set(el)])
-    shared = {k for k, v in _share_check.items() if v > 1}
-    shared_params = {k: control_params.pop(k) for k in shared.intersection(control_params)}
-    shared_params |= {k: dispatch_params.pop(k) for k in shared.intersection(dispatch_params)}
-    shared_params |= {k: cost_params.pop(k) for k in shared.intersection(cost_params)}
-    shared_params |= {k: performance_params.pop(k) for k in shared.intersection(performance_params)}
+    shared_params, restructured_sections = separate_shared_parameters(
+        {
+            "control_parameters": control_params,
+            "dispatch_parameters": dispatch_params,
+            "cost_parameters": cost_params,
+            "performance_parameters": performance_params,
+        }
+    )
+    control_params = restructured_sections.get("control_parameters", {})
+    dispatch_params = restructured_sections.get("dispatch_parameters", {})
+    cost_params = restructured_sections.get("cost_parameters", {})
+    performance_params = restructured_sections.get("performance_parameters", {})
     restructured_params = {
         "control_parameters": control_params,
         "dispatch_parameters": dispatch_params,
@@ -324,33 +372,37 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
                 if len(unnecessary_shared) == 1:
                     unshared_params, other_key = unnecessary_shared[0]
                     msg = (
-                        f"The parameter(s): {unnecessary_shared} found in shared_parameters"
+                        f"The parameter(s): {sorted(unshared_params)} found in shared_parameters"
                         f" but should be in {other_key} for {tech_location}"
                     )
+                    raise AttributeError(msg)
                 else:
                     mapping = "\n\t".join(
-                        f"{level} should contain: {keys}" for keys, level in unnecessary_shared
+                        f"{level} should contain {sorted(keys)}"
+                        for keys, level in unnecessary_shared
                     )
                     msg = (
                         f"The following parameter sets were found in shared_parameters but should"
-                        f" be in the following sections for {tech_location}:"
+                        f" be contained in the following sections for {tech_location}:"
                         f"\n\t{mapping}"
                     )
+                    raise AttributeError(msg)
             else:
                 msg = (
-                    f"The parameter(s): {user_extras} found in shared_parameters"
+                    f"The parameter(s): {sorted(user_extras)} found in shared_parameters"
                     f" are not used by any of the models for {tech_location}"
                 )
-            raise AttributeError(msg)
+                raise AttributeError(msg)
 
         shared_overlap = user_extras.intersection(restructured_params.get("shared_parameters", {}))
         if shared_overlap:
             msg = (
-                f"The parameter(s) {shared_overlap} found in {param_key}"
+                f"The parameter(s) {sorted(shared_overlap)} found in {param_key}"
                 f" should be under shared_parameters for {tech_location}"
             )
+            raise AttributeError(msg)
         msg = (
-            f"The parameter(s) {user_extras} found in {param_key} are not used for "
+            f"The parameter(s) {sorted(user_extras)} found in {param_key} are not used for "
             f"{tech_location}"
         )
         raise AttributeError(msg)

@@ -7,8 +7,9 @@ H2Integrate can pull data (such as wind and solar resource data, feedstock price
     - `NLR_API_EMAIL`
 - [EIA Natural Gas Cost Data](environment_variables:eia_ng)
     - `EIA_API_KEY`
-- Customized Workflow
+- [Customized Workflow](environment_variables:folders)
     - `RESOURCE_DIR`
+    - `FEEDSTOCK_DIR`
 
 ```{note}
 Tips on debugging environment variable related errors or issues can be found [here](#env_var_debug:intro)
@@ -17,12 +18,11 @@ Tips on debugging environment variable related errors or issues can be found [he
 To use models that require environment variables, [follow these instructions below](environment_variables:setting-environment-variables).
 
 (environment_variables:setting-environment-variables)=
-# Setting Environment Variables
+## Setting Environment Variables
 We will use the environment variables needed for the NLR Developer Network (`NLR_API_KEY` and `NLR_API_EMAIL`) to showcase different methods of setting environment variables in this section.
 
 In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NLR API key and `'email-for-api-key'` should be replaced with your email address.
 
-An optional environment variable is `RESOURCE_DIR`. If set, this will be used as the default folder to save resource data to that is downloaded from the API. If setting this, please set its value as the full filepath to the folder you'd like to save resource files to, and ensure that the folder exists.
 
 The remaining sections outline different options for setting environment variables in H2Integrate:
 - [Save environment variables with conda (preferred)](#save-environment-variables-with-conda-preferred)
@@ -44,14 +44,12 @@ The `.\etc\conda\activate.d\env_vars.bat` file may look like below:
 ```bash
 set NLR_API_KEY='api-key-value'
 set NLR_API_EMAIL='email-for-api-key'
-set RESOURCE_DIR=C:\path\to\my\resource\folder
 ```
 
 The `.\etc\conda\deactivate.d\env_vars.bat` file may look like below:
 ```bash
 set NLR_API_KEY=
 set NLR_API_EMAIL=
-set RESOURCE_DIR=
 ```
 
 ### macOS and Linux instructions
@@ -63,7 +61,6 @@ The `./etc/conda/activate.d/env_vars.sh` file may look like below:
 #!/bin/sh
 export NLR_API_KEY='api-key-value'
 export NLR_API_EMAIL='email-for-api-key'
-export RESOURCE_DIR=/path/to/my/resource/folder/
 ```
 
 The `./etc/conda/deactivate.d/env_vars.sh` file may look like below:
@@ -72,7 +69,6 @@ The `./etc/conda/deactivate.d/env_vars.sh` file may look like below:
 
 unset NLR_API_KEY
 unset NLR_API_EMAIL
-unset RESOURCE_DIR
 ```
 
 (set-environment-variables-with-yaml-file)=
@@ -86,7 +82,6 @@ unset RESOURCE_DIR
     variables:
         NLR_API_KEY='api-key-value'
         NLR_API_EMAIL='email-for-api-key'
-        RESOURCE_DIR='/path/to/my/resource/folder/'
     ```
 
 2. After that, create a conda environment and install H2Integrate and all its dependencies using the modified `environment.yml` file with the command:
@@ -97,10 +92,6 @@ unset RESOURCE_DIR
 
 (set-environment-variables-with-env-file)=
 ## Set Environment Variables with .env file
-
-```{note}
-This method only works for setting the `NLR_API_KEY` and `NLR_API_EMAIL` environment variables; this method should not be used to set the `RESOURCE_DIR` environment variable.
-```
 
 The ".env" file will be looked for in all of the following locations:
     - H2Integrate root directory (`/path/to/H2Integrate/h2integrate/`)
@@ -116,7 +107,7 @@ The ".env" file will be looked for in all of the following locations:
 
 
 (environment_variables:nlr_developer)=
-# NLR Developer Network Environment Variables
+## NLR Developer Network Environment Variables
 
 H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
 To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
@@ -131,9 +122,27 @@ Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 ```
 
 (environment_variables:eia_ng)=
-# EIA Natural Gas Cost
+## EIA Natural Gas Cost
 Further documentation on the EIA natural gas cost model can be [here](#feedstocks:eia_ng_price). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
 
 ```bash
 EIA_API_KEY='api-key-value'
+```
+
+(environment_variables:folders)=
+## Customized Directories for Resource and Feedstock data
+Two **optional** environment variables are available to customize directories for saving and loading data from. These two environment variables are `RESOURCE_DIR` and `FEEDSTOCK_DIR` and should be set to filepaths:
+
+
+```bash
+RESOURCE_DIR='/path/to/my/resource/folder/'
+FEEDSTOCK_DIR='/path/to/my/feedstock/folder/'
+```
+
+An optional environment variable is `RESOURCE_DIR`. If set, this will be used as the default folder to save resource data to that is downloaded from the API and load resource data from. By default, if `RESOURCE_DIR` is not set as an environment variable and no other folder is specified to a resource model, the default behavior for resource models is to use `DEFAULT_RESOURCE_DIR` which is the folder `/path/to/H2Integrate/resource_files/`.
+
+Another optional environment variable is `FEEDSTOCK_DIR`. If set, this will be used as the default folder to save feedstock data to that is downloaded from the API. By default, if `FEEDSTOCK_DIR` is not set as an environment variable and no other folder is specified to a feedstock model, the default behavior for feedstock models is to use `DEFAULT_FEEDSTOCK_DIR` which is the folder `/path/to/H2Integrate/resource_files/feedstock_files/`.
+
+```{important}
+If setting either of these environment variables, please set its value as the full filepath to the folder you'd like to save resource files to, and ensure that the folder exists.
 ```

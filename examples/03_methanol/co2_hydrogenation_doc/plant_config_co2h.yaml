@@ -27,7 +27,7 @@ technology_interconnections:
   - [co2_storage, co2_combiner, co2, pipe]
   # connect the co2 supply to the methanol system
   - [co2_combiner, methanol, co2, pipe]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
 plant:

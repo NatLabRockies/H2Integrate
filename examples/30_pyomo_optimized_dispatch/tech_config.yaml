@@ -6,9 +6,6 @@ technologies:
       model: PYSAMWindPlantPerformanceModel
     cost_model:
       model: ATBWindPlantCostModel
-    resource:
-      type: pysam_wind
-      wind_speed: 9.
     model_inputs:
       performance_parameters:
         num_turbines: 25

@@ -58,20 +58,17 @@ However, there are a few downsides to using OpenMDAO:
 The benefits outweighed the downsides, hence the team's choice to use OpenMDAO going forward.
 Additionally, we can code H2Integrate in a way to minimize some of the potential issues, given that we're aware of them before refactoring H2Integrate.
 
-## Where does HOPP come into play?
+## How are generation technologies handled today?
 
-[HOPP](https://github.com/NatLabRockies/HOPP) is a well-structured and useful tool that analyzes hybrid plants producing electricity.
-H2Integrate historically calls HOPP to obtain the plant's outputted electricity, which is then used downstream to feed into electrolyzers, steel, and other components.
-The current setup of H2Integrate largely works in the same way.
-
-The end-goal of H2Integrate is to remove this call to HOPP as a monolith and instead break out the individual technologies so they are all exposed equally to H2Integrate.
-This would entail reworking the dispatch implementation so it is controlled by H2Integrate and not by HOPP, which is a non-trivial task.
-HOPP would still exist as a standalone tool, but major framework development would be done in H2Integrate.
+H2Integrate now models generation technologies directly with native technology components
+for wind, solar, storage, wave, and tidal systems.
+This keeps technology behavior, dispatch interfaces, and cost modeling within a single
+framework, with all components exposed consistently to the same configuration and
+optimization infrastructure.
 
 ## Where should code I develop and implement live?
 
 Historically, H2Integrate has been a sort of hybrid itself, where it contains both the tool itself as well as project-specific code.
-Additionally, HOPP has been a separate tool that H2Integrate calls to obtain electricity production data and has been developed alongside H2Integrate.
 This has led to a somewhat disjointed codebase that is difficult to maintain and understand.
 
 To address this, here are guidelines for where code you develop should live:

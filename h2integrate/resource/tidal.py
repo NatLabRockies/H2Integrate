@@ -7,6 +7,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import get_path, find_file
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -23,6 +24,7 @@ class TidalResourceConfig(BaseConfig):
     resource_filename: Path | str = field(default="")
 
 
+@register
 class TidalResource(om.ExplicitComponent):
     """
     A resource component for processing tidal data from a CSV file.
