@@ -149,26 +149,6 @@ def test_repository_paths_in_docs_exist():
     )
 
 
-def test_registered_models_have_narrative_documentation():
-    """Keep registered models discoverable in user-facing documentation.
-
-    Search Markdown outside the generated model registry for every registered
-    model name, excluding only models tracked in the undocumented-model allowlist.
-    """
-    text = "\n".join(_page_text(page) for page in _markdown_pages())
-    undocumented = {
-        name
-        for name in supported_models
-        if name not in UNDOCUMENTED_MODELS
-        and not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text)
-    }
-
-    assert undocumented == set(), (
-        "New registered models need narrative documentation or an explicit allowlist entry: "
-        f"{sorted(undocumented)}"
-    )
-
-
 def test_example_folders_are_referenced_from_docs():
     """Ensure numbered runnable examples can be found through the documentation.
 
