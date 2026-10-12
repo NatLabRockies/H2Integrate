@@ -324,9 +324,10 @@ def resample_resource_data_to_dt(
     Resampling is driven by the actual time span of the data (its native timestep, inferred
     from the time columns), not by the number of timesteps. When the simulation timestep is
     smaller than the native timestep the data is upsampled (finer resolution) using
-    :meth:`pandas.DataFrame.interpolate`; when it is larger the data is downsampled (coarser
-    resolution) using :meth:`pandas.core.resample.Resampler.agg`. Time columns are
-    regenerated at ``target_dt`` and scalar metadata is left unchanged.
+    `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_;
+    when it is larger the data is downsampled (coarser resolution) using
+    `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_.
+    Time columns are regenerated at ``target_dt`` and scalar metadata is left unchanged.
 
     Resampling operates on the samples as an evenly spaced sequence at the native timestep.
     Resource data may have non-contiguous calendar timestamps (for example when a leap day
@@ -338,11 +339,13 @@ def resample_resource_data_to_dt(
         data (dict): resource data dictionary with timeseries arrays and time columns.
         target_dt (int | float): desired simulation timestep in seconds.
         upsample_method (str | None): interpolation method passed to
-            :meth:`pandas.DataFrame.interpolate` when upsampling. Must be explicitly set when
-            upsampling is needed; otherwise a ``ValueError`` is raised.
+            `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_
+            when upsampling. Must be explicitly set when upsampling is needed; otherwise a
+            ``ValueError`` is raised.
         downsample_method (str | None): aggregation passed to
-            :meth:`pandas.core.resample.Resampler.agg` when downsampling. Must be explicitly
-            set when downsampling is needed; otherwise a ``ValueError`` is raised.
+            `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_
+            when downsampling. Must be explicitly set when downsampling is needed; otherwise a
+            ``ValueError`` is raised.
 
     Returns:
         dict: resource data resampled to ``target_dt``.

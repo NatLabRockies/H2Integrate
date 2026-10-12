@@ -69,11 +69,15 @@ class ResourceBaseAPIConfig(BaseConfig):
             resource years. List of resource years in-order, such as [2012, 2011, 2013].
             Defaults to None.
         upsample_method (str | None, optional): Pandas interpolation method to use when the
-            simulation timestep is finer than the resource data timestep. Required only when
-            upsampling is needed; otherwise defaults to None and no automatic resampling occurs.
+            simulation timestep is finer than the resource data timestep (passed to
+            `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_).
+            Required only when upsampling is needed; otherwise defaults to None and no automatic
+            resampling occurs.
         downsample_method (str | None, optional): Pandas resampling aggregation to use when the
-            simulation timestep is coarser than the resource data timestep. Required only when
-            downsampling is needed; otherwise defaults to None and no automatic resampling occurs.
+            simulation timestep is coarser than the resource data timestep (passed to
+            `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_).
+            Required only when downsampling is needed; otherwise defaults to None and no automatic
+            resampling occurs.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
