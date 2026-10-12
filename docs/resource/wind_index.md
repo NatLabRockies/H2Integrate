@@ -12,7 +12,7 @@ Please refer to the [Setting Environment Variables](../getting_started/environme
 ```
 
 (windresource:overview)=
-# Wind Resource: Output Data
+## Wind Resource: Output Data
 
 Wind resource models may output wind resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a wind resource model.
 

@@ -1,46 +1,19 @@
 (cost:cost_years)=
-# Cost year of Cost Models
-Some cost models are derived from literature and output costs (CapEx and OpEx) in a specific dollar-year.
-Some cost models require users to input the key cost information and the output costs are in the same cost year as the user-provided costs.
-For [cost models with a built-in cost year](#cost-models-with-inherent-cost-year), the cost year is not required as an input for the cost model.
-For [cost models based on user-provided costs](#cost-models-with-user-input-cost-year), the `cost_year` should be included in the tech_config for that technology.
+# Cost year of cost models
+Cost models report the dollar year associated with their cost outputs. Plant-level finance parameters can adjust these costs to a common `target_dollar_year`. Some models use fixed source years; others require a year alongside user-provided cost data.
 
 (cost-models-with-inherent-cost-year)=
 ## Cost models with inherent cost year
 
-### Summary of cost models that are based around a cost year
-| Cost Model              | Cost Year  |
-| :---------------------- | :---------------: |
-| `BasicElectrolyzerCostModel`|  2016    |
-| `pem_electrolyzer_cost`|  2021    |
-| `SingliticoCostModel`|  2021    |
-| `h2_storage`  with `'mch'` storage type  |  2024    |
-| `h2_storage` for geologic storage or buried pipe | 2018 |
-| `simple_ammonia_cost`   |  2022    |
-| `DOCCostModel` | 2023 |
-| `OAECostModel` | 2024 |
-| `OAECostAndFinancialModel` | 2024 |
-| `SteelCostAndFinancialModel`            |  2022    |
-| `ReverseOsmosisCostModel` | 2013 |
-| `AmmoniaSynLoopCostModel`  |  N/A (adjusts costs to `target_dollar_year` within cost model)  |
+Some cost models are built from published cost data in a single dollar year. These models set `cost_year` to that year by default, so you do not need to provide it in `model_inputs.cost_parameters`. If you do provide a `cost_year` that differs from the model's source year, the model raises an error when its configuration is validated. See each model's documentation for its source cost year.
 
 (cost-models-with-user-input-cost-year)=
 ## Cost models with user input cost year
 
-### Summary of cost models that have user-input cost year
-| Cost Model              |
-| :---------------------- |
-| `wind_plant_cost` |
-| `ATBUtilityPVCostModel` |
-| `ATBResComPVCostModel` |
-| `SimpleASUCostModel` |
-| `RunOfRiverHydroCostModel` |
-| `SMRMethanolPlantCostModel` |
-| `stimulated_geoh2_cost` |
-| `natural_geoh2_cost`    |
-| `WOMBATElectrolyzerModel`                |
-| `CustomElectrolyzerCostModel` |
-| `QuinnNuclearCostModel` |
+### Models with user-provided cost years
+Most cost models use costs that you supply (for example, `capex_per_kW`), so the dollar year is defined by your inputs. For these models, you must provide `cost_year` in `model_inputs.cost_parameters` that matches the dollar year of your cost values. If it is missing, the model raises an error when its configuration is validated. Some models also restrict `cost_year` to a supported range and raise an error for values outside it. `AmmoniaSynLoopCostModel` uses the parameter `base_cost_year` for its source data.
+
+A few models with user-provided costs also define a default `cost_year`, such as `HTSECostModel` and `SimpleThermalNuclearReactorCostModel`; confirm that the default matches the year of the costs you provide.
 
 ### Example tech_config input for user-input cost year
 ```yaml

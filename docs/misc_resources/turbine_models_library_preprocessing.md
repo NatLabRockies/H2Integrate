@@ -17,7 +17,7 @@ The [turbine-models package](https://github.com/NatLabRockies/turbine-models/tre
 
 The full list of turbine models available in the turbine-models library can be found [here](https://github.com/NatLabRockies/turbine-models/blob/main/turbine_models/supported_turbines.py)
 
-H2Integrate has preprocessing tools that leverage the functionality available in the turbine-models library. The function `export_turbine_to_pysam_format()` will save turbine model specifications formatted for the PySAM Windpower model. The PySAM Windpower model is wrapped in H2I and can be utilized with the "pysam_wind_plant_performance" model. Example usage of the `export_turbine_to_pysam_format()` function is demonstrated in the following section using Example 8.
+H2Integrate has preprocessing tools that leverage the functionality available in the turbine-models library. The function `export_turbine_to_pysam_format()` will save turbine model specifications formatted for the PySAM Windpower model. The PySAM Windpower model is wrapped in H2I as `PYSAMWindPlantPerformanceModel`. Example usage of the `export_turbine_to_pysam_format()` function is demonstrated in the following section using Example 8.
 
 
 ## Turbine Model Pre-Processing with PySAM Windpower Model
@@ -49,7 +49,7 @@ tech_config_path = EXAMPLE_DIR / "08_wind_electrolyzer" / "tech_config.yaml"
 tech_config = load_tech_yaml(tech_config_path)
 ```
 
-This example uses the "pysam_wind_plant_performance" performance model for the wind plant. Currently, the performance model is using an 8.3MW wind turbine with a rotor diameter of 196 meters and a hub-height of 130 meters. This information is defined in the `tech_config` file:
+This example uses the `PYSAMWindPlantPerformanceModel` performance model for the wind plant. Currently, the performance model is using an 8.3MW wind turbine with a rotor diameter of 196 meters and a hub-height of 130 meters. This information is defined in the `tech_config` file:
 
 ```{literalinclude} ../../examples/08_wind_electrolyzer/tech_config.yaml
 :language: yaml
@@ -76,7 +76,7 @@ pysam_options
 
 ```{code-cell} ipython3
 # Create dictionary of updated inputs for the new turbine formatted for
-# the "pysam_wind_plant_performance" model
+# the "PYSAMWindPlantPerformanceModel" model
 updated_parameters = {
     "turbine_rating_kw": np.max(pysam_options["Turbine"].get("wind_turbine_powercurve_powerout")),
     "rotor_diameter": pysam_options["Turbine"].pop("wind_turbine_rotor_diameter"),
@@ -166,7 +166,7 @@ print(f"LCOH is ${lcoh[0]:.2f}/kg")
 
 ## Turbine Model Pre-Processing with FLORIS
 
-Example 26 (`26_floris`) currently uses an 660 kW turbine. This example uses the "floris_wind_plant_performance" performance model for the wind plant. Currently, the performance model is using an 660 kW wind turbine with a rotor diameter of 47.0 meters and a hub-height of 65 meters. In the following sections we will demonstrate how to:
+Example 26 (`26_floris`) currently uses an 660 kW turbine. This example uses the `FlorisWindPlantPerformanceModel` performance model for the wind plant. Currently, the performance model is using an 660 kW wind turbine with a rotor diameter of 47.0 meters and a hub-height of 65 meters. In the following sections we will demonstrate how to:
 
 1. Save turbine model specifications for the Vestas 1.65 MW turbine in the FLORIS format using `export_turbine_to_floris_format()`
 2. Load the turbine model specifications for the Vestas 1.65 MW turbine and update performance parameters for the wind technology in the `tech_config` dictionary for the Vestas 1.65 MW turbine.
@@ -196,7 +196,7 @@ tech_config = load_tech_yaml(tech_config_path)
 floris_options = load_yaml(turbine_model_fpath)
 
 # Create dictionary of updated inputs for the new turbine formatted for
-# the "floris_wind_plant_performance" model
+# the "FlorisWindPlantPerformanceModel" model
 updated_parameters = {
     "hub_height": -1,  # -1 indicates to use the hub-height in the floris_turbine_config
     "floris_turbine_config": floris_options,
