@@ -1,7 +1,9 @@
 # Changelog
 ## Unreleased [TBD]
+
 - Add data resampling capabilities via pandas methods. [PR 893](https://github.com/NatLabRockies/H2Integrate/pull/893)
 - Add core framework support for non-annual simulation durations. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.10.0 [October 12, 2026]
 
