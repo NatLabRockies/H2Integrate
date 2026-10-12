@@ -6,7 +6,11 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.tools.profast_tools import (
+    variable_cost_item_name,
+    create_years_of_operation,
+    create_and_populate_profast,
+)
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
@@ -728,7 +732,9 @@ class ProFastBase(om.ExplicitComponent):
                 for var_cost_key, var_cost_val in variable_cost_defaults.items():
                     tech_varopex_info.setdefault(var_cost_key, var_cost_val)
                 # unique name so the cost is not confused with the tech's fixed cost in ProFAST
-                variable_costs[f"{tech}_variable_cost"] = tech_varopex_info
+                cost_model_name = self.tech_config[tech].get("cost_model", {}).get("model", "")
+                is_feedstock = "FeedstockCostModel" in cost_model_name
+                variable_costs[variable_cost_item_name(tech, is_feedstock)] = tech_varopex_info
 
             # if VarOpEx is negative, treat as a coproduct
             else:

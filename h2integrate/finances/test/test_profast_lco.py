@@ -90,6 +90,7 @@ def test_profast_params_config(profast_inputs_no1, subtests):
 
 @pytest.mark.regression
 def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
+    fake_filtered_tech_config["natural_gas"]["cost_model"] = {"model": "FeedstockCostModel"}
     mean_hourly_production = 500000.0
     prob = om.Problem()
     plant_config = {
@@ -154,11 +155,12 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
     with subtests.test("LCOE breakdown total"):
         assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW*h)"] * 1e3, rel=1e-6) == lcoe
 
-    with subtests.test("Fixed OpEx and variable costs are attributed to the right rows"):
-        assert lcoe_breakdown["LCOE: wind OpEx ($/kW*h)"] > 0
-        assert lcoe_breakdown["LCOE: wind_variable_cost Feedstock ($/kW*h)"] == 0
-        assert lcoe_breakdown["LCOE: natural_gas OpEx ($/kW*h)"] > 0
-        assert lcoe_breakdown["LCOE: natural_gas_variable_cost Feedstock ($/kW*h)"] > 0
+    with subtests.test("Fixed OpEx, variable OpEx and feedstock are attributed to the right rows"):
+        assert lcoe_breakdown["LCOE: wind Fixed OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: wind Variable OpEx ($/kW*h)"] == 0
+        assert lcoe_breakdown["LCOE: natural_gas Fixed OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: natural_gas Feedstock ($/kW*h)"] > 0
+        assert "LCOE: natural_gas Variable OpEx ($/kW*h)" not in lcoe_breakdown
         assert "LCOE: wind Feedstock ($/kW*h)" not in lcoe_breakdown
 
 
