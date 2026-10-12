@@ -41,8 +41,6 @@ class ResourceBaseAPIConfig(BaseConfig):
             load resource files from. Defaults to "".
         - **resource_filename** (*str*, optional): Filename to save resource data to or load
             resource data from. Defaults to None.
-        - **resource_year_setting** (*str*, optional): How resource years are selected for
-            API datasets. Options include ``start_year``, ``year_order``, and ``filenames``.
         - **valid_intervals** (*list[int]*): time interval(s) in minutes that resource data can be
             downloaded in.
 
@@ -706,10 +704,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             if site_changed and self.raise_error_if_site_change:
                 msg = (
-                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
-                    f"When using `resource_year_setting` of 'filenames' with TMY datasets, "
-                    "the filenames must following the standard naming convention. Resource years "
-                    f"could not be estimated from the input filenames of {self.error_msg_details}."
+                    f"Site changed from {tuple(self.resource_site)} to "
+                    f"({latitude},{longitude}). When providing `resource_filename` "
+                    "as a list with TMY datasets, the filenames must follow the "
+                    "standard naming convention (or `resource_year_order` must be "
+                    "specified). Resource years could not be estimated from the input "
+                    f"filenames of {self.error_msg_details}."
                 )
                 raise ValueError(msg)
 
