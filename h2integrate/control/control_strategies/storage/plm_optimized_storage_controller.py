@@ -1038,9 +1038,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         )
 
         if has_exclusive_control_months:
-            # Exclusive Control Months: the cap is on cycled energy (kWh) per calendar
-            # month, not on discrete events - "total Cycles in
-            # each month cannot exceed the equivalent of one Cycle per calendar day".
+            # Exclusive Control Months: the upper-bound is on cycled energy (kWh) per calendar
+            # month, not on the total number of events.
             E_max = storage_capacity * (soc_max - soc_min)
 
             def monthly_cycle_cap_rule(mdl, month):
