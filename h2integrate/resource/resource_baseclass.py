@@ -593,9 +593,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """Final processing of multi-year resource data. This method does the following:
 
         1. Remove resource data for leap-day if needed
-        2. Clip the resource data to the number of timesteps in a simulation
-        3. Add start and end-times to the resource data
-        4. Check that the length of the timeseries resource data is the same as n_timesteps
+        2. Resample resource data to the simulation timestep if needed
+        3. Clip the resource data to the number of timesteps in the simulation
+        4. Add start and end-times to the resource data
+        5. Check that the length of the timeseries resource data matches n_timesteps
 
         Args:
             resource_data (dict): dictionary of resource data for all resource years
@@ -603,8 +604,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             dict: resource_data after final processing and checks
         """
-        # Remove leap day (if needed) on the native data, resample to the simulation
-        # timestep, then clip to the number of timesteps requested by the simulation.
+
         resource_data = process_leap_day(resource_data, self.config.include_leap_day)
         resource_data = resample_resource_data_to_dt(
             resource_data,
