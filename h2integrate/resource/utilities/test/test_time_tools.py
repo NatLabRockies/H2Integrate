@@ -7,6 +7,7 @@ from h2integrate.resource.utilities.time_tools import (
     process_leap_day,
     check_data_length,
     contains_leap_day,
+    add_resource_start_end_times,
     resample_resource_data_to_dt,
     get_n_timesteps_from_year_list,
     get_number_of_resource_years_needed,
@@ -119,6 +120,20 @@ def test_process_leap_day_without_february():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "freq_seconds",
+    [3600, 86_400, 172_800, 259_200],
+    ids=["1-hour", "1-day", "2-day", "3-day"],
+)
+def test_add_resource_start_end_times_reports_dt_in_seconds(freq_seconds):
+    # `timedelta.seconds` drops whole days, so steps of 24 h or more need `total_seconds()`.
+    data = _make_timeseries(4, freq_seconds)
+    result = add_resource_start_end_times(data)
+
+    assert result["dt"] == freq_seconds
+    assert isinstance(result["dt"], int)
+
+
 def _make_timeseries(n, freq_seconds, start="2012-01-01 00:00", values=None):
     """Build a resource data dict with time columns spaced at ``freq_seconds``."""
 
@@ -345,6 +360,22 @@ def test_resample_warns_when_resampling(subtests):
     with subtests.test("downsampling warns"):
         with pytest.warns(UserWarning, match="downsampling"):
             resample_resource_data_to_dt(_make_timeseries(10, 1800), 3600, downsample_method="mean")
+
+
+@pytest.mark.unit
+def test_resample_non_integer_ratio_guarantees_coverage(subtests):
+    # Non-integer ratios must not round down and under-cover the original duration.
+    with subtests.test("downsampling ceil covers span"):
+        # 10 samples at 3600s = 36000s; 36000 / 7000 = 5.14 -> ceil must yield 6 steps, not 5
+        data = _make_timeseries(10, 3600)
+        res = resample_resource_data_to_dt(data, 7000, downsample_method="mean")
+        assert len(res["wind_speed_100m"]) == 6
+
+    with subtests.test("upsampling ceil covers span"):
+        # 5 samples at 3600s = 18000s; 18000 / 2500 = 7.2 -> ceil must yield 8 steps, not 7
+        data = _make_timeseries(5, 3600)
+        res = resample_resource_data_to_dt(data, 2500, upsample_method="time")
+        assert len(res["wind_speed_100m"]) == 8
 
 
 @pytest.mark.unit
