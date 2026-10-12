@@ -134,7 +134,6 @@ def test_add_resource_start_end_times_reports_dt_in_seconds(freq_seconds):
     assert isinstance(result["dt"], int)
 
 
-@pytest.mark.unit
 def _make_timeseries(n, freq_seconds, start="2012-01-01 00:00", values=None):
     """Build a resource data dict with time columns spaced at ``freq_seconds``."""
 
