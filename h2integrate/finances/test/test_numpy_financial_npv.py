@@ -2,10 +2,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.finances.numpy_financial_npv import (
-    NumpyFinancialNPV,
-    NumpyFinancialNPVFinanceConfig,
-)
+from h2integrate.finances.numpy_financial_npv import NumpyFinancialNPV, NumpyFinancialNPVConfig
 
 
 @fixture
@@ -262,7 +259,7 @@ def test_inflation_rate_combines_via_fisher_equation(
 def test_inflation_rate_validator_rejects_out_of_range():
     """inflation_rate must be in [0, 1]."""
     with pytest.raises(ValueError, match="inflation_rate"):
-        NumpyFinancialNPVFinanceConfig.from_dict(
+        NumpyFinancialNPVConfig.from_dict(
             {
                 "plant_life": 30,
                 "real_discount_rate": 0.05,
@@ -272,7 +269,7 @@ def test_inflation_rate_validator_rejects_out_of_range():
         )
 
     with pytest.raises(ValueError, match="inflation_rate"):
-        NumpyFinancialNPVFinanceConfig.from_dict(
+        NumpyFinancialNPVConfig.from_dict(
             {
                 "plant_life": 30,
                 "real_discount_rate": 0.05,
@@ -302,7 +299,7 @@ def _make_component(**overrides):
         tech_config={},
         commodity_type="electricity",
     )
-    pf.config = NumpyFinancialNPVFinanceConfig.from_dict(params)
+    pf.config = NumpyFinancialNPVConfig.from_dict(params)
     return pf
 
 
@@ -416,8 +413,8 @@ def test_wacc_config_validators_reject_out_of_range(subtests):
 
     with subtests.test("debt_rate above 1 is rejected"):
         with pytest.raises(ValueError, match="debt_rate"):
-            NumpyFinancialNPVFinanceConfig.from_dict({**base, "debt_rate": 1.5})
+            NumpyFinancialNPVConfig.from_dict({**base, "debt_rate": 1.5})
 
     with subtests.test("debt_equity_ratio below 0 is rejected"):
         with pytest.raises(ValueError, match="debt_equity_ratio"):
-            NumpyFinancialNPVFinanceConfig.from_dict({**base, "debt_equity_ratio": -1.0})
+            NumpyFinancialNPVConfig.from_dict({**base, "debt_equity_ratio": -1.0})

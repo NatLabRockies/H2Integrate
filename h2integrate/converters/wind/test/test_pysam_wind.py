@@ -107,6 +107,74 @@ def test_pysam_wind_outputs(plant_config_wtk, wind_plant_config, subtests):
         assert np.all(prob.get_val("comp.replacement_schedule", units="unitless") == 0)
 
 
+@pytest.mark.unit
+def test_pysam_wind_with_lifetime_performance(plant_config_wtk, wind_plant_config, subtests):
+    wind_plant_config = wind_plant_config.copy()
+    wind_plant_config["pysam_options"] = {
+        **wind_plant_config["pysam_options"],
+        "Lifetime": {
+            "system_use_lifetime_output": 1,
+            "analysis_period": 10,
+            "ac_degradation": [0.0, 0.5],
+        },
+    }
+
+    prob = om.Problem()
+    wind_resource = WTKNLRDeveloperAPIWindResource(
+        plant_config=plant_config_wtk,
+        resource_config=plant_config_wtk["site"]["resource"]["wind_resource"][
+            "resource_parameters"
+        ],
+        driver_config={},
+    )
+    wind_plant = PYSAMWindPlantPerformanceModel(
+        plant_config=plant_config_wtk,
+        tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+        driver_config={},
+    )
+    prob.model.add_subsystem("wind_resource", wind_resource, promotes=["*"])
+    prob.model.add_subsystem("wind_plant", wind_plant, promotes=["*"])
+
+    with pytest.warns(UserWarning, match="analysis_period"):
+        with pytest.warns(UserWarning, match="ac_degradation"):
+            prob.setup()
+    prob.run_model()
+
+    n_timesteps = plant_config_wtk["plant"]["simulation"]["n_timesteps"]
+    plant_life = plant_config_wtk["plant"]["plant_life"]
+    generation = np.asarray(wind_plant.system_model.Outputs.gen)
+    degradation = np.resize([0.0, 0.5], plant_life)
+    expected_degradation_factors = 1 - degradation / 100
+    annual_energy = generation[:n_timesteps].sum() * expected_degradation_factors
+
+    with subtests.test("lifetime configuration matches plant life"):
+        assert wind_plant.design_dict["Lifetime"]["analysis_period"] == plant_life
+        configured_degradation = wind_plant.design_dict["Lifetime"]["ac_degradation"]
+        assert len(configured_degradation) == plant_life
+        assert configured_degradation == pytest.approx(degradation)
+
+    with subtests.test("annual production follows lifetime degradation"):
+        actual_annual_energy = prob.get_val(
+            "wind_plant.annual_electricity_produced", units="kW*h/year"
+        )
+        assert actual_annual_energy == pytest.approx(annual_energy)
+
+    with subtests.test("electricity output contains only the first year"):
+        electricity_out = prob.get_val("wind_plant.electricity_out", units="kW")
+        assert len(electricity_out) == n_timesteps
+        assert electricity_out == pytest.approx(generation[:n_timesteps])
+
+    with subtests.test("capacity factor is calculated for each lifetime year"):
+        rated_capacity = prob.get_val("wind_plant.rated_electricity_production", units="kW")[0]
+        expected_capacity_factor = annual_energy / (rated_capacity * n_timesteps)
+        actual_capacity_factor = prob.get_val("wind_plant.capacity_factor", units="unitless")
+        assert actual_capacity_factor == pytest.approx(expected_capacity_factor)
+
+    with subtests.test("total production covers only the first simulated year"):
+        total_production = prob.get_val("wind_plant.total_electricity_produced", units="kW*h")
+        assert total_production[0] == pytest.approx(annual_energy[0])
+
+
 @pytest.mark.regression
 def test_wind_plant_pysam_no_changes_from_setup(plant_config_wtk, wind_plant_config, subtests):
     prob = om.Problem()

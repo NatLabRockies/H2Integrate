@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+
 - Enable `PySAMWindPlantPerformanceModel` to accept more than 300 turbines by overriding the default maximum in the PySAM model. [PR 831](https://github.com/NatLabRockies/H2Integrate/pull/831)
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Replace HOPP with native H2I wind, solar, and battery models in example 11. Adds `percent_load_missed` and `curtailment_percent` outputs to `DemandComponentBase`, allows zero capacity in wind/solar/battery performance models. [PR 826](https://github.com/NatLabRockies/H2Integrate/pull/826)
@@ -17,6 +18,7 @@
 - Exempted demand components from the tech interconnections checking, added unit test. [PR 850](https://github.com/NatLabRockies/H2Integrate/pull/850)
 - Added extra capex, opex, and varopex outputs to `GenericConverterCostModel` for increased cost model flexibility for additional costs that don't scale based on capacity, energy throughput, or commodity throughput. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
 - Updated tech, plant, and driver schemas to better reflect the current state of the codebase and to improve validation. [PR 849](https://github.com/NatLabRockies/H2Integrate/pull/849)
+- Added `populate_tech_yaml` utility to automatically generate `model_inputs` sections in technology configuration files by introspecting model classes and organizing parameters into appropriate sections. Simplifies building tech configs, especially for storage models with multiple parameter sections. [PR 866](https://github.com/NatLabRockies/H2Integrate/pull/866)
 - Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
 - Add resource models that can extract resource data from NLR resource datasets using the `rex` package [PR 854](https://github.com/NatLabRockies/H2Integrate/pull/854)
   - `WTKHRRRMETDatasetH5` to access data from the WTK HRRR MET dataset
@@ -26,11 +28,32 @@
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
 - Expanded ability to connect site information (such as latitude and longitude) to technologies and added the transport cost model `LinearDistanceCostModel` [PR 865](https://github.com/NatLabRockies/H2Integrate/pull/865)
 - Enable the use of latitude and longitude to specify the mine location [PR 875](https://github.com/NatLabRockies/H2Integrate/pull/875)
+- Renamed the plant-config site connection key from `resource_to_tech_connections` to `site_to_tech_connections` so it reflects both site metadata and technology connections such as latitude, longitude, and resource data. [PR 879](https://github.com/NatLabRockies/H2Integrate/pull/879)
+- Added headroom outputs (`electricity_headroom` and `electricity_sell_headroom`) to the grid performance model. [PR #755](https://github.com/NatLabRockies/H2Integrate/pull/755)
+- Added `_check_dispatch_connections` to `H2IntegrateModel` to validate `tech_to_dispatch_connections` in the plant config against `dispatch_rule_set`/`control_strategy` declarations in the technology config, catching extraneous or missing dispatch connections at load time instead of deep inside the storage models. Also fixed a latent bug where dispatch rule connections were never wired due to an incorrect dictionary lookup, and removed unused `dispatch_rule_set` entries from examples 09 and 11. [PR 882](https://github.com/NatLabRockies/H2Integrate/pull/882)
+- Enable `BaseConfig.from_dict` to receive an instance of the object it should be creating to enable
+  `attrs` converter routines to safely handle instances of existing configuration objects or
+  configuration dictionaries for defining objects once. [PR 869](https://github.com/NatLabRockies/H2Integrate/pull/869)
+- Fix bug where initial price in ProFAST NPV list was zero in the first year when installation time finished part way through a year. The key indicator of this bug was a non-zero NPV when run with a pre-determined LCOE. [PR 880](https://github.com/NatLabRockies/H2Integrate/pull/880)
+- Removed pass-through demand from demand components, updated demand to SLC connection to use input-to-input connection, and removed tech naming dependence for combiners and splitters [PR 884](https://github.com/NatLabRockies/H2Integrate/pull/884)
+- Added inputs `dc_ac_ratio`, `tilt_angle` and `azimuth_angle` to `PYSAMSolarPlantPerformanceModel`. [PR #881](https://github.com/NatLabRockies/H2Integrate/pull/881)
+- Move reporting, configuration loading, graph construction, connection parsing, and model checks out of `H2IntegrateModel` into focused utility functions. [PR #886](https://github.com/NatLabRockies/H2Integrate/pull/886)
+- Added transport cost model `LinearMassTransportCostModel`, which has CapEx and OpEx costs scale with the amount of commodity being transported [PR #892](https://github.com/NatLabRockies/H2Integrate/pull/892)
+- Updated `PYSAMSolarPlantPerformanceModel` and `PYSAMWindPlantPerformanceModel` to support lifetime outputs. [PR #889](https://github.com/NatLabRockies/H2Integrate/pull/889)
+- Remove the unused single-source commodity summation component and its references. [PR 898](https://github.com/NatLabRockies/H2Integrate/pull/898)
+- Updated `PYSAMWavePlantPerformanceModel` to support lifetime performance output and aligned the PySAM solar, wind, and wave setup paths to validate lifetime options against plant life. [PR 895](https://github.com/NatLabRockies/H2Integrate/pull/895)
+- Added warnings into ProFAST finance models to handle zero capacity error cases and removed default 'null' value for lower and upper bounds of design variables in driver schema. [PR 896](https://github.com/NatLabRockies/H2Integrate/pull/896)
+- Reduced test suite runtime by speeding up slow code paths and shrinking the most expensive examples. [PR 899](https://github.com/NatLabRockies/H2Integrate/pull/899)
+  - Vectorized the time-to-peak and allowed-charge calculations in `PeakLoadManagementHeuristicOpenLoopStorageController`, removed a deep copy of every YAML node in the config loader, reused a single `TimezoneFinder` for OpenMeteo resource data, and switched reverse geocoding to single-process mode. These changes do not change results.
+  - Example 12 now uses `PYSAMWindPlantPerformanceModel` (same 148 x 6 MW turbines), example 13 uses 44 GE 1.5 MW turbines (same 66 MW capacity), and example 26 uses 25 turbines instead of 100 for the FLORIS wind plant.
+  - The OAE examples and tests now use at most 5 ED units instead of 10 (same maximum capacity), and the OAE unit and regression tests share a single model run.
+- Standardized base class module file names on the `_baseclass.py` suffix, including renaming `h2integrate/core/model_baseclasses.py` to `h2integrate/core/model_baseclass.py`; imports from the old module paths must be updated. [PR 900](https://github.com/NatLabRockies/H2Integrate/pull/900)
 - Added a seasonal `control_tier` feature (DBESS "Exclusive Control Months") to `PeakLoadManagementOptimizedStorageController`, layered on top of the existing G&T/Co-op MILP: during Exclusive Control Months (selected via `control_tier` 1-4 and `winter_control_months`/`summer_control_months`) the existing MILP runs with a monthly cycle-energy cap (`max_cycles_per_day`) in place of the event-count cap; outside those months the controller instead solves an independent bill-minimization MILP against the Member's own facility load (`energy_rate`, `demand_charge_rate`, `demand_charge_window`). The two regimes are always solved as separate MILPs, and `setup()` raises if `n_control_window_hours` would let a rolling window straddle the Exclusive-Control/off-month boundary. [PR TBD]
 
 ## 0.9 [August 10, 2026]
 
 ### New Features
+
 - Creates the `EIANaturalGasFeedstockConfig` and `EIANaturalGasFeedstockCostModel` to load EIA natural gas prices from file or to retrieve them from the EIA API. The model is able to retrieve the US or any of the 50 states' annual or monthly values, which will be converted into an hourly timeseries. [PR 719](https://github.com/NatLabRockies/H2Integrate/pull/719)
 - Add electric arc furnace performance and cost models based on the Carnegie Mellon University DecarbSTEEL v5 excel model [PR 686](https://github.com/NatLabRockies/H2Integrate/pull/686)
   - Adds scrap-only performance model
@@ -41,7 +64,9 @@
 - Added a thermal-nuclear (light-water reactor) model and a high-temperature steam electrolysis model. [PR 807](https://github.com/NatLabRockies/H2Integrate/pull/807)
 
 ### Updates
+
 #### Modeling
+
 - Change commodity in DRI and EAF model from pig iron to sponge iron based on likely carbon content [PR 670](https://github.com/NatLabRockies/H2Integrate/pull/670)
 - Added electricity and water consumption profiles as outputs to the `ECOElectrolyzerPerformanceModel` [PR 690](https://github.com/NatLabRockies/H2Integrate/pull/690)
 - Add per-year pricing support for Grid and Feedstock cost models, allowing price arrays of length `plant_life` in addition to scalar and per-timestep arrays. [PR 700](https://github.com/NatLabRockies/H2Integrate/pull/700)
@@ -65,8 +90,8 @@
 - Added `calc_azimuth_angle()` to `PYSAMSolarPlantPerformanceModel` to provide default azimuth angle based on whether the site is in the northern or southern hemisphere [PR 806](https://github.com/NatLabRockies/H2Integrate/pull/806)
 - Renamed `OpenLoopStorageControlBase` to `OpenLoopControlBase` and `OpenLoopStorageControlBaseConfig` to `OpenLoopControlBaseConfig` and moved them out of the control storage sub-directory. [PR 828](https://github.com/NatLabRockies/H2Integrate/pull/828)
 
-
 #### Infrastructure
+
 - Grouped closely related test assertions into behavior-focused subtests and documented when to use subtests in the developer coding guidelines. [PR 839](https://github.com/NatLabRockies/H2Integrate/pull/839)
 - Renamed `{commodity}_demand` inputs to `{commodity}_set_point` on all converter performance components to align with storage baseclass naming and distinguish converter operating targets from demand components. [PR 691](https://github.com/NatLabRockies/H2Integrate/pull/691)
 - Minor cleanup to `pose_optimization` [PR 695](https://github.com/NatLabRockies/H2Integrate/pull/695)
@@ -99,6 +124,7 @@
 - Added two new fuel cell models: `PEMH2FuelCellPerformanceModel` to model a PEM hydrogen fuel cell and `SONGFuelCellPerformanceModel` to model a natural gas solid oxide fuel cell [PR 794](https://github.com/NatLabRockies/H2Integrate/pull/794)
 
 ### Fixes
+
 - Bug fix so multi-level output path won't throw an error; updated test for EIA API handling. [PR 820](https://github.com/NatLabRockies/H2Integrate/pull/820)
 - Bugfix for round-trip efficiency handling when calling `check_inputs` around `StoragePerformanceModel` [PR 684](https://github.com/NatLabRockies/H2Integrate/pull/684)
 - Bugfix. Include nuclear in electricity producing tech list and improve error message for zero-length electricity producing techs in model when electricity is specified as the commodity. [PR 685](https://github.com/NatLabRockies/H2Integrate/pull/685)

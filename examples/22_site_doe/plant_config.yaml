@@ -12,7 +12,7 @@ sites:
   interconnection_site:
     latitude: 34.126
     longitude: -99.144
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the solar resource to the solar technology
   - [site.solar_resource, solar, solar_resource_data]
   # connect the solar resource site to the transport cost model

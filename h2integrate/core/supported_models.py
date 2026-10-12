@@ -142,6 +142,10 @@ supported_models = _ModelRegistry(
         "SimpleThermalNuclearReactorCostModel": "converters.nuclear:SimpleThermalNuclearReactorCostModel",
         "SimpleThermalNuclearReactorPerformanceModel": "converters.nuclear:SimpleThermalNuclearReactorPerformanceModel",
         "NaturalGasCostModel": "converters.natural_gas:NaturalGasCostModel",
+        "PaperMillPerformanceModel": "converters.paper_mill:PaperMillPerformanceModel",
+        "PaperMillCostModel": "converters.paper_mill:PaperMillCostModel",
+        "SAFPerformanceModel": "converters.saf:SAFPerformanceModel",
+        "SAFCostModel": "converters.saf:SAFCostModel",
         "SimpleCycleTurbinePerformanceModel": "converters.combustion_machines:SimpleCycleTurbinePerformanceModel",
         "DieselGeneratorPerformanceModel": "converters.diesel:DieselGeneratorPerformanceModel",
         "DieselGeneratorCostModel": "converters.diesel:DieselGeneratorCostModel",
@@ -152,10 +156,9 @@ supported_models = _ModelRegistry(
         "GenericSplitterPerformanceModel": "transporters:GenericSplitterPerformanceModel",
         "GenericTransporterPerformanceModel": "transporters:GenericTransporterPerformanceModel",
         "LinearDistanceCostModel": "transporters:LinearDistanceCostModel",
+        "LinearMassTransportCostModel": "transporters:LinearMassTransportCostModel",
         "IronTransportPerformanceComponent": "converters.iron:IronTransportPerformanceComponent",
         "IronTransportCostComponent": "converters.iron:IronTransportCostComponent",
-        # Simple Summers
-        "GenericSummerPerformanceModel": "transporters:GenericSummerPerformanceModel",
         # Storage
         "PySAMBatteryPerformanceModel": "storage.battery:PySAMBatteryPerformanceModel",
         "StoragePerformanceModel": "storage:StoragePerformanceModel",

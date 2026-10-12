@@ -76,7 +76,7 @@ sites:
         resource_parameters:
           filename: river_data.csv
 
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the river resource to the run-of-river hydro technology
   - [site.river_resource, river, discharge]
 ```

@@ -603,6 +603,10 @@ def test_BaseConfig(subtests):
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({})
 
+    with subtests.test("Check instance is returned back"):
+        demo = DemoConfig(x=13, y=12)
+        assert demo == DemoConfig.from_dict(demo)
+
 
 @pytest.mark.unit
 def test_yaml_no_duplicate_keys(subtests):

@@ -95,6 +95,8 @@ def _build_slc_topology(
 
 def _build_problem(slc_cls, plant_config, slc_topology, demand=50000, tech_config={}):
     """Create and setup an OpenMDAO Problem with the given controller."""
+    slc_topology["demand_profile"] = demand
+
     prob = om.Problem()
 
     feedstock_techs = [

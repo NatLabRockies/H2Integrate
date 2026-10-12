@@ -36,7 +36,7 @@ Helper functions for cost-aware controllers.
 ## Base Class and Methods
 
 ```{eval-rst}
-.. autoclass:: h2integrate.control.control_strategies.system_level.system_level_control_base.SystemLevelControlBase
+.. autoclass:: h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase
    :members:
    :undoc-members:
    :show-inheritance:

@@ -35,7 +35,7 @@ technology_interconnections:
   # send hydrogen to load
   - [h2_combiner, h2_load_demand, hydrogen, pipe]
   # combined supply to demand
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
 plant:

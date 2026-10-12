@@ -1,4 +1,4 @@
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
 
 
 class DesalinationPerformanceBaseClass(PerformanceModelBaseClass):

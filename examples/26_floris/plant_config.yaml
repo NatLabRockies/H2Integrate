@@ -22,7 +22,7 @@ technology_interconnections:
   - [utility_wind_plant, combiner, electricity, cable]
                                                               # source_tech, dest_tech, transport_item, transport_type = connection
   - [distributed_wind_plant, combiner, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource at the distributed_wind_site to the distributed_wind_plant technology
   - [distributed_wind_site.wind_resource, distributed_wind_plant, wind_resource_data]
   # connect the wind resource at the utility_wind_site to the utility_wind_plant technology

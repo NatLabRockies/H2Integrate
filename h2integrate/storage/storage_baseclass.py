@@ -3,7 +3,7 @@ from attrs import field, define, validators
 from openmdao.utils import units as om_units
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 @define(kw_only=True)

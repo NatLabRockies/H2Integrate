@@ -12,7 +12,7 @@ from h2integrate.finances.tools import _compute_rate_units, check_plant_config_a
 
 
 @define(kw_only=True)
-class NumpyFinancialNPVFinanceConfig(BaseConfig):
+class NumpyFinancialNPVConfig(BaseConfig):
     """Configuration for NumpyFinancialNPVFinance.
 
     Future cash flows are discounted using the nominal, pre-tax weighted average
@@ -142,7 +142,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             )
         finance_params.update({"plant_life": plant_config["plant"]["plant_life"]})
 
-        self.config = NumpyFinancialNPVFinanceConfig.from_dict(
+        self.config = NumpyFinancialNPVConfig.from_dict(
             finance_params,
             additional_cls_name=self.__class__.__name__,
         )

@@ -32,7 +32,7 @@ technology_interconnections:
   # combine electricity generated from solar+battery and electricity bought from grid
   - [bat_combiner, combiner, electricity, cable]
   - [grid_buy, combiner, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.solar_resource, solar, solar_resource_data]
 plant:

@@ -29,12 +29,12 @@ The cost model will calculate capex costs based on the Stinn correlations and op
 
 For API details, see:
 
-- [`HumbertEwinConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
+- [`HumbertEwinPerformanceComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
 - [`HumbertEwinPerformanceComponent`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
 
 ## Cost Model
 
 For API details, see:
 
-- [`HumbertStinnEwinCostConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
+- [`HumbertStinnEwinCostComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
 - [`HumbertStinnEwinCostComponent`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)

@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.converters.tools import (
+    check_pysam_lifetime_options,
+    apply_non_native_lifetime_degradation,
+)
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -129,6 +133,7 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             "AdjustmentFactors",
             "HybridCosts",
             "Uncertainty",
+            "Lifetime",
         ]
         if bool(self.pysam_options):
             invalid_groups = [k for k in self.pysam_options if k not in valid_groups]
@@ -262,6 +267,14 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                     design_dict[group].update(group_parameters)
                 else:
                     design_dict.update({group: group_parameters})
+
+        design_dict = check_pysam_lifetime_options(design_dict, self.plant_life, "ac_degradation")
+
+        self.design_dict = design_dict.copy()
+
+        if "Lifetime" in design_dict and not hasattr(self.system_model, "Lifetime"):
+            design_dict.pop("Lifetime")
+
         self.system_model.assign(design_dict)
 
         self.data_to_field_number = {
@@ -504,17 +517,45 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         # run the model
         self.system_model.execute(0)
 
-        outputs["electricity_out"] = self.system_model.Outputs.gen
         outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
+        generation = np.asarray(self.system_model.Outputs.gen)
+        time_step_hours = self.dt / 3600
 
-        # outputs["total_capacity"] = self.system_model.Farm.system_capacity
-        # outputs["annual_energy"] = self.system_model.Outputs.annual_energy
-        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (self.dt / 3600)
-        outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
-        max_production = (
-            self.n_timesteps * outputs["rated_electricity_production"] * (self.dt / 3600)
+        use_lifetime_output = bool(
+            self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)
         )
-        outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+        native_lifetime_output = hasattr(self.system_model, "Lifetime")
+
+        if use_lifetime_output:
+            if not native_lifetime_output:
+                degradation = self.design_dict["Lifetime"]["ac_degradation"]
+                generation = apply_non_native_lifetime_degradation(
+                    generation, degradation, self.plant_life
+                )
+
+            generation_per_year = np.split(generation, self.plant_life)
+            annual_energy = np.array(
+                [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
+            )
+            n_timesteps_per_yr = np.array(
+                [len(year_generation) for year_generation in generation_per_year]
+            )
+            max_production = (
+                outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
+            )
+            outputs["electricity_out"] = generation[: self.n_timesteps]
+            outputs["annual_electricity_produced"] = annual_energy
+            outputs["capacity_factor"] = annual_energy / max_production
+        else:
+            outputs["electricity_out"] = generation
+            outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+            max_production = (
+                self.n_timesteps * outputs["rated_electricity_production"] * time_step_hours
+            )
+
+        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * time_step_hours
+        if not use_lifetime_output:
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)

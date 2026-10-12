@@ -93,7 +93,7 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
-  resource_to_tech_connections:
+  site_to_tech_connections:
     type: array
     description: Array of arrays representing resource to technology connections
     items:

@@ -1,4 +1,4 @@
-from h2integrate.converters.iron.iron_dri_base import (
+from h2integrate.converters.iron.iron_dri_baseclass import (
     IronReductionPlantBaseCostComponent,
     IronReductionPlantBasePerformanceComponent,
 )

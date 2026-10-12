@@ -11,7 +11,7 @@ from h2integrate.core.utilities import (
     merge_shared_inputs,
     build_time_series_from_plant_config,
 )
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )
@@ -300,10 +300,8 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
         last_discharge = self.peaks_df["date_time"].iloc[0] - delay_charge_period
 
         # Process each timestep using the pre-computed peak schedule
-        for i in range(self.n_timesteps):
-            time_stamp = self.peaks_df["date_time"].iloc[i]
-            time_to_peak = self.peaks_df["time_to_peak"].iloc[i]
-
+        sub = ["date_time", "time_to_peak", "allow_charge"]
+        for i, (time_stamp, time_to_peak, allow_charge) in enumerate(self.peaks_df[sub].to_numpy()):
             # Get the input flow at the current time step
             inputs[f"{commodity}_in"][i]
 
@@ -317,7 +315,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
                 charging = False
 
             if not discharging and soc < soc_max:
-                if self.peaks_df["allow_charge"].iloc[i]:
+                if allow_charge:
                     if (time_stamp - last_discharge) > delay_charge_period:
                         charging = True
                         discharging = False
@@ -636,18 +634,13 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
         Side effect: Modifies self.peaks_df by adding/updating 'time_to_peak' column
         with pd.Timedelta values or time.max.
         """
-        # Initialize with sentinel value for "no future peak"
-        self.peaks_df["time_to_peak"] = pd.Timedelta(value=24, unit="h")
-        for _i, idx in enumerate(self.peaks_df.index):
-            # Find next peak at or after current index
-            next_peak_time = self.peaks_df.loc[
-                self.peaks_df["is_peak"] & (self.peaks_df.index >= idx), "date_time"
-            ]
-            if len(next_peak_time) > 0:
-                next_peak_time = next_peak_time.iloc[0]
-                self.peaks_df.loc[idx, "time_to_peak"] = (
-                    next_peak_time - self.peaks_df.loc[idx, "date_time"]
-                )
+        # Back-fill the time of each peak to find the next peak at or after each timestep
+        date_time = self.peaks_df["date_time"]
+        next_peak_time = date_time.where(self.peaks_df["is_peak"].astype(bool)).bfill()
+        # Timesteps with no future peak get the sentinel value
+        self.peaks_df["time_to_peak"] = (next_peak_time - date_time).fillna(
+            pd.Timedelta(value=24, unit="h")
+        )
 
     def get_allowed_charge(self):
         """Compute allowed charging time windows based on peak range configuration.
@@ -666,9 +659,7 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
         else:
             peak_range = self._parse_peak_range(self.config.peak_range)
             # Selective allow: suppress charging during peak window only
-            self.peaks_df["allow_charge"] = False
-            for i in range(self.n_timesteps):
-                time_of_day = self.peaks_df["date_time"].iloc[i].time()
-                # Allow charging if outside peak window
-                if time_of_day < peak_range["start"] or time_of_day >= peak_range["end"]:
-                    self.peaks_df.loc[i, "allow_charge"] = True
+            time_of_day = self.peaks_df["date_time"].dt.time
+            self.peaks_df["allow_charge"] = (time_of_day < peak_range["start"]) | (
+                time_of_day >= peak_range["end"]
+            )

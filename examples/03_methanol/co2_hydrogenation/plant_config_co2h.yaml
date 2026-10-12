@@ -25,7 +25,7 @@ technology_interconnections:
   - [electrolyzer, methanol, hydrogen, pipe]
   - [finance_subgroup_electricity, methanol, LCOE]
   - [finance_subgroup_hydrogen, methanol, LCOH]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
   - [site.solar_resource, solar, solar_resource_data]

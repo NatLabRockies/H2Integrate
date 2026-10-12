@@ -103,7 +103,7 @@ def test_demo_case(subtests):
         "technology_interconnections": [
             ["ng_feedstock", "ng", "natural_gas", "pipe"],
         ],
-        "resource_to_tech_connections": [
+        "site_to_tech_connections": [
             ["site.solar_resource", "ng", "solar_resource_data"],
         ],
     }

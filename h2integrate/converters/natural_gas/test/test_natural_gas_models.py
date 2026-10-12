@@ -163,6 +163,14 @@ def test_ngcc_performance_outputs(plant_config, ngcc_performance_params, subtest
     with subtests.test(f"{commodity}_out length"):
         assert len(prob.get_val(f"comp.{commodity}_out", units=commodity_rate_units)) == n_timesteps
 
+    # Test that headroom is greater than zero (plant oversized) and less than the rating
+    with subtests.test(f"0 < {commodity}_headroom_out < rated_{commodity}_production"):
+        assert np.all(prob.get_val(f"comp.{commodity}_headroom_out", units="MW") >= 0)
+        assert np.all(
+            prob.get_val(f"comp.{commodity}_headroom_out", units="MW")
+            <= prob.get_val(f"comp.rated_{commodity}_production", units="MW")
+        )
+
     # Test default values
     with subtests.test("operational_life default value"):
         assert prob.get_val("comp.operational_life", units="yr") == plant_life
@@ -206,6 +214,13 @@ def test_ngcc_performance(plant_config, ngcc_performance_params, subtests):
         # Check average output is 100 MW
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 100.0
 
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCC Headroom Output"):
+        # Headroom should be capacity less expected output (here zero)
+        expected_headroom = ngcc_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
+
 
 @pytest.mark.regression
 def test_ngct_performance(plant_config, ngct_performance_params, subtests):
@@ -242,6 +257,13 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
     with subtests.test("NGCT Average Output"):
         # Check average output is 50 MW
         assert pytest.approx(np.mean(electricity_out), rel=1e-6) == 50.0
+
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCT Headroom Output"):
+        # Headroom should be capacity less expected output
+        expected_headroom = ngct_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
 
 
 @pytest.mark.unit
@@ -393,3 +415,10 @@ def test_ngcc_performance_demand(plant_config, ngcc_performance_params, subtests
             pytest.approx(np.max(electricity_out), rel=1e-6)
             == ngcc_performance_params["system_capacity_mw"]
         )
+
+    headroom_out = prob.get_val("electricity_headroom_out")
+
+    with subtests.test("NGCC Electricity Headroom"):
+        # Headroom should be capacity less expected output (here zero)
+        expected_headroom = ngcc_performance_params["system_capacity_mw"] - expected_output
+        assert np.allclose(headroom_out, expected_headroom, rtol=1.0e-6)
