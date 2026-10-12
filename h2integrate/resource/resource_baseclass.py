@@ -92,7 +92,7 @@ class ResourceBaseAPIConfig(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | list = field(default="")
+    resource_filename: Path | str | list[Path | str] = field(default="")
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
     resource_year_order: list | None = field(default=None)

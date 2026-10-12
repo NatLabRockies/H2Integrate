@@ -1,3 +1,4 @@
+import math
 import warnings
 from datetime import timezone, timedelta
 
@@ -402,15 +403,19 @@ def resample_resource_data_to_dt(
     exclude_leap_day = spans_leap_year and not has_feb29
 
     native_len = len(calendar_index)
-    target_n = round(native_len * native_dt / float(target_dt))
-    if target_n < 1:
+    total_duration = native_len * native_dt
+    if float(target_dt) > total_duration:
         msg = (
             f"Cannot resample resource data to a timestep of {target_dt} s: it is larger than "
             f"the total time span of the data ({native_len} samples at {native_dt} s = "
-            f"{native_len * native_dt} s), so resampling would produce no timesteps. Use a "
+            f"{total_duration} s), so resampling would produce no timesteps. Use a "
             "smaller timestep or provide more resource data."
         )
         raise ValueError(msg)
+
+    # Use a ceil-based computation with epsilon so floating point imprecision does not
+    # round down and non-integer ratios guarantee coverage of the full intended duration.
+    target_n = math.ceil((total_duration / float(target_dt)) - 1e-9)
 
     target_freq = pd.Timedelta(seconds=float(target_dt))
     # Use a contiguous synthetic axis anchored at the data's first timestamp so resampling is

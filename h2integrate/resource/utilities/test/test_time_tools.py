@@ -364,6 +364,22 @@ def test_resample_warns_when_resampling(subtests):
 
 
 @pytest.mark.unit
+def test_resample_non_integer_ratio_guarantees_coverage(subtests):
+    # Non-integer ratios must not round down and under-cover the original duration.
+    with subtests.test("downsampling ceil covers span"):
+        # 10 samples at 3600s = 36000s; 36000 / 7000 = 5.14 -> ceil must yield 6 steps, not 5
+        data = _make_timeseries(10, 3600)
+        res = resample_resource_data_to_dt(data, 7000, downsample_method="mean")
+        assert len(res["wind_speed_100m"]) == 6
+
+    with subtests.test("upsampling ceil covers span"):
+        # 5 samples at 3600s = 18000s; 18000 / 2500 = 7.2 -> ceil must yield 8 steps, not 7
+        data = _make_timeseries(5, 3600)
+        res = resample_resource_data_to_dt(data, 2500, upsample_method="time")
+        assert len(res["wind_speed_100m"]) == 8
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "n_timesteps,include_leap,expected_years",
     [
