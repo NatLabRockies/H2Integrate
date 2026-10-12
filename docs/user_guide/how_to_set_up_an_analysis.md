@@ -86,7 +86,7 @@ The `financial_parameters` section contains parameters that are specific to the 
 
 Model inputs vary by model. Configuration classes may provide defaults for some parameters and
 require others. Use [`populate_tech_yaml`](populate_tech_yaml.md) to generate a configuration
-template, and see the model documentation for parameter details and valid values.
+template, and see the model documentation in the [API documentation](../api.md) for parameter details and valid values.
 The available models are registered with the `@register` decorator from `h2integrate/core/supported_models.py`; see the {ref}`technology models overview <technology-models-overview>` for the full list.
 
 ```{note}
