@@ -84,7 +84,7 @@ IMPORTANT NOTES
 
 ## Section 5: Impacted Areas of the Software
 <!--
-Replace the below example with any added or modified files, and briefly describe what has been changed or added, and why. Can exclude CHANGELOG.md, doc pages and supported_models.py.
+Replace the below example with any added or modified files, and briefly describe what has been changed or added, and why. Can exclude CHANGELOG.md and doc pages.
 -->
 ### Section 5.1: New Files
 - `path/to/file.extension`
@@ -108,14 +108,14 @@ failing test cases.
 <!-- Complete this section only if you checked "New Model" above -->
 - [ ] **Model Structure**:
   - [ ] Follows established naming conventions outlined in `docs/developer_guide/coding_guidelines.md`
-  - [ ] Configuration class is named `{ModelName}Config`, where `{ModelName}` is the complete model class name registered in `supported_models.py`
+  - [ ] Configuration class is named `{ModelName}Config`, where `{ModelName}` is the complete model class name registered with `@register`
   - [ ] Used `attrs` class to define the `Config` to load in attributes for the model
     - [ ] If applicable: inherit from `BaseConfig` or `CostModelBaseConfig`
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method
     - [ ] If applicable: inherit from `PerformanceModelBaseClass` and `CostModelBaseClass`
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
-  - [ ] Add the new model to the appropriate `__init__.py` file to ensure it is properly imported and used in `supported_models.py`
-  - [ ] Added to `supported_models.py`
+  - [ ] Add the new model to the appropriate `__init__.py` file so it can be imported from its subpackage
+  - [ ] Decorated the model class with `@register` from `h2integrate/core/supported_models.py`
 - [ ] **Tests**: Unit tests have been added for the new model
   - [ ] [Pytest-style unit tests](https://realpython.com/pytest-python-testing/)
   - [ ] Unit tests are in a "test" folder within the folder a new model was added to

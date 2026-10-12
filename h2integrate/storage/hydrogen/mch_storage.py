@@ -4,6 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -41,6 +42,7 @@ class MCHTOLStorageCostModelConfig(BaseConfig):
             self.max_discharge_rate = self.max_charge_rate
 
 
+@register
 class MCHTOLStorageCostModel(CostModelBaseClass):
     """
     Cost model representing a toluene/methylcyclohexane (TOL/MCH) hydrogen storage system.

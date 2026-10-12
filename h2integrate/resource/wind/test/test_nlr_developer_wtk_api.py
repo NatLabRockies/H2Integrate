@@ -26,7 +26,6 @@ def wtk_site_config(site_config, lat2, lon2):
     ],
     ids=["WTKNLRDeveloperAPIWindResource", "HRRRMETToolkitWindAPI"],
 )
-# fmt: on
 def test_wind_resource_loaded_from_default_dir(
     subtests,
     plant_simulation,
@@ -98,7 +97,6 @@ def test_wind_resource_loaded_from_default_dir(
     [("WTKNLRDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_v2", 0)],  # noqa: E501
     ids=["WTKNLRDeveloperAPIWindResource"],
 )
-# fmt: on
 def test_wind_resource_loaded_from_weather_dir(
     temp_dir,
     plant_simulation,

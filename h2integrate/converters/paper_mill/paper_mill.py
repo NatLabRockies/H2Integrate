@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -21,6 +22,7 @@ class PaperMillPerformanceModelConfig(BaseConfig):
     oxygen_consumption: float = field(default=2.25)  # kg/MT product
 
 
+@register
 class PaperMillPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an paper mill plant.
@@ -169,6 +171,7 @@ class PaperMillCostModelConfig(BaseConfig):
     water_disposal_unitcost: float = field(default=0.002013)  # $/kg
 
 
+@register
 class PaperMillCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with paper mill production.

@@ -362,13 +362,13 @@ def test_aspen_geoh2_performance(subtests, plant_config, geoh2_subsurface_well, 
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
             == 606.1508855232839
-        ), 1e-6
+        )
 
     with subtests.test("total h2 out well"):
         assert (
             pytest.approx(prob.model.get_val("well.total_hydrogen_produced", units="kg"), rel=1e-6)
             == 5309881.757183
-        ), 1e-6
+        )
 
 
 @pytest.mark.regression
@@ -461,7 +461,7 @@ def test_aspen_geoh2_refit_coeffs(
         assert (
             pytest.approx(np.mean(prob.model.get_val("well.hydrogen_out", units="kg/h")), rel=1e-6)
             == 606.1508855232839
-        ), 1e-6
+        )
 
     with subtests.test("Refit Performance Coeff File"):
         perf_out_fpath = input_dir / perf_out_fname

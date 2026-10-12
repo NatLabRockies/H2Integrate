@@ -4,6 +4,7 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, faraday
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -67,6 +68,7 @@ def calc_current(system_power_reference, cell_area, n_cells, n_stacks):
     return stack_current, V_J_curve
 
 
+@register
 class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a PEM hydrogen fuel cell.

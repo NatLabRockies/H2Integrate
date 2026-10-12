@@ -8,6 +8,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -27,6 +28,7 @@ class DieselGeneratorPerformanceConfig(BaseConfig):
     heat_rate_gal_per_mwh: float = field(validator=validators.gt(0))
 
 
+@register
 class DieselGeneratorPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for diesel generators.
@@ -193,6 +195,7 @@ class DieselGeneratorCostModelConfig(CostModelBaseConfig):
     variable_opex_per_kwh: float | int = field(validator=validators.ge(0))
 
 
+@register
 class DieselGeneratorCostModel(CostModelBaseClass):
     """
     Cost model for diesel generators.

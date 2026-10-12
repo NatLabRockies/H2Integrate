@@ -71,9 +71,9 @@ def test_calculate_geodataframe_total_bounds(subtests):
             "x_range": np.float64(0.03999999999999204),
             "y_range": np.float64(0.01999999999999602),
         }
-        assert isinstance(
-            coord_range_dict, dict
-        ), f"Expected dictionary type but got {type(coord_range_dict)}"
+        assert isinstance(coord_range_dict, dict), (
+            f"Expected dictionary type but got {type(coord_range_dict)}"
+        )
         for key, value in expected_dict.items():
             assert pytest.approx(coord_range_dict[key], rel=1e-3) == value
 
@@ -97,9 +97,9 @@ def test_calculate_geodataframe_total_bounds(subtests):
             "x_range": np.float64(0.03999999999999204),
             "y_range": np.float64(0.01999999999999602),
         }
-        assert isinstance(
-            coord_range_dict, dict
-        ), f"Expected dictionary type but got {type(coord_range_dict)}"
+        assert isinstance(coord_range_dict, dict), (
+            f"Expected dictionary type but got {type(coord_range_dict)}"
+        )
         for key, value in expected_dict.items():
             assert pytest.approx(coord_range_dict[key], rel=1e-3) == value
 
@@ -195,19 +195,19 @@ def test_validate_gdfs_are_same_crs(subtests):
 
     with subtests.test("Test good single gdf, list gdf, and tuple gdf inputs"):
         output_gdf = validate_gdfs_are_same_crs(base_layer_gdf=gdf_1, results_gdf=gdf_3)
-        assert isinstance(
-            output_gdf[0], gpd.GeoDataFrame
-        ), f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        assert isinstance(output_gdf[0], gpd.GeoDataFrame), (
+            f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        )
 
         output_gdf = validate_gdfs_are_same_crs(base_layer_gdf=good_gdf_list, results_gdf=gdf_3)
-        assert isinstance(
-            output_gdf[0], gpd.GeoDataFrame
-        ), f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        assert isinstance(output_gdf[0], gpd.GeoDataFrame), (
+            f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        )
 
         output_gdf = validate_gdfs_are_same_crs(base_layer_gdf=good_gdf_tuple, results_gdf=gdf_3)
-        assert isinstance(
-            output_gdf[0], gpd.GeoDataFrame
-        ), f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        assert isinstance(output_gdf[0], gpd.GeoDataFrame), (
+            f"Expected gpd.GeoDataFrame output but got {type(output_gdf[0])}"
+        )
 
     with subtests.test("Test bad single gdf, list gdf, and tuple gdf inputs"):
         # NOTE: issues with matching the ValueError to an expected message, omitted that logic

@@ -1,7 +1,10 @@
 import pyomo.environ as pyo
 from pyomo.network import Port
 
+from h2integrate.core.supported_models import register
 
+
+@register
 class PyomoDispatchGenericConverterMinOperatingCosts:
     """Class defining Pyomo rules for the optimized dispatch for load following
     for generic commodity production components.

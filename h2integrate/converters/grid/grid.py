@@ -7,6 +7,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -20,6 +21,7 @@ class GridPerformanceModelConfig(BaseConfig):
     interconnection_size: float = field()  # kW
 
 
+@register
 class GridPerformanceModel(PerformanceModelBaseClass):
     """Model a grid interconnection point.
 
@@ -209,6 +211,7 @@ class GridCostModelConfig(CostModelBaseConfig):
     )
 
 
+@register
 class GridCostModel(CostModelBaseClass):
     """
     An OpenMDAO component that computes costs for grid connections.

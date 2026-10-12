@@ -636,9 +636,9 @@ def test_plm_optimized_controller_om_problem_soc_bounds(subtests, om_plant_confi
         expected_soc[t] = expected_soc[t - 1] + charge[t] / E_max - discharge[t] / E_max
     for t in range(n):
         with subtests.test(f"SOC evolution at t={t}"):
-            assert (
-                abs(soc[t] - expected_soc[t]) < 1e-4
-            ), f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
+            assert abs(soc[t] - expected_soc[t]) < 1e-4, (
+                f"SOC mismatch at t={t}: got {soc[t]:.4f}, expected {expected_soc[t]:.4f}"
+            )
 
 
 @pytest.mark.regression

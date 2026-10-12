@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -46,6 +47,7 @@ class SimpleStorageOpenLoopControllerConfig(OpenLoopControlBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleStorageOpenLoopController(OpenLoopControlBase):
     """
     A simple open-loop controller for storage systems.

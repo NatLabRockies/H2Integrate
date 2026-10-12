@@ -92,7 +92,7 @@ You must define all the parameters for the models you are using in the analysis.
 Based on which models you choose to use, the inputs will vary.
 Each model has its own set of inputs, which are defined in the source code for the model.
 Because there are no default values for the parameters, we suggest you look at an existing example that uses the model you are interested in to see what inputs are required or look at the source code for the model.
-The different models are defined in the `supported_models.py` file in the `h2integrate` package.
+The available models are registered with the `@register` decorator from `h2integrate/core/supported_models.py`; see the {ref}`technology models overview <technology-models-overview>` for the full list.
 
 ```{note}
 Every technology group also contains a controller that converts a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the performance model. If you do not specify a `control_strategy` for a technology, H2Integrate automatically inserts an implicit passthrough controller that simply maps demand to set-point. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for more details.

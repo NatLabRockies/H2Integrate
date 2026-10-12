@@ -9,6 +9,7 @@ from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -83,6 +84,7 @@ class NumpyFinancialNPVConfig(BaseConfig):
     cost_breakdown_file_description: str = field(default="default")
 
 
+@register
 class NumpyFinancialNPV(om.ExplicitComponent):
     """OpenMDAO component for calculating Net Present Value (NPV)
     using the NumPy Financial.

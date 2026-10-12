@@ -23,8 +23,8 @@ def profast_config():
 @pytest.mark.regression
 def test_lco_breakdown(profast_config, subtests):
     pf = create_and_populate_profast(profast_config)
-    sol, summary, price_breakdown = run_profast(pf)
-    full_price_breakdown, lco_check = make_price_breakdown(price_breakdown, profast_config)
+    sol, _summary, price_breakdown = run_profast(pf)
+    _full_price_breakdown, lco_check = make_price_breakdown(price_breakdown, profast_config)
 
     lcoe_initial = float(sol["price"] * 1e3)
 
@@ -36,6 +36,6 @@ def test_lco_breakdown(profast_config, subtests):
         "Breakdown LCOE with config created from profast object matches actual LCOE"
     ):
         pf_config_dict = convert_pf_to_dict(pf)
-        full_price_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        _full_price_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
 
         assert pytest.approx(lco_check * 1e3, rel=1e-6) == lcoe_initial

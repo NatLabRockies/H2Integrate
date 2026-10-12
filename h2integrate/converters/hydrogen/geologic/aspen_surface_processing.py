@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.geologic.h2_well_surface_baseclass import (
     GeoH2SurfaceCostConfig,
     GeoH2SurfaceCostBaseClass,
@@ -44,6 +45,7 @@ class AspenGeoH2SurfacePerformanceConfig(GeoH2SurfacePerformanceConfig):
     perf_coeff_fn: str = field()
 
 
+@register
 class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
     """
     ASPEN-based geologic hydrogen surface processing performance model for a
@@ -206,6 +208,7 @@ class AspenGeoH2SurfaceCostConfig(GeoH2SurfaceCostConfig):
     water_price: float = field()
 
 
+@register
 class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
     """OpenMDAO component for modeling the cost of a surface processing system for a
         natural geologic hydrogen plant based on curve fits from an ASPEN model.
