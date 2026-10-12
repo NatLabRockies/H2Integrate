@@ -142,7 +142,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
         demand_charge_window (dict): Time-of-day window, as ``{'start',
             'end'}`` in ``HH:MM:SS`` format, during which the monthly
             demand/transmission peak is determined (e.g.
-            ``13:00:00``-``21:00:00`` for "1pm-9pm"). Required together
+            ``15:00:00``-``23:00:00`` for "3pm-11pm"). Required together
             with ``energy_rate``.
     """
 
