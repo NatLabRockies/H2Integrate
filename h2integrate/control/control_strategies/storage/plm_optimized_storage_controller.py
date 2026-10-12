@@ -140,7 +140,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
             single highest net load within ``demand_charge_window``.
             Required together with ``energy_rate``.
         demand_charge_window (dict): Time-of-day window, as ``{'start',
-            'end'}`` in ``HH:MM:SS`` format, during which the monthly
+            'end'}`` in 24-hour ``HH:MM:SS`` format, during which the monthly
             demand/transmission peak is determined (e.g.
             ``15:00:00``-``23:00:00`` for "3pm-11pm"). Required together
             with ``energy_rate``.
