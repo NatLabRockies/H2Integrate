@@ -377,9 +377,9 @@ def test_power_zero_when_binary_zero(subtests, base_config):
                 )
         with subtests.test(f"p_discharge_local zero when binary zero at t={t}"):
             if u_local < 0.5:
-                assert (
-                    pd_local < 1e-6
-                ), f"p_discharge_local[{t}]={pd_local} but discharge_local[{t}]={u_local}"
+                assert pd_local < 1e-6, (
+                    f"p_discharge_local[{t}]={pd_local} but discharge_local[{t}]={u_local}"
+                )
         with subtests.test(f"p_charge zero when binary zero at t={t}"):
             if v < 0.5:
                 assert p_c < 1e-6, f"p_charge[{t}]={p_c} but charge[{t}]={v}"
