@@ -5,36 +5,15 @@ Cost models report the dollar year associated with their cost outputs. Plant-lev
 (cost-models-with-inherent-cost-year)=
 ## Cost models with inherent cost year
 
-### Models with fixed source cost years
-| Registered cost model | Source cost year |
-| :--- | :---: |
-| `ReverseOsmosisCostModel` | 2013 |
-| `BasicElectrolyzerCostModel` | 2016 |
-| `CompressedGasStorageCostModel`, `LinedRockCavernStorageCostModel`, `PipeStorageCostModel`, `SaltCavernStorageCostModel` | 2018 |
-| `HumbertStinnEwinCostComponent` | 2018 |
-| `SingliticoCostModel` | 2021 |
-| `CMUElectricArcFurnaceCostModel`, `PySAMMarineCostModel`, `SimpleAmmoniaCostModel`, `SteelCostAndFinancialModel` | 2022 |
-| `DOCCostModel` | 2023 |
-| `PaperMillCostModel`, `SAFCostModel` | 2023 |
-| `MCHTOLStorageCostModel`, `OAECostModel`, `OAECostAndFinancialModel` | 2024 |
-
-`SimpleIronMineCostComponent` and `NRRIIronMineCostComponent` use 2021 source costs and adjust them to the plant's `target_dollar_year`.
+Some cost models are built from published cost data in a single dollar year. These models set `cost_year` to that year by default, so you do not need to provide it in `model_inputs.cost_parameters`. If you do provide a `cost_year` that differs from the model's source year, the model raises an error when its configuration is validated. See each model's documentation for its source cost year.
 
 (cost-models-with-user-input-cost-year)=
 ## Cost models with user input cost year
 
 ### Models with user-provided cost years
-Provide the cost year for user-supplied cost data in `model_inputs.cost_parameters`. `AmmoniaSynLoopCostModel` uses the parameter `base_cost_year` for its source data. The following registered models use a configurable cost year:
+Most cost models use costs that you supply (for example, `capex_per_kW`), so the dollar year is defined by your inputs. For these models, you must provide `cost_year` in `model_inputs.cost_parameters` that matches the dollar year of your cost values. If it is missing, the model raises an error when its configuration is validated. Some models also restrict `cost_year` to a supported range and raise an error for values outside it. `AmmoniaSynLoopCostModel` uses the parameter `base_cost_year` for its source data.
 
-| Model area | Registered cost models |
-| :--- | :--- |
-| ATB-based costs | `ATBBatteryCostModel`, `ATBResComPVCostModel`, `ATBUtilityPVCostModel`, `ATBWindPlantCostModel` |
-| Carbon, feedstocks, and generic costs | `AspenGeoH2SurfaceCostModel`, `CO2HMethanolPlantCostModel`, `EIANaturalGasFeedstockCostModel`, `FeedstockCostModel`, `GenericConverterCostModel`, `GenericStorageCostModel`, `GridCostModel`, `NaturalGasCostModel` |
-| Hydrogen | `CustomElectrolyzerCostModel`, `GeoH2SubsurfaceCostModel`, `H2FuelCellCostModel`, `HTSECostModel`, `SMRMethanolPlantCostModel`, `SteamMethaneReformerCostModel`, `WOMBATElectrolyzerModel` |
-| Iron and steel | `HydrogenEAFPlantCostComponent`, `HydrogenIronReductionPlantCostComponent`, `IronTransportCostComponent`, `NaturalGasEAFPlantCostComponent`, `NaturalGasIronReductionPlantCostComponent` |
-| Other generation, transport, and storage | `DieselGeneratorCostModel`, `LinearDistanceCostModel`, `LinearMassTransportCostModel`, `QuinnNuclearCostModel`, `RunOfRiverHydroCostModel`, `SimpleASUCostModel`, `SimpleThermalNuclearReactorCostModel` |
-
-Some configurable models provide a default year, such as `HTSECostModel` and `SimpleThermalNuclearReactorCostModel`; confirm that it matches the year of the costs you provide.
+A few models with user-provided costs also define a default `cost_year`, such as `HTSECostModel` and `SimpleThermalNuclearReactorCostModel`; confirm that the default matches the year of the costs you provide.
 
 ### Example tech_config input for user-input cost year
 ```yaml
