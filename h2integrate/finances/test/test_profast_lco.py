@@ -154,6 +154,13 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
     with subtests.test("LCOE breakdown total"):
         assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW*h)"] * 1e3, rel=1e-6) == lcoe
 
+    with subtests.test("Fixed OpEx and variable costs are attributed to the right rows"):
+        assert lcoe_breakdown["LCOE: wind OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: wind_variable_cost Feedstock ($/kW*h)"] == 0
+        assert lcoe_breakdown["LCOE: natural_gas OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: natural_gas_variable_cost Feedstock ($/kW*h)"] > 0
+        assert "LCOE: wind Feedstock ($/kW*h)" not in lcoe_breakdown
+
 
 @pytest.mark.regression
 def test_profast_comp_coproduct(

@@ -727,7 +727,8 @@ class ProFastBase(om.ExplicitComponent):
                 # update any unset variable cost parameters with the default values
                 for var_cost_key, var_cost_val in variable_cost_defaults.items():
                     tech_varopex_info.setdefault(var_cost_key, var_cost_val)
-                variable_costs[tech] = tech_varopex_info
+                # unique name so the cost is not confused with the tech's fixed cost in ProFAST
+                variable_costs[f"{tech}_variable_cost"] = tech_varopex_info
 
             # if VarOpEx is negative, treat as a coproduct
             else:

@@ -95,6 +95,11 @@ def run_profast(pf):
     return sol, summary, price_breakdown
 
 
+def _get_npv(rows, name):
+    """Return the NPV of the first row of a ProFAST price breakdown with the given name."""
+    return rows.loc[rows["Name"] == name, "NPV"].tolist()[0]
+
+
 def make_price_breakdown(price_breakdown, pf_config):
     """Make a custom price breakdown of primary cost items in $/unit of commodity.
         Distributes non-component financial contributions (remaining financials)
@@ -112,153 +117,78 @@ def make_price_breakdown(price_breakdown, pf_config):
         - **lco_check** (float): if ``lcoh_check==sol['price']``
             then the results of ``full_price_breakdown`` are accurate
     """
-    price_breakdown_feedstocks = {}
-    price_breakdown_capex = {}
-    price_breakdown_fixed_cost = {}
-    price_breakdown_coproducts = {}
-    full_price_breakdown = {}
-
     lco_str = "LCO{}".format(pf_config["params"]["commodity"]["name"][0].upper())
     lco_units = "$/{}".format(pf_config["params"]["commodity"]["unit"])
-    config_keys = list(pf_config.keys())
+
+    capital_items = pf_config.get("capital_items", {})
+    fixed_costs = pf_config.get("fixed_costs", {})
+    feedstocks = pf_config.get("feedstocks", {})
+    coproducts = pf_config.get("coproducts", {})
+
+    # Fixed costs and feedstocks are both "Operating expenses" rows that are only identifiable
+    # by name, so a shared name would silently swap their contributions.
+    shared_names = sorted(set(fixed_costs) & set(feedstocks))
+    if shared_names:
+        raise ValueError(
+            "Fixed costs and feedstocks must have unique names to make a price breakdown. "
+            f"Shared names: {shared_names}"
+        )
 
     operating_expenses = price_breakdown[price_breakdown["Type"] == "Operating expenses"]
     cash_outflow_prices = price_breakdown[price_breakdown["Type"] == "Financing cash outflow"]
     operating_revenue = price_breakdown[price_breakdown["Type"] == "Operating revenue"]
 
-    if "capital_items" in config_keys:
-        capital_items = pf_config["capital_items"]
-        total_price_capex = 0
-        capex_fraction = {}
-        for item in capital_items:
-            total_price_capex += cash_outflow_prices.loc[
-                cash_outflow_prices["Name"] == item, "NPV"
-            ].tolist()[0]
-        if total_price_capex != 0:
-            for item in capital_items:
-                capex_fraction[item] = (
-                    cash_outflow_prices.loc[cash_outflow_prices["Name"] == item, "NPV"].tolist()[0]
-                    / total_price_capex
-                )
-        else:
-            for item in capital_items:
-                capex_fraction[item] = 0
+    capex_npv = {item: _get_npv(cash_outflow_prices, item) for item in capital_items}
+    total_price_capex = sum(capex_npv.values())
+    capex_fraction = {
+        item: (npv / total_price_capex if total_price_capex != 0 else 0)
+        for item, npv in capex_npv.items()
+    }
 
     cap_expense = (
-        price_breakdown.loc[price_breakdown["Name"] == "Repayment of debt", "NPV"].tolist()[0]
-        + price_breakdown.loc[price_breakdown["Name"] == "Interest expense", "NPV"].tolist()[0]
-        + price_breakdown.loc[price_breakdown["Name"] == "Dividends paid", "NPV"].tolist()[0]
-        - price_breakdown.loc[price_breakdown["Name"] == "Inflow of debt", "NPV"].tolist()[0]
-        - price_breakdown.loc[price_breakdown["Name"] == "Inflow of equity", "NPV"].tolist()[0]
-        - price_breakdown.loc[
-            price_breakdown["Name"] == "One time capital incentive", "NPV"
-        ].tolist()[0]
+        _get_npv(price_breakdown, "Repayment of debt")
+        + _get_npv(price_breakdown, "Interest expense")
+        + _get_npv(price_breakdown, "Dividends paid")
+        - _get_npv(price_breakdown, "Inflow of debt")
+        - _get_npv(price_breakdown, "Inflow of equity")
+        - _get_npv(price_breakdown, "One time capital incentive")
     )
     remaining_financial = (
-        price_breakdown.loc[price_breakdown["Name"] == "Non-depreciable assets", "NPV"].tolist()[0]
-        + price_breakdown.loc[price_breakdown["Name"] == "Sales tax", "NPV"].tolist()[0]
-        + price_breakdown.loc[price_breakdown["Name"] == "Cash on hand reserve", "NPV"].tolist()[0]
-        + price_breakdown.loc[price_breakdown["Name"] == "Property insurance", "NPV"].tolist()[0]
-        - price_breakdown.loc[
-            price_breakdown["Name"] == "Sale of non-depreciable assets", "NPV"
-        ].tolist()[0]
-        - price_breakdown.loc[price_breakdown["Name"] == "Cash on hand recovery", "NPV"].tolist()[0]
+        _get_npv(price_breakdown, "Non-depreciable assets")
+        + _get_npv(price_breakdown, "Sales tax")
+        + _get_npv(price_breakdown, "Cash on hand reserve")
+        + _get_npv(price_breakdown, "Property insurance")
+        - _get_npv(price_breakdown, "Sale of non-depreciable assets")
+        - _get_npv(price_breakdown, "Cash on hand recovery")
     )
 
-    if "capital_items" in config_keys:
-        # capital_items are of type "Financing cash outflow"
-        capital_items = pf_config["capital_items"]
-        for item in capital_items:
-            key_name = f"{lco_str}: {item} CapEx ({lco_units})"
+    full_price_breakdown = {}
+    for item in capital_items:
+        # capital items are of type "Financing cash outflow"; financing costs are shared by capex
+        key_name = f"{lco_str}: {item} CapEx ({lco_units})"
+        full_price_breakdown[key_name] = capex_npv[item] + cap_expense * capex_fraction[item]
 
-            # Add the CapEx cost in lco_units to the capex breakdown
-            price_breakdown_capex[key_name] = (
-                cash_outflow_prices.loc[cash_outflow_prices["Name"] == item, "NPV"].tolist()[0]
-                + cap_expense * capex_fraction[item]
-            )
+    for item in fixed_costs:
+        key_name = f"{lco_str}: {item} OpEx ({lco_units})"
+        full_price_breakdown[key_name] = _get_npv(operating_expenses, item)
 
-            # Remove the capital item from the cash outflow prices
-            i_drop = cash_outflow_prices.loc[
-                cash_outflow_prices["Name"] == item, "NPV"
-            ].index.tolist()[0]
-            cash_outflow_prices = cash_outflow_prices.drop(labels=i_drop, axis=0)
+    for item in feedstocks:
+        key_name = f"{lco_str}: {item} Feedstock ({lco_units})"
+        full_price_breakdown[key_name] = _get_npv(operating_expenses, item)
 
-        # add the capex breakdown to the full price breakdown
-        full_price_breakdown.update(price_breakdown_capex)
+    for item in coproducts:
+        # coproducts are revenue, so they reduce the price (stored as negative contributions)
+        key_name = f"{lco_str}: {item} Coproduct ({lco_units})"
+        coproduct_npv = _get_npv(operating_revenue, item)
+        full_price_breakdown[key_name] = -coproduct_npv if coproduct_npv > 0 else coproduct_npv
 
-    if "fixed_costs" in config_keys:
-        # fixed_costs are of type "Operating expenses"
-        fixed_items = pf_config["fixed_costs"]
-        for item in fixed_items:
-            key_name = f"{lco_str}: {item} OpEx ({lco_units})"
-
-            # Add the fixed cost in lco_units to the fixed cost breakdown
-            price_breakdown_fixed_cost[key_name] = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].tolist()[0]
-
-            # Remove the fixed cost from the cash outflow prices
-            i_drop = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].index.tolist()[0]
-            operating_expenses = operating_expenses.drop(labels=i_drop, axis=0)
-
-        # add the fixed cost breakdown to the full price breakdown
-        full_price_breakdown.update(price_breakdown_fixed_cost)
-
-    if "feedstocks" in config_keys:
-        # feedstocks are of type "Operating expenses"
-        feedstock_items = pf_config["feedstocks"]
-        for item in feedstock_items:
-            key_name = f"{lco_str}: {item} Feedstock ({lco_units})"
-
-            # Add the feedstock cost in lco_units to the feedstock breakdown
-            price_breakdown_feedstocks[key_name] = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].tolist()[0]
-
-            # Remove the feedstock cost from the cash outflow prices
-            i_drop = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].index.tolist()[0]
-            operating_expenses = operating_expenses.drop(labels=i_drop, axis=0)
-
-        # add the feedstock cost breakdown to the full price breakdown
-        full_price_breakdown.update(price_breakdown_feedstocks)
-
-    if "coproducts" in config_keys:
-        # coproducts are of type "Operating revenue"
-        coproduct_items = pf_config["coproducts"]
-        for item in coproduct_items:
-            key_name = f"{lco_str}: {item} Coproduct ({lco_units})"
-            coproduct_price = operating_revenue.loc[
-                operating_revenue["Name"] == item, "NPV"
-            ].tolist()[0]
-
-            # Add the coproduct cost in lco_units to the coproduct breakdown
-            if coproduct_price > 0:
-                # multiple by -1 since coproducts are revenue
-                price_breakdown_coproducts[key_name] = -1 * coproduct_price
-            else:
-                price_breakdown_coproducts[key_name] = coproduct_price
-
-        # add the coproduct cost breakdown to the full price breakdown
-        full_price_breakdown.update(price_breakdown_coproducts)
-
-    price_breakdown_taxes = (
-        price_breakdown.loc[price_breakdown["Name"] == "Income taxes payable", "NPV"].tolist()[0]
-        - price_breakdown.loc[price_breakdown["Name"] == "Monetized tax losses", "NPV"].tolist()[0]
+    taxes = _get_npv(price_breakdown, "Income taxes payable") - _get_npv(
+        price_breakdown, "Monetized tax losses"
     )
-
     if pf_config["params"]["general inflation rate"] > 0:
-        price_breakdown_taxes = (
-            price_breakdown_taxes
-            + price_breakdown.loc[
-                price_breakdown["Name"] == "Capital gains taxes payable", "NPV"
-            ].tolist()[0]
-        )
+        taxes += _get_npv(price_breakdown, "Capital gains taxes payable")
 
-    full_price_breakdown[f"{lco_str}: Taxes ({lco_units})"] = price_breakdown_taxes
+    full_price_breakdown[f"{lco_str}: Taxes ({lco_units})"] = taxes
     full_price_breakdown[f"{lco_str}: Finances ({lco_units})"] = remaining_financial
     lco_check = sum(list(full_price_breakdown.values()))
     full_price_breakdown[f"{lco_str}: Total ({lco_units})"] = lco_check

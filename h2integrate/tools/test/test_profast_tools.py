@@ -39,3 +39,42 @@ def test_lco_breakdown(profast_config, subtests):
         _full_price_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
 
         assert pytest.approx(lco_check * 1e3, rel=1e-6) == lcoe_initial
+
+
+@pytest.mark.regression
+def test_lco_breakdown_item_attribution(profast_config, subtests):
+    # Zero-cost feedstock sorts before the fixed cost of the same tech in ProFAST's breakdown
+    ng_feedstock = profast_config["feedstocks"]["ng_feedstock_variable_cost"]
+    profast_config["feedstocks"]["wind_variable_cost"] = {
+        **ng_feedstock,
+        "name": "wind_variable_cost",
+        "cost": dict.fromkeys(ng_feedstock["cost"], 0.0),
+    }
+    pf = create_and_populate_profast(profast_config)
+    sol, _summary, price_breakdown = run_profast(pf)
+    breakdown, lco_check = make_price_breakdown(price_breakdown, profast_config)
+    npv = price_breakdown.set_index(["Type", "Name"])["NPV"]
+
+    with subtests.test("Fixed cost OpEx matches its ProFAST row"):
+        wind_opex = npv["Operating expenses", "wind"]
+        assert wind_opex > 0
+        assert breakdown["LCOE: wind OpEx ($/kWh)"] == pytest.approx(wind_opex)
+
+    with subtests.test("Feedstock matches its ProFAST row"):
+        assert breakdown["LCOE: wind_variable_cost Feedstock ($/kWh)"] == pytest.approx(0.0)
+        ng_npv = npv["Operating expenses", "ng_feedstock_variable_cost"]
+        ng_key = "LCOE: ng_feedstock_variable_cost Feedstock ($/kWh)"
+        assert breakdown[ng_key] == pytest.approx(ng_npv)
+
+    with subtests.test("Breakdown total matches price"):
+        assert lco_check == pytest.approx(sol["price"], rel=1e-6)
+
+
+@pytest.mark.unit
+def test_lco_breakdown_rejects_shared_fixed_cost_and_feedstock_names(profast_config):
+    profast_config["feedstocks"]["wind"] = profast_config["feedstocks"][
+        "ng_feedstock_variable_cost"
+    ]
+
+    with pytest.raises(ValueError, match="unique names"):
+        make_price_breakdown(None, profast_config)
