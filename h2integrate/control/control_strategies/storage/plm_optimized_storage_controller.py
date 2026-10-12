@@ -38,7 +38,7 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             The coefficients of the polynominal function representing the price G&T charges
             the Coop based on the LMP. The list contains the coefficients of the polynomial
             function in decreasing order. (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent
-            1*x^2 + 2*x + 3). This function should be a monotonially non-decreasing function.
+            1*x^2 + 2*x + 3). This function should be a monotonically non-decreasing function.
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in
@@ -226,23 +226,28 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             "demand_charge_window": self.demand_charge_window,
         }
         n_set = sum(v is not None for v in peak_shaving_fields.values())
+
+        # Partially set values
         if n_set not in (0, len(peak_shaving_fields)):
             missing = [k for k, v in peak_shaving_fields.items() if v is None]
             raise ValueError(
                 "energy_rate, demand_charge_rate, and demand_charge_window must be set "
                 f"together; missing: {missing}."
             )
+        # Control tier is set but none of the peak-shaving fields are set
         if self.control_tier is not None and n_set == 0:
             raise ValueError(
                 "control_tier requires energy_rate, demand_charge_rate, and "
                 "demand_charge_window to be set, to solve the off-month bill-minimization "
                 "problem."
             )
+        # Peak-shaving fields are set but control tier is not set
         if self.control_tier is None and n_set > 0:
             raise ValueError(
                 "energy_rate/demand_charge_rate/demand_charge_window require control_tier "
                 "to be set."
             )
+        # Check that demand_charge_window has both 'start' and 'end' keys if it is set
         if self.demand_charge_window is not None:
             for key in ("start", "end"):
                 if key not in self.demand_charge_window:
@@ -418,7 +423,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
             # Track usage per calendar month so each regime's monthly cap is
             # respected across window boundaries: when
-            # control_tier is None, use events per month, when set usecycled energy (kWh).
+            # control_tier is None, use events per month, when set use cycled energy (kWh).
             events_used_per_month = {}
             energy_used_per_month = {}
 
@@ -1254,13 +1259,19 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         # Minimize the Member's own bill: flat energy charge on net metered load, plus
         # a combined demand+transmission charge on this window's highest net load
-        # within demand_charge_window, for each month in the window.
+        # within demand_charge_window, for each month in the window. A flat energy
+        # rate makes any charge/discharge pair that nets to zero energy free in this
+        # objective (it cancels in the first term and never touches peak_demand), so
+        # without a tie-break the solver can pick a degenerate solution with pointless
+        # extra cycling. The tiny throughput penalty below breaks that tie toward the
+        # minimal-cycling solution without measurably affecting the real $ tradeoffs.
         m.objective = pyomo.Objective(
             expr=self.config.energy_rate
             * dt_hours
             * sum((demand_w[t] - m.p_discharge[t] + m.p_charge[t]) for t in m.T)
             + self.config.demand_charge_rate
-            * sum(m.peak_demand[month] for month in months_in_window),
+            * sum(m.peak_demand[month] for month in months_in_window)
+            + 1e-6 * sum(m.p_discharge[t] + m.p_charge[t] for t in m.T),
             sense=pyomo.minimize,
         )
 
