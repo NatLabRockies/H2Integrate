@@ -1,3 +1,4 @@
+import math
 import warnings
 from datetime import timezone, timedelta
 
@@ -189,7 +190,7 @@ def add_resource_start_end_times(data: dict):
     time_start_end_info = {
         "start_time": f"{start_date} ({tz_str})",
         "end_time": f"{end_date} ({tz_str})",
-        "dt": dt.seconds,
+        "dt": int(dt.total_seconds()),
     }
 
     # Update resource data with time information
@@ -280,26 +281,39 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
 
 def _regenerate_time_columns_at_dt(
-    data, start_timestamp, dt_seconds, n, present_time_keys, exclude_leap_day=False
+    data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, exclude_leap_day=False
 ):
     """Regenerate time columns as ``n`` steps of ``dt_seconds`` starting at a timestamp.
 
     When ``exclude_leap_day`` is True, February 29 is skipped so the regenerated calendar
     keeps the leap day excluded even at the new timestep (extra steps are generated to make
     up for the skipped timestamps).
+
+    Args:
+        data (dict): resource data dictionary whose time column arrays are to be updated.
+        start_timestamp (pandas.Timestamp | datetime.datetime): timestamp of the first sample.
+        dt_seconds (int | float): new timestep duration in seconds.
+        n_timesteps (int): number of timesteps to generate.
+        present_time_keys (list[str]): list of time column keys (e.g. "year", "month",
+            "day", "hour", "minute", "second") present in the data to regenerate.
+        exclude_leap_day (bool, optional): whether to skip February 29 when generating the
+            calendar index. Defaults to False.
+
+    Returns:
+        dict: resource data dictionary with updated time columns.
     """
     freq = pd.Timedelta(seconds=dt_seconds)
     if exclude_leap_day:
-        periods = n
+        periods = n_timesteps
         new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
         new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        while len(new_index) < n:
-            periods += (n - len(new_index)) + 1
+        while len(new_index) < n_timesteps:
+            periods += (n_timesteps - len(new_index)) + 1
             new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
             new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        new_index = new_index[:n]
+        new_index = new_index[:n_timesteps]
     else:
-        new_index = pd.date_range(start=start_timestamp, periods=n, freq=freq)
+        new_index = pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq)
     field_map = {
         "year": new_index.year,
         "month": new_index.month,
@@ -324,9 +338,10 @@ def resample_resource_data_to_dt(
     Resampling is driven by the actual time span of the data (its native timestep, inferred
     from the time columns), not by the number of timesteps. When the simulation timestep is
     smaller than the native timestep the data is upsampled (finer resolution) using
-    :meth:`pandas.DataFrame.interpolate`; when it is larger the data is downsampled (coarser
-    resolution) using :meth:`pandas.core.resample.Resampler.agg`. Time columns are
-    regenerated at ``target_dt`` and scalar metadata is left unchanged.
+    `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_;
+    when it is larger the data is downsampled (coarser resolution) using
+    `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_.
+    Time columns are regenerated at ``target_dt`` and scalar metadata is left unchanged.
 
     Resampling operates on the samples as an evenly spaced sequence at the native timestep.
     Resource data may have non-contiguous calendar timestamps (for example when a leap day
@@ -338,13 +353,13 @@ def resample_resource_data_to_dt(
         data (dict): resource data dictionary with timeseries arrays and time columns.
         target_dt (int | float): desired simulation timestep in seconds.
         upsample_method (str | None): interpolation method passed to
-            :meth:`pandas.DataFrame.interpolate` when upsampling. No default; when upsampling
-            is required this must be set (for example ``"time"``) or a ``ValueError`` is
-            raised, so resampling never happens automatically.
+            `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_
+            when upsampling. Must be explicitly set (for example ``"time"``) when upsampling is
+            needed; otherwise a ``ValueError`` is raised.
         downsample_method (str | None): aggregation passed to
-            :meth:`pandas.core.resample.Resampler.agg` when downsampling. No default; when
-            downsampling is required this must be set (for example ``"mean"``) or a
-            ``ValueError`` is raised, so resampling never happens automatically.
+            `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_
+            when downsampling. Must be explicitly set (for example ``"mean"``)  when downsampling
+            is needed; otherwise a ``ValueError`` is raised.
 
     Returns:
         dict: resource data resampled to ``target_dt``.
@@ -388,15 +403,19 @@ def resample_resource_data_to_dt(
     exclude_leap_day = spans_leap_year and not has_feb29
 
     native_len = len(calendar_index)
-    target_n = round(native_len * native_dt / float(target_dt))
-    if target_n < 1:
+    total_duration = native_len * native_dt
+    if float(target_dt) > total_duration:
         msg = (
             f"Cannot resample resource data to a timestep of {target_dt} s: it is larger than "
             f"the total time span of the data ({native_len} samples at {native_dt} s = "
-            f"{native_len * native_dt} s), so resampling would produce no timesteps. Use a "
+            f"{total_duration} s), so resampling would produce no timesteps. Use a "
             "smaller timestep or provide more resource data."
         )
         raise ValueError(msg)
+
+    # Use a ceil-based computation with epsilon so floating point imprecision does not
+    # round down and non-integer ratios guarantee coverage of the full intended duration.
+    target_n = math.ceil((total_duration / float(target_dt)) - 1e-9)
 
     target_freq = pd.Timedelta(seconds=float(target_dt))
     # Use a contiguous synthetic axis anchored at the data's first timestamp so resampling is

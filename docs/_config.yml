@@ -95,5 +95,15 @@ sphinx:
     # pages together and can't be moved into ``_toc.yml``, so the warnings
     # are noise rather than a real problem to fix.
     suppress_warnings: [etoc.toctree]
+    linkcheck_ignore:
+      # These exact publisher URLs return 403 to automated linkcheck requests.
+      - https://www\.cell\.com/cell-reports-sustainability/pdfExtended/S2949-7906\(25\)00034-5
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319906005726
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319917347237#bib27
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319924051577
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319921030834\?via%3Dihub
+      - https://www\.researchgate\.net/publication/344260178_Faraday%27s_Efficiency_Modeling_of_a_Proton_Exchange_Membrane_Electrolyzer_Based_on_Experimental_Data
+      - https://assets-eu\.researchsquare\.com/files/rs-4326648/v1_covered_338a5071-b74b-4ecd-9d2a-859e8d988b5c\.pdf\?c=1716199726
+      - https://fred\.stlouisfed\.org/series/CUUR0000SEHF01
     nb_merge_streams: true
     nb_execution_raise_on_error: true
