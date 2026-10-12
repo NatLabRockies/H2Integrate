@@ -7,7 +7,8 @@ from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import (
-    variable_cost_item_name,
+    FEEDSTOCK_SUFFIX,
+    VARIABLE_OPEX_SUFFIX,
     create_years_of_operation,
     create_and_populate_profast,
 )
@@ -734,7 +735,8 @@ class ProFastBase(om.ExplicitComponent):
                 # unique name so the cost is not confused with the tech's fixed cost in ProFAST
                 cost_model_name = self.tech_config[tech].get("cost_model", {}).get("model", "")
                 is_feedstock = "FeedstockCostModel" in cost_model_name
-                variable_costs[variable_cost_item_name(tech, is_feedstock)] = tech_varopex_info
+                suffix = FEEDSTOCK_SUFFIX if is_feedstock else VARIABLE_OPEX_SUFFIX
+                variable_costs[tech + suffix] = tech_varopex_info
 
             # if VarOpEx is negative, treat as a coproduct
             else:
