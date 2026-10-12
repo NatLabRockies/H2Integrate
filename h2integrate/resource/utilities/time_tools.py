@@ -280,26 +280,39 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
 
 def _regenerate_time_columns_at_dt(
-    data, start_timestamp, dt_seconds, n, present_time_keys, exclude_leap_day=False
+    data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, exclude_leap_day=False
 ):
     """Regenerate time columns as ``n`` steps of ``dt_seconds`` starting at a timestamp.
 
     When ``exclude_leap_day`` is True, February 29 is skipped so the regenerated calendar
     keeps the leap day excluded even at the new timestep (extra steps are generated to make
     up for the skipped timestamps).
+
+    Args:
+        data (dict): resource data dictionary whose time column arrays are to be updated.
+        start_timestamp (pandas.Timestamp | datetime.datetime): timestamp of the first sample.
+        dt_seconds (int | float): new timestep duration in seconds.
+        n_timesteps (int): number of timesteps to generate.
+        present_time_keys (list[str]): list of time column keys (e.g. "year", "month",
+            "day", "hour", "minute", "second") present in the data to regenerate.
+        exclude_leap_day (bool, optional): whether to skip February 29 when generating the
+            calendar index. Defaults to False.
+
+    Returns:
+        dict: resource data dictionary with updated time columns.
     """
     freq = pd.Timedelta(seconds=dt_seconds)
     if exclude_leap_day:
-        periods = n
+        periods = n_timesteps
         new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
         new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        while len(new_index) < n:
-            periods += (n - len(new_index)) + 1
+        while len(new_index) < n_timesteps:
+            periods += (n_timesteps - len(new_index)) + 1
             new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
             new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        new_index = new_index[:n]
+        new_index = new_index[:n_timesteps]
     else:
-        new_index = pd.date_range(start=start_timestamp, periods=n, freq=freq)
+        new_index = pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq)
     field_map = {
         "year": new_index.year,
         "month": new_index.month,
