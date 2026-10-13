@@ -175,18 +175,63 @@ def test_resample_target_dt_larger_than_span_raises():
 
 
 @pytest.mark.unit
-def test_resample_non_increasing_timestamps_raises():
-    # The first two timestamps are identical, so the native timestep is non-positive
+def test_resample_non_positive_deltas_raises():
+    # If all deltas are non-positive (e.g. all identical timestamps), raise ValueError
     data = {
         "wind_speed_100m": np.arange(3, dtype=float),
         "year": np.array([2012, 2012, 2012], dtype=float),
         "month": np.array([1, 1, 1], dtype=float),
         "day": np.array([1, 1, 1], dtype=float),
-        "hour": np.array([0, 0, 1], dtype=float),
+        "hour": np.array([0, 0, 0], dtype=float),
         "minute": np.array([0, 0, 0], dtype=float),
     }
-    with pytest.raises(ValueError, match="non-positive"):
+    with pytest.raises(ValueError, match="no positive time steps"):
         resample_resource_data_to_dt(data, 1800)
+
+
+@pytest.mark.unit
+def test_resample_negative_deltas_warns(subtests):
+    # Out-of-order years (e.g. 2013 then 2011) produce a negative delta at the transition,
+    # which should emit a warning but successfully resample.
+    data1 = _make_timeseries(5, 3600, start="2013-01-01 00:00")
+    data2 = _make_timeseries(5, 3600, start="2011-01-01 00:00")
+    combined = {
+        k: np.concatenate([data1[k], data2[k]])
+        for k in ["year", "month", "day", "hour", "minute", "wind_speed_100m"]
+    }
+    with pytest.warns(UserWarning, match="negative time steps"):
+        result = resample_resource_data_to_dt(combined, 1800, upsample_method="time")
+    with subtests.test("upsampled length is 2x"):
+        assert len(result["wind_speed_100m"]) == 20
+
+
+@pytest.mark.unit
+def test_resample_infers_native_dt_across_initial_calendar_gap(subtests):
+    # Dataset starting adjacent to a removed leap day (Feb 28 23:00 to Mar 1 00:00).
+    # The first delta is 25 hours (90000 s), but subsequent hourly steps are 3600 s.
+    # Native dt must infer as 3600 s (not 90000 s).
+    idx = pd.DatetimeIndex(
+        [
+            "2012-02-28 23:00",
+            "2012-03-01 00:00",
+            "2012-03-01 01:00",
+            "2012-03-01 02:00",
+            "2012-03-01 03:00",
+        ]
+    )
+    data = {
+        "wind_speed_100m": np.arange(len(idx), dtype=float),
+        "year": idx.year.to_numpy().astype(float),
+        "month": idx.month.to_numpy().astype(float),
+        "day": idx.day.to_numpy().astype(float),
+        "hour": idx.hour.to_numpy().astype(float),
+        "minute": idx.minute.to_numpy().astype(float),
+    }
+    result = resample_resource_data_to_dt(data, 1800, upsample_method="time")
+    with subtests.test("upsampled length doubles based on 3600s native dt"):
+        assert len(result["wind_speed_100m"]) == 10
+    with subtests.test("timestamps are at 30-minute intervals"):
+        assert np.isclose(result["minute"][1] - result["minute"][0], 30.0)
 
 
 @pytest.mark.unit
@@ -381,6 +426,61 @@ def test_resample_non_integer_ratio_guarantees_coverage(subtests):
         data = _make_timeseries(5, 3600)
         res = resample_resource_data_to_dt(data, 2500, upsample_method="time")
         assert len(res["wind_speed_100m"]) == 8
+
+
+@pytest.mark.unit
+def test_resample_non_uniform_deltas(subtests):
+    # Non-uniform deltas within a series: 1h and 2h steps.
+    # Spacing is proportional to physical duration: 2 steps for 1h, 4 steps for 2h.
+    idx = pd.DatetimeIndex(
+        [
+            "2020-01-01 00:00",
+            "2020-01-01 01:00",
+            "2020-01-01 03:00",
+            "2020-01-01 04:00",
+            "2020-01-01 06:00",
+        ]
+    )
+    data = {
+        "year": idx.year.to_numpy().astype(float),
+        "month": idx.month.to_numpy().astype(float),
+        "day": idx.day.to_numpy().astype(float),
+        "hour": idx.hour.to_numpy().astype(float),
+        "minute": idx.minute.to_numpy().astype(float),
+        "val": np.array([0.0, 10.0, 30.0, 40.0, 60.0]),
+    }
+    res = resample_resource_data_to_dt(data, 1800, upsample_method="time")
+    with subtests.test("interpolated length covers 8 hours span at 30 min"):
+        assert len(res["val"]) == 16
+    with subtests.test("1h interval contains 2 steps and 2h contains 4 steps"):
+        # At 30m: 00:00(0), 00:30(5), 01:00(10), 01:30(15), 02:00(20), 02:30(25), 03:00(30)
+        np.testing.assert_allclose(res["val"][:3], [0.0, 5.0, 10.0])
+        np.testing.assert_allclose(res["val"][2:7], [10.0, 15.0, 20.0, 25.0, 30.0])
+
+
+@pytest.mark.unit
+def test_resample_out_of_order_years_boundary_transition(subtests):
+    # Year 1 (2015) followed by Year 2 (2012).
+    # Transition across year boundary completes Year 1 using Year 2 first value.
+    idx1 = pd.DatetimeIndex(["2015-12-31 22:00", "2015-12-31 23:00"])
+    idx2 = pd.DatetimeIndex(["2012-01-01 00:00", "2012-01-01 01:00"])
+    idx = idx1.append(idx2)
+    data = {
+        "year": idx.year.to_numpy().astype(float),
+        "month": idx.month.to_numpy().astype(float),
+        "day": idx.day.to_numpy().astype(float),
+        "hour": idx.hour.to_numpy().astype(float),
+        "minute": idx.minute.to_numpy().astype(float),
+        "val": np.array([10.0, 20.0, 40.0, 50.0]),
+    }
+    with pytest.warns(UserWarning, match="negative time steps"):
+        res = resample_resource_data_to_dt(data, 1800, upsample_method="time")
+    with subtests.test("boundary step interpolates between Year 1 end and Year 2 start"):
+        # At t=23:30 (index 3), value must interpolate between 20.0 and 40.0 -> 30.0
+        assert res["val"][3] == 30.0
+    with subtests.test("regenerated years preserve 2015 then 2012 order"):
+        assert (res["year"][:4] == 2015).all()
+        assert (res["year"][4:] == 2012).all()
 
 
 @pytest.mark.unit
