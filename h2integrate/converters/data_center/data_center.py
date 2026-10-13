@@ -698,18 +698,18 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
             efficiency (str): Either "efficient" (5th percentile) or "inefficient"
                 (95th percentile). Defaults to "efficient".
             cooling_configuration (int | None): The cooling configuration number (1-12) to look
-                up. If None, the configuration is selected automatically. Valid values:
+                up. If None, the configuration is selected automatically. Valid values::
 
-                    1 - Large-scale DC; Airside economizer + adiabatic cooling
-                        + (water-cooled chiller)
-                    2 - Large-scale DC; Waterside economizer + (water-cooled chiller)
-                    3 - Midsize DC; Airside economizer + (water-cooled chiller)
-                    4 - Midsize DC; Waterside economizer + (water-cooled chiller)
-                    5 - Midsize DC; Water-cooled chiller
-                    6 - Midsize DC; Airside economizer + (air-cooled chiller)
-                    7 - Midsize DC; Air-cooled chiller
-                    8 - Small DC; Water-cooled chiller
-                    9 - Small DC; Air-cooled chiller
+                    1  - Large-scale DC; Airside economizer + adiabatic cooling
+                         + (water-cooled chiller)
+                    2  - Large-scale DC; Waterside economizer + (water-cooled chiller)
+                    3  - Midsize DC; Airside economizer + (water-cooled chiller)
+                    4  - Midsize DC; Waterside economizer + (water-cooled chiller)
+                    5  - Midsize DC; Water-cooled chiller
+                    6  - Midsize DC; Airside economizer + (air-cooled chiller)
+                    7  - Midsize DC; Air-cooled chiller
+                    8  - Small DC; Water-cooled chiller
+                    9  - Small DC; Air-cooled chiller
                     10 - Small DC; Direct expansion system
                     11 - Liquid-cooled DC; Direct-to-chip liquid loop + dry cooler
                     12 - Liquid-cooled DC; Direct-to-chip liquid loop + water-cooled chiller
@@ -718,11 +718,11 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
                 configuration with the lowest "pue" or lowest "wue". Defaults to "pue".
             size_sqft (float | None): Floor area of the data center in square feet. When
                 provided and ``cooling_configuration`` is None, only configurations valid for
-                the corresponding size category are considered:
+                the corresponding size category are considered::
 
-                    - **Large-scale** (> 20,000 sqft): configurations 1, 2, 11, 12
-                    - **Midsize** (1,000-20,000 sqft): configurations 3-7, 11, 12
-                    - **Small** (< 1,000 sqft): configurations 8-10
+                    Large-scale (> 20,000 sqft): configurations 1, 2, 11, 12
+                    Midsize     (1,000-20,000 sqft): configurations 3-7, 11, 12
+                    Small       (< 1,000 sqft): configurations 8-10
 
         Returns:
             tuple: A tuple ``(pue, wue, case_num)`` for the given climate zone,
@@ -730,6 +730,7 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
                 integer cooling-configuration case that was used (either the one
                 passed in, or the one selected automatically).
         """
+
         quantile_map = {"efficient": "5th", "inefficient": "95th"}
         if efficiency not in quantile_map:
             raise ValueError(
