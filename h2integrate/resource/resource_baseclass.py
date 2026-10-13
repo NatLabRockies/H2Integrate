@@ -59,7 +59,7 @@ class ResourceBaseAPIConfig(BaseConfig):
         resource_dir (str | Path, optional): Folder to save resource files to or
             load resource files from. Defaults to "".
         resource_filename (str | list, optional): Filename(s) to save resource data to or load
-            resource data from. Defaults to "". Can only be a list of filenames if
+            resource data from. Defaults to None. Can only be a list of filenames if
             running a simulation requiring multiple resource years.
         include_leap_day (bool, optional): If False, remove data from leap day if the
             resource_year is a leap year. Otherwise, leave leap day data in. Defaults to False.
@@ -92,7 +92,7 @@ class ResourceBaseAPIConfig(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | list[Path | str] = field(default="")
+    resource_filename: Path | str | list[Path | str] | None = field(default=None)
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
     resource_year_order: list | None = field(default=None)
@@ -180,15 +180,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # Running multiple years
         provided_yr_order = self.config.resource_year_order is not None
         provided_filenames = isinstance(self.config.resource_filename, list)
-        provided_filename = (
-            isinstance(self.config.resource_filename, str) and self.config.resource_filename != ""
-        ) or isinstance(self.config.resource_filename, Path)
+        provided_filename = self.config.resource_filename is not None and not provided_filenames
 
         if not provided_filenames and not provided_yr_order:
             # Didn't provide either, using resource_year as the start-year
             # Check that enough future-years are available from the start-year
             self.get_resource_years_from_start_year(self.config.resource_year)
-            # NOTE: should check if `resource_filename` is not an empty string
 
             # Cannot provide a single filename when running multiple years
             if provided_filename:
@@ -196,7 +193,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                     f"A single `resource_filename` ({self.config.resource_filename}) cannot be "
                     f"used for a simulation requiring {n_data_years} resource years. "
                     "Please either specify `resource_filename` as a list of of filenames or "
-                    "leave it as an empty string. "
+                    "leave it unset. "
                 )
                 raise ValueError(msg)
 
@@ -232,7 +229,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             msg = (
                 "`resource_filename` cannot be a single value when `resource_year_order` is a "
                 "list. Please either provide `resource_filename` as a list of filenames or as "
-                "an empty string."
+                "unset."
             )
             raise ValueError(msg)
 
@@ -490,7 +487,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def get_data_for_year(
-        self, latitude, longitude, resource_year, resource_filename="", forced_download=False
+        self, latitude, longitude, resource_year, resource_filename=None, forced_download=False
     ):
         """Get resource data for a single resource year to handle any of the expected inputs.
         This method does the following:
@@ -523,7 +520,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         site_changed = not np.allclose([latitude, longitude], self.resource_site, atol=1e-6, rtol=0)
 
         # check if user provided directory or filename
-        provided_filename = False if resource_filename == "" else True
+        provided_filename = resource_filename is not None
         provided_dir = False if self.config.resource_dir is None else True
 
         # 1a) check if file exists directly within resource directory
@@ -664,7 +661,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         infer_years_from_files = False
         # 2) Determine the resource years and resource filenames to loop
         if self.resource_year_setting == "start_year":
-            # if running multiple years, resource_filename an empty string (based on earlier checks)
+            # if running multiple years, resource_filename is None (based on earlier checks)
             resource_years = self.get_resource_years_from_start_year(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
@@ -700,7 +697,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
                 # 'filenames' resource setting if statement
 
                 # don't use input resource filenames if site changes
-                resource_filenames = [""] * len(self.config.resource_filename)
+                resource_filenames = [None] * len(self.config.resource_filename)
 
             if site_changed and self.raise_error_if_site_change:
                 msg = (
@@ -717,7 +714,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             for year in self.config.resource_year_order:
                 self._check_resource_year(year)
             resource_years = self.config.resource_year_order
-            # config.resource_filename is an empty string if running multiple years
+            # config.resource_filename is None if running multiple years
             # (based on checks in ``check_config_inputs()``)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
