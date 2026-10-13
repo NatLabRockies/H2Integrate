@@ -8,7 +8,8 @@ To use this model, specify `"PYSAMSolarPlantPerformanceModel"` as the performanc
 ```yaml
 technologies:
     pv:
-        performance_model: "PYSAMSolarPlantPerformanceModel"
+        performance_model:
+            model: "PYSAMSolarPlantPerformanceModel"
         model_inputs:
             performance_parameters:
                 pv_capacity_kWdc: 1000.0

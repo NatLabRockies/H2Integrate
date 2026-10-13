@@ -28,16 +28,9 @@ H2Integrate is both a **hybrid systems engineering design tool** and a **technoe
 - **Cost inputs settable by the user** with examples based on the [Annual Technology Baseline (ATB)](https://atb.nlr.gov/)
 - **Optimization and scenario analysis** to explore design trade-offs across hybrid plant configurations
 
-### Available Technologies
+### Model Library
 
-H2I includes models for a broad set of energy generation, conversion, and storage technologies.
-This is a non-exhaustive list, and the library of available technologies is actively expanding:
-
-- **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), nuclear, grid
-- **Hydrogen production**: PEM electrolysis, NG-SMR
-- **Energy storage**: Li-ion batteries, long-duration energy storage (LDES), pumped storage hydropower (PSH), hydrogen storage, compressed gas storage
-- **Fuel cells**: H2 PEM fuel cells
-- **Industrial processes**: ammonia synthesis, iron ore reduction, steel production, and more
+See the [Model Overview](./docs/user_guide/model_overview.md) for the current registered models and their categories. The [documentation](https://h2integrate.readthedocs.io/en/latest/intro.html) provides the project overview and links to model-specific guides.
 
 ## Getting Started
 
