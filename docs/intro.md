@@ -73,6 +73,10 @@ H2Integrate goes into more component-level details than those tools, especially 
 For more context about H2Integrate and analyses performed using the tool, see the publications below.
 PDFs are available in the linked titles.
 
+```{note}
+H2Integrate was previously known as GreenHEART, and some publications or references may refer to it by that name.
+```
+
 
 ### Techno-economic analysis of low-carbon hydrogen production pathways for decarbonizing steel and ammonia production
 
