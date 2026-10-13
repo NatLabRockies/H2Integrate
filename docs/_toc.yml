@@ -11,6 +11,7 @@ parts:
   - caption: User Guide
     chapters:
       - file: user_guide/model_overview
+      - file: user_guide/model_registry
       - file: user_guide/how_to_set_up_an_analysis
       - file: user_guide/connecting_technologies
       - file: user_guide/defining_sites_and_resources
@@ -125,10 +126,10 @@ parts:
       - file: developer_guide/class_structure
       - file: developer_guide/technology_model_types
       - file: developer_guide/testing
-      - file: developer_guide/features_not_currently_implemented
   - caption: Miscellaneous Resources
     chapters:
       - file: misc_resources/FAQ
+      - file: misc_resources/changelog
       - file: misc_resources/glossary
       - file: misc_resources/defining_filepaths
       - file: misc_resources/turbine_models_library_preprocessing

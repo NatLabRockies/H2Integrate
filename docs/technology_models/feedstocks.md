@@ -115,7 +115,7 @@ the model to load.
 At present, the EIA natural gas cost model uses only a single year of price data (annual or monthly)
 and extrapolates it to an hourly timeseries automatically. For users that wish to download a large
 batch of data from the EIA, please see the EIA preprocessing tools in
-[`h2integrate/preprocess/eia.py`](https://github.com/NatLabRockies/H2Integrate/h2integrate/preprocess/eia.py).
+{py:mod}`h2integrate.preprocess.eia`.
 In particular, use the `get_eia_ng_data` function once an API has been created and saved to your
 environment variables or to a file.
 
