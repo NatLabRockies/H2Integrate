@@ -70,8 +70,6 @@
 - Pinned `optiwindnet<0.3.1` in the `ard` extra because `optiwindnet` 0.3.1 is incompatible with `ard-nrel` 0.1.0b5. [PR 902](https://github.com/NatLabRockies/H2Integrate/pull/902)
 - Updates to all GH Actions, pre-commit, isort, and ruff versioning. [PR 904](https://github.com/NatLabRockies/H2Integrate/pull/904)
 - Updated the docs throughout, removing stale references and ensuring consistency with the latest model and configuration changes. [PR 910](https://github.com/NatLabRockies/H2Integrate/pull/910)
-- Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
-- Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ### Fixes
 

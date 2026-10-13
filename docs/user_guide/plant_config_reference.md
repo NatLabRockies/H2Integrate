@@ -20,11 +20,7 @@ examples, and the [Technology Configuration Reference](technology_config_referen
 | `finance_parameters` | Finance groups, subgroups, and cost-year adjustment settings. |
 
 The plant schema currently validates the fields documented in
-[`plant_schema.yaml`](../../h2integrate/core/inputs/plant_schema.yaml). The model also reads
-`tech_to_dispatch_connections` and `system_level_control`, but these two keys are not currently
-declared in that schema; they are therefore code-supported configuration fields that schema
-validation does not check.
-
+[`plant_schema.yaml`](../../h2integrate/core/inputs/plant_schema.yaml).
 ## Sites
 
 Each site is identified by a user-chosen key. Latitude and longitude are required; elevation is

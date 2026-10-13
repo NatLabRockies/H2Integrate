@@ -85,6 +85,7 @@ connection syntax and stream variable names are covered in
 
 ## Transport cost models
 
+- `LinearDistanceCostModel` calculates the geodesic distance between source and destination
   coordinates, then multiplies it by `capex_per_km` and `fixed_opex_per_km`. Connect site latitude
   and longitude to its `source_*` and `dest_*` inputs.
 - `LinearMassTransportCostModel` uses geodesic distance, an optional `circuity_ratio` (default 1),

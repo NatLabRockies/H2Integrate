@@ -79,8 +79,9 @@ The available storage cost models are:
 
     ### ATB battery cost model
 
-    `ATBBatteryCostModel` uses separate energy and power capital costs from the NLR Annual Technology
-    Baseline battery workbook. It derives storage duration from capacity and charge rate, calculates
+    `ATBBatteryCostModel` uses separate energy and power capital costs from the [NLR Annual Technology
+    Baseline utility-scale battery ATB](https://atb.nrel.gov/electricity/2024b/utility-scale_battery_storage).
+    It derives storage duration from capacity and charge rate, calculates
     CapEx from the energy and power cost inputs, and calculates annual OpEx as a fraction of CapEx.
     `commodity_rate_units` must be a power unit based on watts; the default amount unit is the rate unit
     multiplied by hours.
