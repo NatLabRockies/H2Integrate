@@ -93,11 +93,16 @@ unset NLR_API_EMAIL
 (set-environment-variables-with-env-file)=
 ## Set Environment Variables with .env file
 
-The ".env" file will be looked for in all of the following locations:
-    - H2Integrate root directory (`/path/to/H2Integrate/h2integrate/`)
-    - parent of H2Integrate root directory (`/path/to/H2Integrate/`) (preferred location to store your environment file)
-    - current working directory (this is not a preferred location to store your environment file)
-1. Choose which of the above directories you want to host your .env file, and create a file named ".env" in that folder.
+H2Integrate searches for a `.env` file in these locations, in order:
+
+1. The H2Integrate package directory (for a source checkout, `/path/to/H2Integrate/h2integrate/`).
+2. The package directory's parent (for a source checkout, `/path/to/H2Integrate/`).
+3. The current working directory.
+4. The user's home directory.
+
+For a source checkout, the repository root is a convenient location. For a pip installation, the
+package directory's parent is usually inside `site-packages`; use the home directory or current
+working directory instead. Create a file named `.env` in the directory you choose.
 2. Open the ".env" file and add the environment variables:
     ```bash
     NLR_API_KEY='api-key-value'
