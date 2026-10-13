@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased [TBD]
+
+- Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
+
 ## 0.10.0 [October 12, 2026]
 
 ### New Features
