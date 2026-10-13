@@ -233,8 +233,8 @@ class DataCenterCostModel(CostModelBaseClass):
     def initialize(self):
         super().initialize()
         self.commodity = "compute_load"
-        self.commodity_rate_units = "kW"
-        self.commodity_amount_units = "kW*h"
+        self.commodity_rate_units = "MW"
+        self.commodity_amount_units = "MW*h"
 
     def setup(self):
         self.config = DataCenterCostModelConfig.from_dict(
