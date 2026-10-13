@@ -700,16 +700,16 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
             cooling_configuration (int | None): The cooling configuration number (1-12) to look
                 up. If None, the configuration is selected automatically. Valid values:
 
-                    1  - Large-scale DC; Airside economizer + adiabatic cooling
-                         + (water-cooled chiller)
-                    2  - Large-scale DC; Waterside economizer + (water-cooled chiller)
-                    3  - Midsize DC; Airside economizer + (water-cooled chiller)
-                    4  - Midsize DC; Waterside economizer + (water-cooled chiller)
-                    5  - Midsize DC; Water-cooled chiller
-                    6  - Midsize DC; Airside economizer + (air-cooled chiller)
-                    7  - Midsize DC; Air-cooled chiller
-                    8  - Small DC; Water-cooled chiller
-                    9  - Small DC; Air-cooled chiller
+                    1 - Large-scale DC; Airside economizer + adiabatic cooling
+                        + (water-cooled chiller)
+                    2 - Large-scale DC; Waterside economizer + (water-cooled chiller)
+                    3 - Midsize DC; Airside economizer + (water-cooled chiller)
+                    4 - Midsize DC; Waterside economizer + (water-cooled chiller)
+                    5 - Midsize DC; Water-cooled chiller
+                    6 - Midsize DC; Airside economizer + (air-cooled chiller)
+                    7 - Midsize DC; Air-cooled chiller
+                    8 - Small DC; Water-cooled chiller
+                    9 - Small DC; Air-cooled chiller
                     10 - Small DC; Direct expansion system
                     11 - Liquid-cooled DC; Direct-to-chip liquid loop + dry cooler
                     12 - Liquid-cooled DC; Direct-to-chip liquid loop + water-cooled chiller
@@ -720,9 +720,9 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
                 provided and ``cooling_configuration`` is None, only configurations valid for
                 the corresponding size category are considered:
 
-                    Large-scale (> 20,000 sqft): configurations 1, 2, 11, 12
-                    Midsize     (1,000-20,000 sqft): configurations 3-7, 11, 12
-                    Small       (< 1,000 sqft): configurations 8-10
+                    - **Large-scale** (> 20,000 sqft): configurations 1, 2, 11, 12
+                    - **Midsize** (1,000-20,000 sqft): configurations 3-7, 11, 12
+                    - **Small** (< 1,000 sqft): configurations 8-10
 
         Returns:
             tuple: A tuple ``(pue, wue, case_num)`` for the given climate zone,
