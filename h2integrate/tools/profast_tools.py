@@ -301,6 +301,20 @@ def format_profast_price_breakdown_per_year(price_breakdown):
     Returns:
         pd.DataFrame: Formatted DataFrame with yearly amounts expanded into separate columns.
     """
+
+    # Remove any non inflow or outflow types (this is to remove 'Depreciation expense')
+    # The below logic is representative of what profast does if it sorts the price breakdown
+    price_breakdown = price_breakdown.loc[
+        price_breakdown["Type"].isin(
+            [
+                "Operating revenue",
+                "Financing cash inflow",
+                "Operating expenses",
+                "Financing cash outflow",
+            ]
+        )
+    ]
+
     n_years = len(price_breakdown.iloc[0]["Amount"])
     year_cols = [f"Year {i} Amount" for i in range(n_years)]
 
