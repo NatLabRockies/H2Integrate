@@ -120,7 +120,7 @@ class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerB
             months are Exclusive Control, so every window solves the
             off-month bill-minimization MILP instead. Defaults to
             ``None`` (feature off: no seasonal split, every window solves
-            the DR MILP, matching behavior before this feature existed).
+            the DR MILP).
         max_cycles_per_day (float): During Exclusive Control Months, the
             maximum full-cycle-equivalent energy (relative to
             ``max_capacity * (max_soc_fraction - min_soc_fraction)``) that
