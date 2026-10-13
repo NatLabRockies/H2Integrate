@@ -504,11 +504,11 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
             if self.config.create_model_from == "default":
-                system_model = Pvwatts.default(self.config.config_name)
+                self.system_model = Pvwatts.default(self.config.config_name)
             elif self.config.create_model_from == "new":
-                system_model = Pvwatts.new(self.config.config_name)
+                self.system_model = Pvwatts.new(self.config.config_name)
 
-            system_model.assign(self.design_dict)
+            self.system_model.assign(self.design_dict)
 
             if "tilt_angle" in inputs:
                 tilt_angle = inputs["tilt_angle"][0]
@@ -521,7 +521,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                 # over-write the tilt angle if it was specified in the design dict
                 tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
             # assign the tilt angle
-            system_model.value("tilt", tilt_angle)
+            self.system_model.value("tilt", tilt_angle)
 
             if "azimuth_angle" in inputs:
                 azimuth = inputs["azimuth_angle"][0]
