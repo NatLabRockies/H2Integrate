@@ -304,14 +304,13 @@ def _regenerate_time_columns_at_dt(
     """
     freq = pd.Timedelta(seconds=dt_seconds)
     if exclude_leap_day:
-        periods = n_timesteps
-        new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
-        new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        while len(new_index) < n_timesteps:
-            periods += (n_timesteps - len(new_index)) + 1
-            new_index = pd.date_range(start=start_timestamp, periods=periods, freq=freq)
-            new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))]
-        new_index = new_index[:n_timesteps]
+        # Upper bound on skipped timestamps: every leap year up to one year past the nominal end
+        start_year = pd.Timestamp(start_timestamp).year
+        last_year = start_year + math.ceil(n_timesteps * dt_seconds / (365 * 86400)) + 1
+        n_leap_years = sum(is_leap_year(y) for y in range(start_year, last_year + 1))
+        extra = n_leap_years * math.ceil(86400 / dt_seconds)
+        new_index = pd.date_range(start=start_timestamp, periods=n_timesteps + extra, freq=freq)
+        new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))][:n_timesteps]
     else:
         new_index = pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq)
     field_map = {
