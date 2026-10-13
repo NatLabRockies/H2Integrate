@@ -100,7 +100,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
 
     Reference:
         NumPy Financial NPV documentation:
-        https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv
+        https://pypi.org/project/numpy-financial/
 
         By convention:
             - Investments or "deposits" are negative.

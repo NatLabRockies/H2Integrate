@@ -20,7 +20,7 @@ The `commodity_type` and `description` are used in the finance model naming conv
 
 - [``ProFastLCO``](profastcomp:profastcompmodel): calculates levelized cost of commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
 - [``ProFastNPV``](profastnpv:profastnpvmodel): calculates the net present value of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
-- [``NumpyFinancialNPV``](numpyfinancialnpvfinance:numpyfinancialnpvmodel): calculates the net present value of a commodity using the [NumPy Financial npv](https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv) method.
+- [``NumpyFinancialNPV``](numpyfinancialnpvfinance:numpyfinancialnpvmodel): calculates the net present value of a commodity using the `numpy_financial.npv` function.
 
 ## Custom finance models
 
