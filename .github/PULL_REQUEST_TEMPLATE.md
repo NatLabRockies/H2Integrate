@@ -94,6 +94,9 @@ IMPORTANT NOTES
 <!-- Required -->
 ## Related Issues
 <!--
+If this PR relates to an existing GitHub issue, please link the issue and indicate whether this PR
+would fully or partially resolve that issue. Please also link any issues that were created due to this PR
+
 https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue
 -->
 [N/A or appropriately link related issues]
