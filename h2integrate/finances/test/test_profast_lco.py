@@ -2,7 +2,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate.finances.profast_lco import ProFastLCO
+from h2integrate.finances.profast_lco import ProFastLCO, relabel_lco_breakdown
 from h2integrate.finances.profast_baseclass import BasicProFASTParameterConfig
 
 
@@ -156,12 +156,38 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
         assert pytest.approx(lcoe_breakdown["LCOE: Total ($/kW*h)"] * 1e3, rel=1e-6) == lcoe
 
     with subtests.test("Fixed OpEx, variable OpEx and feedstock are attributed to the right rows"):
-        assert lcoe_breakdown["LCOE: wind Fixed OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: wind OpEx ($/kW*h)"] > 0
         assert lcoe_breakdown["LCOE: wind Variable OpEx ($/kW*h)"] == 0
-        assert lcoe_breakdown["LCOE: natural_gas Fixed OpEx ($/kW*h)"] > 0
+        assert lcoe_breakdown["LCOE: natural_gas OpEx ($/kW*h)"] > 0
         assert lcoe_breakdown["LCOE: natural_gas Feedstock ($/kW*h)"] > 0
         assert "LCOE: natural_gas Variable OpEx ($/kW*h)" not in lcoe_breakdown
         assert "LCOE: wind Feedstock ($/kW*h)" not in lcoe_breakdown
+
+
+@pytest.mark.unit
+def test_relabel_lco_breakdown(subtests):
+    pf_config_dict = {
+        "feedstocks": {"wind_variable_opex": {}, "natural_gas_feedstock": {}},
+    }
+    lco_breakdown = {
+        "LCOE: wind OpEx ($/kW*h)": 1.0,
+        "LCOE: wind_variable_opex Feedstock ($/kW*h)": 2.0,
+        "LCOE: natural_gas_feedstock Feedstock ($/kW*h)": 3.0,
+        "LCOE: Total ($/kW*h)": 6.0,
+    }
+
+    relabeled = relabel_lco_breakdown(lco_breakdown, pf_config_dict)
+
+    with subtests.test("Keys are relabeled by cost category"):
+        assert list(relabeled) == [
+            "LCOE: wind OpEx ($/kW*h)",
+            "LCOE: wind Variable OpEx ($/kW*h)",
+            "LCOE: natural_gas Feedstock ($/kW*h)",
+            "LCOE: Total ($/kW*h)",
+        ]
+
+    with subtests.test("Values are unchanged"):
+        assert list(relabeled.values()) == list(lco_breakdown.values())
 
 
 @pytest.mark.regression

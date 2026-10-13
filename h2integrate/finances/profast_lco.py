@@ -14,7 +14,40 @@ from h2integrate.tools.profast_tools import (
 )
 from h2integrate.core.supported_models import register
 from h2integrate.core.inputs.validation import write_yaml
-from h2integrate.finances.profast_baseclass import ProFastBase
+from h2integrate.finances.profast_baseclass import (
+    FEEDSTOCK_SUFFIX,
+    VARIABLE_OPEX_SUFFIX,
+    ProFastBase,
+)
+
+
+def relabel_lco_breakdown(lco_breakdown, pf_config_dict):
+    """Rename the ProFAST feedstock entries of an LCO breakdown by their cost category.
+
+    Entries named ``{tech}_variable_opex`` become ``{tech} Variable OpEx`` and entries named
+    ``{tech}_feedstock`` become ``{tech} Feedstock``.
+
+    Args:
+        lco_breakdown (dict): LCO breakdown from ``make_price_breakdown()``.
+        pf_config_dict (dict): ProFAST config dictionary used to make the breakdown.
+
+    Returns:
+        dict: ``lco_breakdown`` with renamed keys, in the original order.
+    """
+    renames = {}
+    for item in pf_config_dict.get("feedstocks", {}):
+        if item.endswith(VARIABLE_OPEX_SUFFIX):
+            new_label = f"{item.removesuffix(VARIABLE_OPEX_SUFFIX)} Variable OpEx"
+        else:
+            new_label = f"{item.removesuffix(FEEDSTOCK_SUFFIX)} Feedstock"
+        renames[f": {item} Feedstock ("] = f": {new_label} ("
+
+    relabeled = {}
+    for key, value in lco_breakdown.items():
+        for old, new in renames.items():
+            key = key.replace(old, new)
+        relabeled[key] = value
+    return relabeled
 
 
 @register
@@ -144,6 +177,7 @@ class ProFastLCO(ProFastBase):
 
         # make LCO cost breakdown
         lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        lco_breakdown = relabel_lco_breakdown(lco_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
         # Check whether to export profast object to .yaml file

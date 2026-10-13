@@ -35,8 +35,8 @@ params:
   general inflation rate: 0.0
   leverage after tax nominal discount rate: 0.0615
 feedstocks:
-  ng_feedstock_feedstock:
-    name: ng_feedstock_feedstock
+  ng_feedstock:
+    name: ng_feedstock
     usage: 1.0
     unit: $/kW/h
     cost: {'2035': 0.006996177517553415, '2036': 0.006996177517553415, '2037': 0.006996177517553415, '2038': 0.006996177517553415,

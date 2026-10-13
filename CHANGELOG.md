@@ -2,7 +2,8 @@
 
 ## Unreleased [TBD]
 
-- Fix the ProFAST LCO breakdown swapping a tech's fixed OpEx with its variable cost when both share a name, and report the breakdown as CapEx, Fixed OpEx, Variable OpEx, and Feedstock (feedstock technologies only). `make_price_breakdown()` raises an error if fixed cost and feedstock names collide. [PR 923](https://github.com/NatLabRockies/H2Integrate/pull/923)
+- Fix the ProFAST LCO breakdown swapping a tech's fixed OpEx with its variable cost when both share a name. Variable costs are now registered in ProFAST with unique names and reported in the breakdown as "Variable OpEx" for regular technologies and "Feedstock" for feedstock technologies. [PR 923](https://github.com/NatLabRockies/H2Integrate/pull/923)
+- Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 
 ## 0.10.0 [October 12, 2026]
 

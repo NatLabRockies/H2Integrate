@@ -6,13 +6,13 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.tools.profast_tools import (
-    FEEDSTOCK_SUFFIX,
-    VARIABLE_OPEX_SUFFIX,
-    create_years_of_operation,
-    create_and_populate_profast,
-)
+from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
 
+
+# ProFAST identifies cost rows only by name, so variable costs get a suffix to keep them distinct
+# from the same tech's fixed cost.
+VARIABLE_OPEX_SUFFIX = "_variable_opex"
+FEEDSTOCK_SUFFIX = "_feedstock"
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
 finance_to_pf_param_mapper = {
