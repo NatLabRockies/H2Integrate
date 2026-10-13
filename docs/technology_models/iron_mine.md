@@ -1,8 +1,8 @@
 # Iron mine model
 
-H2I contains 2 iron mine models that simulate the extraction of crude ore and its processing into iron ore pellets:
-    - `SimpleIronMine`: Models only the flow of `crude_ore` in and `iron_ore` out, with costs all lumped together
-    - `NRRIIronMine`: Models mass flows and electricity/fuel consumption at intermediate steps, with costs broken out
+H2I contains two iron mine models that simulate the extraction of crude ore and its processing into iron ore pellets:
+    - `SimpleIronMinePerformanceComponent` and `SimpleIronMineCostComponent`: model the flow of `crude_ore` in and `iron_ore` out, with costs lumped together.
+    - `NRRIIronMinePerformanceComponent` and `NRRIIronMineCostComponent`: model mass flows and electricity/fuel consumption at intermediate steps, with costs broken out.
 
 ## SimpleIronMine
 The main input feedstock is `crude_ore`, i.e. the unprocessed ore in the earth containing iron oxide.
@@ -31,7 +31,7 @@ These data were compiled from two sources:
     - [Minorca Mine](https://minedocs.com/22/Minorca-TR-12312021.pdf)
     - [Tilden Mine](https://minedocs.com/22/Tilden-TR-12312021.pdf)
 
-To use this model, specify `"SimpleIronMinePerformanceComponent"` as the performance model and `"SimpleIronMineCostComponent"` as the cost model.
+To use the simple model, specify `"SimpleIronMinePerformanceComponent"` as the performance model and `"SimpleIronMineCostComponent"` as the cost model. The NRRI model uses `"NRRIIronMinePerformanceComponent"` and `"NRRIIronMineCostComponent"`.
 Currently, no complex calculations occur beyond importing performance and costs.
 In the performance model, the "wet long tons" (wlt) that ore production is typically reported in are converted to dry metric tons for use in H2I.
 In the cost model, the total capex costs for a plant are scaled by the amount of are produced annually.
