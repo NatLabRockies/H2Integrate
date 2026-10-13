@@ -699,7 +699,7 @@ def test_custom_resource_model(subtests, temp_copy_of_example):
 
     from h2integrate.resource.river import RiverResource
 
-    resource_model_fpath_parts = [ROOT_DIR] + RiverResource.__module__.split(".")[1:]
+    resource_model_fpath_parts = [ROOT_DIR, *RiverResource.__module__.split(".")[1:]]
     resource_model_fpath_parts[-1] = f"{resource_model_fpath_parts[-1]}.py"
 
     # Make folder to hold custom resource model
@@ -1192,9 +1192,9 @@ def test_reports_turned_off(temp_dir):
     report_dirs = [f for f in new_files if f.is_dir() and "reports" in f.name.lower()]
 
     # Assert that no report directories were created due to create_om_reports=False
-    assert (
-        len(report_dirs) == 0
-    ), f"Report directories were created despite create_om_reports=False: {report_dirs}"
+    assert len(report_dirs) == 0, (
+        f"Report directories were created despite create_om_reports=False: {report_dirs}"
+    )
 
 
 @pytest.mark.unit

@@ -6,6 +6,7 @@ from wombat import Simulation
 from wombat.core.library import load_yaml
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.pem_electrolyzer import (
     ECOElectrolyzerPerformanceModel,
     ECOElectrolyzerPerformanceModelConfig,
@@ -24,6 +25,7 @@ class WOMBATElectrolyzerModelConfig(ECOElectrolyzerPerformanceModelConfig):
     cost_year: int = field(converter=int)
 
 
+@register
 class WOMBATElectrolyzerModel(ECOElectrolyzerPerformanceModel):
     """
     WOMBATElectrolyzerModel is a joint performance and cost model for electrolyzers

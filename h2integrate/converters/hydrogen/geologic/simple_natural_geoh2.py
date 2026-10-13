@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfacePerformanceConfig,
     GeoH2SubsurfacePerformanceBaseClass,
@@ -67,6 +68,7 @@ class NaturalGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     decline_fit_params: dict = field(default=None)
 
 
+@register
 class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
     """OpenMDAO component for modeling the performance of a subsurface well for a
         natural geologic hydrogen plant.

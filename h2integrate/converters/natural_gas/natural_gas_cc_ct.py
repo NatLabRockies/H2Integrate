@@ -8,6 +8,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -32,6 +33,7 @@ class NaturalGasPerformanceConfig(BaseConfig):
     heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
+@register
 class NaturalGasPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for natural gas power plants.
@@ -242,6 +244,7 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
     variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
 
 
+@register
 class NaturalGasCostModel(CostModelBaseClass):
     """
     Cost model for natural gas power plants.

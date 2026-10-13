@@ -3,6 +3,7 @@ from geopy import distance
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -18,6 +19,7 @@ class LinearTransportCostConfig(CostModelBaseConfig):
     fixed_opex_per_km: float = field(validator=validators.ge(0))
 
 
+@register
 class LinearDistanceCostModel(CostModelBaseClass):
     """
     Combine any commodity or resource from multiple sources into one output without losses.
