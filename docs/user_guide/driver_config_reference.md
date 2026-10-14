@@ -112,5 +112,11 @@ recorder:
 | `options_excludes` | Component option names to omit when attached to the model. |
 | `record_desvars`, `record_objectives`, `record_constraints`, `record_derivative` | Select driver data; used when attached to the driver. |
 
+```{note}
+The `excludes` supersede the `includes`. A variable that matches both an `includes` pattern and
+an `excludes` pattern is not recorded. For example, with `includes: ['*']` and
+`excludes: ['*resource_data']`, everything except the resource data is recorded.
+```
+
 The schema is maintained in [`driver_schema.yaml`](../../h2integrate/core/inputs/driver_schema.yaml).
 See [Recording and Loading Data](recording_and_loading_data.md) for working recorder examples.
