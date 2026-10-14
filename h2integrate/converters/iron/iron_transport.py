@@ -47,6 +47,7 @@ class IronTransportPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
+@register(no_replacement_schedule=True)
 class IronTransportPerformanceComponent(om.ExplicitComponent):
     """Component to calculate iron ore pellet transportation distances considering both
     land and water routes.
@@ -63,7 +64,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = IronTransportPerformanceConfig.from_dict(
+        self.config = IronTransportPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -332,6 +333,7 @@ class IronTransportCostConfig(BaseConfig):
     marginal_cost: float = field(default=0.0)
 
 
+@register
 class IronTransportCostComponent(CostModelBaseClass):
     """Component for calculating iron ore pellet transportation costs."""
 
@@ -355,7 +357,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         )
         config_dict.update({"cost_year": target_dollar_year})
 
-        self.config = IronTransportCostConfig.from_dict(
+        self.config = IronTransportCostComponentConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

@@ -7,7 +7,8 @@ To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance
 ```yaml
 technologies:
   wind:
-     performance_model: "PYSAMWindPlantPerformanceModel"
+         performance_model:
+             model: "PYSAMWindPlantPerformanceModel"
      model_inputs:
          performance_parameters:
             num_turbines: 10

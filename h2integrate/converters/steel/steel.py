@@ -2,6 +2,7 @@ import ProFAST
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.steel.steel_baseclass import (
     SteelCostBaseClass,
     SteelPerformanceBaseClass,
@@ -14,6 +15,7 @@ class SteelPerformanceModelConfig(BaseConfig):
     capacity_factor: float = field()
 
 
+@register
 class SteelPerformanceModel(SteelPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of an steel plant.
@@ -82,6 +84,7 @@ class SteelCostAndFinancialModelConfig(BaseConfig):
     maintenance_materials_unitcost: float = field(default=7.72)
 
 
+@register
 class SteelCostAndFinancialModel(SteelCostBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with steel production.

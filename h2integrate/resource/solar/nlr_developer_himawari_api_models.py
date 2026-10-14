@@ -2,8 +2,9 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.core.supported_models import register
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
@@ -42,6 +43,7 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class Himawari7SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -91,6 +93,7 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -105,7 +108,7 @@ class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
+class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Himawari TMY: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari-tmy-download/>`_.
     This dataset covers regions within Asia, Australia & Pacific at a spatial resolution of 4 km.
@@ -156,14 +159,23 @@ class HimawariTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "himawari_tgy_v3"
 
 
+@register
 class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
 
         self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/himawari-tmy-download.csv?"
         # create the resource config
-        self.config = HimawariTMYAPIConfig.from_dict(
+        self.config = HimawariTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
+
         super().setup()

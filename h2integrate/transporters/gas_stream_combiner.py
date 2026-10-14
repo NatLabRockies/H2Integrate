@@ -10,11 +10,12 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 
 
 @define(kw_only=True)
-class GasStreamCombinerConfig(BaseConfig):
+class GasStreamCombinerPerformanceModelConfig(BaseConfig):
     """Configuration for the gas stream combiner.
 
     Attributes:
@@ -33,6 +34,7 @@ class GasStreamCombinerConfig(BaseConfig):
             )
 
 
+@register(no_cost=True)
 class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
     """
     Combine multiple gas streams into one using mass-weighted averaging.
@@ -53,7 +55,7 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = GasStreamCombinerConfig.from_dict(
+        self.config = GasStreamCombinerPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 

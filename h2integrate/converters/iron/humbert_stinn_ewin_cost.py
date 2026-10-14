@@ -21,11 +21,12 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.tools.constants import FE_MW, faraday
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define
-class HumbertStinnEwinCostConfig(CostModelBaseConfig):
+class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
     """Configuration class for the Humbert iron electrowinning cost model.
 
     Default values for the `labor_rate_cost`, `anode_cost_per_tonne`,
@@ -61,6 +62,7 @@ class HumbertStinnEwinCostConfig(CostModelBaseConfig):
     annual_labor_hours_per_position: int | float = field(default=2000)
 
 
+@register
 class HumbertStinnEwinCostComponent(CostModelBaseClass):
     """OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
 
@@ -129,7 +131,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = HumbertStinnEwinCostConfig.from_dict(
+        self.config = HumbertStinnEwinCostComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=True,
         )

@@ -45,7 +45,7 @@ The results that are output per-year of the `plant_life` are:
     $
     CF = \frac{\sum_{t=0}^{n_{\text{timesteps}}}(\text{commodity_out}_t*dt)}{\text{\text{discharge}\_\text{rate}*n_{\text{timesteps}}*dt}
     $
-- `standard_capacity_factor`: the storage capacity factor as defined by the [NLR ATB](https://atb.nrel.gov/electricity/2024b/utility-scale_battery_storage). The ratio of the total *commodity discharged* to the discharge rate (or `rated_commodity_production`). This value will always be greater than or equal to zero.
+- `standard_capacity_factor`: the storage capacity factor as defined by the [NLR ATB](https://atb.nlr.gov/electricity/2024b/utility-scale_battery_storage). The ratio of the total *commodity discharged* to the discharge rate (or `rated_commodity_production`). This value will always be greater than or equal to zero.
     $
     CF_{\text{standard}} = \frac{\sum_{t=0}^{n_{\text{timesteps}}}(\text{storage_commodity_discharge}_t*dt)}{\text{discharge_rate}*n_{\text{timesteps}}*dt}
     $

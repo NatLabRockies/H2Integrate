@@ -2,8 +2,8 @@ import urllib.parse
 
 import pandas as pd
 
-from h2integrate.resource.resource_base import ResourceBaseAPIModel
-from h2integrate.resource.solar.solar_resource_base import SolarResourceBase
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIModel
+from h2integrate.resource.solar.solar_resource_baseclass import SolarResourceBase
 from h2integrate.resource.utilities.nlr_developer_api_keys import (
     get_nlr_developer_api_key,
     get_nlr_developer_api_email,
@@ -38,7 +38,7 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
             "solar_resource_data", val=data, desc="Dict of solar resource data"
         )
 
-    def create_filename(self, latitude, longitude):
+    def create_filename(self, latitude, longitude, resource_year):
         """Create default filename to save downloaded data to. Filename is formatted as
         "{latitude}_{longitude}_{resource_year}_{config.dataset_desc}_{interval}min_{tz_desc}_tz.csv"
         where "tz_desc" is "utc" if the timezone is zero, or "local" otherwise.
@@ -57,12 +57,12 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
         else:
             tz_desc = "local"
         filename = (
-            f"{latitude}_{longitude}_{self.config.resource_year}_"
+            f"{latitude}_{longitude}_{resource_year}_"
             f"{self.config.dataset_desc}_{self.interval}min_{tz_desc}_tz.csv"
         )
         return filename
 
-    def create_url(self, latitude, longitude):
+    def create_url(self, latitude, longitude, resource_year):
         """Create url for data download.
 
         Args:
@@ -74,9 +74,10 @@ class NLRDeveloperAPISolarResourceBase(SolarResourceBase, ResourceBaseAPIModel):
         """
         input_data = {
             "wkt": f"POINT({longitude} {latitude})",
-            "names": [str(self.config.resource_year)],  # TODO: update to handle multiple years
+            "names": [str(resource_year)],  # TODO: update to handle multiple years
             "interval": str(self.interval),
             "utc": str(self.utc).lower(),
+            "leap_day": str(self.config.include_leap_day).lower(),
             "api_key": get_nlr_developer_api_key(),
             "email": get_nlr_developer_api_email(),
         }

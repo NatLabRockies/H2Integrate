@@ -50,6 +50,8 @@ def test_BaseConfig(subtests):
     ... # rest of the test
 ```
 
+Tests must be marked with at least one of `unit`, `regression`, `integration`, or `hpc`. The test configuration rejects unknown markers, and `test/conftest.py` fails collection for unmarked tests.
+
 ## Unit Tests
 
 Unit tests should test the correctness of the code in isolation from the rest of the system.
@@ -57,7 +59,7 @@ At a minimum, this involves testing data handling, utility methods, setup, and e
 should also be taken to test around the edges of the program being written to ensure code can't
 silently fail by producing erroneous results or failing unexpectedly.
 
-Run `pytest -m unit` to run only the unit test suite or `pytest -m not-unit` to skip the unit tests.
+Run `pytest -m unit` to run only the unit test suite or `pytest -m "not unit"` to skip the unit tests.
 
 An example of a unit test is in the example below where there is only a validation of the location
 of the output directory and subdirectory, and not the contents of those files.
@@ -73,7 +75,7 @@ In an analysis-focused code base, regression tests should test the results of ru
 ensure changes made do not alter expected results. These should not encapsulate more than the focal
 system if it can be helped.
 
-Run `pytest -m regression` to run only the regression test suite or `pytest -m not-regression` to
+Run `pytest -m regression` to run only the regression test suite or `pytest -m "not regression"` to
 skip the regression tests.
 
 An example of a regression test is in the example below where the model's outputs are checked
@@ -95,7 +97,7 @@ An example would be to test that a model configuration that contributed to a pub
 produces the same results, ensuring the legitimacy of those results and the underlying modeled
 systems.
 
-Run `pytest -m integration` to run only the integration test suite or `pytest -m not-integration`
+Run `pytest -m integration` to run only the integration test suite or `pytest -m "not integration"`
 to skip the integration tests.
 
 For examples of integration tests, please see the `examples/test/test_all_examples.py` module

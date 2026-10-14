@@ -46,13 +46,14 @@ jobs:
             test-type: integration
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+          channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate
       - name: Install base conda dependencies
@@ -70,6 +71,9 @@ jobs:
           conda install -y -c conda-forge glpk highspy coin-or-cbc>=2.10.12
           python -m pip install --upgrade pip
           pip install ".[develop${{ matrix.optional && ',extras' || '' }}]"
+      - name: List conda packages
+        shell: bash -el {0}
+        run: conda list
       - name: Create env file
         run: |
           touch .env

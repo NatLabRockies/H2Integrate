@@ -4,10 +4,11 @@ from attrs import field, define, validators
 from h2integrate.core.dynamics import apply_ramping_limits, startup_loss_multiplier
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.tools.constants import H_MW, N_MW, AR_MW
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     ResizeablePerformanceModelBaseClass,
     ResizeablePerformanceModelBaseConfig,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.core.commodity_stream_definitions import add_multivariable_output
 
 
@@ -157,6 +158,7 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
             raise AttributeError(f"`include_warm_start` is True, missing inputs {missing_params}")
 
 
+@register
 class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     """
     OpenMDAO component modeling the performance of an ammonia synthesis loop.
