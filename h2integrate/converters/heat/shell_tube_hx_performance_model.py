@@ -3,11 +3,10 @@ from pathlib import Path
 
 import numpy as np
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 from CoolProp.CoolProp import PropsSI
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero
 from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     add_multivariable_output,
@@ -39,22 +38,31 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
         D_o_m: Outer diameter of the tubes in meters.
         t_wall_m: Wall thickness of the tubes in meters.
         D_shell_m: Diameter of the shell in meters.
+        tube_material: Material of the tubes in the heat exchanger. Possible values are:
+            "carbon_steel", "stainless_304", "copper".
+        shell_material: Material of the shell in the heat exchanger. Possible values are:
+            "carbon_steel", "stainless_304", "copper".
         process_fluid_name: CoolProp fluid name for the process stream.
         working_fluid_name: CoolProp fluid name for the working stream.
+        enable_plot: Whether to enable plotting of the HX performance.
+        plot_dir: Directory to save plots if plotting is enabled.
+        show_plot: Whether to display plots interactively.
     """
 
-    process_fluid_temp_C: float = field(validator=gt_zero)
-    working_fluid_temp_C: float = field(validator=gt_zero)
-    process_fluid_mass_flow_kg_s: float = field(validator=gt_zero)
-    working_fluid_mass_flow_kg_s: float = field(validator=gt_zero)
-    process_fluid_pressure_bar: float = field(default=1.0, validator=gt_zero)
-    working_fluid_pressure_bar: float = field(default=1.0, validator=gt_zero)
-    N_tubes: int = field(validator=gt_zero)
-    N_passes: int = field(validator=gt_zero)
-    L_tube_m: float = field(validator=gt_zero)
-    D_o_m: float = field(validator=gt_zero)
-    t_wall_m: float = field(validator=gt_zero)
-    D_shell_m: float = field(validator=gt_zero)
+    process_fluid_temp_C: float = field(validator=validators.gt(0))
+    working_fluid_temp_C: float = field(validator=validators.gt(0))
+    process_fluid_mass_flow_kg_s: float = field(validator=validators.gt(0))
+    working_fluid_mass_flow_kg_s: float = field(validator=validators.gt(0))
+    process_fluid_pressure_bar: float = field(default=1.0, validator=validators.gt(0))
+    working_fluid_pressure_bar: float = field(default=1.0, validator=validators.gt(0))
+    N_tubes: int = field(validator=validators.gt(0))
+    N_passes: int = field(validator=validators.gt(0))
+    L_tube_m: float = field(validator=validators.gt(0))
+    D_o_m: float = field(validator=validators.gt(0))
+    t_wall_m: float = field(validator=validators.gt(0))
+    D_shell_m: float = field(validator=validators.gt(0))
+    tube_material: str = field(default="carbon_steel")
+    shell_material: str = field(default="carbon_steel")
     process_fluid_name: str = field(default="Water")
     working_fluid_name: str = field(default="Water")
     enable_plot: bool = field(default=False)
@@ -64,7 +72,13 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
 
 class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     """
-    An OpenMDAO component that wraps the steady shell-and-tube heat exchanger model.
+    An OpenMDAO component that contains a steady state shell-and-tube heat exchanger model.
+
+    **Note:** This component assumes steady-state operation and does not account for
+        dynamic effects. Additionally, it enforces that heat is transfered from  the
+        hotter fluid to colder fluid, but other physical checks are currently limited.
+        The user is warned to use physically reasonable values for inputs and to check
+        results with utilities such as the plotting or printing functions.
 
     The component exposes two multivariable-stream inlet ports
     (``process_fluid`` on the tube side and ``working_fluid`` on the shell side) and
@@ -126,9 +140,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "total_heat_transfer_rate", units="kW", desc="Total heat transfer rate", **ts
         )
-        self.add_output("hx_effectiveness", desc="Effectiveness of the heat exchanger", **ts)
-        self.add_output("number_of_transfer_units", desc="Number of transfer units", **ts)
-        self.add_output("heat_capacity_rate_ratio", desc="Heat capacity rate ratio", **ts)
+        self.add_output("hx_effectiveness", units="unitless", desc="Effectiveness of the heat exchanger", **ts)
+        self.add_output("number_of_transfer_units", units="unitless", desc="Number of transfer units", **ts)
+        self.add_output("heat_capacity_rate_ratio", units="unitless", desc="Heat capacity rate ratio", **ts)
         self.add_output(
             "overall_heat_transfer_coefficient",
             units="W/m**2/K",
@@ -154,6 +168,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output("exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts)
         self.add_output(
             "roles_swapped",
+            units="unitless",
             desc=(
                 "Per-timestep flag (0/1). 1 indicates the working fluid entered "
                 "hotter than the process fluid at that timestep and the two "
@@ -267,6 +282,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                     show=self.config.show_plot,
                 )
 
+            if self.config.print_summary:
+                self.print_summary(res)
+
             # Outlet multivariable-stream values
             outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
             outputs["process_fluid:temperature_out"][i] = T_process_out
@@ -332,13 +350,19 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     def metal_props(self, name: str):
         """
         Returns thermal conductivity (k), density (rho), and specific heat (cp) for common metals.
+
+        Returns:
+            tuple[float, float, float]:
+                - k: thermal conductivity [W/m-K]
+                - rho: density [kg/m^3]
+                - cp: specific heat [J/kg-K]
         """
         key = name.lower().replace(" ", "_")
-        if key in ("carbon_steel", "cs"):
+        if key == "carbon_steel":
             return 45.0, 7850.0, 480.0
-        elif key in ("stainless_304", "ss304", "stainless"):
+        elif key == "stainless_304":
             return 16.0, 8000.0, 500.0
-        elif key in ("copper", "cu"):
+        elif key == "copper":
             return 390.0, 8960.0, 385.0
         else:
             # default carbon steel
@@ -441,6 +465,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         get = params.get
 
         # Inlet temps [°C] and mass flow rates [kg/s]
+        # Taken as inputs from multivariable commodity streams
         Th_in = float(get("temp_hot_in", 90.0))
         Tc_in = float(get("temp_cold_in", 30.0))
         m_dot_h = float(get("mass_flow_rate_hot", 18.0))
@@ -497,8 +522,8 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         fzero_maxit = int(get("fzero_maxit", 50))
 
         # Materials
-        tube_material = get("tube_material", "carbon_steel")
-        shell_material = get("shell_material", "carbon_steel")
+        tube_material = get("tube_material", self.config.tube_material)
+        shell_material = get("shell_material", self.config.shell_material)
 
         t_shell = float(get("t_shell", 0.02))
 
