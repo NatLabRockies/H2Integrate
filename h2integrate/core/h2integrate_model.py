@@ -6,7 +6,11 @@ import openmdao.api as om
 
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_is_steppable,
+    check_model_control_classifier,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -467,14 +471,24 @@ class H2IntegrateModel:
         if n_steps_per_compute := self.plant_config["plant"]["simulation"].get(
             "n_steps_per_compute", False
         ):
+            assert n_steps_per_compute > 0, (
+                f"n_steps_per_compute ({n_steps_per_compute}) must be positive."
+            )
+
             n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
 
             if n_steps_per_compute != n_timesteps:
                 if n_steps_per_compute > n_timesteps:
-                    raise AssertionError("n_steps_per_compute cannot be greater than n_timesteps")
+                    raise AssertionError(
+                        f"n_steps_per_compute ({n_steps_per_compute})"
+                        + "cannot be greater than n_timesteps ({n_timesteps})"
+                    )
 
                 if n_timesteps % n_steps_per_compute != 0:
-                    raise AssertionError("n_timesteps must be divisible by n_steps_per_compute")
+                    raise AssertionError(
+                        f"n_timesteps ({n_timesteps}) "
+                        + "must be divisible by n_steps_per_compute ({n_steps_per_compute})"
+                    )
 
                 # Assign custom nonlinear solver to plant group to manage concurrent simulation
                 self.plant.nonlinear_solver = ConcurrentPlantNLSolver(
@@ -1102,61 +1116,6 @@ class H2IntegrateModel:
             tech_group.linear_solver = om.DirectSolver()
 
         return om_model_object
-
-    def _check_time_step(self, model_name, model_object):
-        dt = int(self.plant_config["plant"]["simulation"]["dt"])
-
-        min_ts = model_object._time_step_bounds[0]
-        max_ts = model_object._time_step_bounds[1]
-        if dt < min_ts or dt > max_ts:
-            msg = (
-                f"Model {model_name} is compatible with time steps "
-                f"between {min_ts} (s) and {max_ts} (s), but a time step of {dt} (s) "
-                "was specified. Please set plant_config['plant']['simulation']['dt'] to a"
-                f" value within the range [{min_ts}, {max_ts}]."
-            )
-            raise ValueError(msg)
-
-    def _check_control_classifier(self, model_name, model_object):
-        if not self.slc:
-            return
-        if not hasattr(model_object, "_control_classifier"):
-            msg = f"Model {model_name} is missing a control classifier"
-            raise ValueError(msg)
-
-    def _check_steppable_models(self):
-        error_msg_list = []
-
-        non_steppable_control_strategies = [
-            cs.__str__()
-            for cs in self.control_strategies
-            if ((not hasattr(cs, "_is_steppable")) or (not cs._is_steppable))
-        ]
-        if non_steppable_control_strategies:
-            control_msg = (
-                f"Control strategy(ies): {sorted(non_steppable_control_strategies)} are not flagged"
-                " as capable of steppable simulation."
-            )
-            error_msg_list.append(control_msg)
-
-        non_steppable_performance_models = [
-            pm.__str__()
-            for pm in self.performance_models
-            if ((not hasattr(pm, "_is_steppable")) or (not pm._is_steppable))
-        ]
-        if non_steppable_performance_models:
-            performance_msg = (
-                f"Performance model(s): {sorted(non_steppable_performance_models)} are not flagged"
-                " as capable of steppable simulation."
-            )
-            error_msg_list.append(performance_msg)
-
-        if error_msg_list:
-            error_msg = (
-                "Attempting to run a steppable simulation with unsupported models:\n\t"
-                + "\n\t".join(error_msg_list)
-            )
-            raise AttributeError(error_msg)
 
     def _add_passthrough_controller(self, tech_group, perf_comp, individual_tech_config):
         """Automatically add a PassthroughController to a tech group if appropriate.
@@ -2058,7 +2017,7 @@ class H2IntegrateModel:
                     plant_config=self.plant_config
                 )
 
-                self._check_steppable_models()
+                check_model_is_steppable(self.control_strategies, self.performance_models)
 
     def create_driver_model(self):
         """

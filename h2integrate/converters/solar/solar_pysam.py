@@ -437,7 +437,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                     reformatted_data.update({new_key: values})
         return reformatted_data
 
-    def _compute_outputs(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def _compute_outputs(self, inputs, outputs):
         # Range object for the slice of the total simulation to run in this
         # compute call
         simulation_range = self._get_compute_time_range(inputs["timestep_index"])
@@ -554,4 +554,4 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         if int(inputs["timestep_index"][0]) + self.n_steps_per_compute >= self.n_timesteps:
             self._PYSAM_model_has_been_executed = False
 
-        self._compute_outputs(inputs, outputs, discrete_inputs, discrete_outputs)
+        self._compute_outputs(inputs, outputs)

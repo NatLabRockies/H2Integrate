@@ -44,17 +44,26 @@ class SkippableComputeMixin:
         if getattr(cls, "_is_steppable", False):
             return
 
+        # Collect compute method from child class.
         user_compute = cls.__dict__.get("compute")
         if user_compute is None or getattr(user_compute, "_skips_when_flagged", False):
             return
 
+        # Create a new compute method that wrap's the child's compute method.
         @functools.wraps(user_compute)
         def compute(self, *args):
+            # Steppable simulation is managed by a custom openmdao nonlinear solver, which sets
+            # the skip_compute option to False for all but the last simulation slice so the child
+            # class' compute method is skipped until the very end to avoid extra computation.
             if self.options["skip_compute"]:
                 return None
             return user_compute(self, *args)
 
         compute._skips_when_flagged = True
+
+        # Replace the child class's compute method with the wrapped compute method. Now, the
+        # skip_compute behavior is enabled without modifying the child class's compute method nor
+        # the way its compute method is called.
         cls.compute = compute
 
 
