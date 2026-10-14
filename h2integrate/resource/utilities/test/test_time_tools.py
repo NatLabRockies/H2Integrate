@@ -125,13 +125,15 @@ def test_process_leap_day_without_february():
     [3600, 86_400, 172_800, 259_200],
     ids=["1-hour", "1-day", "2-day", "3-day"],
 )
-def test_add_resource_start_end_times_reports_dt_in_seconds(freq_seconds):
+def test_add_resource_start_end_times_reports_dt_in_seconds(subtests, freq_seconds):
     # `timedelta.seconds` drops whole days, so steps of 24 h or more need `total_seconds()`.
     data = _make_timeseries(4, freq_seconds)
     result = add_resource_start_end_times(data)
 
-    assert result["dt"] == freq_seconds
-    assert isinstance(result["dt"], int)
+    with subtests.test("timestep includes whole days in seconds"):
+        assert result["dt"] == freq_seconds
+    with subtests.test("timestep is an integer"):
+        assert isinstance(result["dt"], int)
 
 
 def _make_timeseries(n, freq_seconds, start="2012-01-01 00:00", values=None):
@@ -315,15 +317,16 @@ def test_resample_keeps_leap_day_when_present_at_new_timestep(subtests):
 
 
 @pytest.mark.unit
-def test_downsample_preserves_mean():
+def test_downsample_preserves_mean(subtests):
     rng = np.random.default_rng(0)
     values = rng.random(24)
     data = _make_timeseries(24, 900, values=values)  # 15-min data
     result = resample_resource_data_to_dt(data, 3600, downsample_method="mean")  # hourly
 
-    assert len(result["wind_speed_100m"]) == 6
-    # overall mean is conserved by the averaging
-    np.testing.assert_allclose(result["wind_speed_100m"].mean(), values.mean())
+    with subtests.test("downsampling produces six hourly values"):
+        assert len(result["wind_speed_100m"]) == 6
+    with subtests.test("downsampling preserves the overall mean"):
+        np.testing.assert_allclose(result["wind_speed_100m"].mean(), values.mean())
 
 
 @pytest.mark.unit
@@ -421,6 +424,23 @@ def test_resample_non_integer_ratio_guarantees_coverage(subtests):
         data = _make_timeseries(5, 3600)
         res = resample_resource_data_to_dt(data, 2500, upsample_method="time")
         assert len(res["wind_speed_100m"]) == 8
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "target_dt,expected_steps",
+    [(6000.0, 6), (5999.9999999, 7), (6000.1, 6)],
+    ids=["exact-division", "tiny-positive-remainder", "fractional-timestep"],
+)
+def test_resample_step_count_preserves_small_remainders(subtests, target_dt, expected_steps):
+    data = _make_timeseries(10, 3600)
+    result = resample_resource_data_to_dt(data, target_dt, downsample_method="mean")
+    n_steps = len(result["wind_speed_100m"])
+
+    with subtests.test("step count is the ceiling of the duration ratio"):
+        assert n_steps == expected_steps
+    with subtests.test("target intervals cover the complete source duration"):
+        assert n_steps * pd.Timedelta(seconds=target_dt) >= pd.Timedelta(hours=10)
 
 
 @pytest.mark.unit
