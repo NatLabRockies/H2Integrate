@@ -306,7 +306,8 @@ def _regenerate_time_columns_at_dt(
     if exclude_leap_day:
         # Upper bound on skipped timestamps: every leap year up to one year past the nominal end
         start_year = pd.Timestamp(start_timestamp).year
-        last_year = start_year + math.ceil(n_timesteps * dt_seconds / (365 * 86400)) + 1
+        n_years = get_number_of_resource_years_needed(dt_seconds, n_timesteps, include_leap=False)
+        last_year = start_year + n_years + 1  # +1 needed for upper-bound calculation
         n_leap_years = sum(is_leap_year(y) for y in range(start_year, last_year + 1))
         extra = n_leap_years * math.ceil(86400 / dt_seconds)
         new_index = pd.date_range(start=start_timestamp, periods=n_timesteps + extra, freq=freq)
