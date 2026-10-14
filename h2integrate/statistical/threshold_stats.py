@@ -3,6 +3,7 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -21,6 +22,7 @@ class ThresholdStatisticsPerformanceConfig(BaseConfig):
     epsilon_comparison: float = field(default=0.0, validator=validators.ge(0.0))
 
 
+@register(no_cost=True, no_replacement_schedule=True)
 class ThresholdStatisticsPerformanceModel(om.ExplicitComponent):
     """
     A component for threshold statistics of simulation timeseries as optimization QoIs.

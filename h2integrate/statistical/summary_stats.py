@@ -3,6 +3,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -25,6 +26,7 @@ class SummaryStatisticsPerformanceConfig(BaseConfig):
     )
 
 
+@register(no_cost=True, no_replacement_schedule=True)
 class SummaryStatisticsPerformanceModel(om.ExplicitComponent):
     """
     A component for summary statistics of simulation timeseries as optimization QoIs
