@@ -5,10 +5,12 @@ IMPORTANT NOTES
 1. Use GH flavored markdown when writing your description:
    https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax
 
-2. If all boxes in the PR Checklist cannot be checked, this PR should be marked as a draft.
+2. Draft PRs should submitted for incomplete PRs if one of the following criteria can be met:
+   - Feedback or further discussion is required prior to completion of the contribution
+   - If all boxes in the PR Checklist cannot be checked, but feedback is desired prior to completion
 
-3. DO NOT DELETE ANYTHING FROM THIS TEMPLATE. If a section does not apply to you, simply write
-   "N/A" in the description.
+3. DO NOT DELETE REQUIRED SECTIONS FROM THIS TEMPLATE. Optional sections may be deleted for PRs that
+   are ready for review or you may simply write "N/A" in the description.
 
 4. Code snippets to highlight new, modified, or problematic functionality are highly encouraged,
    though not required. Be sure to use proper code highlighting as demonstrated below.
@@ -21,8 +23,6 @@ IMPORTANT NOTES
     b = a_func()
     print(a + b)
     ```
-
-5. Delete unused optional sections for non-draft PRs
 -->
 
 <!--The title should clearly define your contribution succinctly.-->
