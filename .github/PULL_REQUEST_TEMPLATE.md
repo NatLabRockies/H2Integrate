@@ -137,14 +137,14 @@ failing test cases.
 <!-- Complete this section only if you checked "New Model" above -->
 - [ ] **Model Structure**:
   - [ ] Follows established naming conventions outlined in `docs/developer_guide/coding_guidelines.md`
-  - [ ] Configuration class is named `{ModelName}Config`, where `{ModelName}` is the complete model class name registered with `@register`
+  - [ ] Configuration class is named `{ModelName}Config`, where `{ModelName}` is the complete model class name
   - [ ] Used `attrs` class to define the `Config` to load in attributes for the model
     - [ ] If applicable: inherit from `BaseConfig` or `CostModelBaseConfig`
   - [ ] Added: `initialize()` method, `setup()` method, `compute()` method
     - [ ] If applicable: inherit from `PerformanceModelBaseClass` and `CostModelBaseClass`
 - [ ] **Integration**: Model has been properly integrated into H2Integrate
   - [ ] Add the new model to the appropriate `__init__.py` file so it can be imported from its subpackage
-  - [ ] Decorated the model class with `@register` from `h2integrate/core/supported_models.py`
+  - [ ] Import and apply the register decorator from `h2integrate/core/supported_models.py` to enable H2I to recognize the new model
 - [ ] **Tests**: Unit tests have been added for the new model
   - [ ] [Pytest-style unit tests](https://realpython.com/pytest-python-testing/)
   - [ ] Unit tests are in a "test" folder within the folder a new model was added to
