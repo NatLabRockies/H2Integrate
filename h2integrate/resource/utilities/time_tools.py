@@ -415,7 +415,7 @@ def resample_resource_data_to_dt(
             stacklevel=2,
         )
 
-    # Detect annual or segment boundaries where chronological year/month resets
+    # Detect indices of annual or segment boundaries where chronological year/month resets
     block_starts = [0]
     for i in range(native_len - 1):
         if calendar_index.month[i + 1] < calendar_index.month[i]:
