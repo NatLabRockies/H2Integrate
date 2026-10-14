@@ -281,12 +281,12 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
 
 def _regenerate_time_columns_at_dt(
-    data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, exclude_leap_day=False
+    data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, include_leap_day=True
 ):
     """Regenerate time columns as ``n_timesteps`` steps of ``dt_seconds`` starting at
     ``start_timestamp``.
 
-    When ``exclude_leap_day`` is True, February 29 is skipped so the regenerated calendar
+    When ``include_leap_day`` is False, February 29 is skipped so the regenerated calendar
     keeps the leap day excluded even at the new timestep.
 
     Args:
@@ -296,14 +296,14 @@ def _regenerate_time_columns_at_dt(
         n_timesteps (int): number of timesteps to generate.
         present_time_keys (list[str]): list of time column keys (e.g. "year", "month",
             "day", "hour", "minute", "second") present in the data to regenerate.
-        exclude_leap_day (bool, optional): whether to skip February 29 when generating the
-            calendar index. Defaults to False.
+        include_leap_day (bool, optional): whether to include February 29 when generating the
+            calendar index. Defaults to True.
 
     Returns:
         dict: resource data dictionary with updated time columns.
     """
     freq = pd.Timedelta(seconds=dt_seconds)
-    if exclude_leap_day:
+    if not include_leap_day:
         # Upper bound on skipped timestamps: every leap year up to one year past the nominal end
         start_year = pd.Timestamp(start_timestamp).year
         n_years = get_number_of_resource_years_needed(dt_seconds, n_timesteps, include_leap=False)
@@ -402,7 +402,7 @@ def resample_resource_data_to_dt(
     # February 29 excluded at the new timestep.
     has_feb29 = bool(((calendar_index.month == 2) & (calendar_index.day == 29)).any())
     spans_leap_year = any(is_leap_year(int(y)) for y in np.unique(calendar_index.year.to_numpy()))
-    exclude_leap_day = spans_leap_year and not has_feb29
+    include_leap_day = not spans_leap_year or has_feb29
 
     # Detect non-chronological transitions (e.g. out-of-order years or TMY month jumps)
     len(np.unique(calendar_index.year)) > 1 and len(calendar_index) <= 8784
@@ -567,7 +567,7 @@ def resample_resource_data_to_dt(
                 float(target_dt),
                 b_target_n,
                 present_time_keys,
-                exclude_leap_day,
+                include_leap_day=include_leap_day,
             )
             for k in present_time_keys:
                 reg_time_cols[k].append(b_dict[k])
@@ -580,6 +580,6 @@ def resample_resource_data_to_dt(
             float(target_dt),
             target_n,
             present_time_keys,
-            exclude_leap_day,
+            include_leap_day=include_leap_day,
         )
     return resampled
