@@ -1,6 +1,7 @@
 import math
 import warnings
 from datetime import timezone, timedelta
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
@@ -383,9 +384,6 @@ def resample_resource_data_to_dt(
     if len(calendar_index) < 2:
         return data
 
-    # Infer native timestep from the median/mean positive step across consecutive samples
-    # so an edge calendar gap (e.g., a series starting adjacent to a removed leap day)
-    # does not distort it.
     deltas = pd.Series((calendar_index[1:] - calendar_index[:-1]).total_seconds())
     pos_deltas = deltas[deltas > 0]
     if pos_deltas.empty:
@@ -394,12 +392,6 @@ def resample_resource_data_to_dt(
             "data's time columns. Ensure the resource data has increasing timestamps."
         )
         raise ValueError(msg)
-
-    # Detect whether the source data has a leap day removed so the regenerated calendar keeps
-    # February 29 excluded at the new timestep.
-    has_feb29 = bool(((calendar_index.month == 2) & (calendar_index.day == 29)).any())
-    spans_leap_year = any(is_leap_year(int(y)) for y in np.unique(calendar_index.year.to_numpy()))
-    include_leap_day = not spans_leap_year or has_feb29
 
     # Detect non-chronological transitions (e.g. out-of-order years or TMY month jumps)
     has_negative_deltas = bool((deltas < 0).any())
@@ -427,6 +419,7 @@ def resample_resource_data_to_dt(
     # Compute effective step durations across samples
     # For transitions across boundaries, large TMY gaps, or calendar gaps (e.g. removed leap day),
     # complete the period using the local step duration of the preceding sample.
+    # Positive steps exclude backward jumps; their median resists isolated large forward gaps.
     median_dt = float(pos_deltas.median())
     effective_deltas = deltas.to_numpy().copy()
     for b_idx in range(1, len(block_starts) - 1):
@@ -449,14 +442,15 @@ def resample_resource_data_to_dt(
     elapsed = np.insert(np.cumsum(effective_deltas), 0, 0.0)
 
     # Calculate target step count per block to ensure correct time coverage
-    block_target_ns = []
-    for b in range(len(block_starts) - 1):
-        s_i = block_starts[b]
-        e_i = block_starts[b + 1]
-        b_dur = float(np.sum(step_durations[s_i:e_i]))
-        block_target_ns.append(math.ceil((b_dur / float(target_dt)) - 1e-9))
+    # Inputs are seconds; Timedelta.value returns integer nanoseconds.
+    target_dt_ns = pd.Timedelta(seconds=float(target_dt)).value
+    block_target_n_timesteps = []
+    for s_i, e_i in pairwise(block_starts):
+        block_duration_ns = pd.to_timedelta(step_durations[s_i:e_i], unit="s").sum().value
+        # Integer ceiling division retains any positive remainder without a float tolerance.
+        block_target_n_timesteps.append((block_duration_ns + target_dt_ns - 1) // target_dt_ns)
 
-    target_n = sum(block_target_ns)
+    target_n = sum(block_target_n_timesteps)
     total_duration = float(np.sum(step_durations))
     if float(target_dt) > total_duration:
         msg = (
@@ -468,8 +462,9 @@ def resample_resource_data_to_dt(
         raise ValueError(msg)
 
     target_offsets = np.arange(target_n) * float(target_dt)
-    native_index = pd.to_timedelta(elapsed, unit="s")
-    target_index = pd.to_timedelta(target_offsets, unit="s")
+    # Pandas 3 may infer second resolution, which cannot represent fractional resampling bins.
+    native_index = pd.to_timedelta(elapsed, unit="s").as_unit("ns")
+    target_index = pd.to_timedelta(target_offsets, unit="s").as_unit("ns")
 
     # Only numeric timeseries columns are resampled; time columns are regenerated afterward.
     _, ts_data = separate_timeseries_and_meta_data(data)
@@ -550,6 +545,12 @@ def resample_resource_data_to_dt(
     for k in data_keys:
         resampled[k] = resampled_frame[k].to_numpy()
 
+    # Detect whether the source data has a leap day removed so the regenerated calendar keeps
+    # February 29 excluded at the new timestep.
+    has_feb29 = bool(((calendar_index.month == 2) & (calendar_index.day == 29)).any())
+    spans_leap_year = any(is_leap_year(int(y)) for y in np.unique(calendar_index.year.to_numpy()))
+    include_leap_day = not spans_leap_year or has_feb29
+
     # Regenerate calendar time columns per block at target_dt, preserving original block order
     # (even when years are non-chronological) and leap-day settings.
     if len(block_starts) > 2:
@@ -557,7 +558,7 @@ def resample_resource_data_to_dt(
         for b in range(len(block_starts) - 1):
             b_start_idx = block_starts[b]
             b_start_ts = calendar_index[b_start_idx]
-            b_target_n = block_target_ns[b]
+            b_target_n = block_target_n_timesteps[b]
             b_dict = {}
             _regenerate_time_columns_at_dt(
                 b_dict,

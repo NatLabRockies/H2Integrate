@@ -427,6 +427,23 @@ def test_resample_non_integer_ratio_guarantees_coverage(subtests):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "target_dt,expected_steps",
+    [(6000.0, 6), (5999.9999999, 7), (6000.1, 6)],
+    ids=["exact-division", "tiny-positive-remainder", "fractional-timestep"],
+)
+def test_resample_step_count_preserves_small_remainders(subtests, target_dt, expected_steps):
+    data = _make_timeseries(10, 3600)
+    result = resample_resource_data_to_dt(data, target_dt, downsample_method="mean")
+    n_steps = len(result["wind_speed_100m"])
+
+    with subtests.test("step count is the ceiling of the duration ratio"):
+        assert n_steps == expected_steps
+    with subtests.test("target intervals cover the complete source duration"):
+        assert n_steps * pd.Timedelta(seconds=target_dt) >= pd.Timedelta(hours=10)
+
+
+@pytest.mark.unit
 def test_resample_non_uniform_deltas(subtests):
     # Non-uniform deltas within a series: 1h and 2h steps.
     # Spacing is proportional to physical duration: 2 steps for 1h, 4 steps for 2h.
