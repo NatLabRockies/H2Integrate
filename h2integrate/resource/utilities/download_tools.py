@@ -1,7 +1,7 @@
 import json
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone as datetime_timezone
 from zoneinfo import ZoneInfo
 from functools import cache
 
@@ -69,7 +69,8 @@ def download_from_api(url, filename):
 def make_time_index_openmeteo(data, timezone, lat, lon):
     """Make a pd.DatetimeIndex object from the 'time' column of the input data.
     This is intended to be used with resource data obtained from
-    OpenMeteo resource models.
+    OpenMeteo resource models. Legacy UTC timestamps are converted to local standard
+    time with a fixed offset so daylight-saving transitions do not change the timestep.
 
     Args:
         data (pd.DataFrame): resource data with a 'time' column in ISO format
@@ -111,6 +112,8 @@ def make_time_index_openmeteo(data, timezone, lat, lon):
             dt_t0 = dt_t0.replace(tzinfo=ZoneInfo("UTC"))
             # convert those times to local time
             dt_t0 = dt_t0.astimezone(ZoneInfo(local_timezone))
+            standard_offset = dt_t0.utcoffset() - dt_t0.dst()
+            dt_t0 = dt_t0.astimezone(datetime_timezone(standard_offset))
 
     # Either the time column was already timezone aware or
     # has been adjusted to the proper timezone
