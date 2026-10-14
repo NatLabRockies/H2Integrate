@@ -1,9 +1,9 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 title: H2Integrate
-author: National Renewable Energy Laboratory
+author: NLR
 # logo: logo.png
-copyright: '2025'
+copyright: 2026, NLR
 only_build_toc_files: false
 # exclude_patterns: [_build, Thumbs.db, .DS_Store, "**.ipynb_checkpoints", .github]
 # Force re-execution of notebooks on each build.
@@ -30,21 +30,30 @@ latex:
 repository:
   url: https://github.com/NatLabRockies/H2Integrate
   path_to_book: docs
-  branch: main
+  branch: develop
 # Add GitHub buttons to your book
 # See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
 html:
   use_issues_button: true
   use_repository_button: true
-  baseurl: https://nrel.github.io/H2Integrate/
+  baseurl: https://h2integrate.readthedocs.io/en/latest/
 sphinx:
   extra_extensions:
     - sphinx.ext.autodoc
     - sphinx.ext.autosummary
     - sphinx.ext.napoleon
+    - h2integrate.core.docs_sphinx
   config:
     language: python
     autosummary_generate: true
+    html_theme_options:
+      check_switcher: false
+      navbar_end:
+        - version-switcher
+        - navbar-icon-links
+      switcher:
+        json_url: https://h2integrate.readthedocs.io/en/latest/_static/switcher.json
+        version_match: latest
     autodoc_default_options:
       members: true
       member-order: bysource

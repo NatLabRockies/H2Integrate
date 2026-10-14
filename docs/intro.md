@@ -9,15 +9,18 @@
 H2Integrate (H2I) is an open-source Python package for hybrid systems engineering design and technoeconomic analysis.
 It models and optimizes hybrid energy plants that produce electricity, hydrogen, ammonia, steel, and other products, using high-resolution location-specific resource data to perform optimization and scenario analysis.
 
+## About H2Integrate
+
+H2Integrate grew from projects that needed to model and analyze complex hybrid energy systems. It is now maintained as a reusable framework for composing technology performance, cost, finance, and control models, while still allowing users to add project-specific components.
+
 Browse the example workflows in the GitHub repository: https://github.com/NatLabRockies/H2Integrate/tree/main/examples
 
 ## What is H2Integrate?
 
-H2Integrate is designed to be flexible and extensible, allowing users to create their own components and models for various hybrid systems.
-The tool currently includes renewable energy generation (land-based wind, offshore wind, solar PV, wave, tidal), conventional generation (natural gas combined cycle, combustion turbines, grid electricity), hydrogen production (PEM electrolysis, NG-SMR), energy storage (Li-ion batteries, long-duration energy storage, pumped storage hydropower), fuel cells, and industrial processes (ammonia synthesis, iron ore reduction, steel production, methanol, and more).
-Other elements can also be included as developed by users.
-H2Integrate is continually expanding to serve additional hybrid applications -- if you're interested in seeing what's being actively developed, please see the [current pull requests in the GitHub repository](https://github.com/NatLabRockies/H2Integrate/pulls).
-Some modeling capabilities in H2Integrate are provided by integrating existing tools, such as [PySAM](https://github.com/NatLabRockies/pysam), [ORBIT](https://github.com/NLRWindSystems/ORBIT), and [ProFAST](https://github.com/NatLabRockies/ProFAST).
+H2Integrate is designed to be flexible and extensible, allowing users to create their own components and models for hybrid systems.
+Its registered models cover land-based wind and solar PV; wave, tidal, run-of-river hydro, natural gas, nuclear, and grid electricity; hydrogen production and storage; fuel cells; and industrial processes including ammonia, methanol, iron, and steel.
+The [Model Overview](user_guide/model_overview.md) lists the current registered models, and model-specific pages describe their capabilities and configuration.
+Some models integrate existing tools, including [PySAM](https://github.com/NatLabRockies/pysam) and [ProFAST](https://github.com/NatLabRockies/ProFAST).
 The H2Integrate tool is built on top of [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/), which provides a powerful and flexible environment for modeling and optimization.
 
 ```{note}
