@@ -404,7 +404,7 @@ def resample_resource_data_to_dt(
             stacklevel=2,
         )
 
-    # Detect annual or segment boundaries where chronological year/month resets
+    # Detect indices of annual or segment boundaries where chronological year/month resets
     native_len = len(calendar_index)
     calendar_months = calendar_index.month.to_numpy()
     calendar_years = calendar_index.year.to_numpy()
