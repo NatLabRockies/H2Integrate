@@ -1,8 +1,7 @@
-from attrs import field, define
+from attrs import field, define, validators
 from attrs.validators import gt, lt
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, must_equal
 from h2integrate.core.model_baseclasses import CostModelBaseClass
 
 
@@ -13,7 +12,7 @@ class ShellTubeHXCostModelConfig(BaseConfig):
 
     Args:
         cost_year (int): The year for which the cost model is applicable. Default is 2022.
-        S (float): Total heat transfer area of the heat exchanger in square meters.
+        hx_transfer_area (float): Total heat transfer area of the heat exchanger in square meters.
             Default is 10.0, limited to a range of 10 to 1000 m^2.
         install_factor (float): Installation factor for the heat exchanger. Default is 1.61.
         material_factor (float): Material factor for the heat exchanger. Default is 1.0 for
@@ -23,11 +22,13 @@ class ShellTubeHXCostModelConfig(BaseConfig):
             capital expenditure. Default is 0.04 (4%).
     """
 
-    cost_year: int = field(default=2022, converter=int, validator=must_equal(2022))
-    S: float = field(default=10.0, converter=float, validator=[gt(10), lt(1000)])
-    install_factor: float = field(default=1.61, converter=float, validator=gt_zero)
-    material_factor: float = field(default=1.0, converter=float, validator=gt_zero)
-    opex_percentage: float = field(default=0.04, converter=float, validator=gt_zero)
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_(2022))
+    hx_transfer_area: float = field(
+        default=10.0, converter=float, validator=[validators.gt(10), validators.lt(1000)]
+    )
+    install_factor: float = field(default=1.61, converter=float, validator=validators.gt(0))
+    material_factor: float = field(default=1.0, converter=float, validator=validators.gt(0))
+    opex_percentage: float = field(default=0.04, converter=float, validator=validators.gt(0))
 
 
 class ShellTubeHXCostModel(CostModelBaseClass):
