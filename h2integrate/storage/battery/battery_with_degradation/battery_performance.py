@@ -3,6 +3,8 @@ import math
 import numpy as np
 import pandas as pd
 
+from h2integrate.core.supported_models import register
+
 
 """
 Integration notes:
@@ -193,6 +195,7 @@ class ScaledLFPCyclicDegradation(SonyLFPCyclicDegradation):
         return k_crate_r * k_dod_r * delta_fec / 100.0
 
 
+@register
 @define(kw_only=True)
 class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     """Configuration class for storage performance models.
@@ -342,6 +345,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class BatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component for a storage component."""
 
@@ -761,24 +765,16 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         outputs[f"{self.commodity}_out"] = power_ts
         outputs[f"rated_{self.commodity}_production"] = discharge_rate
         outputs[f"total_{self.commodity}_produced"] = np.sum(power_ts) * self.dt_amount
-        outputs[f"annual_{self.commodity}_produced"] = outputs[
-            f"total_{self.commodity}_produced"
-        ] * (1 / self.fraction_of_year_simulated)
         outputs["operational_life"] = self.plant_life
 
         if discharge_rate <= 0:
+            outputs[f"annual_{self.commodity}_produced"] = 0.0
             outputs["capacity_factor"] = 0.0
             outputs["standard_capacity_factor"] = 0.0
             outputs["replacement_schedule"] = np.zeros(self.plant_life)
         else:
             # Gross discharge timeseries (commodity_rate_units, discharge only).
             discharge_ts = outputs[f"storage_{self.commodity}_discharge"]
-            total_commodity_discharged = discharge_ts.sum() * self.dt_amount
-
-            # Scalar average discharge capacity factor over the whole simulation.
-            outputs["standard_capacity_factor"] = total_commodity_discharged / (
-                discharge_rate * self.n_timesteps * self.dt_amount
-            )
 
             # Per-year capacity factor and replacement schedule projected across the plant
             # life from the simulated discharge and capacity-SOH timeseries. Uses the shared
@@ -790,5 +786,20 @@ class BatteryPerformanceModel(StoragePerformanceBase):
                 state_of_health_timeseries=log["soh_Q"],
                 eol_soh=self.config.eol_soh_capacity,
             )
-            outputs["capacity_factor"] = annual_cf
+            annual_amount_per_unit_rate = om_units.convert_units(
+                31_536_000,
+                "s",
+                f"({self.commodity_amount_units})/({self.commodity_rate_units})",
+            )
+            outputs[f"annual_{self.commodity}_produced"] = (
+                annual_cf * discharge_rate * annual_amount_per_unit_rate
+            )
+            outputs["standard_capacity_factor"] = annual_cf
+            annual_net_cf, _ = self.calculate_annual_cf_and_replacement_schedule(
+                performance_timeseries=power_ts,
+                rated_performance=discharge_rate,
+                state_of_health_timeseries=log["soh_Q"],
+                eol_soh=self.config.eol_soh_capacity,
+            )
+            outputs["capacity_factor"] = annual_net_cf
             outputs["replacement_schedule"] = replacement_schedule

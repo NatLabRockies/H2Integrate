@@ -187,3 +187,53 @@ def test_output_shapes_match_n_timesteps():
         "system_derated",
     ):
         assert prob.get_val(f"battery.{name}").shape == (n_timesteps,)
+
+
+@pytest.mark.integration
+def test_multiyear_simulation_preserves_state_and_annual_discharge():
+    steps_per_year = 8760
+    n_timesteps = 2 * steps_per_year
+    hour_of_day = np.arange(n_timesteps) % 24
+    power_profile = np.zeros(n_timesteps)
+    power_profile[hour_of_day < 2] = -500.0
+    power_profile[(hour_of_day >= 12) & (hour_of_day < 14)] = 500.0
+    power_profile[steps_per_year:] *= 0.5
+    prob = _build_problem(
+        n_timesteps=n_timesteps,
+        dt=3600,
+        power_profile=power_profile,
+        performance_overrides={"deg_scale": 0.01, "eol_soh_capacity": 0.0},
+    )
+    _set_resource(prob, n_timesteps=n_timesteps)
+    prob.run_model()
+
+    for name in ("SOC", "temperature", "soh_capacity", "soh_resistance", "power_ac"):
+        values = prob.get_val(f"battery.{name}")
+        assert values.shape == (n_timesteps,)
+        assert np.all(np.isfinite(values))
+
+    soh = prob.get_val("battery.soh_capacity")
+    assert soh[steps_per_year] <= soh[steps_per_year - 1]
+    assert soh[-1] < soh[steps_per_year - 1] < soh[0]
+
+    discharge = prob.get_val("battery.storage_electricity_discharge", units="kW")
+    annual_discharge = discharge.reshape(2, steps_per_year).sum(axis=1)
+    assert annual_discharge[0] > annual_discharge[1] > 0.0
+    rated_discharge = prob.get_val("battery.rated_electricity_production", units="kW")[0]
+    annual_production = prob.get_val("battery.annual_electricity_produced", units="kW*h/year")
+    standard_cf = prob.get_val("battery.standard_capacity_factor", units="unitless")
+    net_cf = prob.get_val("battery.capacity_factor", units="unitless")
+    replacements = prob.get_val("battery.replacement_schedule")
+    for values in (annual_production, standard_cf, net_cf, replacements):
+        assert values.shape == (30,)
+        assert np.all(np.isfinite(values))
+    np.testing.assert_allclose(annual_production[:2], annual_discharge)
+    np.testing.assert_allclose(
+        standard_cf[:2], annual_discharge / (rated_discharge * steps_per_year)
+    )
+    np.testing.assert_allclose(annual_production, standard_cf * rated_discharge * steps_per_year)
+    net_power = prob.get_val("battery.electricity_out", units="kW")
+    np.testing.assert_allclose(
+        prob.get_val("battery.total_electricity_produced", units="kW*h")[0],
+        net_power.sum(),
+    )
