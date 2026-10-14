@@ -378,8 +378,8 @@ def resample_resource_data_to_dt(
         )
         raise ValueError(msg)
 
-    assembly = {k: np.asarray(data[k]).astype(int) for k in present_time_keys}
-    calendar_index = pd.DatetimeIndex(pd.to_datetime(assembly))
+    time_dict = {k: np.asarray(data[k]).astype(int) for k in present_time_keys}
+    calendar_index = pd.DatetimeIndex(pd.to_datetime(time_dict))
     if len(calendar_index) < 2:
         return data
 
@@ -395,9 +395,6 @@ def resample_resource_data_to_dt(
         )
         raise ValueError(msg)
 
-    native_len = len(calendar_index)
-    median_dt = float(pos_deltas.median())
-
     # Detect whether the source data has a leap day removed so the regenerated calendar keeps
     # February 29 excluded at the new timestep.
     has_feb29 = bool(((calendar_index.month == 2) & (calendar_index.day == 29)).any())
@@ -405,7 +402,6 @@ def resample_resource_data_to_dt(
     include_leap_day = not spans_leap_year or has_feb29
 
     # Detect non-chronological transitions (e.g. out-of-order years or TMY month jumps)
-    len(np.unique(calendar_index.year)) > 1 and len(calendar_index) <= 8784
     has_negative_deltas = bool((deltas < 0).any())
     if has_negative_deltas:
         warnings.warn(
@@ -417,6 +413,7 @@ def resample_resource_data_to_dt(
         )
 
     # Detect annual or segment boundaries where chronological year/month resets
+    native_len = len(calendar_index)
     calendar_months = calendar_index.month.to_numpy()
     calendar_years = calendar_index.year.to_numpy()
     block_starts = [0]
@@ -430,6 +427,7 @@ def resample_resource_data_to_dt(
     # Compute effective step durations across samples
     # For transitions across boundaries, large TMY gaps, or calendar gaps (e.g. removed leap day),
     # complete the period using the local step duration of the preceding sample.
+    median_dt = float(pos_deltas.median())
     effective_deltas = deltas.to_numpy().copy()
     for b_idx in range(1, len(block_starts) - 1):
         trans_i = block_starts[b_idx] - 1
