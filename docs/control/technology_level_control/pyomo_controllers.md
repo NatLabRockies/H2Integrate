@@ -80,8 +80,17 @@ The optimized dispatch using Pyomo is implemented differently than the heuristic
 ```{note}
 Optimized dispatch passes a `pyomo_dispatch_solver` callable to a storage performance model.
 `StoragePerformanceBase` provides this interface, so optimized dispatch is not inherently limited
-to the PySAM battery. Confirm that the selected storage model and controller support the requested
-dispatch mode.
+to the PySAM battery. To confirm that a storage model works with optimized dispatch:
+
+- Check that the storage `performance_model` is derived from `StoragePerformanceBase`; the models
+  listed in the [Storage Models](../../storage/storage_models_index.md) page are valid.
+- Check that `tech_to_dispatch_connections` in `plant_config.yaml` lists the storage technology as the
+  dispatching technology, for example `[battery, battery]`. Only then does the storage model add the
+  `pyomo_dispatch_solver` input and run with feedback control.
+- Check that the controller `commodity` matches the storage model `commodity`.
+
+[Example 30](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/30_pyomo_optimized_dispatch)
+uses `PySAMBatteryPerformanceModel`.
 ```
 
 ![](./figures/Pyomo_dispatch_figure.png)

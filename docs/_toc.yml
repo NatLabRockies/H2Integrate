@@ -30,6 +30,7 @@ parts:
   - caption: Technology Models
     chapters:
       - file: technology_models/transport
+      - file: technology_models/combiners_and_splitters
       - file: technology_models/feedstocks
       - file: technology_models/marine_hydrokinetic
       - file: technology_models/run_of_river

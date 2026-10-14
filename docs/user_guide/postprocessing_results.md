@@ -218,41 +218,6 @@ The returned mapping has `inputs`, `explicit_outputs`, and `implicit_outputs` en
    :no-index:
 ```
 
-## Plotting energy and hydrogen flows
-
-The plotting helpers in `h2integrate.tools.plot` read the production `energy_flows.csv` file. They
-accept start and end datetimes, a save path, and flags to display or save the figure. The default
-input path is `./output/data/production/energy_flows.csv`.
-
-```python
-import datetime as dt
-
-from h2integrate.tools.plot import plot_energy_flows, plot_hydrogen_flows
-
-plot_energy_flows(
-  energy_flow_data_path="output/data/production/energy_flows.csv",
-  start_date_time=dt.datetime(2024, 1, 5),
-  end_date_time=dt.datetime(2024, 1, 10),
-  show_fig=False,
-)
-plot_hydrogen_flows(
-  energy_flow_data_path="output/data/production/energy_flows.csv",
-  show_fig=False,
-)
-```
-
-`plot_energy_flows` plots electricity generation and battery charge/discharge.
-`plot_hydrogen_flows` plots hydrogen production, demand, and storage state of charge. The CSV must
-contain the columns expected by the selected plotting function.
-
-```{eval-rst}
-.. autofunction:: h2integrate.tools.plot.plot_energy_flows
-   :no-index:
-
-.. autofunction:: h2integrate.tools.plot.plot_hydrogen_flows
-   :no-index:
-```
-
 ## ProFAST helpers
 
 The ProFAST utilities create and populate a `ProFAST` object from a configuration mapping, run its

@@ -21,6 +21,36 @@ cache location when caching is enabled. Cache entries are based on the model con
 simulation inputs; disable caching with `enable_caching: false` when debugging or when cache reuse
 is not desired.
 
+## Turbine file preprocessing
+
+The `h2integrate.preprocess.wind_turbine_file_tools` module can create turbine files from the
+[turbine-models](https://github.com/NatLabRockies/turbine-models) library, so you do not have to
+write them by hand:
+
+- `export_turbine_to_floris_format(turbine_name)` writes a FLORIS turbine YAML file (named
+  `floris_turbine_{turbine_name}.yaml` by default) to the H2I library folder, or to `output_folder`
+  if given. Use its path as the FLORIS turbine configuration for this model.
+- `FlorisTurbineDefaults` holds the defaults (`TSR`, `ref_air_density`, `ref_tilt`, and the
+  cosine loss exponents) that fill in values FLORIS requires but are not provided by the turbine-models
+  library. Pass a `FlorisTurbineDefaults` object or a dictionary as `floris_defaults` to override them.
+- `export_turbine_to_pysam_format(turbine_name)` does the same for the PySAM Windpower model used
+  by `PYSAMWindPlantPerformanceModel`.
+
+See [Turbine Models Library Pre-Processing](../misc_resources/turbine_models_library_preprocessing.md)
+for a worked example that exports a turbine, updates the `tech_config`, and runs Example 26.
+
+```{eval-rst}
+.. autofunction:: h2integrate.preprocess.wind_turbine_file_tools.export_turbine_to_floris_format
+   :no-index:
+
+.. autoclass:: h2integrate.preprocess.wind_turbine_file_tools.FlorisTurbineDefaults
+   :members:
+   :no-index:
+
+.. autofunction:: h2integrate.preprocess.wind_turbine_file_tools.export_turbine_to_pysam_format
+   :no-index:
+```
+
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.floris.FlorisWindPlantPerformanceModelConfig
    :members:

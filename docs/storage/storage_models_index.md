@@ -14,7 +14,8 @@ The following sections detail the inputs and outputs of the storage performance 
 ### Automatic storage sizing
 
 `StorageAutoSizingModel` calculates the storage capacity and charge/discharge rate required to
-balance a commodity production profile against demand, then simulates the storage operation. Set
+balance a commodity production profile against demand, then simulates the storage operation. In the
+`tech_config.yaml` set
 `set_demand_as_avg_commodity_in: true` to use average input as demand, or set it to `false` and
 provide `demand_profile`. The model requires either `round_trip_efficiency`, or both
 `charge_efficiency` and `discharge_efficiency`. `min_soc_fraction` and `max_soc_fraction` bound the

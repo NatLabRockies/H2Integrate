@@ -29,6 +29,18 @@ entry specifies a registered `resource_model` and its `resource_parameters`; the
 user-chosen name, not the model class name. Use `site_to_tech_connections` to connect site location
 or resource data to technologies.
 
+```yaml
+sites:
+  site_A:  # user-chosen site name
+    latitude: 35.2018863
+    longitude: -101.945027
+    resources:
+      wind_resource:  # user-chosen resource name
+        resource_model: WTKNLRDeveloperAPIWindResource
+        resource_parameters:
+          resource_year: 2012
+```
+
 Resource models have model-specific data ranges and time-step requirements. Some API-backed wind
 and solar resources support multiple years; see the [resource index](../resource/resource_index.md)
 and the wind and solar resource pages.
@@ -58,13 +70,15 @@ requested simulation period must be compatible with the connected resource data.
 `technology_interconnections` lists source, destination, commodity or stream, and optionally a
 transporter. For example, `- [wind, battery, electricity, cable]` connects wind electricity to a
 battery through a cable. See [Connecting Technologies](connecting_technologies.md) for connection
-forms and [Transport Components](../technology_models/transport.md) for cable, pipe, combiner, and
-splitter behavior.
+forms, [Transport Components](../technology_models/transport.md) for cable and pipe behavior, and
+[Combiners and Splitters](../technology_models/combiners_and_splitters.md) for combiner and splitter
+behavior.
 
 `site_to_tech_connections` connects a named site or resource to a technology. Resource data is
 typically connected with a three-element entry such as
 `[site.wind_resource, wind, wind_resource_data]`; site coordinates can also be mapped to technology
-inputs. The site guide covers the supported forms and resource variable names.
+inputs. See [Defining Sites and Connecting Resources](defining_sites_and_resources.md) for the
+supported forms and resource variable names.
 
 `tech_to_dispatch_connections` is used when dispatch rules need information from technologies
 upstream of a dispatch controller. Each pair identifies a source technology and the technology

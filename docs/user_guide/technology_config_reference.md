@@ -3,7 +3,9 @@
 The technology configuration declares each technology, its model classes, and model-specific
 inputs. It is referenced from the top-level configuration with `technology_config`. The schema is
 maintained in [`tech_schema.yaml`](../../h2integrate/core/inputs/tech_schema.yaml), and
-[`populate_tech_yaml`](populate_tech_yaml.md) can generate model input templates.
+[`populate_tech_yaml`](populate_tech_yaml.md) can generate model input templates. The parameters
+that each model accepts are documented in the [API documentation](../api.md), and the
+{ref}`technology models overview <technology-models-overview>` lists the available models.
 
 ## Technology entries
 

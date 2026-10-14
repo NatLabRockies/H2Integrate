@@ -226,6 +226,7 @@ See [Example 32](https://github.com/NatLabRockies/H2Integrate/tree/main/examples
 (transport-connections)=
 ## Combiners, splitters, and transporters
 
-The `cable`, `pipe`, generic transporter, combiner, and splitter models are documented in
-[Transport Components](../technology_models/transport.md). This page focuses on how to express
-their connections in `technology_interconnections`.
+The `cable`, `pipe`, and generic transporter models are documented in
+[Transport Components](../technology_models/transport.md), and the combiner and splitter models are
+documented in [Combiners and Splitters](../technology_models/combiners_and_splitters.md). This page
+focuses on how to express their connections in `technology_interconnections`.
