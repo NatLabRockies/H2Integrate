@@ -498,8 +498,10 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             self.apply_curtailment(outputs)
             return
 
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         if not self._PYSAM_model_has_been_executed:
-            assert inputs["timestep_index"] == 0, (
+            assert simulation_range.start == 0, (
                 "PYSAM model should only be executed at the start of the simulation"
             )
 
@@ -551,7 +553,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             self._PYSAM_model_has_been_executed = True
 
         # Re-set model execution flag at the end of the simulation
-        if int(inputs["timestep_index"][0]) + self.n_steps_per_compute >= self.n_timesteps:
+        if simulation_range.stop >= self.n_timesteps:
             self._PYSAM_model_has_been_executed = False
 
         self._compute_outputs(inputs, outputs)
