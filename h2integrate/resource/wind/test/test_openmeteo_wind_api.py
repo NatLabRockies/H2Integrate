@@ -12,18 +12,21 @@ from h2integrate.resource.utilities.download_tools import make_time_index_openme
 
 
 @pytest.mark.unit
-def test_legacy_openmeteo_timestamps_use_standard_time():
+def test_legacy_openmeteo_timestamps_use_standard_time(subtests):
     utc_times = pd.date_range(start="2022-12-31", periods=8810, freq="1h")
     data = pd.DataFrame({"time": utc_times.strftime("%Y-%m-%d %H:%M:%S")})
     index = make_time_index_openmeteo(data, timezone="America/Chicago", lat=44.04218, lon=-95.19757)
     calendar = index.tz_localize(None)
-    assert np.all((calendar[1:] - calendar[:-1]).total_seconds() == 3600)
-    assert all(timestamp.utcoffset().total_seconds() == -21600 for timestamp in index)
+    with subtests.test("calendar timestamps remain hourly across daylight-saving transitions"):
+        assert np.all((calendar[1:] - calendar[:-1]).total_seconds() == 3600)
+    with subtests.test("timestamps retain the standard-time UTC offset"):
+        assert all(timestamp.utcoffset().total_seconds() == -21600 for timestamp in index)
     resource = {
         key: getattr(calendar, key).to_numpy() for key in ["year", "month", "day", "hour", "minute"]
     }
     resource["wind_speed_100m"] = np.ones(len(calendar))
-    assert resample_resource_data_to_dt(resource, target_dt=3600) is resource
+    with subtests.test("hourly data does not require resampling"):
+        assert resample_resource_data_to_dt(resource, target_dt=3600) is resource
 
 
 @pytest.mark.unit
