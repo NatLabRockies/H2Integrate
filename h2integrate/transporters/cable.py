@@ -1,6 +1,9 @@
 import openmdao.api as om
 
+from h2integrate.core.supported_models import register
 
+
+@register(name="cable", no_cost=True)
 class CablePerformanceModel(om.ExplicitComponent):
     """
     Pass-through cable with no losses.
@@ -10,6 +13,8 @@ class CablePerformanceModel(om.ExplicitComponent):
         1,
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def initialize(self):
         self.options.declare("transport_item", values=["electricity"])

@@ -585,7 +585,7 @@ def test_BaseConfig(subtests):
             demo = BaseDemoModelStrictAdditional({"x": 1, "z": 2})
 
     with subtests.test("Check prohibited inputs overload w/o additional"):
-        msg = "The initialization for DemoConfig" " was given extraneous inputs"
+        msg = "The initialization for DemoConfig was given extraneous inputs"
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({"x": 1, "z": 2})
         assert demo.config.y == "y"

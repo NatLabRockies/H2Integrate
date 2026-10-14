@@ -3,6 +3,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -35,6 +36,7 @@ class GenericStorageCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class GenericStorageCostModel(CostModelBaseClass):
     """Generic storage cost model for any commodity (electricity, hydrogen, etc.).
 

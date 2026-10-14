@@ -2,6 +2,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -16,6 +17,7 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     in_streams: int = field(default=2)
 
 
+@register(no_cost=True)
 class GenericCombinerPerformanceModel(om.ExplicitComponent):
     """
     Combine any commodity or resource from multiple sources into one output without losses.
@@ -42,6 +44,8 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
         1,
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     _control_classifier = "combiner"
 

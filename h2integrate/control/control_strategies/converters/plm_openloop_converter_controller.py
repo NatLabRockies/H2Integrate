@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
@@ -43,6 +44,7 @@ class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
     )
 
 
+@register
 class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
 

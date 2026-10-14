@@ -105,7 +105,7 @@ class OpenLoopControlBaseConfig(BaseConfig):
         missing = [name for name in required_param_names if getattr(self, name) is None]
         if missing:
             raise ValueError(
-                "Missing required storage configuration parameter(s): " f"{', '.join(missing)}"
+                f"Missing required storage configuration parameter(s): {', '.join(missing)}"
             )
 
         if not self.charge_equals_discharge and self.max_discharge_rate is None:
@@ -164,6 +164,8 @@ class OpenLoopControlBase(om.ExplicitComponent):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)

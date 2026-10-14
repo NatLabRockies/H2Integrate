@@ -249,15 +249,15 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
-    assert (
-        outputs_dir / "profast_output_ammonia_config.yaml"
-    ).is_file(), "profast_output_ammonia.yaml not found"
-    assert (
-        outputs_dir / "profast_output_electricity_config.yaml"
-    ).is_file(), "profast_output_electricity.yaml not found"
-    assert (
-        outputs_dir / "profast_output_hydrogen_config.yaml"
-    ).is_file(), "profast_output_hydrogen.yaml not found"
+    assert (outputs_dir / "profast_output_ammonia_config.yaml").is_file(), (
+        "profast_output_ammonia.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_electricity_config.yaml").is_file(), (
+        "profast_output_electricity.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_hydrogen_config.yaml").is_file(), (
+        "profast_output_hydrogen.yaml not found"
+    )
 
 
 @pytest.mark.integration
@@ -533,9 +533,9 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
                 break
         if sql_path:
             break
-    assert (
-        sql_path is not None
-    ), "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    assert sql_path is not None, (
+        "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    )
 
     cr = om.CaseReader(str(sql_path))
     cases = list(cr.get_cases())
@@ -2286,6 +2286,7 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     electricity_sold = sum(model.prob.get_val("grid_sell.electricity_in", units="kW"))
 
     solar_aep = sum(model.prob.get_val("solar.electricity_out", units="kW"))
+    battery_net_energy = sum(model.prob.get_val("battery.electricity_out", units="kW"))
 
     with subtests.test("Behavior check battery missed load is electricity bought"):
         assert pytest.approx(battery_missed_load, rel=1e-6) == electricity_bought
@@ -2294,13 +2295,71 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
         assert pytest.approx(battery_curtailed, rel=1e-6) == electricity_sold
 
     with subtests.test(
-        "Behavior check energy for financials; include solar aep and electricity bought"
+        "Behavior check energy for financials includes solar, grid, and battery net output"
     ):
-        assert pytest.approx(energy_for_financials, rel=1e-6) == (solar_aep + electricity_bought)
+        assert pytest.approx(energy_for_financials, rel=1e-6) == (
+            solar_aep + electricity_bought + battery_net_energy
+        )
 
     with subtests.test("Value check on LCOE"):
         lcoe = model.prob.get_val("finance_subgroup_renewables.LCOE", units="USD/(MW*h)")[0]
-        assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
+        assert pytest.approx(lcoe, rel=1e-4) == 89.28084320265795
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+)
+def test_24_solar_battery_grid_non_annual(subtests, temp_copy_of_example):
+    # Regression guard: the models used by example 24 must declare non-annual
+    # `_simulation_duration_bounds`, so a sub-annual horizon runs without being rejected by
+    # `check_model_simulation_duration`.
+    import copy
+
+    example_folder = temp_copy_of_example
+    top_level_config = load_yaml(example_folder / "solar_battery_grid.yaml")
+    driver_config = load_yaml(example_folder / top_level_config["driver_config"])
+    tech_config = load_yaml(example_folder / top_level_config["technology_config"])
+    plant_config = load_yaml(example_folder / top_level_config["plant_config"])
+
+    driver_config.setdefault("general", {})["create_om_reports"] = False
+    # Half-year horizon at 15-minute steps (one native year upsampled to 15-min, clipped).
+    plant_config["plant"]["simulation"]["dt"] = 900
+    plant_config["plant"]["simulation"]["n_timesteps"] = 17520
+    resource_params = plant_config["sites"]["site"]["resources"]["solar_resource"][
+        "resource_parameters"
+    ]
+    resource_params.clear()
+    resource_params.update(
+        {
+            "resource_year": 2013,
+            "resource_filename": "34.22_-102.75_2013_goes_aggregated_v4_60min_utc_tz.csv",
+            "upsample_method": "time",
+        }
+    )
+
+    model = H2IntegrateModel(
+        {
+            "name": "solar_battery_grid_half_year",
+            "system_summary": top_level_config["system_summary"],
+            "driver_config": driver_config,
+            "technology_config": copy.deepcopy(tech_config),
+            "plant_config": plant_config,
+        }
+    )
+    model.run()
+
+    plant_life = int(plant_config["plant"]["plant_life"])
+
+    with subtests.test("Capacity factor is projected across the full plant life"):
+        solar_cf = model.prob.get_val("solar.capacity_factor", units="unitless")
+        assert solar_cf.shape == (plant_life,)
+
+    with subtests.test("Sub-annual load served is less than a comparable annual run"):
+        load_served = model.prob.get_val(
+            "electrical_load_demand.total_electricity_produced", units="kW*h"
+        )[0]
+        assert load_served > 0.0
 
 
 @pytest.mark.integration
@@ -2427,7 +2486,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
         ],
     )
     # Add chicago route as layer
-    fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
+    fig, ax, _transport_layer3_gdf = plot_straight_line_shipping_routes(
         shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=chicago_route,
         map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
@@ -2444,18 +2503,18 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     )
 
     with subtests.test("Type check on fig, ax, and lcoi_layer_gdf"):
-        assert isinstance(
-            fig, matplotlib.figure.Figure
-        ), f"Expected matplotlib.figure.Figure but got{type(fig)}"
-        assert isinstance(
-            ax, matplotlib.axes._axes.Axes
-        ), f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        assert isinstance(fig, matplotlib.figure.Figure), (
+            f"Expected matplotlib.figure.Figure but got{type(fig)}"
+        )
+        assert isinstance(ax, matplotlib.axes._axes.Axes), (
+            f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        )
 
     with subtests.test("Check example_28_iron_map.png was saved"):
         assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"

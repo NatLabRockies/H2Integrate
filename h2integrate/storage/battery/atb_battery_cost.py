@@ -4,6 +4,7 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -44,6 +45,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class ATBBatteryCostModel(CostModelBaseClass):
     """This cost model is based on the equations in the "Utility-Scale Battery Storage"
     sheet in the ATB 2024 workbook.
@@ -67,6 +69,8 @@ class ATBBatteryCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model. The ATB
     # cost model is time-step independent (it only uses storage capacity and charge
     # rate), so it accepts any sub-hourly-to-hourly time step.
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = ATBBatteryCostConfig.from_dict(

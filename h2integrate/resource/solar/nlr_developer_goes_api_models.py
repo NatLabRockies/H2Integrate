@@ -1,5 +1,6 @@
 from attrs import field, define, validators
 
+from h2integrate.core.supported_models import register
 from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
 from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
@@ -30,6 +31,7 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
 
 
+@register
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -70,6 +72,7 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
 
 
+@register
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -111,6 +114,7 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
 
 
+@register
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -176,6 +180,7 @@ class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "goes_tgy_v4"
 
 
+@register
 class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
     def setup(self):
         resource_specs = self.helper_setup_method()
@@ -188,4 +193,12 @@ class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
+
         super().setup()

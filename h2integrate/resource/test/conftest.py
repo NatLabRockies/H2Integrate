@@ -4,11 +4,11 @@ import pytest
 
 from h2integrate.resource.utilities.nlr_developer_api_keys import get_nlr_developer_api_credential
 
-from test.conftest import (  # noqa: F401
-    temp_dir,
-    temp_copy_of_example,
-    pytest_collection_modifyitems,
-)
+# ruff: disable[F401]
+from test.conftest import temp_dir, temp_copy_of_example, pytest_collection_modifyitems
+
+
+# ruff: enable[F401]
 
 
 # docs fencepost start: DO NOT REMOVE
@@ -39,6 +39,8 @@ def site_config(which, lat, lon, model, resource_year, model_name):
                 "resource_model": model,
                 "resource_parameters": {
                     "resource_year": resource_year,
+                    "upsample_method": "time",
+                    "downsample_method": "mean",
                 },
             }
         },

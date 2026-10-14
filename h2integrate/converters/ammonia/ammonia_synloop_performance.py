@@ -8,6 +8,7 @@ from h2integrate.core.model_baseclass import (
     ResizeablePerformanceModelBaseClass,
     ResizeablePerformanceModelBaseConfig,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.core.commodity_stream_definitions import add_multivariable_output
 
 
@@ -157,6 +158,7 @@ class AmmoniaSynLoopPerformanceConfig(ResizeablePerformanceModelBaseConfig):
             raise AttributeError(f"`include_warm_start` is True, missing inputs {missing_params}")
 
 
+@register
 class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
     """
     OpenMDAO component modeling the performance of an ammonia synthesis loop.

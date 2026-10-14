@@ -6,7 +6,11 @@ import openmdao.api as om
 
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_control_classifier,
+    check_model_simulation_duration,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -926,6 +930,12 @@ class H2IntegrateModel:
                     comp,
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
+                check_model_simulation_duration(
+                    perf_model,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["n_timesteps"],
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
@@ -968,6 +978,12 @@ class H2IntegrateModel:
                     check_model_time_step(
                         perf_model,
                         comp,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
+                    check_model_simulation_duration(
+                        perf_model,
+                        comp,
+                        self.plant_config["plant"]["simulation"]["n_timesteps"],
                         self.plant_config["plant"]["simulation"]["dt"],
                     )
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
@@ -1050,6 +1066,12 @@ class H2IntegrateModel:
                     comp,
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
+                check_model_simulation_duration(
+                    tech_name,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["n_timesteps"],
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
             1 for v in self.tech_control_classifiers.values() if v != "transport"
@@ -1074,6 +1096,12 @@ class H2IntegrateModel:
         check_model_time_step(
             model_name,
             model_object,
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
+        check_model_simulation_duration(
+            model_name,
+            model_object,
+            self.plant_config["plant"]["simulation"]["n_timesteps"],
             self.plant_config["plant"]["simulation"]["dt"],
         )
 
@@ -1645,6 +1673,12 @@ class H2IntegrateModel:
                     check_model_time_step(
                         transport_type,
                         connection_component,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
+                    check_model_simulation_duration(
+                        transport_type,
+                        connection_component,
+                        self.plant_config["plant"]["simulation"]["n_timesteps"],
                         self.plant_config["plant"]["simulation"]["dt"],
                     )
                     self.plant.add_subsystem(connection_name, connection_component)

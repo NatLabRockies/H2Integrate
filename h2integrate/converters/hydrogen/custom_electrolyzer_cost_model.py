@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
@@ -21,6 +22,7 @@ class CustomElectrolyzerCostModelConfig(CostModelBaseConfig):
     fixed_om_USD_per_kW_per_year: float = field(validator=validators.ge(0))
 
 
+@register
 class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a PEM electrolyzer.

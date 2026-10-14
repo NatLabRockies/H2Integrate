@@ -3,6 +3,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -137,6 +138,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
         return design_dict
 
 
+@register
 class PySAMMarineCostModel(CostModelBaseClass):
     """An OpenMDAO component for calculating the costs associated
     with Marine Hydrokinetic (MHK) energy systems.

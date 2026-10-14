@@ -1,7 +1,9 @@
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.demand.demand_baseclass import DemandComponentBase, DemandComponentBaseConfig
 
 
+@register
 class GenericDemandComponent(DemandComponentBase):
     """Component for for converting input supply into met demand.
 
@@ -17,6 +19,9 @@ class GenericDemandComponent(DemandComponentBase):
     ``tech_config`` dictionary, which must define the demand's
     ``performance_parameters``.
     """
+
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = DemandComponentBaseConfig.from_dict(
