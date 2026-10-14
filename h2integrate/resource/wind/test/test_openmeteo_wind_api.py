@@ -12,7 +12,7 @@ from h2integrate.resource.utilities.download_tools import make_time_index_openme
 
 
 @pytest.mark.unit
-def test_legacy_openmeteo_timestamps_use_standard_time():
+def test_legacy_openmeteo_timestamps_use_standard_time(subtests):
     utc_times = pd.date_range(start="2022-12-31", periods=8810, freq="1h")
     data = pd.DataFrame({"time": utc_times.strftime("%Y-%m-%d %H:%M:%S")})
     index = make_time_index_openmeteo(data, timezone="America/Chicago", lat=44.04218, lon=-95.19757)
