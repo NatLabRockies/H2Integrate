@@ -283,11 +283,11 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 def _regenerate_time_columns_at_dt(
     data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, exclude_leap_day=False
 ):
-    """Regenerate time columns as ``n`` steps of ``dt_seconds`` starting at a timestamp.
+    """Regenerate time columns as ``n_timesteps`` steps of ``dt_seconds`` starting at
+    ``start_timestamp``.
 
     When ``exclude_leap_day`` is True, February 29 is skipped so the regenerated calendar
-    keeps the leap day excluded even at the new timestep (extra steps are generated to make
-    up for the skipped timestamps).
+    keeps the leap day excluded even at the new timestep.
 
     Args:
         data (dict): resource data dictionary whose time column arrays are to be updated.
@@ -334,7 +334,7 @@ def resample_resource_data_to_dt(
 ):
     """Resample resource timeseries from its native timestep to ``target_dt``.
 
-    Resampling is driven by the actual time span of the data (its native timestep, inferred
+    Resampling is driven by the actual time span of the data (its native timestep(s), inferred
     from the time columns), not by the number of timesteps. When the simulation timestep is
     smaller than the native timestep the data is upsampled (finer resolution) using
     `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_;
@@ -372,7 +372,7 @@ def resample_resource_data_to_dt(
     if not present_time_keys:
         msg = (
             "Cannot resample resource data to the simulation timestep because the data has "
-            "no time columns (year/month/day/hour/minute) to determine its native timestep. "
+            "no time columns (year/month/day/hour/minute) to determine its native timestep(s). "
             "Provide resource data that includes time information."
         )
         raise ValueError(msg)

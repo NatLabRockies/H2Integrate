@@ -39,7 +39,7 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | None = field(default=None)
+    resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
 
@@ -89,7 +89,7 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | None = field(default=None)
+    resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
 
@@ -147,7 +147,7 @@ class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [60])
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | None = field(default=None)
+    resource_filename: Path | str = field(default="")
     resource_dir: Path | str | None = field(default=None)
 
     def __attrs_post_init__(self):

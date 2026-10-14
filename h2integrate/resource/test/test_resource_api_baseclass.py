@@ -74,7 +74,7 @@ class FakeResource(ResourceBaseAPIModel):
         self.add_discrete_output("fake_resource_data", val=data, desc="Dict of fake resource data")
 
     def get_data_for_year(
-        self, latitude, longitude, resource_year, resource_filename=None, forced_download=False
+        self, latitude, longitude, resource_year, resource_filename="", forced_download=False
     ):
         # simple method that overwrites get_data_for_year in resource baseclass
         dates = pd.date_range(
@@ -92,7 +92,7 @@ class FakeResource(ResourceBaseAPIModel):
             "ws": np.arange(len(dates), dtype=float),
             "latitude": latitude,
             "longitude": longitude,
-            "filename": resource_filename or "",
+            "filename": resource_filename,
             "forced_download": forced_download,
             "id": 1111,
             "units": {"ws": "m/s"},
@@ -107,7 +107,7 @@ class FakeTMYResource(FakeResource):
         super().setup()
 
     def get_data_for_year(
-        self, latitude, longitude, resource_year, resource_filename=None, forced_download=False
+        self, latitude, longitude, resource_year, resource_filename="", forced_download=False
     ):
         self.requested_resource_years.append((resource_year, resource_filename))
         dates = pd.date_range(start="2001-01-01", periods=8760, freq="1h")
@@ -121,7 +121,7 @@ class FakeTMYResource(FakeResource):
             "ws": np.arange(len(dates), dtype=float),
             "latitude": latitude,
             "longitude": longitude,
-            "filename": resource_filename or "",
+            "filename": resource_filename,
             "forced_download": forced_download,
             "id": 1111,
             "units": {"ws": "m/s"},
@@ -145,21 +145,21 @@ def _setup_resource_component(resource_class, input_config):
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order,expected_msg",
     [
         # Invalid setting with <= 1 year
-        (2015, 8760, False, None, [2015, 2016], "`resource_year_order` is an extran"),
-        (2015, 8760, False, [None], None, "`resource_filename` must be a single"),
-        (2012, 4380, False, None, [2012], "`resource_year_order` is an extran"),
-        (2012, 8784, True, [None], None, "`resource_filename` must be a single"),
+        (2015, 8760, False, "", [2015, 2016], "`resource_year_order` is an extran"),
+        (2015, 8760, False, [""], None, "`resource_filename` must be a single"),
+        (2012, 4380, False, "", [2012], "`resource_year_order` is an extran"),
+        (2012, 8784, True, [""], None, "`resource_filename` must be a single"),
         # Not enough inputs
-        (2012, 17520, False, None, [2012], "2 resource years are req"),
-        (2012, 17520, False, [None], None, "2 resource filenames are req"),
+        (2012, 17520, False, "", [2012], "2 resource years are req"),
+        (2012, 17520, False, [""], None, "2 resource filenames are req"),
         # Too many inputs
-        (2012, 17520, False, None, [2012, 2012, 2012], "2 resource years are req"),
-        (2012, 17520, False, [None, None, None], None, "2 resource filenames are req"),
+        (2012, 17520, False, "", [2012, 2012, 2012], "2 resource years are req"),
+        (2012, 17520, False, ["", "", ""], None, "2 resource filenames are req"),
         # Invalid combination for filename and year order
         (2012, 17520, False, "f.csv", [2012, 2013], "_filename` cannot be a single"),
         (2012, 17520, False, ["f.csv"], [2012, 2013], "must be the same length"),
         (2012, 17520, False, ["a", "b", "c"], [2012, 2013, 2014], "elements but 2 are requi"),
-        (2019, 26280, False, None, None, "Not enough future resource years"),
+        (2019, 26280, False, "", None, "Not enough future resource years"),
         (2012, 17520, False, "f.csv", None, "A single `resource_filename` (f.csv)"),
     ],
     ids=[
@@ -203,8 +203,8 @@ def test_setup_errors(input_config, expected_msg):
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order,expected_years",
     [
-        (2018, 26280, False, None, None, [2018, 2019, 2020]),
-        (2019, 17544, True, None, None, [2019, 2020]),
+        (2018, 26280, False, "", None, [2018, 2019, 2020]),
+        (2019, 17544, True, "", None, [2019, 2020]),
     ],
 )
 def test_get_resource_years_from_start_year(input_config, expected_years):
@@ -216,7 +216,7 @@ def test_get_resource_years_from_start_year(input_config, expected_years):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [(2020, 8760, False, None, None)],
+    [(2020, 8760, False, "", None)],
 )
 def test_get_resource_years_from_start_year_insufficient_years(input_config):
     _, comp = _setup_resource_component(FakeResource, input_config)
@@ -229,7 +229,7 @@ def test_get_resource_years_from_start_year_insufficient_years(input_config):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [("tmy-2020", 17520, False, None, None)],
+    [("tmy-2020", 17520, False, "", None)],
 )
 def test_get_resource_years_from_start_year_tmy(input_config):
     _, comp = _setup_resource_component(FakeTMYResource, input_config)
@@ -240,7 +240,7 @@ def test_get_resource_years_from_start_year_tmy(input_config):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [(2012, 8760, False, None, None)],
+    [(2012, 8760, False, "", None)],
 )
 def test_check_resource_year(input_config):
     _, comp = _setup_resource_component(FakeResource, input_config)
@@ -253,7 +253,7 @@ def test_check_resource_year(input_config):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [("tmy-2020", 8760, False, None, None)],
+    [("tmy-2020", 8760, False, "", None)],
 )
 def test_check_resource_year_tmy(input_config):
     _, comp = _setup_resource_component(FakeTMYResource, input_config)
@@ -284,7 +284,7 @@ def test_get_data_infers_tmy_years_from_filenames(input_config):
 
     data = comp.get_data(35.0, -100.0, first_call=False)
 
-    assert comp.requested_resource_years[-2:] == [("tmy-2020", None), ("tmy-2021", None)]
+    assert comp.requested_resource_years[-2:] == [("tmy-2020", ""), ("tmy-2021", "")]
     assert len(data["year"]) == 17520
 
 
@@ -303,7 +303,7 @@ def test_get_data_tmy_filenames_require_years_for_site_change(input_config):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [(2013, 2, False, None, None)],
+    [(2013, 2, False, "", None)],
 )
 def test_process_final_resource_data(subtests, input_config):
     input_config["plant"]["simulation"]["dt"] = 172800
@@ -340,7 +340,7 @@ def test_process_final_resource_data(subtests, input_config):
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [(2012, 8760, False, None, None)],
+    [(2012, 8760, False, "", None)],
 )
 def test_get_data_for_year_loads_and_forces_download(input_config, monkeypatch, tmp_path):
     _, comp = _setup_resource_component(FakeResource, input_config)
@@ -380,7 +380,7 @@ def test_get_data_for_year_loads_and_forces_download(input_config, monkeypatch, 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
-    [(2012, 8760, False, None, None)],
+    [(2012, 8760, False, "", None)],
 )
 def test_get_data_for_year_warns_and_raises_on_download_failure(
     input_config, monkeypatch, tmp_path
@@ -458,7 +458,7 @@ def test_get_data_filenames(subtests, input_config):
     with subtests.test("Data length"):
         assert len(data_site1["year"]) == 17544
 
-    # Run again without changing site, make sure filename is still "" (no filename requested)
+    # Run again without changing site, make sure filename is still ""
     prob.run_model()
     with subtests.test("Third filename"):
         assert prob.get_val("resource.fake_resource_data")["filename"] == ""
