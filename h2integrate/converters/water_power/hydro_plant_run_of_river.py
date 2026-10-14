@@ -7,6 +7,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -30,6 +31,7 @@ class RunOfRiverHydroPerformanceConfig(BaseConfig):
     head: float = field()
 
 
+@register
 class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a run-of-river hydropower plant.
@@ -108,6 +110,7 @@ class RunOfRiverHydroCostConfig(CostModelBaseConfig):
     operational_cost_usd_per_kw_year: float = field()
 
 
+@register
 class RunOfRiverHydroCostModel(CostModelBaseClass):
     """
     An OpenMDAO component that calculates the capital expenditure (CapEx) for a run-of-river

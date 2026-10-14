@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -62,6 +63,7 @@ class GenericConverterCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class GenericConverterCostModel(CostModelBaseClass):
     _time_step_bounds = (
         3600,

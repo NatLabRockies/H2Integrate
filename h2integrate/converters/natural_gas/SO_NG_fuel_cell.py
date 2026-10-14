@@ -5,6 +5,7 @@ from openmdao.utils import units
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, LHV_CH4_MJ_PER_KG, faraday
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -69,6 +70,7 @@ def calc_current(system_power_reference, cell_area, n_cells, n_stacks):
     return stack_current, V_J_curve
 
 
+@register
 class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a solid oxide natural gas fuel cell.

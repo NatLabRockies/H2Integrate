@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
@@ -23,6 +24,7 @@ class SingliticoCostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2021, converter=int, validator=validators.in_([2021]))
 
 
+@register
 class SingliticoCostModel(ElectrolyzerCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a PEM electrolyzer.

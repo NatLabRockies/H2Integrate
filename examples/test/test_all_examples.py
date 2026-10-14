@@ -249,15 +249,15 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
-    assert (
-        outputs_dir / "profast_output_ammonia_config.yaml"
-    ).is_file(), "profast_output_ammonia.yaml not found"
-    assert (
-        outputs_dir / "profast_output_electricity_config.yaml"
-    ).is_file(), "profast_output_electricity.yaml not found"
-    assert (
-        outputs_dir / "profast_output_hydrogen_config.yaml"
-    ).is_file(), "profast_output_hydrogen.yaml not found"
+    assert (outputs_dir / "profast_output_ammonia_config.yaml").is_file(), (
+        "profast_output_ammonia.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_electricity_config.yaml").is_file(), (
+        "profast_output_electricity.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_hydrogen_config.yaml").is_file(), (
+        "profast_output_hydrogen.yaml not found"
+    )
 
 
 @pytest.mark.integration
@@ -533,9 +533,9 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
                 break
         if sql_path:
             break
-    assert (
-        sql_path is not None
-    ), "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    assert sql_path is not None, (
+        "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    )
 
     cr = om.CaseReader(str(sql_path))
     cases = list(cr.get_cases())
@@ -2427,7 +2427,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
         ],
     )
     # Add chicago route as layer
-    fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
+    fig, ax, _transport_layer3_gdf = plot_straight_line_shipping_routes(
         shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=chicago_route,
         map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
@@ -2444,18 +2444,18 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     )
 
     with subtests.test("Type check on fig, ax, and lcoi_layer_gdf"):
-        assert isinstance(
-            fig, matplotlib.figure.Figure
-        ), f"Expected matplotlib.figure.Figure but got{type(fig)}"
-        assert isinstance(
-            ax, matplotlib.axes._axes.Axes
-        ), f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        assert isinstance(fig, matplotlib.figure.Figure), (
+            f"Expected matplotlib.figure.Figure but got{type(fig)}"
+        )
+        assert isinstance(ax, matplotlib.axes._axes.Axes), (
+            f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        )
 
     with subtests.test("Check example_28_iron_map.png was saved"):
         assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"

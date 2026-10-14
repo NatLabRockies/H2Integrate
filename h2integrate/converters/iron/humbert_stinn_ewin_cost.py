@@ -22,6 +22,7 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.tools.constants import FE_MW, faraday
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define
@@ -61,6 +62,7 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
     annual_labor_hours_per_position: int | float = field(default=2000)
 
 
+@register
 class HumbertStinnEwinCostComponent(CostModelBaseClass):
     """OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
 

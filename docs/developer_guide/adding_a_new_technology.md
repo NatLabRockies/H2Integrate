@@ -176,39 +176,27 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_output('efficiency', val=0.0, desc='Average efficiency of the electrolyzer')
 ```
 
-## Add the new technology to the `supported_models.py` file
-This file contains the registry of every technology available in H2Integrate.
-Add your new technology with the appropriate key depending on whether it is a performance, cost, control, or financial model.
-
-```{important}
-Use a string version of the class name as the dictionary key. This greatly simplifies debugging configuration issues and improves model findability in the documentation and code.
-```
-
-The registry uses lazy imports to decrease computational overhead: each value is a
-`"relative.module.path:ClassName"` string relative to the `h2integrate`
-package, and the class is imported the first time it is accessed. Here's what
-the updated `supported_models.py` looks like with the new solar entries:
+## Register the new technology with `@register`
+Decorate every model class (performance, cost, control, dispatch, resource, or finance) with `register` from `h2integrate/core/supported_models.py`:
 
 ```python
-supported_models = _ModelRegistry(
-    {
-        # ...
-        "PYSAMSolarPlantPerformanceModel": "converters.solar:PYSAMSolarPlantPerformanceModel",
-        "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
-        "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
-        "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
-        # ...
-    }
-)
+from h2integrate.core.supported_models import register
+
+
+@register
+class SolarPerformanceModel(PerformanceModelBaseClass):
+    ...
 ```
 
-For the import to resolve, also export your class from the relevant subpackage
-`__init__.py` (for example, `h2integrate/converters/solar/__init__.py`).
+The model is registered under its class name, which is the name used in YAML and in its `{ModelName}Config` class. Optional keyword arguments:
 
-The registry key is the model name used in YAML. Keep it aligned with the model
-class name and use the same complete name when naming its configuration class:
-`{ModelName}Config`. This applies independently to performance, cost, control,
-dispatch, and finance models.
+- `name`: register under a different name (for example, the `cable` and `pipe` transporters).
+- `no_cost=True`: the model does not contribute costs to the finance stackup.
+- `no_replacement_schedule=True`: the model has no `replacement_schedule` output.
+
+```{important}
+The registry finds models by scanning the source as text, so each model's module is only imported when the model is used. Put `@register` directly above the `class` definition line.
+```
 
 ## More complex cases
 

@@ -6,6 +6,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     ResizeablePerformanceModelBaseConfig,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
     ElectrolyzerCostBaseClass,
@@ -38,6 +39,7 @@ class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     turndown_ratio: float = field(default=0.1, validator=validators.gt(0))
 
 
+@register
 class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """A simplified high-temperature steam electrolysis (HTSE) model.
 
@@ -283,6 +285,7 @@ class HTSECostModelConfig(CostModelBaseConfig):
             self.fixed_opex = 0.0 if self.fixed_capex is None else float(self.fixed_capex)
 
 
+@register
 class HTSECostModel(ElectrolyzerCostBaseClass):
     """A simple size-based cost model for HTSE.
 

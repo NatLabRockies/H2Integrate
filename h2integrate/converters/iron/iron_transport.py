@@ -9,6 +9,7 @@ from geopy import distance
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 
@@ -27,6 +28,7 @@ class IronTransportPerformanceComponentConfig(BaseConfig):
             raise ValueError(msg)
 
 
+@register(no_replacement_schedule=True)
 class IronTransportPerformanceComponent(om.ExplicitComponent):
     _time_step_bounds = (
         3600,
@@ -167,6 +169,7 @@ class IronTransportCostComponentConfig(BaseConfig):
     marginal_cost: float = field(default=0.0)
 
 
+@register
 class IronTransportCostComponent(CostModelBaseClass):
     _time_step_bounds = (
         3600,

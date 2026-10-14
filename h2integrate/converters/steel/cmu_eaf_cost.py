@@ -2,6 +2,7 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -46,6 +47,7 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
     cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
+@register
 class CMUElectricArcFurnaceCostModel(CostModelBaseClass):
     """
     OpenMDAO component for calculating electric arc furnace capital and operating

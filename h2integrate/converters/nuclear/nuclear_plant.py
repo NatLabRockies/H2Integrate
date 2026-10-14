@@ -7,6 +7,7 @@ from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -20,6 +21,7 @@ class QuinnNuclearPerformanceModelConfig(BaseConfig):
     system_capacity_kw: float = field(validator=validators.gt(0))
 
 
+@register
 class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     """
     Simple nuclear performance model producing electricity.
@@ -116,6 +118,7 @@ class QuinnNuclearCostModelConfig(CostModelBaseConfig):
             raise ValueError("reference_capacity_kw must be greater than zero")
 
 
+@register
 class QuinnNuclearCostModel(CostModelBaseClass):
     """
     Cost model for nuclear power plants.

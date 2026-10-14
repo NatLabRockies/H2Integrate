@@ -29,8 +29,9 @@ class ExamplePerformanceModelConfig(BaseConfig):
 	...
 ```
 
-The model should instantiate that class in `setup()`. Keep the model name used
-in `supported_models.py` unchanged when renaming or clarifying a configuration
+The model should instantiate that class in `setup()`. Keep the registered model
+name (the class name, or the `name` passed to `@register`) unchanged when
+renaming or clarifying a configuration
 class, because that model name is part of the YAML interface. Models that
 intentionally share a base configuration may retain a base config class, but
 the model-specific class should still be used when the fields or semantics

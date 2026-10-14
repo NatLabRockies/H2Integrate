@@ -80,7 +80,7 @@ def test_EIANaturalGasFeedstockConfig(subtests, EIA_API_key_file):
 def test_EIANaturalGasFeedstockConfig_with_dir(subtests, EIA_API_key_file):
     """Tests a failed API for basic parameterizations."""
 
-    good_api_fn, bad_api_fn = EIA_API_key_file
+    good_api_fn, _bad_api_fn = EIA_API_key_file
 
     ng_feedstock = EIANaturalGasFeedstockConfig(
         resource_year=2022,
