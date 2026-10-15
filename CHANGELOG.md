@@ -6,6 +6,7 @@
 - Add data resampling capabilities via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Add core framework support for non-annual simulation durations. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 - Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR 936](https://github.com/NatLabRockies/H2Integrate/pull/936)
+- Add SimSES battery model including degradation and thermal modeling. [PR 937](https://github.com/NatLabRockies/H2Integrate/pull/937)
 
 ## 0.10.0 [October 12, 2026]
 
