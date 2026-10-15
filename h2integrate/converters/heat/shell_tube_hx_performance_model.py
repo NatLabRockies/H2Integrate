@@ -1,5 +1,6 @@
 from math import log
 from pathlib import Path
+from functools import partial
 
 import numpy as np
 import openmdao.api as om
@@ -30,8 +31,8 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
         working_fluid_temp_C: Default working (shell-side) inlet temperature in degC.
         process_fluid_mass_flow_kg_s: Default process mass flow rate in kg/s.
         working_fluid_mass_flow_kg_s: Default working mass flow rate in kg/s.
-        process_fluid_pressure_bar: Default process inlet pressure in bar.
-        working_fluid_pressure_bar: Default working inlet pressure in bar.
+        process_fluid_pressure_bar: Default process inlet pressure in bar. Defaults to 1.0.
+        working_fluid_pressure_bar: Default working inlet pressure in bar. Defaults to 1.0.
         N_tubes: Number of tubes in the heat exchanger.
         N_passes: Number of tube passes.
         L_tube_m: Length of each tube in meters.
@@ -39,42 +40,50 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
         t_wall_m: Wall thickness of the tubes in meters.
         D_shell_m: Diameter of the shell in meters.
         tube_material: Material of the tubes in the heat exchanger. Possible values are:
-            "carbon_steel", "stainless_304", "copper".
+            "carbon_steel", "stainless_304", "copper". Defaults to "carbon_steel".
         shell_material: Material of the shell in the heat exchanger. Possible values are:
-            "carbon_steel", "stainless_304", "copper".
-        process_fluid_name: CoolProp fluid name for the process stream.
-        working_fluid_name: CoolProp fluid name for the working stream.
+            "carbon_steel", "stainless_304", "copper". Defaults to "carbon_steel".
+        process_fluid_name: CoolProp fluid name for the process stream. Defaults to "Water".
+        working_fluid_name: CoolProp fluid name for the working stream. Defaults to "Water".
         k_wall_W_mK: Tube wall thermal conductivity in W/m-K. If None, the value
-            is taken from ``tube_material``.
-        t_shell_m: Shell wall thickness in meters.
-        N_seg: Number of axial segments used to discretize the HX.
-        R_fi_m2K_W: Tube-side (inner) fouling resistance in m^2-K/W.
-        R_fo_m2K_W: Shell-side (outer) fouling resistance in m^2-K/W.
-        pitch_m: Tube pitch in meters. If None, defaults to ``1.1 * D_o_m``.
-        baffle_spacing_m: Shell-side baffle spacing in meters.
-        baffle_cut: Baffle cut as a fraction of the shell diameter (0-1).
+            is taken from ``tube_material``. Defaults to None.
+        t_shell_m: Shell wall thickness in meters. Defaults to 0.02.
+        N_seg: Number of axial segments used to discretize the HX. Defaults to 20.
+        R_fi_m2K_W: Tube-side (inner) fouling resistance in m^2-K/W. Defaults to 1e-4.
+        R_fo_m2K_W: Shell-side (outer) fouling resistance in m^2-K/W. Defaults to 2e-4.
+        pitch_m: Tube pitch in meters. If None, ``1.1 * D_o_m`` is used. Defaults to None.
+        baffle_spacing_m: Shell-side baffle spacing in meters. Defaults to 0.20.
+        baffle_cut: Baffle cut as a fraction of the shell diameter (0-1). Defaults to 0.20.
         layout: Tube layout. Possible values are: "triangular", "square".
+            Defaults to "triangular".
         shell_model: Shell-side heat transfer correlation. Possible values are:
             "kern", "bell_delaware" (currently a placeholder equal to Kern).
+            Defaults to "kern".
         F_shell: Correction factor applied to the shell-side heat transfer coefficient.
+            Defaults to 0.8.
         use_SiederTate_tube: Whether to use the Sieder-Tate correlation for turbulent
-            tube-side flow (otherwise Dittus-Boelter).
+            tube-side flow (otherwise Dittus-Boelter). Defaults to True.
         use_wall_viscosity_correction: Whether to apply the wall viscosity correction
-            in the Sieder-Tate correlation.
-        Re_laminar_max: Upper Reynolds number limit for laminar flow.
-        Re_turb_min: Lower Reynolds number limit for turbulent flow.
-        eta_pump: Pump efficiency (0-1] used to compute pumping power.
+            in the Sieder-Tate correlation. Defaults to True.
+        Re_laminar_max: Upper Reynolds number limit for laminar flow. Defaults to 2300.
+        Re_turb_min: Lower Reynolds number limit for turbulent flow. Defaults to 4000.
+        eta_pump: Pump efficiency (0-1] used to compute pumping power. Defaults to 0.7.
         U_loss_W_m2K: Overall heat loss coefficient from shell to ambient in W/m^2-K.
-        T_amb_C: Ambient temperature for shell heat loss in degC.
+            Defaults to 0.0 (adiabatic shell).
+        T_amb_C: Ambient temperature for shell heat loss in degC. Defaults to 25.0.
         T0_env_K: Dead-state (environment) temperature for exergy analysis in K.
+            Defaults to 298.15.
         pinch_threshold_K: Minimum temperature approach below which a pinch warning
-            is flagged, in K.
+            is flagged, in K. Defaults to 3.0.
         fzero_tol: Convergence tolerance for the shooting-method bisection.
+            Defaults to 1e-6.
         fzero_maxit: Maximum number of iterations for the shooting-method bisection.
-        enable_plot: Whether to enable plotting of the HX performance.
-        plot_dir: Directory to save plots if plotting is enabled.
-        show_plot: Whether to display plots interactively.
+            Defaults to 50.
+        enable_plot: Whether to enable plotting of the HX performance. Defaults to False.
+        plot_dir: Directory to save plots if plotting is enabled. Defaults to None.
+        show_plot: Whether to display plots interactively. Defaults to False.
         print_summary: Whether to print a detailed summary at each timestep.
+            Defaults to False.
     """
 
     process_fluid_temp_C: float = field(validator=validators.gt(0))
@@ -197,9 +206,15 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "total_heat_transfer_rate", units="kW", desc="Total heat transfer rate", **ts
         )
-        self.add_output("hx_effectiveness", units="unitless", desc="Effectiveness of the heat exchanger", **ts)
-        self.add_output("number_of_transfer_units", units="unitless", desc="Number of transfer units", **ts)
-        self.add_output("heat_capacity_rate_ratio", units="unitless", desc="Heat capacity rate ratio", **ts)
+        self.add_output(
+            "hx_effectiveness", units="unitless", desc="Effectiveness of the heat exchanger", **ts
+        )
+        self.add_output(
+            "number_of_transfer_units", units="unitless", desc="Number of transfer units", **ts
+        )
+        self.add_output(
+            "heat_capacity_rate_ratio", units="unitless", desc="Heat capacity rate ratio", **ts
+        )
         self.add_output(
             "overall_heat_transfer_coefficient",
             units="W/m**2/K",
@@ -222,7 +237,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "entropy_generation_rate", units="W/K", desc="Entropy generation rate", **ts
         )
-        self.add_output("exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts)
+        self.add_output(
+            "exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts
+        )
         self.add_output(
             "roles_swapped",
             units="unitless",
@@ -235,7 +252,19 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             **ts,
         )
 
+    # ----------------------------------------------------------------------
+    # 1) Main HX model
+    # ----------------------------------------------------------------------
     def compute(self, inputs, outputs):
+        """
+        Steady-state shell-and-tube heat exchanger model, solved independently at
+        each timestep.
+
+        Geometry, material, and solver settings are taken from ``self.config``.
+        The per-timestep stream state (inlet mass flow, temperature, and pressure)
+        is taken from the multivariable-stream inputs.
+        """
+        cfg = self.config
         n = self.n_timesteps
 
         m_dot_process = inputs["process_fluid:mass_flow_in"]
@@ -245,292 +274,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         m_dot_working = inputs["working_fluid:mass_flow_in"]
         T_working = inputs["working_fluid:temperature_in"]
         P_working = inputs["working_fluid:pressure_in"]
-
-        # Fluid property functions built once per timestep (pressure varies)
-        for i in range(n):
-            # Fluid-property callables at this timestep's inlet pressures
-            fluid_process_fun = self.make_coolprop_fluid(
-                fluid_name=self.config.process_fluid_name,
-                P_bar=float(P_process[i]),
-            )
-            fluid_working_fun = self.make_coolprop_fluid(
-                fluid_name=self.config.working_fluid_name,
-                P_bar=float(P_working[i]),
-            )
-
-            # ---- Role-swap safeguard ----
-            # The steady solver assumes ``hot`` enters warmer than ``cold``
-            # (its LMTD bisection requires dT > 0 throughout). The nominal
-            # assignment is process → hot (tube side), working → cold (shell
-            # side). When the working fluid enters hotter than the process
-            # fluid we swap the two streams' roles for this timestep so the
-            # solver still converges; the swap is undone when writing the
-            # outputs back to the process/working streams. This means the
-            # tube-side vs shell-side geometry is applied to whichever
-            # stream is hotter at that timestep — an explicit modeling
-            # assumption for design-oriented HX studies.
-            swap = float(T_working[i]) > float(T_process[i])
-
-            if swap:
-                (T_hot, m_dot_hot, fluid_hot_fun) = (
-                    float(T_working[i]),
-                    float(m_dot_working[i]),
-                    fluid_working_fun,
-                )
-                (T_cold, m_dot_cold, fluid_cold_fun) = (
-                    float(T_process[i]),
-                    float(m_dot_process[i]),
-                    fluid_process_fun,
-                )
-            else:
-                (T_hot, m_dot_hot, fluid_hot_fun) = (
-                    float(T_process[i]),
-                    float(m_dot_process[i]),
-                    fluid_process_fun,
-                )
-                (T_cold, m_dot_cold, fluid_cold_fun) = (
-                    float(T_working[i]),
-                    float(m_dot_working[i]),
-                    fluid_working_fun,
-                )
-
-            params = {
-                "temp_hot_in": T_hot,
-                "temp_cold_in": T_cold,
-                "mass_flow_rate_hot": m_dot_hot,
-                "mass_flow_rate_cold": m_dot_cold,
-                "fluid_hot": fluid_hot_fun,
-                "fluid_cold": fluid_cold_fun,
-            }
-
-            res = self.hx_shell_tube_steady(params)
-
-            # Solver-frame results
-            T_hot_out = float(res["Th"][-1])
-            T_cold_out = float(res["Tc"][0])
-            dp_tube_total = float(res["dp_tube_total"])
-            dp_shell_total = float(res["dp_shell_total"])
-
-            # Map solver-frame results back to the process/working streams.
-            # The "tube" pressure drop belongs to whichever stream was routed
-            # into the hot role; the "shell" drop belongs to the cold role.
-            if swap:
-                T_process_out = T_cold_out
-                T_working_out = T_hot_out
-                dp_process = dp_shell_total
-                dp_working = dp_tube_total
-            else:
-                T_process_out = T_hot_out
-                T_working_out = T_cold_out
-                dp_process = dp_tube_total
-                dp_working = dp_shell_total
-
-            if self.config.enable_plot:
-                self.plot_results(
-                    res,
-                    label=f"timestep_{i}",
-                    save_dir=self.config.plot_dir,
-                    show=self.config.show_plot,
-                )
-
-            if self.config.print_summary:
-                self.print_summary(res)
-
-            # Outlet multivariable-stream values
-            outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
-            outputs["process_fluid:temperature_out"][i] = T_process_out
-            # Convert Pa drop back into a bar-scale pressure decrement
-            outputs["process_fluid:pressure_out"][i] = float(P_process[i]) - dp_process / 1e5
-
-            outputs["working_fluid:mass_flow_out"][i] = float(m_dot_working[i])
-            outputs["working_fluid:temperature_out"][i] = T_working_out
-            outputs["working_fluid:pressure_out"][i] = float(P_working[i]) - dp_working / 1e5
-
-            # Diagnostic time-series outputs
-            outputs["total_heat_transfer_rate"][i] = float(res["Q_total"]) / 1e3
-            outputs["hx_effectiveness"][i] = float(res["epsilon"])
-            outputs["number_of_transfer_units"][i] = float(res["NTU"])
-            outputs["heat_capacity_rate_ratio"][i] = float(res["C_r"])
-            outputs["overall_heat_transfer_coefficient"][i] = float(res["U_global"])
-            outputs["pressure_drop_process_fluid"][i] = dp_process
-            outputs["pressure_drop_working_fluid"][i] = dp_working
-            outputs["pump_power"][i] = float(res["P_pump_total"]) / 1e3
-            outputs["entropy_generation_rate"][i] = float(res["S_gen_dot"])
-            outputs["exergy_destruction_rate"][i] = float(res["Ex_dest_dot"]) / 1e3
-            outputs["roles_swapped"][i] = 1.0 if swap else 0.0
-
-    # ----------------------------------------------------------------------
-    # 1) CoolProp-based generic fluid properties
-    # ----------------------------------------------------------------------
-    def make_coolprop_fluid(self, fluid_name="Water", P_bar=1.0):
-        """
-        Returns a function fluid_fun(T_c) that uses CoolProp for fluid properties.
-
-        Inputs:
-            fluid_name (str): CoolProp fluid name, e.g. 'Water', 'Ethanol', 'R134a', 'MEG', etc.
-            P_bar (float): Operating pressure in bar (absolute). Converted internally to Pa.
-
-        Outputs:
-            fluid_fun (callable):  fluid_fun(T_c) -> dict(rho, mu, cp, k, Pr)
-                where T_c is in degC and properties are SI units:
-                - rho : density [kg/m^3]
-                - mu  : dynamic viscosity [Pa·s]
-                - cp  : specific heat at constant pressure [J/kg-K]
-                - k   : thermal conductivity [W/m-K]
-                - Pr  : Prandtl number [-]
-        """
-        P_Pa = P_bar * 1e5  # bar -> Pa
-
-        def fluid_fun(T_c):
-            T_c_arr = np.asarray(T_c, dtype=float)
-            T_K = T_c_arr + 273.15
-
-            rho = PropsSI("D", "T", T_K, "P", P_Pa, fluid_name)  # density [kg/m^3]
-            mu = PropsSI("V", "T", T_K, "P", P_Pa, fluid_name)  # dyn. visc. [Pa·s]
-            cp_ = PropsSI("C", "T", T_K, "P", P_Pa, fluid_name)  # cp [J/kg-K]
-            k = PropsSI("L", "T", T_K, "P", P_Pa, fluid_name)  # k [W/m-K]
-            Pr = PropsSI("Prandtl", "T", T_K, "P", P_Pa, fluid_name)  # Pr [-]
-
-            return {"rho": rho, "mu": mu, "cp": cp_, "k": k, "Pr": Pr}
-
-        return fluid_fun
-
-    # ----------------------------------------------------------------------
-    # 2) Metal properties, helper functions
-    # ----------------------------------------------------------------------
-    def metal_props(self, name: str):
-        """
-        Returns thermal conductivity (k), density (rho), and specific heat (cp) for common metals.
-
-        Returns:
-            tuple[float, float, float]:
-                - k: thermal conductivity [W/m-K]
-                - rho: density [kg/m^3]
-                - cp: specific heat [J/kg-K]
-        """
-        key = name.lower().replace(" ", "_")
-        if key == "carbon_steel":
-            return 45.0, 7850.0, 480.0
-        elif key == "stainless_304":
-            return 16.0, 8000.0, 500.0
-        elif key == "copper":
-            return 390.0, 8960.0, 385.0
-        else:
-            # default carbon steel
-            return 45.0, 7850.0, 480.0
-
-    def LMTD_calc(self, dT1, dT2):
-        """
-        Calculate the Log Mean Temperature Difference (LMTD) for a heat exchanger.
-        """
-        if dT1 <= 0 or dT2 <= 0:
-            raise ValueError("Non-positive temperature difference in LMTD_calc.")
-        if abs(dT1 - dT2) < 1e-6:
-            return 0.5 * (dT1 + dT2)
-        return (dT1 - dT2) / log(dT1 / dT2)
-
-    def classify_regime(self, Re_min, Re_max, Re_laminar_max, Re_turb_min):
-        """
-        Classify the flow regime based on Reynolds number.
-        """
-        if Re_max < Re_laminar_max:
-            return "laminar"
-        elif Re_min > Re_turb_min:
-            return "turbulent"
-        else:
-            return "transition"
-
-    def shell_h_local(self, cold_props, m_dot_c, geom, shell, F_shell, model):
-        """
-        Calculate the local shell-side heat transfer coefficient using the specified model.
-        """
-        S_m = geom["S_m"]
-        D_o = geom["D_o"]
-        p_t = shell["pitch"]
-        D_e = 4.0 * (p_t**2 - np.pi * D_o**2 / 4.0) / (np.pi * D_o)
-
-        G_s = m_dot_c / S_m
-        Re_s = G_s * D_e / cold_props["mu"]
-        Pr_c = cold_props["cp"] * cold_props["mu"] / cold_props["k"]
-
-        model_l = model.lower()
-        if model_l == "kern":
-            if Re_s < 2000.0:
-                L_char = max(1e-6, shell["baffle_spacing"])
-                Nu_fd = 3.66
-                Gz_s = Re_s * Pr_c * D_e / L_char
-                Nu_s = Nu_fd * (1.0 - np.exp(-Gz_s / 20.0))
-                Nu_s = max(1.0, min(Nu_fd, Nu_s))
-            else:
-                Nu_s = 0.36 * Re_s**0.55 * Pr_c ** (1.0 / 3.0)
-        elif model_l == "bell_delaware":
-            # Placeholder: same as Kern, can refine later
-            if Re_s < 2000.0:
-                L_char = max(1e-6, shell["baffle_spacing"])
-                Nu_fd = 3.66
-                Gz_s = Re_s * Pr_c * D_e / L_char
-                Nu_s = Nu_fd * (1.0 - np.exp(-Gz_s / 20.0))
-                Nu_s = max(1.0, min(Nu_fd, Nu_s))
-            else:
-                Nu_s = 0.36 * Re_s**0.55 * Pr_c ** (1.0 / 3.0)
-        else:
-            raise ValueError(f"Unknown shell_model '{model}'")
-
-        h_o = Nu_s * cold_props["k"] / D_e
-        h_o *= F_shell
-        return h_o, Re_s, Nu_s
-
-    def shell_dp_Kern(self, m_dot_c, cold_props, geom, shell):
-        """
-        Calculate the pressure drop on the shell side using the Kern method.
-        """
-        S_m = geom["S_m"]
-        D_o = geom["D_o"]
-        p_t = shell["pitch"]
-        D_e = 4.0 * (p_t**2 - np.pi * D_o**2 / 4.0) / (np.pi * D_o)
-
-        G_s = m_dot_c / S_m
-        Re_s = G_s * D_e / cold_props["mu"]
-
-        if Re_s < 2000.0:
-            f_s = 64.0 / Re_s
-        else:
-            f_s = 0.14 * Re_s ** (-0.2)
-
-        N_b = max(1, int(geom["L_tube"] / shell["baffle_spacing"]) - 1)
-        dp_shell = 4.0 * f_s * (G_s**2 / (2.0 * cold_props["rho"])) * N_b
-        return dp_shell
-
-    # ----------------------------------------------------------------------
-    # 3) Main HX model
-    # ----------------------------------------------------------------------
-    def hx_shell_tube_steady(self, params=None):
-        """
-        Steady-state shell-and-tube heat exchanger model.
-
-        ``params`` carries the per-timestep stream state (inlet temperatures,
-        mass flow rates, and fluid-property callables). All geometry, material,
-        and solver settings are taken from ``self.config``.
-        """
-        cfg = self.config
-
-        # Default fluids (both sides = liquid water @ 1 bar)
-        DEFAULT_WATER_FLUID = self.make_coolprop_fluid("Water", P_bar=1.0)
-
-        if params is None:
-            params = {}
-        get = params.get
-
-        # Inlet temps [°C] and mass flow rates [kg/s]
-        # Taken as inputs from multivariable commodity streams
-        Th_in = float(get("temp_hot_in", 90.0))
-        Tc_in = float(get("temp_cold_in", 30.0))
-        m_dot_h = float(get("mass_flow_rate_hot", 18.0))
-        m_dot_c = float(get("mass_flow_rate_cold", 40.0))
-
-        # Property functions (now CoolProp-based by default)
-        fluid_hot_fun = get("fluid_hot", DEFAULT_WATER_FLUID)
-        fluid_cold_fun = get("fluid_cold", DEFAULT_WATER_FLUID)
 
         # Geometry
         N_tubes = int(cfg.N_tubes)
@@ -636,117 +379,82 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         geom["A_shell_outer_seg"] = geom["A_shell_outer_total"] / N_seg
 
         # ------------------------------------------------------------------
-        # Shooting for counter-current
+        # Per-timestep steady solve
         # ------------------------------------------------------------------
-        Tc_out0_min = Tc_in + 1e-3
-        Tc_out0_max = Th_in - 1e-3
-        Tc_out0_guess = Tc_in + 0.7 * (Th_in - Tc_in)
+        for i in range(n):
+            # Fluid-property callables at this timestep's inlet pressures
+            fluid_process_fun = self.make_coolprop_fluid(
+                fluid_name=cfg.process_fluid_name,
+                P_bar=float(P_process[i]),
+            )
+            fluid_working_fun = self.make_coolprop_fluid(
+                fluid_name=cfg.working_fluid_name,
+                P_bar=float(P_working[i]),
+            )
 
-        def march_segments(Th_in_local, Tc_out0_local):
-            """
-            March through the segments of the heat exchanger to calculate temperatures,
-            heat transfer, and other relevant parameters for each segment.
-            """
-            N_seg = geom["N_seg"]
-            A_seg = geom["A_seg"]
-            A_tube_flow = geom["A_tube_flow"]
-            D_i = geom["D_i"]
+            # ---- Role-swap safeguard ----
+            # The steady solver assumes ``hot`` enters warmer than ``cold``
+            # (its LMTD bisection requires dT > 0 throughout). The nominal
+            # assignment is process → hot (tube side), working → cold (shell
+            # side). When the working fluid enters hotter than the process
+            # fluid we swap the two streams' roles for this timestep so the
+            # solver still converges; the swap is undone when writing the
+            # outputs back to the process/working streams. This means the
+            # tube-side vs shell-side geometry is applied to whichever
+            # stream is hotter at that timestep — an explicit modeling
+            # assumption for design-oriented HX studies.
+            swap = float(T_working[i]) > float(T_process[i])
 
-            Th = np.zeros(N_seg + 1)
-            Tc = np.zeros(N_seg + 1)
-            Tw = np.zeros(N_seg)
-            U_seg = np.zeros(N_seg)
-            Q_seg = np.zeros(N_seg)
-            Q_loss_seg = np.zeros(N_seg)
-            Re_t_seg = np.zeros(N_seg)
-            Re_s_seg = np.zeros(N_seg)
-            h_i_seg = np.zeros(N_seg)
-            h_o_seg = np.zeros(N_seg)
-            Nu_t_seg = np.zeros(N_seg)
-            Nu_s_seg = np.zeros(N_seg)
-            S_gen_seg = np.zeros(N_seg)
-
-            Th[0] = Th_in_local
-            Tc[0] = Tc_out0_local
-
-            A_loss = geom["A_shell_outer_seg"]
-            L_seg = geom["L_tube"] / geom["N_seg"]
-
-            for i in range(N_seg):
-                Th_i = Th[i]
-                Tc_i = Tc[i]
-
-                hot = fluid_hot_fun(Th_i)
-                cold = fluid_cold_fun(Tc_i)
-
-                # Tube-side Re, Nu, h_i
-                V_tube = m_dot_h / (hot["rho"] * A_tube_flow)
-                Re_t = hot["rho"] * V_tube * D_i / hot["mu"]
-                Pr_h = hot["cp"] * hot["mu"] / hot["k"]
-
-                if Re_t < Re_laminar_max:
-                    Nu_fd = 3.66
-                    Gz_t = Re_t * Pr_h * D_i / max(1e-9, L_seg)
-                    Nu_t = Nu_fd * (1.0 - np.exp(-Gz_t / 20.0))
-                    Nu_t = max(1.0, min(Nu_fd, Nu_t))
-                else:
-                    if use_SiederTate_tube:
-                        mu_b = hot["mu"]
-                        if use_wall_viscosity_correction:
-                            Tw_guess = 0.5 * (Th_i + Tc_i)
-                            wall_hot = fluid_hot_fun(Tw_guess)
-                            mu_w = wall_hot["mu"]
-                        else:
-                            mu_w = mu_b
-                        Nu_t = 0.027 * Re_t**0.8 * Pr_h ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
-                    else:
-                        Nu_t = 0.023 * Re_t**0.8 * Pr_h**0.4
-                h_i = Nu_t * hot["k"] / D_i
-
-                Re_t_seg[i] = Re_t
-                h_i_seg[i] = h_i
-                Nu_t_seg[i] = Nu_t
-
-                # Shell-side
-                h_o, Re_s, Nu_s = self.shell_h_local(
-                    cold, m_dot_c, geom, shell, F_shell, shell_model
+            if swap:
+                Th_in, m_dot_h, fluid_hot_fun = (
+                    float(T_working[i]),
+                    float(m_dot_working[i]),
+                    fluid_working_fun,
                 )
-                Re_s_seg[i] = Re_s
-                h_o_seg[i] = h_o
-                Nu_s_seg[i] = Nu_s
+                Tc_in, m_dot_c, fluid_cold_fun = (
+                    float(T_process[i]),
+                    float(m_dot_process[i]),
+                    fluid_process_fun,
+                )
+            else:
+                Th_in, m_dot_h, fluid_hot_fun = (
+                    float(T_process[i]),
+                    float(m_dot_process[i]),
+                    fluid_process_fun,
+                )
+                Tc_in, m_dot_c, fluid_cold_fun = (
+                    float(T_working[i]),
+                    float(m_dot_working[i]),
+                    fluid_working_fun,
+                )
 
-                # Overall U
-                R_o = 1.0 / h_o + R_fo
-                R_w = (geom["D_o"] * log(geom["D_o"] / geom["D_i"])) / (2.0 * k_wall)
-                R_i = geom["D_o"] / (geom["D_i"] * h_i) + R_fi * geom["D_o"] / geom["D_i"]
+            # Shooting for counter-current
+            Tc_out0_min = Tc_in + 1e-3
+            Tc_out0_max = Th_in - 1e-3
+            Tc_out0_guess = Tc_in + 0.7 * (Th_in - Tc_in)
 
-                U_i = 1.0 / (R_o + R_w + R_i)
-                U_seg[i] = U_i
+            # Per-timestep stream state passed to the segment-marching solver
+            stream_state = {
+                "m_dot_h": m_dot_h,
+                "m_dot_c": m_dot_c,
+                "fluid_hot_fun": fluid_hot_fun,
+                "fluid_cold_fun": fluid_cold_fun,
+                "geom": geom,
+                "shell": shell,
+                "k_wall": k_wall,
+            }
+            residual = partial(self.residual_Tc_out, Th_in=Th_in, Tc_in=Tc_in, **stream_state)
 
-                dT_i = Th_i - Tc_i
-                Q_i = U_i * A_seg * dT_i
+            Tc_root, r_min, r_max = self.find_root_bisect(
+                residual, Tc_out0_min, Tc_out0_max, fzero_tol, fzero_maxit
+            )
+            shooting_bracket_ok = True
+            if Tc_root is None:
+                shooting_bracket_ok = False
+                Tc_root = Tc_out0_guess
 
-                # External loss (from shell to ambient)
-                Q_loss_i = U_loss * A_loss * (Tc_i - T_amb)
-                Q_loss_seg[i] = Q_loss_i
-
-                cp_h = hot["cp"]
-                cp_c = cold["cp"]
-
-                # Energy balances
-                Th[i + 1] = Th_i - Q_i / (m_dot_h * cp_h)
-                Tc[i + 1] = Tc_i - (Q_i - Q_loss_i) / (m_dot_c * cp_c)
-
-                # Wall temperature
-                Tw[i] = (h_i * Th_i + h_o * Tc_i) / (h_i + h_o)
-                Q_seg[i] = Q_i
-
-                # Local entropy generation
-                Th_iK = Th_i + 273.15
-                Tc_iK = Tc_i + 273.15
-                S_gen_seg[i] = Q_i * (1.0 / Tc_iK - 1.0 / Th_iK)
-
-            return (
+            # March with final
+            (
                 Th,
                 Tc,
                 Tw,
@@ -760,52 +468,635 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 Nu_t_seg,
                 Nu_s_seg,
                 S_gen_seg,
+            ) = self.march_segments(Th_in, Tc_root, **stream_state)
+
+            x = np.linspace(0.0, L_tube, N_seg + 1)
+            x_mid = 0.5 * (x[:-1] + x[1:])
+
+            Q_total = float(np.sum(Q_seg))
+            Q_loss_tot = float(np.sum(Q_loss_seg))
+            Th_out = float(Th[-1])
+            Tc_out = float(Tc[0])
+
+            # Global metrics
+            dT1 = Th_in - Tc_out
+            dT2 = Th_out - Tc_in
+            LMTD_global = self.LMTD_calc(dT1, dT2)
+            U_global = Q_total / (A_o_total * LMTD_global)
+
+            hot_in = fluid_hot_fun(Th_in)
+            cold_in = fluid_cold_fun(Tc_in)
+            cp_h_in = hot_in["cp"]
+            cp_c_in = cold_in["cp"]
+            C_hot = m_dot_h * cp_h_in
+            C_cold = m_dot_c * cp_c_in
+            C_min = min(C_hot, C_cold)
+            C_max = max(C_hot, C_cold)
+            C_r = C_min / C_max
+
+            epsilon = Q_total / (C_min * (Th_in - Tc_in))
+            NTU = U_global * A_o_total / C_min
+
+            # Energy-balance checks
+            Q_hot = m_dot_h * cp_h_in * (Th_in - Th_out)
+            Q_cold = m_dot_c * cp_c_in * (Tc_out - Tc_in)
+
+            Q_ref_hot = Q_total
+            Q_ref_cold = Q_total - Q_loss_tot
+
+            energy_balance_error_hot = (Q_hot - Q_ref_hot) / abs(Q_ref_hot)
+            energy_balance_error_cold = (Q_cold - Q_ref_cold) / abs(Q_ref_cold)
+
+            # Lumped U & LMTD check
+            Th_mean_bulk = 0.5 * (Th_in + Th_out)
+            Tc_mean_bulk = 0.5 * (Tc_in + Tc_out)
+            hot_m = fluid_hot_fun(Th_mean_bulk)
+            cold_m = fluid_cold_fun(Tc_mean_bulk)
+            Tw_mean = 0.5 * (Th_mean_bulk + Tc_mean_bulk)
+
+            V_tube_mean = m_dot_h / (hot_m["rho"] * A_tube_flow)
+            Re_t_mean = hot_m["rho"] * V_tube_mean * D_i / hot_m["mu"]
+            Pr_h_mean = hot_m["cp"] * hot_m["mu"] / hot_m["k"]
+
+            if Re_t_mean < Re_laminar_max:
+                Nu_t_mean = 3.66
+            else:
+                if use_SiederTate_tube:
+                    mu_b = hot_m["mu"]
+                    if use_wall_viscosity_correction:
+                        wall_hot_mean = fluid_hot_fun(Tw_mean)
+                        mu_w = wall_hot_mean["mu"]
+                    else:
+                        mu_w = mu_b
+                    Nu_t_mean = (
+                        0.027 * Re_t_mean**0.8 * Pr_h_mean ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
+                    )
+                else:
+                    Nu_t_mean = 0.023 * Re_t_mean**0.8 * Pr_h_mean**0.4
+            h_i_mean = Nu_t_mean * hot_m["k"] / D_i
+
+            h_o_mean, _, _ = self.shell_h_local(
+                cold_m, m_dot_c, geom, shell, F_shell, shell_model
             )
 
-        def residual_Tc_out(Tc_out0):
-            """
-            Residual function for the shooting method to find the correct outlet temperature of the
-            cold fluid. It calculates the difference between the calculated cold outlet temperature
-            at the end of the heat exchanger and the specified cold inlet temperature.
-            """
-            Th_, Tc_, *_ = march_segments(Th_in, Tc_out0)
-            Tc_at_L = Tc_[-1]
-            return Tc_at_L - Tc_in
+            R_o_mean = 1.0 / h_o_mean + R_fo
+            R_w_mean = (D_o * log(D_o / D_i)) / (2.0 * k_wall)
+            R_i_mean = D_o / (D_i * h_i_mean) + R_fi * D_o / D_i
 
-        # Simple bisection
-        def find_root_bisect(f, a, b, tol, maxit):
-            """
-            Simple bisection method to find the root of a function f within the interval [a, b].
-            It iteratively narrows down the interval until the function value at the midpoint is
-            within the specified tolerance or the maximum number of iterations is reached.
-            """
-            fa = f(a)
-            fb = f(b)
-            if fa * fb > 0:
-                return None, fa, fb
-            for _ in range(maxit):
-                c = 0.5 * (a + b)
-                fc = f(c)
-                if abs(fc) < tol or 0.5 * (b - a) < tol:
-                    return c, fa, fb
-                if fa * fc < 0:
-                    b = c
-                    fb = fc
+            U_lumped = 1.0 / (R_o_mean + R_w_mean + R_i_mean)
+            Q_LMTD_lumped = U_lumped * A_o_total * LMTD_global
+            Q_error_frac = (Q_total - Q_LMTD_lumped) / Q_total
+
+            # Pressure drops & pump power
+            Th_mean = float(np.mean(Th))
+            Tc_mean = float(np.mean(Tc))
+            hot_mean = fluid_hot_fun(Th_mean)
+            cold_mean = fluid_cold_fun(Tc_mean)
+
+            V_tube = m_dot_h / (hot_mean["rho"] * A_tube_flow)
+            Re_t = hot_mean["rho"] * V_tube * D_i / hot_mean["mu"]
+
+            if Re_t < Re_laminar_max:
+                f_t = 64.0 / Re_t
+            else:
+                f_t = 0.3164 * Re_t ** (-0.25)
+
+            L_equiv_tube = L_tube * N_passes
+            dp_fric_tube = f_t * (L_equiv_tube / D_i) * 0.5 * hot_mean["rho"] * V_tube**2
+
+            K_inlet = 1.0
+            K_exit = 1.0
+            K_bends = 1.5 * (N_passes - 1)
+            K_total = K_inlet + K_exit + K_bends
+            dp_minor_tube = K_total * 0.5 * hot_mean["rho"] * V_tube**2
+
+            dp_tube_total = dp_fric_tube + dp_minor_tube
+
+            dp_shell_total = self.shell_dp_Kern(m_dot_c, cold_mean, geom, shell)
+
+            P_pump_tube = (m_dot_h / hot_mean["rho"]) * dp_tube_total / eta_pump
+            P_pump_shell = (m_dot_c / cold_mean["rho"]) * dp_shell_total / eta_pump
+            P_pump_total = P_pump_tube + P_pump_shell
+
+            # Inventories + time constants
+            rho_hot_mean = hot_mean["rho"]
+            rho_cold_mean = cold_mean["rho"]
+            cp_hot_mean = hot_mean["cp"]
+            cp_cold_mean = cold_mean["cp"]
+
+            m_tube_metal = tube_rho * V_tube_metal
+            m_shell_metal = shell_rho * V_shell_metal
+            m_tube_fluid = rho_hot_mean * V_tube_fluid
+            m_shell_fluid = rho_cold_mean * V_shell_fluid
+
+            C_tube_metal = m_tube_metal * tube_cp
+            C_shell_metal = m_shell_metal * shell_cp
+            C_tube_fluid = m_tube_fluid * cp_hot_mean
+            C_shell_fluid = m_shell_fluid * cp_cold_mean
+
+            C_hot_total = C_tube_metal + C_tube_fluid
+            C_cold_total = C_shell_metal + C_shell_fluid
+
+            tau_hot = C_hot_total / (U_global * A_o_total)
+            tau_cold = C_cold_total / (U_global * A_o_total)
+
+            # Pinch & crossing
+            deltaT = Th - Tc
+            min_deltaT = float(np.min(deltaT))
+            has_cross = bool(np.any(deltaT <= 0.0))
+            pinch_warning = (not has_cross) and (min_deltaT < pinch_threshold)
+
+            # 2nd law metrics
+            Th_in_K = Th_in + 273.15
+            Th_out_K = Th_out + 273.15
+            Tc_in_K = Tc_in + 273.15
+            Tc_out_K = Tc_out + 273.15
+
+            hot_in2 = fluid_hot_fun(Th_in)
+            hot_out2 = fluid_hot_fun(Th_out)
+            cold_in2 = fluid_cold_fun(Tc_in)
+            cold_out2 = fluid_cold_fun(Tc_out)
+
+            cp_h_bar = 0.5 * (hot_in2["cp"] + hot_out2["cp"])
+            cp_c_bar = 0.5 * (cold_in2["cp"] + cold_out2["cp"])
+
+            S_gen_dot_bulk = m_dot_h * cp_h_bar * log(Th_out_K / Th_in_K) + (
+                m_dot_c * cp_c_bar * log(Tc_out_K / Tc_in_K)
+            )
+            Ex_dest_dot_bulk = T0_env * S_gen_dot_bulk
+
+            S_gen_dot_seg = float(np.sum(S_gen_seg))
+            Ex_dest_dot_seg = T0_env * S_gen_dot_seg
+
+            # Regimes
+            Re_tube_min = float(np.min(Re_t_seg))
+            Re_tube_max = float(np.max(Re_t_seg))
+            Re_shell_min = float(np.min(Re_s_seg))
+            Re_shell_max = float(np.max(Re_s_seg))
+
+            tube_regime = self.classify_regime(
+                Re_tube_min, Re_tube_max, Re_laminar_max, Re_turb_min
+            )
+            shell_regime = self.classify_regime(
+                Re_shell_min, Re_shell_max, Re_laminar_max, Re_turb_min
+            )
+
+            V_tube_mean2 = V_tube
+            G_s_mean = m_dot_c / S_m
+            V_shell_mean = G_s_mean / cold_mean["rho"]
+
+            flags = {
+                "has_cross": has_cross,
+                "small_pinch": pinch_warning,
+                "tube_laminar": (tube_regime == "laminar"),
+                "shell_laminar": (shell_regime == "laminar"),
+                "low_NTU": (NTU < 0.1),
+                "high_dp_tube": (dp_tube_total > 1e5),
+                "high_dp_shell": (dp_shell_total > 1e4),
+                "Q_LMTD_mismatch": (abs(Q_error_frac) > 0.05),
+                "shooting_ok": shooting_bracket_ok,
+                "V_tube_low": (V_tube_mean2 < 1.0),
+                "V_tube_high": (V_tube_mean2 > 3.0),
+                "V_shell_low": (V_shell_mean < 0.3),
+                "V_shell_high": (V_shell_mean > 1.5),
+            }
+
+            inventory = {
+                "tube_material": tube_material,
+                "shell_material": shell_material,
+                "t_shell": t_shell,
+                "V_tube_metal": V_tube_metal,
+                "V_shell_metal": V_shell_metal,
+                "V_tube_fluid": V_tube_fluid,
+                "V_shell_fluid": V_shell_fluid,
+                "m_tube_metal": m_tube_metal,
+                "m_shell_metal": m_shell_metal,
+                "m_tube_fluid": m_tube_fluid,
+                "m_shell_fluid": m_shell_fluid,
+                "C_tube_metal": C_tube_metal,
+                "C_shell_metal": C_shell_metal,
+                "C_tube_fluid": C_tube_fluid,
+                "C_shell_fluid": C_shell_fluid,
+                "C_hot_total": C_hot_total,
+                "C_cold_total": C_cold_total,
+            }
+
+            res = {
+                "x": x,
+                "x_mid": x_mid,
+                "Th": Th,
+                "Tc": Tc,
+                "Tw": Tw,
+                "Q_seg": Q_seg,
+                "Q_total": Q_total,
+                "Q_loss_seg": Q_loss_seg,
+                "Q_loss_tot": Q_loss_tot,
+                "U_seg": U_seg,
+                "U_global": U_global,
+                "LMTD_global": LMTD_global,
+                "epsilon": epsilon,
+                "NTU": NTU,
+                "C_r": C_r,
+                "Q_hot": Q_hot,
+                "Q_cold": Q_cold,
+                "energy_balance_error_hot": energy_balance_error_hot,
+                "energy_balance_error_cold": energy_balance_error_cold,
+                "dp_tube_total": dp_tube_total,
+                "dp_shell_total": dp_shell_total,
+                "P_pump_tube": P_pump_tube,
+                "P_pump_shell": P_pump_shell,
+                "P_pump_total": P_pump_total,
+                "min_deltaT": min_deltaT,
+                "has_cross": has_cross,
+                "pinch_warning": pinch_warning,
+                "Re_tube": Re_t_seg,
+                "Re_shell": Re_s_seg,
+                "Re_tube_min": Re_tube_min,
+                "Re_tube_max": Re_tube_max,
+                "Re_shell_min": Re_shell_min,
+                "Re_shell_max": Re_shell_max,
+                "tube_regime": tube_regime,
+                "shell_regime": shell_regime,
+                "h_i_seg": h_i_seg,
+                "h_o_seg": h_o_seg,
+                "Nu_t_seg": Nu_t_seg,
+                "Nu_s_seg": Nu_s_seg,
+                "U_lumped": U_lumped,
+                "Q_LMTD_lumped": Q_LMTD_lumped,
+                "Q_error_frac": Q_error_frac,
+                "S_gen_seg": S_gen_seg,
+                "S_gen_dot": S_gen_dot_seg,
+                "Ex_dest_dot": Ex_dest_dot_seg,
+                "S_gen_dot_bulk": S_gen_dot_bulk,
+                "Ex_dest_dot_bulk": Ex_dest_dot_bulk,
+                "tau_hot": tau_hot,
+                "tau_cold": tau_cold,
+                "inventory": inventory,
+                "V_tube_mean": V_tube_mean2,
+                "V_shell_mean": V_shell_mean,
+                "flags": flags,
+                "geom": geom,
+                "shell": shell,
+                "params": {
+                    "Th_in": Th_in,
+                    "Tc_in": Tc_in,
+                    "m_dot_h": m_dot_h,
+                    "m_dot_c": m_dot_c,
+                    "N_tubes": N_tubes,
+                    "N_passes": N_passes,
+                    "L_tube": L_tube,
+                    "D_o": D_o,
+                    "t_wall": t_wall,
+                    "D_i": D_i,
+                    "D_shell": D_shell,
+                    "N_seg": N_seg,
+                    "R_fi": R_fi,
+                    "R_fo": R_fo,
+                    "eta_pump": eta_pump,
+                    "pinch_threshold": pinch_threshold,
+                    "use_SiederTate_tube": use_SiederTate_tube,
+                    "use_wall_viscosity_correction": use_wall_viscosity_correction,
+                    "F_shell": F_shell,
+                    "shell_model": shell_model,
+                    "T0_env": T0_env,
+                    "U_loss": U_loss,
+                    "T_amb": T_amb,
+                    "fzero_tol": fzero_tol,
+                    "fzero_maxit": fzero_maxit,
+                    "tube_material": tube_material,
+                    "shell_material": shell_material,
+                    "t_shell": t_shell,
+                    "Re_laminar_max": Re_laminar_max,
+                    "Re_turb_min": Re_turb_min,
+                },
+            }
+
+            # Map solver-frame results back to the process/working streams.
+            # The "tube" pressure drop belongs to whichever stream was routed
+            # into the hot role; the "shell" drop belongs to the cold role.
+            if swap:
+                T_process_out = Tc_out
+                T_working_out = Th_out
+                dp_process = dp_shell_total
+                dp_working = dp_tube_total
+            else:
+                T_process_out = Th_out
+                T_working_out = Tc_out
+                dp_process = dp_tube_total
+                dp_working = dp_shell_total
+
+            if cfg.enable_plot:
+                self.plot_results(
+                    res,
+                    label=f"timestep_{i}",
+                    save_dir=cfg.plot_dir,
+                    show=cfg.show_plot,
+                )
+
+            if cfg.print_summary:
+                self.print_summary(res)
+
+            # Outlet multivariable-stream values
+            outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
+            outputs["process_fluid:temperature_out"][i] = T_process_out
+            # Convert Pa drop back into a bar-scale pressure decrement
+            outputs["process_fluid:pressure_out"][i] = float(P_process[i]) - dp_process / 1e5
+
+            outputs["working_fluid:mass_flow_out"][i] = float(m_dot_working[i])
+            outputs["working_fluid:temperature_out"][i] = T_working_out
+            outputs["working_fluid:pressure_out"][i] = float(P_working[i]) - dp_working / 1e5
+
+            # Diagnostic time-series outputs
+            outputs["total_heat_transfer_rate"][i] = Q_total / 1e3
+            outputs["hx_effectiveness"][i] = float(epsilon)
+            outputs["number_of_transfer_units"][i] = float(NTU)
+            outputs["heat_capacity_rate_ratio"][i] = float(C_r)
+            outputs["overall_heat_transfer_coefficient"][i] = float(U_global)
+            outputs["pressure_drop_process_fluid"][i] = dp_process
+            outputs["pressure_drop_working_fluid"][i] = dp_working
+            outputs["pump_power"][i] = float(P_pump_total) / 1e3
+            outputs["entropy_generation_rate"][i] = S_gen_dot_seg
+            outputs["exergy_destruction_rate"][i] = Ex_dest_dot_seg / 1e3
+            outputs["roles_swapped"][i] = 1.0 if swap else 0.0
+
+    # ----------------------------------------------------------------------
+    # 2) CoolProp-based generic fluid properties
+    # ----------------------------------------------------------------------
+    def make_coolprop_fluid(self, fluid_name="Water", P_bar=1.0):
+        """
+        Returns a function fluid_fun(T_c) that uses CoolProp for fluid properties.
+
+        Inputs:
+            fluid_name (str): CoolProp fluid name, e.g. 'Water', 'Ethanol', 'R134a', 'MEG', etc.
+            P_bar (float): Operating pressure in bar (absolute). Converted internally to Pa.
+
+        Outputs:
+            fluid_fun (callable):  fluid_fun(T_c) -> dict(rho, mu, cp, k, Pr)
+                where T_c is in degC and properties are SI units:
+                - rho : density [kg/m^3]
+                - mu  : dynamic viscosity [Pa·s]
+                - cp  : specific heat at constant pressure [J/kg-K]
+                - k   : thermal conductivity [W/m-K]
+                - Pr  : Prandtl number [-]
+        """
+        P_Pa = P_bar * 1e5  # bar -> Pa
+
+        def fluid_fun(T_c):
+            T_c_arr = np.asarray(T_c, dtype=float)
+            T_K = T_c_arr + 273.15
+
+            rho = PropsSI("D", "T", T_K, "P", P_Pa, fluid_name)  # density [kg/m^3]
+            mu = PropsSI("V", "T", T_K, "P", P_Pa, fluid_name)  # dyn. visc. [Pa·s]
+            cp_ = PropsSI("C", "T", T_K, "P", P_Pa, fluid_name)  # cp [J/kg-K]
+            k = PropsSI("L", "T", T_K, "P", P_Pa, fluid_name)  # k [W/m-K]
+            Pr = PropsSI("Prandtl", "T", T_K, "P", P_Pa, fluid_name)  # Pr [-]
+
+            return {"rho": rho, "mu": mu, "cp": cp_, "k": k, "Pr": Pr}
+
+        return fluid_fun
+
+    # ----------------------------------------------------------------------
+    # 3) Metal properties, helper functions
+    # ----------------------------------------------------------------------
+    def metal_props(self, name: str):
+        """
+        Returns thermal conductivity (k), density (rho), and specific heat (cp) for common metals.
+
+        Returns:
+            tuple[float, float, float]:
+                - k: thermal conductivity [W/m-K]
+                - rho: density [kg/m^3]
+                - cp: specific heat [J/kg-K]
+        """
+        key = name.lower().replace(" ", "_")
+        if key == "carbon_steel":
+            return 45.0, 7850.0, 480.0
+        elif key == "stainless_304":
+            return 16.0, 8000.0, 500.0
+        elif key == "copper":
+            return 390.0, 8960.0, 385.0
+        else:
+            # default carbon steel
+            return 45.0, 7850.0, 480.0
+
+    def LMTD_calc(self, dT1, dT2):
+        """
+        Calculate the Log Mean Temperature Difference (LMTD) for a heat exchanger.
+        """
+        if dT1 <= 0 or dT2 <= 0:
+            raise ValueError("Non-positive temperature difference in LMTD_calc.")
+        if abs(dT1 - dT2) < 1e-6:
+            return 0.5 * (dT1 + dT2)
+        return (dT1 - dT2) / log(dT1 / dT2)
+
+    def classify_regime(self, Re_min, Re_max, Re_laminar_max, Re_turb_min):
+        """
+        Classify the flow regime based on Reynolds number.
+        """
+        if Re_max < Re_laminar_max:
+            return "laminar"
+        elif Re_min > Re_turb_min:
+            return "turbulent"
+        else:
+            return "transition"
+
+    def shell_h_local(self, cold_props, m_dot_c, geom, shell, F_shell, model):
+        """
+        Calculate the local shell-side heat transfer coefficient using the specified model.
+        """
+        S_m = geom["S_m"]
+        D_o = geom["D_o"]
+        p_t = shell["pitch"]
+        D_e = 4.0 * (p_t**2 - np.pi * D_o**2 / 4.0) / (np.pi * D_o)
+
+        G_s = m_dot_c / S_m
+        Re_s = G_s * D_e / cold_props["mu"]
+        Pr_c = cold_props["cp"] * cold_props["mu"] / cold_props["k"]
+
+        model_l = model.lower()
+        if model_l == "kern":
+            if Re_s < 2000.0:
+                L_char = max(1e-6, shell["baffle_spacing"])
+                Nu_fd = 3.66
+                Gz_s = Re_s * Pr_c * D_e / L_char
+                Nu_s = Nu_fd * (1.0 - np.exp(-Gz_s / 20.0))
+                Nu_s = max(1.0, min(Nu_fd, Nu_s))
+            else:
+                Nu_s = 0.36 * Re_s**0.55 * Pr_c ** (1.0 / 3.0)
+        elif model_l == "bell_delaware":
+            # Placeholder: same as Kern, can refine later
+            if Re_s < 2000.0:
+                L_char = max(1e-6, shell["baffle_spacing"])
+                Nu_fd = 3.66
+                Gz_s = Re_s * Pr_c * D_e / L_char
+                Nu_s = Nu_fd * (1.0 - np.exp(-Gz_s / 20.0))
+                Nu_s = max(1.0, min(Nu_fd, Nu_s))
+            else:
+                Nu_s = 0.36 * Re_s**0.55 * Pr_c ** (1.0 / 3.0)
+        else:
+            raise ValueError(f"Unknown shell_model '{model}'")
+
+        h_o = Nu_s * cold_props["k"] / D_e
+        h_o *= F_shell
+        return h_o, Re_s, Nu_s
+
+    def shell_dp_Kern(self, m_dot_c, cold_props, geom, shell):
+        """
+        Calculate the pressure drop on the shell side using the Kern method.
+        """
+        S_m = geom["S_m"]
+        D_o = geom["D_o"]
+        p_t = shell["pitch"]
+        D_e = 4.0 * (p_t**2 - np.pi * D_o**2 / 4.0) / (np.pi * D_o)
+
+        G_s = m_dot_c / S_m
+        Re_s = G_s * D_e / cold_props["mu"]
+
+        if Re_s < 2000.0:
+            f_s = 64.0 / Re_s
+        else:
+            f_s = 0.14 * Re_s ** (-0.2)
+
+        N_b = max(1, int(geom["L_tube"] / shell["baffle_spacing"]) - 1)
+        dp_shell = 4.0 * f_s * (G_s**2 / (2.0 * cold_props["rho"])) * N_b
+        return dp_shell
+
+    def march_segments(
+        self,
+        Th_in_local,
+        Tc_out0_local,
+        m_dot_h,
+        m_dot_c,
+        fluid_hot_fun,
+        fluid_cold_fun,
+        geom,
+        shell,
+        k_wall,
+    ):
+        """
+        March through the segments of the heat exchanger to calculate temperatures,
+        heat transfer, and other relevant parameters for each segment.
+
+        Args:
+            Th_in_local: Hot-stream inlet temperature in degC.
+            Tc_out0_local: Guessed cold-stream outlet temperature in degC (at x=0).
+            m_dot_h: Hot-stream mass flow rate in kg/s.
+            m_dot_c: Cold-stream mass flow rate in kg/s.
+            fluid_hot_fun: Hot-stream property callable from :meth:`make_coolprop_fluid`.
+            fluid_cold_fun: Cold-stream property callable from :meth:`make_coolprop_fluid`.
+            geom: Geometry dict assembled in :meth:`compute`.
+            shell: Shell-side parameter dict assembled in :meth:`compute`.
+            k_wall: Tube wall thermal conductivity in W/m-K.
+        """
+        cfg = self.config
+        Re_laminar_max = float(cfg.Re_laminar_max)
+        use_SiederTate_tube = bool(cfg.use_SiederTate_tube)
+        use_wall_viscosity_correction = bool(cfg.use_wall_viscosity_correction)
+        F_shell = float(cfg.F_shell)
+        shell_model = cfg.shell_model
+        R_fi = float(cfg.R_fi_m2K_W)
+        R_fo = float(cfg.R_fo_m2K_W)
+        U_loss = float(cfg.U_loss_W_m2K)
+        T_amb = float(cfg.T_amb_C)
+
+        N_seg = geom["N_seg"]
+        A_seg = geom["A_seg"]
+        A_tube_flow = geom["A_tube_flow"]
+        D_i = geom["D_i"]
+
+        Th = np.zeros(N_seg + 1)
+        Tc = np.zeros(N_seg + 1)
+        Tw = np.zeros(N_seg)
+        U_seg = np.zeros(N_seg)
+        Q_seg = np.zeros(N_seg)
+        Q_loss_seg = np.zeros(N_seg)
+        Re_t_seg = np.zeros(N_seg)
+        Re_s_seg = np.zeros(N_seg)
+        h_i_seg = np.zeros(N_seg)
+        h_o_seg = np.zeros(N_seg)
+        Nu_t_seg = np.zeros(N_seg)
+        Nu_s_seg = np.zeros(N_seg)
+        S_gen_seg = np.zeros(N_seg)
+
+        Th[0] = Th_in_local
+        Tc[0] = Tc_out0_local
+
+        A_loss = geom["A_shell_outer_seg"]
+        L_seg = geom["L_tube"] / geom["N_seg"]
+
+        for i in range(N_seg):
+            Th_i = Th[i]
+            Tc_i = Tc[i]
+
+            hot = fluid_hot_fun(Th_i)
+            cold = fluid_cold_fun(Tc_i)
+
+            # Tube-side Re, Nu, h_i
+            V_tube = m_dot_h / (hot["rho"] * A_tube_flow)
+            Re_t = hot["rho"] * V_tube * D_i / hot["mu"]
+            Pr_h = hot["cp"] * hot["mu"] / hot["k"]
+
+            if Re_t < Re_laminar_max:
+                Nu_fd = 3.66
+                Gz_t = Re_t * Pr_h * D_i / max(1e-9, L_seg)
+                Nu_t = Nu_fd * (1.0 - np.exp(-Gz_t / 20.0))
+                Nu_t = max(1.0, min(Nu_fd, Nu_t))
+            else:
+                if use_SiederTate_tube:
+                    mu_b = hot["mu"]
+                    if use_wall_viscosity_correction:
+                        Tw_guess = 0.5 * (Th_i + Tc_i)
+                        wall_hot = fluid_hot_fun(Tw_guess)
+                        mu_w = wall_hot["mu"]
+                    else:
+                        mu_w = mu_b
+                    Nu_t = 0.027 * Re_t**0.8 * Pr_h ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
                 else:
-                    a = c
-                    fa = fc
-            return c, fa, fb
+                    Nu_t = 0.023 * Re_t**0.8 * Pr_h**0.4
+            h_i = Nu_t * hot["k"] / D_i
 
-        Tc_root, r_min, r_max = find_root_bisect(
-            residual_Tc_out, Tc_out0_min, Tc_out0_max, fzero_tol, fzero_maxit
-        )
-        shooting_bracket_ok = True
-        if Tc_root is None:
-            shooting_bracket_ok = False
-            Tc_root = Tc_out0_guess
+            Re_t_seg[i] = Re_t
+            h_i_seg[i] = h_i
+            Nu_t_seg[i] = Nu_t
 
-        # March with final
-        (
+            # Shell-side
+            h_o, Re_s, Nu_s = self.shell_h_local(cold, m_dot_c, geom, shell, F_shell, shell_model)
+            Re_s_seg[i] = Re_s
+            h_o_seg[i] = h_o
+            Nu_s_seg[i] = Nu_s
+
+            # Overall U
+            R_o = 1.0 / h_o + R_fo
+            R_w = (geom["D_o"] * log(geom["D_o"] / geom["D_i"])) / (2.0 * k_wall)
+            R_i = geom["D_o"] / (geom["D_i"] * h_i) + R_fi * geom["D_o"] / geom["D_i"]
+
+            U_i = 1.0 / (R_o + R_w + R_i)
+            U_seg[i] = U_i
+
+            dT_i = Th_i - Tc_i
+            Q_i = U_i * A_seg * dT_i
+
+            # External loss (from shell to ambient)
+            Q_loss_i = U_loss * A_loss * (Tc_i - T_amb)
+            Q_loss_seg[i] = Q_loss_i
+
+            cp_h = hot["cp"]
+            cp_c = cold["cp"]
+
+            # Energy balances
+            Th[i + 1] = Th_i - Q_i / (m_dot_h * cp_h)
+            Tc[i + 1] = Tc_i - (Q_i - Q_loss_i) / (m_dot_c * cp_c)
+
+            # Wall temperature
+            Tw[i] = (h_i * Th_i + h_o * Tc_i) / (h_i + h_o)
+            Q_seg[i] = Q_i
+
+            # Local entropy generation
+            Th_iK = Th_i + 273.15
+            Tc_iK = Tc_i + 273.15
+            S_gen_seg[i] = Q_i * (1.0 / Tc_iK - 1.0 / Th_iK)
+
+        return (
             Th,
             Tc,
             Tw,
@@ -819,303 +1110,62 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             Nu_t_seg,
             Nu_s_seg,
             S_gen_seg,
-        ) = march_segments(Th_in, Tc_root)
-
-        x = np.linspace(0.0, L_tube, N_seg + 1)
-        x_mid = 0.5 * (x[:-1] + x[1:])
-
-        Q_total = float(np.sum(Q_seg))
-        Q_loss_tot = float(np.sum(Q_loss_seg))
-        Th_out = float(Th[-1])
-        Tc_out = float(Tc[0])
-
-        # Global metrics
-        dT1 = Th_in - Tc_out
-        dT2 = Th_out - Tc_in
-        LMTD_global = self.LMTD_calc(dT1, dT2)
-        U_global = Q_total / (A_o_total * LMTD_global)
-
-        hot_in = fluid_hot_fun(Th_in)
-        cold_in = fluid_cold_fun(Tc_in)
-        cp_h_in = hot_in["cp"]
-        cp_c_in = cold_in["cp"]
-        C_hot = m_dot_h * cp_h_in
-        C_cold = m_dot_c * cp_c_in
-        C_min = min(C_hot, C_cold)
-        C_max = max(C_hot, C_cold)
-        C_r = C_min / C_max
-
-        epsilon = Q_total / (C_min * (Th_in - Tc_in))
-        NTU = U_global * A_o_total / C_min
-
-        # Energy-balance checks
-        Q_hot = m_dot_h * cp_h_in * (Th_in - Th_out)
-        Q_cold = m_dot_c * cp_c_in * (Tc_out - Tc_in)
-
-        Q_ref_hot = Q_total
-        Q_ref_cold = Q_total - Q_loss_tot
-
-        energy_balance_error_hot = (Q_hot - Q_ref_hot) / abs(Q_ref_hot)
-        energy_balance_error_cold = (Q_cold - Q_ref_cold) / abs(Q_ref_cold)
-
-        # Lumped U & LMTD check
-        Th_mean_bulk = 0.5 * (Th_in + Th_out)
-        Tc_mean_bulk = 0.5 * (Tc_in + Tc_out)
-        hot_m = fluid_hot_fun(Th_mean_bulk)
-        cold_m = fluid_cold_fun(Tc_mean_bulk)
-        Tw_mean = 0.5 * (Th_mean_bulk + Tc_mean_bulk)
-
-        V_tube_mean = m_dot_h / (hot_m["rho"] * A_tube_flow)
-        Re_t_mean = hot_m["rho"] * V_tube_mean * D_i / hot_m["mu"]
-        Pr_h_mean = hot_m["cp"] * hot_m["mu"] / hot_m["k"]
-
-        if Re_t_mean < Re_laminar_max:
-            Nu_t_mean = 3.66
-        else:
-            if use_SiederTate_tube:
-                mu_b = hot_m["mu"]
-                if use_wall_viscosity_correction:
-                    wall_hot_mean = fluid_hot_fun(Tw_mean)
-                    mu_w = wall_hot_mean["mu"]
-                else:
-                    mu_w = mu_b
-                Nu_t_mean = (
-                    0.027 * Re_t_mean**0.8 * Pr_h_mean ** (1.0 / 3.0) * (mu_b / mu_w) ** 0.14
-                )
-            else:
-                Nu_t_mean = 0.023 * Re_t_mean**0.8 * Pr_h_mean**0.4
-        h_i_mean = Nu_t_mean * hot_m["k"] / D_i
-
-        h_o_mean, _, _ = self.shell_h_local(cold_m, m_dot_c, geom, shell, F_shell, shell_model)
-
-        R_o_mean = 1.0 / h_o_mean + R_fo
-        R_w_mean = (D_o * log(D_o / D_i)) / (2.0 * k_wall)
-        R_i_mean = D_o / (D_i * h_i_mean) + R_fi * D_o / D_i
-
-        U_lumped = 1.0 / (R_o_mean + R_w_mean + R_i_mean)
-        Q_LMTD_lumped = U_lumped * A_o_total * LMTD_global
-        Q_error_frac = (Q_total - Q_LMTD_lumped) / Q_total
-
-        # Pressure drops & pump power
-        Th_mean = float(np.mean(Th))
-        Tc_mean = float(np.mean(Tc))
-        hot_mean = fluid_hot_fun(Th_mean)
-        cold_mean = fluid_cold_fun(Tc_mean)
-
-        V_tube = m_dot_h / (hot_mean["rho"] * A_tube_flow)
-        Re_t = hot_mean["rho"] * V_tube * D_i / hot_mean["mu"]
-
-        if Re_t < Re_laminar_max:
-            f_t = 64.0 / Re_t
-        else:
-            f_t = 0.3164 * Re_t ** (-0.25)
-
-        L_equiv_tube = L_tube * N_passes
-        dp_fric_tube = f_t * (L_equiv_tube / D_i) * 0.5 * hot_mean["rho"] * V_tube**2
-
-        K_inlet = 1.0
-        K_exit = 1.0
-        K_bends = 1.5 * (N_passes - 1)
-        K_total = K_inlet + K_exit + K_bends
-        dp_minor_tube = K_total * 0.5 * hot_mean["rho"] * V_tube**2
-
-        dp_tube_total = dp_fric_tube + dp_minor_tube
-
-        dp_shell_total = self.shell_dp_Kern(m_dot_c, cold_mean, geom, shell)
-
-        P_pump_tube = (m_dot_h / hot_mean["rho"]) * dp_tube_total / eta_pump
-        P_pump_shell = (m_dot_c / cold_mean["rho"]) * dp_shell_total / eta_pump
-        P_pump_total = P_pump_tube + P_pump_shell
-
-        # Inventories + time constants
-        rho_hot_mean = hot_mean["rho"]
-        rho_cold_mean = cold_mean["rho"]
-        cp_hot_mean = hot_mean["cp"]
-        cp_cold_mean = cold_mean["cp"]
-
-        m_tube_metal = tube_rho * V_tube_metal
-        m_shell_metal = shell_rho * V_shell_metal
-        m_tube_fluid = rho_hot_mean * V_tube_fluid
-        m_shell_fluid = rho_cold_mean * V_shell_fluid
-
-        C_tube_metal = m_tube_metal * tube_cp
-        C_shell_metal = m_shell_metal * shell_cp
-        C_tube_fluid = m_tube_fluid * cp_hot_mean
-        C_shell_fluid = m_shell_fluid * cp_cold_mean
-
-        C_hot_total = C_tube_metal + C_tube_fluid
-        C_cold_total = C_shell_metal + C_shell_fluid
-
-        tau_hot = C_hot_total / (U_global * A_o_total)
-        tau_cold = C_cold_total / (U_global * A_o_total)
-
-        # Pinch & crossing
-        deltaT = Th - Tc
-        min_deltaT = float(np.min(deltaT))
-        has_cross = bool(np.any(deltaT <= 0.0))
-        pinch_warning = (not has_cross) and (min_deltaT < pinch_threshold)
-
-        # 2nd law metrics
-        Th_in_K = Th_in + 273.15
-        Th_out_K = Th_out + 273.15
-        Tc_in_K = Tc_in + 273.15
-        Tc_out_K = Tc_out + 273.15
-
-        hot_in2 = fluid_hot_fun(Th_in)
-        hot_out2 = fluid_hot_fun(Th_out)
-        cold_in2 = fluid_cold_fun(Tc_in)
-        cold_out2 = fluid_cold_fun(Tc_out)
-
-        cp_h_bar = 0.5 * (hot_in2["cp"] + hot_out2["cp"])
-        cp_c_bar = 0.5 * (cold_in2["cp"] + cold_out2["cp"])
-
-        S_gen_dot_bulk = m_dot_h * cp_h_bar * log(Th_out_K / Th_in_K) + m_dot_c * cp_c_bar * log(
-            Tc_out_K / Tc_in_K
         )
-        Ex_dest_dot_bulk = T0_env * S_gen_dot_bulk
 
-        S_gen_dot_seg = float(np.sum(S_gen_seg))
-        Ex_dest_dot_seg = T0_env * S_gen_dot_seg
+    def residual_Tc_out(
+        self,
+        Tc_out0,
+        Th_in,
+        Tc_in,
+        m_dot_h,
+        m_dot_c,
+        fluid_hot_fun,
+        fluid_cold_fun,
+        geom,
+        shell,
+        k_wall,
+    ):
+        """
+        Residual function for the shooting method to find the correct outlet temperature of the
+        cold fluid. It calculates the difference between the calculated cold outlet temperature
+        at the end of the heat exchanger and the specified cold inlet temperature.
+        """
+        Th_, Tc_, *_ = self.march_segments(
+            Th_in,
+            Tc_out0,
+            m_dot_h,
+            m_dot_c,
+            fluid_hot_fun,
+            fluid_cold_fun,
+            geom,
+            shell,
+            k_wall,
+        )
+        Tc_at_L = Tc_[-1]
+        return Tc_at_L - Tc_in
 
-        # Regimes
-        Re_tube_min = float(np.min(Re_t_seg))
-        Re_tube_max = float(np.max(Re_t_seg))
-        Re_shell_min = float(np.min(Re_s_seg))
-        Re_shell_max = float(np.max(Re_s_seg))
-
-        tube_regime = self.classify_regime(Re_tube_min, Re_tube_max, Re_laminar_max, Re_turb_min)
-        shell_regime = self.classify_regime(Re_shell_min, Re_shell_max, Re_laminar_max, Re_turb_min)
-
-        V_tube_mean2 = V_tube
-        G_s_mean = m_dot_c / S_m
-        V_shell_mean = G_s_mean / cold_mean["rho"]
-
-        flags = {
-            "has_cross": has_cross,
-            "small_pinch": pinch_warning,
-            "tube_laminar": (tube_regime == "laminar"),
-            "shell_laminar": (shell_regime == "laminar"),
-            "low_NTU": (NTU < 0.1),
-            "high_dp_tube": (dp_tube_total > 1e5),
-            "high_dp_shell": (dp_shell_total > 1e4),
-            "Q_LMTD_mismatch": (abs(Q_error_frac) > 0.05),
-            "shooting_ok": shooting_bracket_ok,
-            "V_tube_low": (V_tube_mean2 < 1.0),
-            "V_tube_high": (V_tube_mean2 > 3.0),
-            "V_shell_low": (V_shell_mean < 0.3),
-            "V_shell_high": (V_shell_mean > 1.5),
-        }
-
-        inventory = {
-            "tube_material": tube_material,
-            "shell_material": shell_material,
-            "t_shell": t_shell,
-            "V_tube_metal": V_tube_metal,
-            "V_shell_metal": V_shell_metal,
-            "V_tube_fluid": V_tube_fluid,
-            "V_shell_fluid": V_shell_fluid,
-            "m_tube_metal": m_tube_metal,
-            "m_shell_metal": m_shell_metal,
-            "m_tube_fluid": m_tube_fluid,
-            "m_shell_fluid": m_shell_fluid,
-            "C_tube_metal": C_tube_metal,
-            "C_shell_metal": C_shell_metal,
-            "C_tube_fluid": C_tube_fluid,
-            "C_shell_fluid": C_shell_fluid,
-            "C_hot_total": C_hot_total,
-            "C_cold_total": C_cold_total,
-        }
-
-        res = {
-            "x": x,
-            "x_mid": x_mid,
-            "Th": Th,
-            "Tc": Tc,
-            "Tw": Tw,
-            "Q_seg": Q_seg,
-            "Q_total": Q_total,
-            "Q_loss_seg": Q_loss_seg,
-            "Q_loss_tot": Q_loss_tot,
-            "U_seg": U_seg,
-            "U_global": U_global,
-            "LMTD_global": LMTD_global,
-            "epsilon": epsilon,
-            "NTU": NTU,
-            "C_r": C_r,
-            "Q_hot": Q_hot,
-            "Q_cold": Q_cold,
-            "energy_balance_error_hot": energy_balance_error_hot,
-            "energy_balance_error_cold": energy_balance_error_cold,
-            "dp_tube_total": dp_tube_total,
-            "dp_shell_total": dp_shell_total,
-            "P_pump_tube": P_pump_tube,
-            "P_pump_shell": P_pump_shell,
-            "P_pump_total": P_pump_total,
-            "min_deltaT": min_deltaT,
-            "has_cross": has_cross,
-            "pinch_warning": pinch_warning,
-            "Re_tube": Re_t_seg,
-            "Re_shell": Re_s_seg,
-            "Re_tube_min": Re_tube_min,
-            "Re_tube_max": Re_tube_max,
-            "Re_shell_min": Re_shell_min,
-            "Re_shell_max": Re_shell_max,
-            "tube_regime": tube_regime,
-            "shell_regime": shell_regime,
-            "h_i_seg": h_i_seg,
-            "h_o_seg": h_o_seg,
-            "Nu_t_seg": Nu_t_seg,
-            "Nu_s_seg": Nu_s_seg,
-            "U_lumped": U_lumped,
-            "Q_LMTD_lumped": Q_LMTD_lumped,
-            "Q_error_frac": Q_error_frac,
-            "S_gen_seg": S_gen_seg,
-            "S_gen_dot": S_gen_dot_seg,
-            "Ex_dest_dot": Ex_dest_dot_seg,
-            "S_gen_dot_bulk": S_gen_dot_bulk,
-            "Ex_dest_dot_bulk": Ex_dest_dot_bulk,
-            "tau_hot": tau_hot,
-            "tau_cold": tau_cold,
-            "inventory": inventory,
-            "V_tube_mean": V_tube_mean2,
-            "V_shell_mean": V_shell_mean,
-            "flags": flags,
-            "geom": geom,
-            "shell": shell,
-            "params": {
-                "Th_in": Th_in,
-                "Tc_in": Tc_in,
-                "m_dot_h": m_dot_h,
-                "m_dot_c": m_dot_c,
-                "N_tubes": N_tubes,
-                "N_passes": N_passes,
-                "L_tube": L_tube,
-                "D_o": D_o,
-                "t_wall": t_wall,
-                "D_i": D_i,
-                "D_shell": D_shell,
-                "N_seg": N_seg,
-                "R_fi": R_fi,
-                "R_fo": R_fo,
-                "eta_pump": eta_pump,
-                "pinch_threshold": pinch_threshold,
-                "use_SiederTate_tube": use_SiederTate_tube,
-                "use_wall_viscosity_correction": use_wall_viscosity_correction,
-                "F_shell": F_shell,
-                "shell_model": shell_model,
-                "T0_env": T0_env,
-                "U_loss": U_loss,
-                "T_amb": T_amb,
-                "fzero_tol": fzero_tol,
-                "fzero_maxit": fzero_maxit,
-                "tube_material": tube_material,
-                "shell_material": shell_material,
-                "t_shell": t_shell,
-                "Re_laminar_max": Re_laminar_max,
-                "Re_turb_min": Re_turb_min,
-            },
-        }
-        return res
+    def find_root_bisect(self, f, a, b, tol, maxit):
+        """
+        Simple bisection method to find the root of a function f within the interval [a, b].
+        It iteratively narrows down the interval until the function value at the midpoint is
+        within the specified tolerance or the maximum number of iterations is reached.
+        """
+        fa = f(a)
+        fb = f(b)
+        if fa * fb > 0:
+            return None, fa, fb
+        for _ in range(maxit):
+            c = 0.5 * (a + b)
+            fc = f(c)
+            if abs(fc) < tol or 0.5 * (b - a) < tol:
+                return c, fa, fb
+            if fa * fc < 0:
+                b = c
+                fb = fc
+            else:
+                a = c
+                fa = fc
+        return c, fa, fb
 
     # ----------------------------------------------------------------------
     # 4) Printing summary utility
@@ -1208,7 +1258,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         """Produce the four diagnostic figures for a single HX solve.
 
         Args:
-            res: Result dict returned by :meth:`hx_shell_tube_steady`.
+            res: Per-timestep result dict assembled in :meth:`compute`.
             label: Optional label (e.g. ``"timestep_0"``) used in figure
                 titles and as a filename prefix when saving.
             save_dir: If not ``None``, save each figure as a PNG in this
