@@ -336,11 +336,9 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             # Model the availability as N systems by running the model N times and extracting the
             # results of each run to ensure variations in system availability, recreating the
             # fractional availability calculation to get availability in the correct shape
-            availability = []
-            for _ in range(num_turbines_int):
+            for i in range(num_turbines_int):
                 self.reliability_model.run()
-                availability.append(self.reliability_model.availability.reshape(1, -1))
-            availability = np.vstack(availability)
+                availability[i, :] = self.reliability_model.availability
         # if we're using fractional turbines, ensure the last row reflects the fractional part
         if (num_turbines - (num_turbines_int - 1)) != 0:
             availability[-1, :] = np.minimum(
