@@ -32,7 +32,7 @@ class DataCenterPerformanceModelConfig(BaseConfig):
     compute_electrical_efficiency: float = field(validator=validators.gt(0))
     cooling_load_ratio: float = field(validator=validators.ge(0))
     water_use_gal_per_mwh: float = field(validator=validators.ge(0))
-    demand_profile: int | float | list = field()
+    compute_load_demand: int | float | list = field()
 
 
 @register
@@ -82,7 +82,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
 
         self.add_input(
             f"{self.commodity}_demand",
-            val=self.config.demand_profile,
+            val=self.config.compute_load_demand,
             shape=n_timesteps,
             units=self.commodity_rate_units,
             desc="Data center compute load demand profile",
@@ -100,7 +100,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
             "electricity_in",
             val=0.0,
             shape=n_timesteps,
-            units="MW/h",
+            units=self.commodity_rate_units,
             desc="Electricity input",
         )
 
@@ -121,7 +121,7 @@ class DataCenterPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
-            "unmet_electricity_demand_out",
+            "unmet_electricity_demand",
             val=0.0,
             shape=n_timesteps,
             units=self.commodity_rate_units,
@@ -322,7 +322,7 @@ class DataCenterPUEWUEPerformanceModelConfig(BaseConfig):
     Resources, Conservation and Recycling 182 (2022): 106323.
 
     Attributes:
-        compute_it_workload_profile (float or list): Compute IT workload demand profile in MW.
+        compute_load_demand (float or list): Compute IT workload demand profile in MW.
         system_capacity_mw (float): Maximum compute capacity of the data center in MW.
         pue (float, optional): Power Usage Effectiveness ratio (total facility power / IT
             equipment power). Typical range: 1.1 - 3.0. A PUE of 1.5 means 1.5 kW of total
@@ -343,7 +343,7 @@ class DataCenterPUEWUEPerformanceModelConfig(BaseConfig):
         size_sqft (float, optional): Size of the data center in square feet. Defaults to None.
     """
 
-    compute_it_workload_profile: int | float | list = field()
+    compute_load_demand: int | float | list = field()
     system_capacity_mw: float = field(validator=validators.gt(0))
     pue: float = field(validator=validators.optional(validators.gt(1.0)), default=None)
     wue: float = field(validator=validators.optional(validators.ge(0)), default=None)
@@ -429,7 +429,7 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
     Inputs:
         pue (float): Power Usage Effectiveness ratio (typically 1.1 - 3.0).
         wue (float): Water Usage Effectiveness in liters per kWh.
-        compute_it_workload_profile (float array): Compute IT workload in MW.
+        compute_load_demand (float array): Compute IT workload in MW.
         system_capacity_mw (float): Maximum capacity in MW.
         electricity_in (float array): Available electricity in MW.
         water_in (float array): Available water in galUS/h.
@@ -494,8 +494,8 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
 
         # Inputs
         self.add_input(
-            "compute_it_workload",
-            val=self.config.compute_it_workload_profile,
+            "compute_load_demand",
+            val=self.config.compute_load_demand,
             shape=n_timesteps,
             units="MW",
             desc="Compute IT workload demand profile",
@@ -585,7 +585,7 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
         7. Track unmet demands
         """
         # Get inputs
-        it_workload = inputs["compute_it_workload"]  # MW
+        it_workload = inputs["compute_load_demand"]  # MW
         system_capacity = inputs["system_capacity"]  # MW
         pue = inputs["pue"]
         wue = inputs["wue"]  # L/kWh
@@ -658,11 +658,9 @@ class DataCenterPUEWUEPerformanceModel(PerformanceModelBaseClass):
         iecc_moisture = station.iecc_moisture_regime
 
         if warnings:
-            self.logger.warning(
-                "Warnings encountered when selecting weather station for location (%s, %s): %s",
-                latitude,
-                longitude,
-                warnings,
+            raise UserWarning(
+                "Warnings encountered when selecting weather station for location "
+                f"({latitude}, {longitude}): {warnings}"
             )
 
         # IECC zones 7 and 8 do not use a moisture-regime suffix.
@@ -948,8 +946,6 @@ class DataCenterPUEWUECostModel(CostModelBaseClass):
         # Total variable operating expenses (energy and water)
         variable_om = electricity_cost + water_cost
 
-        # Total operating expenditure
-        opex = fixed_om + variable_om
-
         outputs["CapEx"] = capex
-        outputs["OpEx"] = opex
+        outputs["OpEx"] = fixed_om
+        outputs["VarOpEx"] = variable_om

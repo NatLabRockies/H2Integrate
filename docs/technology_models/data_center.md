@@ -4,7 +4,8 @@ H2Integrate includes two data center model pairs, implemented in
 {mod}`h2integrate.converters.data_center`. Both produce a `compute_load` commodity (in MW)
 and calculate the electricity and water the data center consumes to serve a compute
 load profile. An example that runs both model pairs with an hourly AI training workload
-is provided in `examples/38_data_center/`.
+is provided in `examples/38_data_center/`. This AI training workload is based on data from
+NLR's DIPLOEE tool [^garg2026].
 
 | Model | Type | Description |
 | --- | --- | --- |
@@ -109,6 +110,9 @@ Unmet electricity and water demands are reported as `unmet_electricity_demand` a
 If electricity and water are purchased through separate technologies (for example, a grid
 model and a water feedstock), set `electricity_rate` and `water_rate` to zero to avoid
 counting those costs twice.
+
+[^garg2026]: Garg, A., Long, N., Vercellino, R., & Van Geet, O. (2026). Integrating Data
+Centers at the Edge: Addressing Growth and Interconnection Challenges. https://www.aceee.org/wp-content/uploads/2026/08/integrating-data-centers-at-the-edge-addressing.pdf.
 
 [^lei2022]: Lei, N., and Masanet, E. "Climate- and technology-specific PUE and WUE
 estimations for U.S. data centers using a hybrid statistical and thermodynamics-based
