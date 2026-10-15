@@ -354,6 +354,8 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    _simulation_duration_bounds = (0.0, float("inf"))
+
     def initialize(self):
         super().initialize()
         self.commodity = "electricity"
@@ -571,17 +573,12 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         """Run the storage performance model."""
         self.current_soc = self.config.init_soc_fraction
 
-        inputs["max_charge_rate"][0]
+        charge_rate = inputs["max_charge_rate"][0]
         if "max_discharge_rate" in inputs:
             discharge_rate = inputs["max_discharge_rate"][0]
         else:
-            discharge_rate = inputs["max_charge_rate"][0]
+            discharge_rate = charge_rate
         storage_capacity = inputs["storage_capacity"][0]
-
-        # H2I dispatch command: positive = discharge, negative = charge (commodity_rate_units)
-        power_profile = inputs[f"{self.commodity}_command_value"]
-
-        ### from Ankit
 
         # ---------------------------------------------------------------------------
         # Battery pack + inverter (fixed Megapack-style topology, from config)
@@ -670,9 +667,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         n_thermal_substeps = max(1, math.ceil(self.dt / float(inputs["thermal_substep_max"][0])))
         thermal_sub_dt = self.dt / n_thermal_substeps
 
-        # ---------------------------------------------------------------------------
-        # Simulation loop
-        # ---------------------------------------------------------------------------
         keys = ["soc", "v", "i", "T", "loss", "heat", "soh_Q", "soh_R"]
         log = {k: np.empty(self.n_timesteps) for k in keys}
         power_ac = np.empty(self.n_timesteps)
@@ -685,41 +679,38 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         hvac_power_th = np.empty(self.n_timesteps)
         hvac_power_el = np.empty(self.n_timesteps)
         system_derated = np.zeros(self.n_timesteps)
+        self._sim_state = {
+            "battery": battery,
+            "converter": converter,
+            "thermal": thermal,
+            "ambient_temperature": ambient_temperature,
+            "q_solar": q_solar,
+            "battery_temp_safe_lower": battery_temp_safe_lower,
+            "battery_temp_safe_upper": battery_temp_safe_upper,
+            "n_thermal_substeps": n_thermal_substeps,
+            "thermal_sub_dt": thermal_sub_dt,
+            "log": log,
+            "power_ac": power_ac,
+            "power_dc": power_dc,
+            "converter_loss": conv_loss,
+            "container_air_temperature": container_T_air,
+            "container_wall_temperature_inner": container_T_in,
+            "container_wall_temperature_mid": container_T_mid,
+            "container_wall_temperature_outer": container_T_out,
+            "hvac_thermal_power": hvac_power_th,
+            "hvac_electrical_power": hvac_power_el,
+            "system_derated": system_derated,
+        }
 
-        for i, p in enumerate(power_profile):
-            # Safety interlock: force commanded power to zero if the battery cell
-            # temperature (from the prior step) is outside the safe operating range.
-            current_batt_temp = battery.state.T
-            if (
-                current_batt_temp > battery_temp_safe_upper
-                or current_batt_temp < battery_temp_safe_lower
-            ):
-                p_executed = 0.0
-                system_derated[i] = 1.0
-            else:
-                p_executed = float(p)
-
-            # H2I sign (+discharge) -> SimSES AC sign (+charge)
-            converter.step(
-                -om_units.convert_units(p_executed, self.commodity_rate_units, "W"), self.dt
-            )
-            thermal.T_ambient = float(ambient_temperature[i])
-            thermal.Q_solar = float(q_solar[i])
-            for _ in range(n_thermal_substeps):
-                thermal.step(thermal_sub_dt)  # update battery temperature after each substep
-            for k in keys:
-                log[k][i] = getattr(battery.state, k)
-            power_ac[i] = converter.state.power  # AC power (W), positive = charge
-            power_dc[i] = battery.state.power  # AC power (W), positive = charge
-            conv_loss[i] = converter.state.loss
-            container_T_air[i] = thermal.state.T_air
-            container_T_in[i] = thermal.state.T_in
-            container_T_mid[i] = thermal.state.T_mid
-            container_T_out[i] = thermal.state.T_out
-            hvac_power_th[i] = thermal.state.power_th
-            hvac_power_el[i] = thermal.state.power_el
-
-        #############
+        outputs = self.run_storage(
+            charge_rate,
+            discharge_rate,
+            storage_capacity,
+            inputs,
+            outputs,
+            discrete_inputs,
+        )
+        power_ts = outputs[f"{self.commodity}_out"]
 
         # Expose the full SimSES timeseries as OpenMDAO outputs for downstream
         # diagnostics/plotting
@@ -746,8 +737,6 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         # Convert SimSES AC power (W, +charge) back to H2I convention
         # (commodity_rate_units, +discharge).
         soc_ts = log["soc"]
-        power_ts = -om_units.convert_units(power_ac, "W", self.commodity_rate_units)
-
         # --- BatteryPerformanceModel outputs ---
         outputs[f"{self.commodity}_auxiliary_demand"] = om_units.convert_units(
             hvac_power_el, "W", self.commodity_rate_units
@@ -803,3 +792,74 @@ class BatteryPerformanceModel(StoragePerformanceBase):
             )
             outputs["capacity_factor"] = annual_net_cf
             outputs["replacement_schedule"] = replacement_schedule
+
+    def simulate(
+        self,
+        storage_dispatch_commands: list,
+        charge_rate: float,
+        discharge_rate: float,
+        storage_capacity: float,
+        commodity_available: list | np.ndarray,
+        sim_start_index: int = 0,
+    ):
+        """Advance the SimSES battery over one controller window.
+
+        ``commodity_available`` is accepted for the storage-controller interface; grid
+        purchases are metered from the actual charge output after the battery simulation.
+        """
+        del storage_capacity
+        state = self._sim_state
+        battery = state["battery"]
+        converter = state["converter"]
+        thermal = state["thermal"]
+        commands = np.asarray(storage_dispatch_commands, dtype=float)
+        storage_power = np.empty(len(commands))
+        soc = np.empty(len(commands))
+
+        for local_index, command in enumerate(commands):
+            index = sim_start_index + local_index
+            if not 0 <= index < self.n_timesteps:
+                raise ValueError(
+                    f"Simulation index {index} is outside the {self.n_timesteps}-step horizon."
+                )
+
+            current_temperature = battery.state.T
+            if (
+                current_temperature > state["battery_temp_safe_upper"]
+                or current_temperature < state["battery_temp_safe_lower"]
+            ):
+                command = 0.0
+                state["system_derated"][index] = 1.0
+            elif command < 0.0:
+                available = max(0.0, float(commodity_available[index]))
+                command = -min(-float(command), charge_rate, available)
+            else:
+                command = min(float(command), discharge_rate)
+
+            converter.step(
+                -om_units.convert_units(command, self.commodity_rate_units, "W"), self.dt
+            )
+            thermal.T_ambient = float(state["ambient_temperature"][index])
+            thermal.Q_solar = float(state["q_solar"][index])
+            for _ in range(state["n_thermal_substeps"]):
+                thermal.step(state["thermal_sub_dt"])
+
+            for key in state["log"]:
+                state["log"][key][index] = getattr(battery.state, key)
+            state["power_ac"][index] = converter.state.power
+            state["power_dc"][index] = battery.state.power
+            state["converter_loss"][index] = converter.state.loss
+            state["container_air_temperature"][index] = thermal.state.T_air
+            state["container_wall_temperature_inner"][index] = thermal.state.T_in
+            state["container_wall_temperature_mid"][index] = thermal.state.T_mid
+            state["container_wall_temperature_outer"][index] = thermal.state.T_out
+            state["hvac_thermal_power"][index] = thermal.state.power_th
+            state["hvac_electrical_power"][index] = thermal.state.power_el
+
+            storage_power[local_index] = -om_units.convert_units(
+                converter.state.power, "W", self.commodity_rate_units
+            )
+            soc[local_index] = battery.state.soc * 100.0
+
+        self.current_soc = battery.state.soc
+        return storage_power, soc

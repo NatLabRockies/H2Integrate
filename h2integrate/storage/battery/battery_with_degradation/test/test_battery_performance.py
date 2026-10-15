@@ -78,11 +78,10 @@ def _build_problem(
         power_profile = np.zeros(n_timesteps)
 
     prob = om.Problem()
-    prob.model.add_subsystem(
-        "ivc",
-        om.IndepVarComp("electricity_command_value", val=power_profile, units="kW"),
-        promotes=["*"],
-    )
+    ivc = om.IndepVarComp()
+    ivc.add_output("electricity_command_value", val=power_profile, units="kW")
+    ivc.add_output("electricity_in", val=np.full(n_timesteps, 1.0e6), units="kW")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
     site_ivc = om.IndepVarComp()
     site_ivc.add_output("latitude", val=39.7392, units="deg")
     site_ivc.add_output("longitude", val=-104.9903, units="deg")
@@ -370,6 +369,10 @@ def test_notebook_weather_year_full_h2i_system(subtests):
 
     config["driver_config"].setdefault("general", {})["create_om_reports"] = False
     plant_config = config["plant_config"]
+    battery_tech = config["technology_config"]["technologies"]["battery"]
+    battery_tech.pop("control_strategy")
+    battery_tech["model_inputs"].pop("control_parameters")
+    plant_config.pop("tech_to_dispatch_connections")
     plant_config["plant"]["simulation"].update(
         {
             "dt": dt,
@@ -390,9 +393,6 @@ def test_notebook_weather_year_full_h2i_system(subtests):
     h2i = H2IntegrateModel(config)
     h2i.setup()
     h2i.prob.set_val("battery.electricity_set_point", power_profile_kw, units="kW")
-    h2i.prob.set_val(
-        "grid_buy.electricity_set_point", np.clip(-power_profile_kw, 0.0, None), units="kW"
-    )
     h2i.run()
 
     _assert_notebook_weather_year_outputs(h2i.prob, dt, subtests)
