@@ -33,7 +33,7 @@ For open-loop dispatch, the storage command uses H2I sign convention: positive v
 
 The component supports plant timesteps from 60 to 3600 seconds. However, the underlying SimSES model required timesteps <= 60 seconds. Its thermal solver internally substeps to maintain stability at larger plant timesteps.
 
-`eol_soh_capacity` is used to project the battery replacement schedule and degradation-aware annual capacity factors for finance. The current simulation does not physically reset the SimSES battery state at the projected replacement point.
+When capacity SOH reaches `eol_soh_capacity`, the performance model replaces the SimSES battery with a fresh instance using the configured initial SOC and temperature. The container thermal state is retained. The H2I `replacement_schedule` records the number of physical replacements in each simulated plant year and projects replacement cycles beyond the simulation horizon. ProFAST applies the configured `replacement_cost_percent` to this schedule when calculating replacement capital costs.
 
 ## Outputs
 

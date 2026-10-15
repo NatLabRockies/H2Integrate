@@ -489,6 +489,14 @@ class ContainerThermalModel:
         """
         self._components.append(component)
 
+    def replace_component(self, current: ThermalComponent, replacement: ThermalComponent) -> None:
+        """Replace a registered thermal node while retaining the container state."""
+        for index, component in enumerate(self._components):
+            if component is current:
+                self._components[index] = replacement
+                return
+        raise ValueError("The component to replace is not registered with this container.")
+
     def step(self, dt: float) -> None:
         """Advance all thermal nodes by one timestep.
 

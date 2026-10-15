@@ -3308,8 +3308,12 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
     control = config["technology_config"]["technologies"]["battery"]["model_inputs"][
         "control_parameters"
     ]
+    performance = config["technology_config"]["technologies"]["battery"]["model_inputs"][
+        "performance_parameters"
+    ]
     control["lmp_signal"] = lmp_signal.tolist()
     control["demand_signal"] = demand_signal.tolist()
+    performance["eol_soh_capacity"] = 1.0
 
     model = H2IntegrateModel(config)
     model.setup()
@@ -3317,6 +3321,8 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
 
     controller = model.control_strategies[0]
     battery_power = model.prob.get_val("battery.electricity_out", units="kW")
+    replacement_schedule = model.prob.get_val("battery.replacement_schedule")
+    lcoe = model.prob.get_val("finance_subgroup_battery.LCOE")[0]
     with subtests.test("controller horizon is 24 hours at 15-minute resolution"):
         assert controller.config.n_control_window_hours == 96
     with subtests.test("Nov windows use local bill minimization"):
@@ -3327,6 +3333,11 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
         assert battery_power.shape == (n_timesteps,)
         assert np.all(np.isfinite(battery_power))
         assert np.any(np.abs(battery_power) > 0.0)
+    with subtests.test("physical EOL replacements populate the finance schedule"):
+        assert replacement_schedule.shape == (30,)
+        assert replacement_schedule[0] == pytest.approx(0.0)
+        assert np.all(replacement_schedule[1:] == pytest.approx(1.0))
+        assert np.isfinite(lcoe)
 
 
 @pytest.mark.integration

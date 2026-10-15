@@ -567,7 +567,21 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
             desc="1 where battery output was forced to zero by the safe temperature interlock",
         )
 
-        # TODO degradation: adjustments for degradation
+    def _create_battery(self):
+        return Battery(
+            cell=LFP280Ah(),
+            circuit=(self.config.series_count, self.config.parallel_count),
+            initial_states={
+                "start_soc": self.config.init_soc_fraction,
+                "start_T": self.config.battery_temperature_c,
+            },
+            degradation=DegradationModel(
+                calendar=ScaledLFPCalendarDegradation(self.config.deg_scale),
+                cyclic=ScaledLFPCyclicDegradation(self.config.deg_scale),
+                initial_soc=self.config.init_soc_fraction,
+                initial_state=DegradationState(qloss_cal=1e-4),
+            ),
+        )
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
@@ -583,23 +597,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         # ---------------------------------------------------------------------------
         # Battery pack + inverter (fixed Megapack-style topology, from config)
         # ---------------------------------------------------------------------------
-        cell = LFP280Ah()
-
-        # TODO check sizing
-        battery = Battery(
-            cell=cell,
-            circuit=(self.config.series_count, self.config.parallel_count),
-            initial_states={
-                "start_soc": self.config.init_soc_fraction,
-                "start_T": self.config.battery_temperature_c,
-            },
-            degradation=DegradationModel(
-                calendar=ScaledLFPCalendarDegradation(self.config.deg_scale),
-                cyclic=ScaledLFPCyclicDegradation(self.config.deg_scale),
-                initial_soc=self.config.init_soc_fraction,
-                initial_state=DegradationState(qloss_cal=1e-4),
-            ),
-        )
+        battery = self._create_battery()
 
         converter = Converter(
             loss_model=FixedEfficiency(self.config.converter_efficiency),
@@ -860,6 +858,14 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
                 converter.state.power, "W", self.commodity_rate_units
             )
             soc[local_index] = battery.state.soc * 100.0
+
+            if battery.state.soh_Q <= self.config.eol_soh_capacity:
+                replaced_battery = battery
+                battery = self._create_battery()
+                state["battery"] = battery
+                converter.storage = battery
+                thermal.replace_component(replaced_battery, battery)
+                soc[local_index] = battery.state.soc * 100.0
 
         self.current_soc = battery.state.soc
         return storage_power, soc

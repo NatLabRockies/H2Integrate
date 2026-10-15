@@ -193,20 +193,25 @@ def _assert_notebook_weather_year_outputs(prob, dt, subtests):
 
 
 @pytest.mark.unit
-def test_config_defaults():
+def test_config_defaults(subtests):
     config = SimSESBatteryPerformanceModelConfig.from_dict(SHARED_PARAMETERS, strict=False)
 
-    assert config.deg_scale == pytest.approx(0.115)
-    assert config.eol_soh_capacity == pytest.approx(0.8)
-    assert config.hvac_cop_cooling_nominal == pytest.approx(3.2)
-    assert config.hvac_cop_heating_nominal == pytest.approx(3.8)
-    assert config.hvac_max_power == pytest.approx(12.0)
-    assert config.thermostat_setpoint == pytest.approx(25.0)
-    assert config.thermostat_deadband == pytest.approx(5.0)
-    assert config.thermal_substep_max == pytest.approx(60.0)
-    assert config.azimuth == pytest.approx(0.0)
-    assert config.battery_temp_safe_lower == pytest.approx(15.0)
-    assert config.battery_temp_safe_upper == pytest.approx(45.0)
+    expected_defaults = {
+        "deg_scale": 0.115,
+        "eol_soh_capacity": 0.8,
+        "hvac_cop_cooling_nominal": 3.2,
+        "hvac_cop_heating_nominal": 3.8,
+        "hvac_max_power": 12.0,
+        "thermostat_setpoint": 25.0,
+        "thermostat_deadband": 5.0,
+        "thermal_substep_max": 60.0,
+        "azimuth": 0.0,
+        "battery_temp_safe_lower": 15.0,
+        "battery_temp_safe_upper": 45.0,
+    }
+    for name, expected in expected_defaults.items():
+        with subtests.test(f"{name} default"):
+            assert getattr(config, name) == pytest.approx(expected)
 
 
 @pytest.mark.unit
@@ -219,7 +224,7 @@ def test_missing_resource_data_raises():
 
 
 @pytest.mark.unit
-def test_thermal_interlock_zeros_power_when_battery_too_hot():
+def test_thermal_interlock_zeros_power_when_battery_too_hot(subtests):
     n_timesteps = 3
     power_profile = np.full(n_timesteps, 500.0)  # kW, constant discharge command
     prob = _build_problem(
@@ -231,12 +236,16 @@ def test_thermal_interlock_zeros_power_when_battery_too_hot():
     _set_resource(prob, n_timesteps, temperature_c=25.0, ghi=0.0)
     prob.run_model()
 
-    assert prob.get_val("battery.system_derated")[0] == pytest.approx(1.0)
-    assert prob.get_val("battery.electricity_out", units="kW")[0] == pytest.approx(0.0, abs=1e-6)
+    with subtests.test("system is derated"):
+        assert prob.get_val("battery.system_derated")[0] == pytest.approx(1.0)
+    with subtests.test("battery power is zero"):
+        assert prob.get_val("battery.electricity_out", units="kW")[0] == pytest.approx(
+            0.0, abs=1e-6
+        )
 
 
 @pytest.mark.unit
-def test_hvac_heats_when_battery_is_cold():
+def test_hvac_heats_when_battery_is_cold(subtests):
     n_timesteps = 2
     prob = _build_problem(
         n_timesteps,
@@ -247,8 +256,37 @@ def test_hvac_heats_when_battery_is_cold():
     _set_resource(prob, n_timesteps, temperature_c=18.0, ghi=0.0)
     prob.run_model()
 
-    assert prob.get_val("battery.hvac_thermal_power", units="W")[0] > 0.0
-    assert prob.get_val("battery.hvac_electrical_power", units="W")[0] > 0.0
+    with subtests.test("HVAC thermal power is positive"):
+        assert prob.get_val("battery.hvac_thermal_power", units="W")[0] > 0.0
+    with subtests.test("HVAC electrical power is positive"):
+        assert prob.get_val("battery.hvac_electrical_power", units="W")[0] > 0.0
+
+
+@pytest.mark.unit
+def test_eol_replaces_battery_and_updates_finance_schedule(subtests):
+    n_timesteps = 2
+    prob = _build_problem(
+        n_timesteps,
+        dt=60,
+        power_profile=np.full(n_timesteps, 500.0),
+        performance_overrides={"eol_soh_capacity": 1.0},
+    )
+    _set_resource(prob, n_timesteps, temperature_c=25.0, ghi=0.0)
+    prob.run_model()
+
+    state_of_charge = prob.get_val("battery.SOC")
+    state_of_health = prob.get_val("battery.soh_capacity")
+    replacement_schedule = prob.get_val("battery.replacement_schedule")
+
+    with subtests.test("replacement restarts SOC from a fresh battery"):
+        np.testing.assert_allclose(state_of_charge[0], state_of_charge[1])
+    with subtests.test("logged SOH reaches EOL before each replacement"):
+        assert np.all(state_of_health < 1.0)
+    with subtests.test("finance schedule spans the full plant life"):
+        assert replacement_schedule.shape == (30,)
+        assert replacement_schedule[0] == pytest.approx(0.0)
+    with subtests.test("replacement schedule projects beyond the simulated horizon"):
+        np.testing.assert_allclose(replacement_schedule[1:], np.ones(29))
 
 
 @pytest.mark.unit
@@ -262,7 +300,7 @@ def test_solar_heat_gain_is_zero_at_night():
 
 
 @pytest.mark.unit
-def test_output_shapes_match_n_timesteps():
+def test_output_shapes_match_n_timesteps(subtests):
     n_timesteps = 5
     prob = _build_problem(n_timesteps)
     _set_resource(prob, n_timesteps, temperature_c=25.0, ghi=0.0)
@@ -278,11 +316,12 @@ def test_output_shapes_match_n_timesteps():
         "solar_heat_gain",
         "system_derated",
     ):
-        assert prob.get_val(f"battery.{name}").shape == (n_timesteps,)
+        with subtests.test(f"{name} output shape"):
+            assert prob.get_val(f"battery.{name}").shape == (n_timesteps,)
 
 
 @pytest.mark.integration
-def test_multiyear_simulation_preserves_state_and_annual_discharge():
+def test_multiyear_simulation_preserves_state_and_annual_discharge(subtests):
     steps_per_year = 8760
     n_timesteps = 2 * steps_per_year
     hour_of_day = np.arange(n_timesteps) % 24
@@ -301,34 +340,50 @@ def test_multiyear_simulation_preserves_state_and_annual_discharge():
 
     for name in ("SOC", "temperature", "soh_capacity", "soh_resistance", "power_ac"):
         values = prob.get_val(f"battery.{name}")
-        assert values.shape == (n_timesteps,)
-        assert np.all(np.isfinite(values))
+        with subtests.test(f"{name} timeseries has expected shape and finite values"):
+            assert values.shape == (n_timesteps,)
+            assert np.all(np.isfinite(values))
 
     soh = prob.get_val("battery.soh_capacity")
-    assert soh[steps_per_year] <= soh[steps_per_year - 1]
-    assert soh[-1] < soh[steps_per_year - 1] < soh[0]
+    with subtests.test("capacity SOH does not rise at the year boundary"):
+        assert soh[steps_per_year] <= soh[steps_per_year - 1]
+    with subtests.test("capacity SOH degrades over both simulated years"):
+        assert soh[-1] < soh[steps_per_year - 1] < soh[0]
 
     discharge = prob.get_val("battery.storage_electricity_discharge", units="kW")
     annual_discharge = discharge.reshape(2, steps_per_year).sum(axis=1)
-    assert annual_discharge[0] > annual_discharge[1] > 0.0
+    with subtests.test("annual discharge decreases as the battery degrades"):
+        assert annual_discharge[0] > annual_discharge[1] > 0.0
     rated_discharge = prob.get_val("battery.rated_electricity_production", units="kW")[0]
     annual_production = prob.get_val("battery.annual_electricity_produced", units="kW*h/year")
     standard_cf = prob.get_val("battery.standard_capacity_factor", units="unitless")
     net_cf = prob.get_val("battery.capacity_factor", units="unitless")
     replacements = prob.get_val("battery.replacement_schedule")
-    for values in (annual_production, standard_cf, net_cf, replacements):
-        assert values.shape == (30,)
-        assert np.all(np.isfinite(values))
-    np.testing.assert_allclose(annual_production[:2], annual_discharge)
-    np.testing.assert_allclose(
-        standard_cf[:2], annual_discharge / (rated_discharge * steps_per_year)
-    )
-    np.testing.assert_allclose(annual_production, standard_cf * rated_discharge * steps_per_year)
+    for name, values in {
+        "annual production": annual_production,
+        "standard capacity factor": standard_cf,
+        "net capacity factor": net_cf,
+        "replacement schedule": replacements,
+    }.items():
+        with subtests.test(f"{name} has expected shape and finite values"):
+            assert values.shape == (30,)
+            assert np.all(np.isfinite(values))
+    with subtests.test("annual production matches simulated annual discharge"):
+        np.testing.assert_allclose(annual_production[:2], annual_discharge)
+    with subtests.test("standard capacity factor matches annual discharge"):
+        np.testing.assert_allclose(
+            standard_cf[:2], annual_discharge / (rated_discharge * steps_per_year)
+        )
+    with subtests.test("annual production matches standard capacity factor"):
+        np.testing.assert_allclose(
+            annual_production, standard_cf * rated_discharge * steps_per_year
+        )
     net_power = prob.get_val("battery.electricity_out", units="kW")
-    np.testing.assert_allclose(
-        prob.get_val("battery.total_electricity_produced", units="kW*h")[0],
-        net_power.sum(),
-    )
+    with subtests.test("total production matches net power sum"):
+        np.testing.assert_allclose(
+            prob.get_val("battery.total_electricity_produced", units="kW*h")[0],
+            net_power.sum(),
+        )
 
 
 @pytest.mark.integration
