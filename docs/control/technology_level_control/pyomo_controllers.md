@@ -77,7 +77,20 @@ The optimized dispatch method is specified by setting the storage control to  `O
 
 The optimized dispatch using Pyomo is implemented differently than the heuristic dispatch in order to be able to properly aggregate the individual Pyomo technology models into a cohesive Pyomo plant model for the optimization solver. The Pyomo plant model is from the perspective of the storage technology and is meant to track inflows of commodities and other parameters that might impact the dispatch of the storage from upstream technologies. Practically, this means that the Pyomo elements of the dispatch (including the individual technology models and the plant model) are not exposed to the main H2I code flow, and do not appear in the N2 diagram. The figure below shows a flow diagram of how the dispatch is implemented. The green blocks below represent what is represented in the N2 diagram of the system. The dispatch routine is currently self-contained within the storage technology of the system, though it includes solving an aggregated plant model in the optimization
 
-```{note} Only the PySAM battery performance model can call Pyomo dispatch at this time.
+```{note}
+Optimized dispatch passes a `pyomo_dispatch_solver` callable to a storage performance model.
+`StoragePerformanceBase` provides this interface, so optimized dispatch is not inherently limited
+to the PySAM battery. To confirm that a storage model works with optimized dispatch:
+
+- Check that the storage `performance_model` is derived from `StoragePerformanceBase`; the models
+  listed in the [Storage Models](../../storage/storage_models_index.md) page are valid.
+- Check that `tech_to_dispatch_connections` in `plant_config.yaml` lists the storage technology as the
+  dispatching technology, for example `[battery, battery]`. Only then does the storage model add the
+  `pyomo_dispatch_solver` input and run with feedback control.
+- Check that the controller `commodity` matches the storage model `commodity`.
+
+[Example 30](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/30_pyomo_optimized_dispatch)
+uses `PySAMBatteryPerformanceModel`.
 ```
 
 ![](./figures/Pyomo_dispatch_figure.png)
@@ -93,7 +106,25 @@ We have exposed the optimization cost (weighting) values to the user in this imp
 ```
 
 For an example of how to use the optimized Pyomo control framework with the `OptimizedDispatchStorageController`, see
-- `examples/30_pyomo_optimized_dispatch`
+- [Example 30: Optimized Pyomo Dispatch](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/30_pyomo_optimized_dispatch)
+
+### Minimum operating-cost rules
+
+The optimized controller creates `PyomoDispatchGenericConverterMinOperatingCosts` blocks for
+upstream converter technologies and a `PyomoRuleStorageMinOperatingCosts` block for the dispatching
+storage technology. These registered Pyomo rule classes define the per-technology variables and
+constraints used by the controller; the optimized controller constructs them internally rather than
+requiring them to be added as performance models.
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_rules.converters.generic_converter_min_operating_cost.PyomoDispatchGenericConverterMinOperatingCosts
+  :members: initialize_parameters
+  :no-index:
+
+.. autoclass:: h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost.PyomoRuleStorageMinOperatingCosts
+  :members: initialize_parameters
+  :no-index:
+```
 
 
 This controller only allows one incoming electricity stream and does not apply optimal dispatch of that stream back through the upstream technologies (no feedback). The dispatch can handle more than one generation technology, but the incoming electricity must be combined using an H2I combiner before going to the storage component, and the `cost_per_production`, which is defined in the storage technology section, needs to include the cost of production for all production technologies. This could be done using the following:
@@ -114,7 +145,14 @@ tech_to_dispatch_connections: [
 (optimized-demand-response-controller)=
 ## Optimized Demand Response Controller
 
-The optimized demand response controller is specified by setting the storage control to `PeakLoadManagementOptimizedStorageController`. This controller optimizes the dispatch of a Battery Energy Storage System (BESS). It is demonstrated for a scenario in which a Generation and Transmission Cooperative (G&T) is connected to a Distribution Cooperative (Coop). The battery is owned and operated by the Coop, primarily to reduce its electricity cost; in addition, the G&T can request battery dispatch a limited number of times during peak LMP periods, in exchange for incentive payments. Using a pre-defined Locational Marginal Price (LMP) profile and consumer power demand profile as inputs, the controller maximizes the incentive payments earned from G&T-requested dispatches while minimizing the Coop's electricity cost, subject to constraints on the maximum number of dispatch events per month and the battery's state of charge. The result demonstrates peak load management and demand response from a single coordinated controller.
+Set `control_strategy` to `PeakLoadManagementOptimizedStorageController` to use this controller. It schedules a battery that serves two parties with different goals:
+
+- The **local** party owns the battery and wants to lower its own electricity bill.
+- The **upstream** party can call on the battery a limited number of times per month during high-price periods, paying an incentive each time it does.
+
+(A common real-world example: a distribution cooperative owns the battery to cut its own bill, while the generation and transmission utility it buys power from is the upstream party.)
+
+Given a price signal (`lmp_signal`) and the local party's demand (`demand_signal`), the controller picks a dispatch schedule that earns as much incentive revenue as possible while keeping the local party's cost low, without exceeding the monthly dispatch limit or the battery's state-of-charge limits.
 
 The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
 
@@ -135,7 +173,7 @@ The controller works at any simulation timestep resolution (`dt`). All time-base
 - $E_{\max} :=$ `max_capacity` $\times$ (`max_soc_fraction` $-$ `min_soc_fraction`): usable energy capacity (kWh)
 - $\eta_c$ := `charge_efficiency`, $\quad \eta_d$ := `discharge_efficiency`
 - $\text{SoC}_{\max}$ := `max_soc_fraction`, $\quad \text{SoC}_{\min}$ := `min_soc_fraction`
-- $\text{gt2coop_limit}$ := upper limit on power transmitted from G&T to Coop.
+- $\text{upstream\_to\_local\_limit}$ := upper limit on power transmitted from the upstream party to the local party.
 - `n_control_window_hours` := rolling horizon length in hours; converted to $T =$ `n_control_window_hours` / $\Delta t$ timesteps
 - $\mathcal{T} := \{0, 1, \ldots, T-1\}$: timesteps in the current rolling window
 - $\mathcal{M}_m$ := set of timesteps in month $m$, for $m = 1, \ldots, 12$
@@ -154,13 +192,13 @@ Before the MILP is solved, the dispatch window $\mathcal{D}$ is built in two ste
 
 ### Decision Variables
 
-- $u_{gt,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at G&T's command is active at timestep $t$; used for event counting and window feasibility constraints only
-- $u_{coop,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at Coop's command is active at timestep $t$; used for event counting and window feasibility constraints only
+- $u_{up,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at the upstream party's command is active at timestep $t$; used for event counting and window feasibility constraints only
+- $u_{loc,t} \in \{0, 1\}$ := discharge binary: 1 if a discharge event at the local party's command is active at timestep $t$; used for event counting and window feasibility constraints only
 - $v_t \in \{0, 1\}$ := charge binary: 1 if a charge event is active at timestep $t$
-- $p^d_{gt,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at G&Ts command at timestep $t$
-- $p^d_{coop,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at Coop's command timestep $t$
+- $p^d_{up,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at the upstream party's command at timestep $t$
+- $p^d_{loc,t} \in [0,\, P_{\max}]$ := discharge power (kW) dispatched at the local party's command at timestep $t$
 - $pc_{t} \in [0,\, P_{\max}]$ := charge power (kW) consumed at timestep $t$
-- $p_{gt2coop,t}$  := Energy supplied by the G&T to Coop at timestep $t$
+- $p_{up2loc,t}$  := power supplied by the upstream party to the local party at timestep $t$
 - $\text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}]$ := state of charge (fraction) at timestep $t$
 
 ### Optimization Problem
@@ -169,15 +207,15 @@ This optimization is executed for each rolling window. At each window boundary t
 
 #### Objective
 
-Minimize Coop's cost and maximize total incentive revenue over the optimization window:
+Minimize the local party's cost and maximize total incentive revenue over the optimization window:
 
 $$
-\min_{u_{gt,t},u_{coop,t},v_t,p^d_{gt,t},p^d_{coop,t},pc_t,\text{SOC}_t,p_{gt2coop,t}} \quad
-\Delta t \cdot \sum(f(\lambda_t) \cdot p_{gt2coop,t})
--\gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p^d_{gt,t}
+\min_{u_{up,t},u_{loc,t},v_t,p^d_{up,t},p^d_{loc,t},pc_t,\text{SOC}_t,p_{up2loc,t}} \quad
+\Delta t \cdot \sum(f(\lambda_t) \cdot p_{up2loc,t})
+-\gamma \cdot \Delta t \sum_{t \in \mathcal{T}} p^d_{up,t}
 $$
 
-where $f(\lambda_t)$ describes the price charged by the G&T to the Coop.
+where $f(\lambda_t)$ describes the price the upstream party charges the local party.
 
 The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled at any timestep resolution.
 
@@ -186,25 +224,25 @@ The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is c
 - Dispatch only within the event window $\mathcal{D}$:
 
 $$
-u_{gt,t} = 0 \qquad \forall\, t \notin \mathcal{D}
+u_{up,t} = 0 \qquad \forall\, t \notin \mathcal{D}
 $$
 
 - Maximum $N_{\max}$ discharge events per month. Because `event_duration` fixes each event to exactly $\tau$ timesteps, the event cap translates directly into a timestep cap:
 
 $$
-\sum_{t \in \mathcal{M}_m \cap \mathcal{T}} u_{gt,t} \leq B_m \cdot \tau \qquad \forall\, m
+\sum_{t \in \mathcal{M}_m \cap \mathcal{T}} u_{up,t} \leq B_m \cdot \tau \qquad \forall\, m
 $$
 
-After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_{gt,t} = 1$ and $u_{gt,t-1} = 0$) and $B_m$ is decremented accordingly for subsequent windows.
+After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_{up,t} = 1$ and $u_{up,t-1} = 0$) and $B_m$ is decremented accordingly for subsequent windows.
 
 - Power is zero when the binary is 0, and at most $P_{\max}$ when it is 1:
 
 $$
-p^d_{gt,t} \leq P_{\max} \cdot u_{gt,t} \qquad \forall\, t \in \mathcal{T}
+p^d_{up,t} \leq P_{\max} \cdot u_{up,t} \qquad \forall\, t \in \mathcal{T}
 $$
 
 $$
-p^d_{coop,t} \leq P_{\max} \cdot u_{coop,t} \qquad \forall\, t \in \mathcal{T}
+p^d_{loc,t} \leq P_{\max} \cdot u_{loc,t} \qquad \forall\, t \in \mathcal{T}
 $$
 
 $$
@@ -214,7 +252,7 @@ $$
 - SoC evolution with continuous charge and discharge power:
 
 $$
-\text{SoC}_{t} = \text{SoC}_{t-1} + \frac{\eta_c \cdot p_{c,t}\cdot \Delta t }{E_{\max}} - \frac{p^d_{gt,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} - \frac{p^d_{coop,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} \qquad \forall\, t \in \mathcal{T},\, t > 0
+\text{SoC}_{t} = \text{SoC}_{t-1} + \frac{\eta_c \cdot p_{c,t}\cdot \Delta t }{E_{\max}} - \frac{p^d_{up,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} - \frac{p^d_{loc,t} \cdot \Delta t}{\eta_d \cdot E_{\max}} \qquad \forall\, t \in \mathcal{T},\, t > 0
 $$
 
 - SoC bounds:
@@ -226,7 +264,7 @@ $$
 - No simultaneous charge and discharge:
 
 $$
-u_{gt,t} + u_{coop,t} + v_t \leq 1 \qquad \forall\, t \in \mathcal{T}
+u_{up,t} + u_{loc,t} + v_t \leq 1 \qquad \forall\, t \in \mathcal{T}
 $$
 
 - No charging during the dispatch window (battery reserved for discharge):
@@ -244,25 +282,25 @@ $$
 - Variable domains:
 
 $$
-u_{gt,t} \in \{0, 1\}, u_{coop,t} \in \{0, 1\}, \quad v_t \in \{0, 1\} \qquad \forall\, t
+u_{up,t} \in \{0, 1\}, u_{loc,t} \in \{0, 1\}, \quad v_t \in \{0, 1\} \qquad \forall\, t
 $$
 
 $$
-p^d_{gt,t},\,p^d_{coop,t},\, p_{c,t} \in [0,\, P_{\max}] \qquad \forall\, t
+p^d_{up,t},\,p^d_{loc,t},\, p_{c,t} \in [0,\, P_{\max}] \qquad \forall\, t
 $$
 
 $$
-\quad p_{gt2coop,t} \in [0,\, \text{gt2coop_limit}] \qquad \forall\, t
+\quad p_{up2loc,t} \in [0,\, \text{upstream\_to\_local\_limit}] \qquad \forall\, t
 $$
 
 $$
 \quad \text{SoC}_t \in [\text{SoC}_{\min},\, \text{SoC}_{\max}] \qquad \forall\, t
 $$
 
-- Energy balance at Coop level
+- Energy balance for the local party:
 
 $$
-\delta_t = p_{gt2coop,t} + p^d_{gt,t} + p^d_{coop,t} - p_{c,t}
+\delta_t = p_{up2loc,t} + p^d_{up,t} + p^d_{loc,t} - p_{c,t}
 $$
 
 
@@ -271,6 +309,22 @@ Example 34 performs the optimization with a synthetic LMP signal and demand sign
 ![](./figures/plm_optimized_dispatch.png)
 
 where peak windows are shown in light orange blocks and peak events are shown in dark orange blocks.
+
+### Seasonal switching: Exclusive Control Months
+
+Setting `exclusive_control_months` turns on a seasonal split: in listed months, the upstream party controls the battery as described above. In every other month, control switches to the local party, who instead runs the battery purely to lower its own bill.
+
+- `exclusive_control_months`: list of calendar months (1-12) the upstream party controls, e.g. `[12, 1, 2, 3]` for winter only.
+  - `None` (default): feature off, the upstream party always controls the battery.
+  - `[]`: the local party always controls the battery.
+
+Each rolling window is solved one way or the other, but never solved simultaneously - `setup()` raises an error if `n_control_window_hours` spans both the control schemes.
+
+During Exclusive Control Months, the discharge cap switches from a monthly event count (`n_max_events`) to a monthly cycled-energy budget (`max_cycles_per_day`), and `peak_window` switches roles from "eligible to discharge" to "no charging allowed" (e.g. a utility's Class A Peak Period).
+
+#### Local-control bill minimization
+
+In local-control months, the battery instead minimizes the local party's bill: a flat energy charge (`energy_rate`) plus a demand charge (`demand_charge_rate`) on the month's single highest net load within `demand_charge_window`. The objective also includes a tiny penalty on total charge/discharge throughput - with a flat energy rate, a matched charge/discharge pair that cancels out is otherwise free, so without that penalty the solver could add pointless extra cycling at no cost.
 
 ### Use as a system-level control (SLC) sub-controller
 
