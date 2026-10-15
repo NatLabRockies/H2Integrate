@@ -44,9 +44,37 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
             "carbon_steel", "stainless_304", "copper".
         process_fluid_name: CoolProp fluid name for the process stream.
         working_fluid_name: CoolProp fluid name for the working stream.
+        k_wall_W_mK: Tube wall thermal conductivity in W/m-K. If None, the value
+            is taken from ``tube_material``.
+        t_shell_m: Shell wall thickness in meters.
+        N_seg: Number of axial segments used to discretize the HX.
+        R_fi_m2K_W: Tube-side (inner) fouling resistance in m^2-K/W.
+        R_fo_m2K_W: Shell-side (outer) fouling resistance in m^2-K/W.
+        pitch_m: Tube pitch in meters. If None, defaults to ``1.1 * D_o_m``.
+        baffle_spacing_m: Shell-side baffle spacing in meters.
+        baffle_cut: Baffle cut as a fraction of the shell diameter (0-1).
+        layout: Tube layout. Possible values are: "triangular", "square".
+        shell_model: Shell-side heat transfer correlation. Possible values are:
+            "kern", "bell_delaware" (currently a placeholder equal to Kern).
+        F_shell: Correction factor applied to the shell-side heat transfer coefficient.
+        use_SiederTate_tube: Whether to use the Sieder-Tate correlation for turbulent
+            tube-side flow (otherwise Dittus-Boelter).
+        use_wall_viscosity_correction: Whether to apply the wall viscosity correction
+            in the Sieder-Tate correlation.
+        Re_laminar_max: Upper Reynolds number limit for laminar flow.
+        Re_turb_min: Lower Reynolds number limit for turbulent flow.
+        eta_pump: Pump efficiency (0-1] used to compute pumping power.
+        U_loss_W_m2K: Overall heat loss coefficient from shell to ambient in W/m^2-K.
+        T_amb_C: Ambient temperature for shell heat loss in degC.
+        T0_env_K: Dead-state (environment) temperature for exergy analysis in K.
+        pinch_threshold_K: Minimum temperature approach below which a pinch warning
+            is flagged, in K.
+        fzero_tol: Convergence tolerance for the shooting-method bisection.
+        fzero_maxit: Maximum number of iterations for the shooting-method bisection.
         enable_plot: Whether to enable plotting of the HX performance.
         plot_dir: Directory to save plots if plotting is enabled.
         show_plot: Whether to display plots interactively.
+        print_summary: Whether to print a detailed summary at each timestep.
     """
 
     process_fluid_temp_C: float = field(validator=validators.gt(0))
@@ -65,9 +93,38 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     shell_material: str = field(default="carbon_steel")
     process_fluid_name: str = field(default="Water")
     working_fluid_name: str = field(default="Water")
+    k_wall_W_mK: float | None = field(
+        default=None, validator=validators.optional(validators.gt(0))
+    )
+    t_shell_m: float = field(default=0.02, validator=validators.gt(0))
+    N_seg: int = field(default=20, validator=validators.gt(0))
+    R_fi_m2K_W: float = field(default=1e-4, validator=validators.ge(0))
+    R_fo_m2K_W: float = field(default=2e-4, validator=validators.ge(0))
+    pitch_m: float | None = field(default=None, validator=validators.optional(validators.gt(0)))
+    baffle_spacing_m: float = field(default=0.20, validator=validators.gt(0))
+    baffle_cut: float = field(default=0.20, validator=[validators.ge(0), validators.lt(1)])
+    layout: str = field(default="triangular", validator=validators.in_(["triangular", "square"]))
+    shell_model: str = field(
+        default="kern",
+        converter=str.lower,
+        validator=validators.in_(["kern", "bell_delaware"]),
+    )
+    F_shell: float = field(default=0.8, validator=validators.gt(0))
+    use_SiederTate_tube: bool = field(default=True)
+    use_wall_viscosity_correction: bool = field(default=True)
+    Re_laminar_max: float = field(default=2300.0, validator=validators.gt(0))
+    Re_turb_min: float = field(default=4000.0, validator=validators.gt(0))
+    eta_pump: float = field(default=0.7, validator=[validators.gt(0), validators.le(1)])
+    U_loss_W_m2K: float = field(default=0.0, validator=validators.ge(0))
+    T_amb_C: float = field(default=25.0)
+    T0_env_K: float = field(default=298.15, validator=validators.gt(0))
+    pinch_threshold_K: float = field(default=3.0, validator=validators.ge(0))
+    fzero_tol: float = field(default=1e-6, validator=validators.gt(0))
+    fzero_maxit: int = field(default=50, validator=validators.gt(0))
     enable_plot: bool = field(default=False)
     plot_dir: str | None = field(default=None)
     show_plot: bool = field(default=False)
+    print_summary: bool = field(default=False)
 
 
 class ShellTubeHXPerformanceModel(om.ExplicitComponent):
@@ -242,12 +299,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 "temp_cold_in": T_cold,
                 "mass_flow_rate_hot": m_dot_hot,
                 "mass_flow_rate_cold": m_dot_cold,
-                "N_tubes": self.config.N_tubes,
-                "N_passes": self.config.N_passes,
-                "L_tube": self.config.L_tube_m,
-                "D_o": self.config.D_o_m,
-                "t_wall": self.config.t_wall_m,
-                "D_shell": self.config.D_shell_m,
                 "fluid_hot": fluid_hot_fun,
                 "fluid_cold": fluid_cold_fun,
             }
@@ -456,7 +507,13 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
     def hx_shell_tube_steady(self, params=None):
         """
         Steady-state shell-and-tube heat exchanger model.
+
+        ``params`` carries the per-timestep stream state (inlet temperatures,
+        mass flow rates, and fluid-property callables). All geometry, material,
+        and solver settings are taken from ``self.config``.
         """
+        cfg = self.config
+
         # Default fluids (both sides = liquid water @ 1 bar)
         DEFAULT_WATER_FLUID = self.make_coolprop_fluid("Water", P_bar=1.0)
 
@@ -471,72 +528,71 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         m_dot_h = float(get("mass_flow_rate_hot", 18.0))
         m_dot_c = float(get("mass_flow_rate_cold", 40.0))
 
-        # Geometry
-        N_tubes = int(get("N_tubes", 192))
-        N_passes = int(get("N_passes", 2))
-        L_tube = float(get("L_tube", 4.9))
-        D_o = float(get("D_o", 0.01905))
-        t_wall = float(get("t_wall", 0.002))
-        D_i = D_o - 2.0 * t_wall
-        k_wall = float(get("k_wall", 45.0))
-        D_shell = float(get("D_shell", 0.591))
-
-        # Discretization
-        N_seg = int(get("N_seg", 20))
-
-        # Fouling
-        R_fi = float(get("R_fi", 1e-4))
-        R_fo = float(get("R_fo", 2e-4))
-
-        # Shell-side parameters
-        shell = {
-            "pitch": get("pitch", 1.1 * D_o),
-            "baffle_spacing": get("baffle_spacing", 0.20),
-            "baffle_cut": get("baffle_cut", 0.20),
-            "layout": get("layout", "triangular"),
-        }
-
-        # Pump efficiency
-        eta_pump = float(get("eta_pump", 0.7))
-
-        # Pinch threshold
-        pinch_threshold = float(get("pinch_threshold", 3.0))
-
-        # Physics switches
-        use_SiederTate_tube = bool(get("use_SiederTate_tube", True))
-        use_wall_viscosity_correction = bool(get("use_wall_viscosity_correction", True))
-        F_shell = float(get("F_shell", 0.8))
-        shell_model = get("shell_model", "kern")
-        T0_env = float(get("T0_env", 298.15))
-
-        # External shell loss
-        U_loss = float(get("U_loss", 0.0))
-        T_amb = float(get("T_amb", 25.0))
-
         # Property functions (now CoolProp-based by default)
         fluid_hot_fun = get("fluid_hot", DEFAULT_WATER_FLUID)
         fluid_cold_fun = get("fluid_cold", DEFAULT_WATER_FLUID)
 
+        # Geometry
+        N_tubes = int(cfg.N_tubes)
+        N_passes = int(cfg.N_passes)
+        L_tube = float(cfg.L_tube_m)
+        D_o = float(cfg.D_o_m)
+        t_wall = float(cfg.t_wall_m)
+        D_i = D_o - 2.0 * t_wall
+        D_shell = float(cfg.D_shell_m)
+
+        # Discretization
+        N_seg = int(cfg.N_seg)
+
+        # Fouling
+        R_fi = float(cfg.R_fi_m2K_W)
+        R_fo = float(cfg.R_fo_m2K_W)
+
+        # Shell-side parameters
+        shell = {
+            "pitch": cfg.pitch_m if cfg.pitch_m is not None else 1.1 * D_o,
+            "baffle_spacing": cfg.baffle_spacing_m,
+            "baffle_cut": cfg.baffle_cut,
+            "layout": cfg.layout,
+        }
+
+        # Pump efficiency
+        eta_pump = float(cfg.eta_pump)
+
+        # Pinch threshold
+        pinch_threshold = float(cfg.pinch_threshold_K)
+
+        # Physics switches
+        use_SiederTate_tube = bool(cfg.use_SiederTate_tube)
+        use_wall_viscosity_correction = bool(cfg.use_wall_viscosity_correction)
+        F_shell = float(cfg.F_shell)
+        shell_model = cfg.shell_model
+        T0_env = float(cfg.T0_env_K)
+
+        # External shell loss
+        U_loss = float(cfg.U_loss_W_m2K)
+        T_amb = float(cfg.T_amb_C)
+
         # fzero options
-        fzero_tol = float(get("fzero_tol", 1e-6))
-        fzero_maxit = int(get("fzero_maxit", 50))
+        fzero_tol = float(cfg.fzero_tol)
+        fzero_maxit = int(cfg.fzero_maxit)
 
         # Materials
-        tube_material = get("tube_material", self.config.tube_material)
-        shell_material = get("shell_material", self.config.shell_material)
+        tube_material = cfg.tube_material
+        shell_material = cfg.shell_material
 
-        t_shell = float(get("t_shell", 0.02))
+        t_shell = float(cfg.t_shell_m)
 
         # Reynolds thresholds
-        Re_laminar_max = float(get("Re_laminar_max", 2300.0))
-        Re_turb_min = float(get("Re_turb_min", 4000.0))
+        Re_laminar_max = float(cfg.Re_laminar_max)
+        Re_turb_min = float(cfg.Re_turb_min)
 
         # Metal props
         tube_k, tube_rho, tube_cp = self.metal_props(tube_material)
         shell_k, shell_rho, shell_cp = self.metal_props(shell_material)
 
-        if "k_wall" not in params:
-            k_wall = tube_k
+        # Tube wall conductivity: user override, otherwise from tube material
+        k_wall = float(cfg.k_wall_W_mK) if cfg.k_wall_W_mK is not None else tube_k
 
         # Geometry and areas
         A_tube_flow = (np.pi * D_i**2 / 4.0) * (N_tubes / N_passes)
