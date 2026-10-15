@@ -126,7 +126,7 @@ class TestShellTubeHXPerformanceModel:
         assert process_mass_flow_out[0] == approx(18.0, rel=1e-12)
         assert working_mass_flow_out[0] == approx(40.0, rel=1e-12)
 
-        # Outlet pressure = inlet pressure − Δp (converted from Pa to bar)
+        # Outlet pressure = inlet pressure - Δp (converted from Pa to bar)
         assert process_pressure_out[0] == approx(1.0 - expected_dp_process_Pa / 1e5, rel=rel)
         assert working_pressure_out[0] == approx(1.0 - expected_dp_working_Pa / 1e5, rel=rel)
 

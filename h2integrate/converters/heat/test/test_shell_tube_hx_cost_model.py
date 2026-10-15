@@ -8,10 +8,11 @@ from h2integrate.converters.heat.shell_tube_hx_cost_model import ShellTubeHXCost
 @fixture
 def shell_tube_hx_cost_model_config():
     cost_parameters = {
-        "Q_ref": 1.0e6,
-        "C_ref": 2.4e5,
-        "exp_Q": 0.8,
-        "cost_year": 2024,
+        "cost_year": 2022,
+        "hx_transfer_area": 100.0,
+        "install_factor": 1.61,
+        "material_factor": 1.0,
+        "opex_percentage": 0.04,
     }
 
     tech_config = {
@@ -48,20 +49,41 @@ class TestShellTubeHXCostModel:
         prob.setup()
         return prob
 
+    @staticmethod
+    def _expected_capex(area_m2, install_factor, material_factor):
+        # Sinnott & Towler (2021) u-tube shell-and-tube correlation, CEPCI 2010 -> 2022
+        a, b, n = 28000.0, 54.0, 1.2
+        cepci_scale = 816.0 / 532.9
+        return (a + b * area_m2**n) * cepci_scale * install_factor * material_factor
+
     def test_hx_cost_calculation(self, shell_tube_hx_cost_model_config):
         prob = self._create_problem(shell_tube_hx_cost_model_config)
-
-        # Set input value for total heat transfer rate
-        prob.set_val("Q_total_W", 5.0e6)  # 5 MW
-
         prob.run_model()
 
         CapEx_USD = prob.get_val("shell_tube_hx_cost.CapEx", units="USD")
         OpEx_USD_per_year = prob.get_val("shell_tube_hx_cost.OpEx", units="USD/year")
 
-        expected_CapEx_USD = 240000.0 * (5.0e6 / 1.0e6) ** 0.8
+        expected_CapEx_USD = self._expected_capex(100.0, 1.61, 1.0)
         expected_OpEx_USD_per_year = 0.04 * expected_CapEx_USD
 
-        rel = 1e-5
-        assert CapEx_USD == approx(expected_CapEx_USD, rel=rel)
-        assert OpEx_USD_per_year == approx(expected_OpEx_USD_per_year, rel=rel)
+        rel = 1e-6
+        assert CapEx_USD[0] == approx(expected_CapEx_USD, rel=rel)
+        assert OpEx_USD_per_year[0] == approx(expected_OpEx_USD_per_year, rel=rel)
+        assert prob.get_val("shell_tube_hx_cost.cost_year") == 2022
+
+    def test_hx_cost_input_override(self, shell_tube_hx_cost_model_config):
+        """Area and cost factors are OpenMDAO inputs and can be set/connected at runtime."""
+        prob = self._create_problem(shell_tube_hx_cost_model_config)
+        prob.set_val("hx_transfer_area", 250.0, units="m**2")
+        prob.set_val("install_factor", 2.0)
+        prob.set_val("material_factor", 1.3)
+        prob.run_model()
+
+        CapEx_USD = prob.get_val("shell_tube_hx_cost.CapEx", units="USD")
+        OpEx_USD_per_year = prob.get_val("shell_tube_hx_cost.OpEx", units="USD/year")
+
+        expected_CapEx_USD = self._expected_capex(250.0, 2.0, 1.3)
+
+        rel = 1e-6
+        assert CapEx_USD[0] == approx(expected_CapEx_USD, rel=rel)
+        assert OpEx_USD_per_year[0] == approx(0.04 * expected_CapEx_USD, rel=rel)

@@ -1,5 +1,4 @@
 from attrs import field, define, validators
-from attrs.validators import gt, lt
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
@@ -22,9 +21,11 @@ class ShellTubeHXCostModelConfig(BaseConfig):
             capital expenditure. Default is 0.04 (4%).
     """
 
-    cost_year: int = field(default=2022, converter=int, validator=validators.in_(2022))
+    cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
     hx_transfer_area: float = field(
-        default=10.0, converter=float, validator=[validators.gt(10), validators.lt(1000)]
+        default=10.0,
+        converter=float,
+        validator=validators.and_(validators.ge(10), validators.lt(1000)),
     )
     install_factor: float = field(default=1.61, converter=float, validator=validators.gt(0))
     material_factor: float = field(default=1.0, converter=float, validator=validators.gt(0))
@@ -48,9 +49,9 @@ class ShellTubeHXCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input(
-            "S",
-            val=self.config.S,
-            units="m^2",
+            "hx_transfer_area",
+            val=self.config.hx_transfer_area,
+            units="m**2",
             desc="Total heat transfer area of the heat exchanger",
         )
         self.add_input(
@@ -78,7 +79,7 @@ class ShellTubeHXCostModel(CostModelBaseClass):
         material = inputs["material_factor"]
 
         # Total heat transfer area of the heat exchanger
-        S = inputs["S"]
+        S = inputs["hx_transfer_area"]
 
         # Total installed costs
         total_installed_costs = (a + b * S**n) * year * install * material
