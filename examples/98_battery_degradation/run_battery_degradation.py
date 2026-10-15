@@ -80,8 +80,11 @@ steps_per_day = round(86400 / dt)
 
 # Fixed Megapack-style pack (read from the tech config)
 shared = model.technology_config["technologies"]["battery"]["model_inputs"]["shared_parameters"]
-series_count = shared["series_count"]
-parallel_count = shared["parallel_count"]
+performance = model.technology_config["technologies"]["battery"]["model_inputs"][
+    "performance_parameters"
+]
+series_count = performance["series_count"]
+parallel_count = performance["parallel_count"]
 cell_nominal_voltage = 3.2  # V
 cell_capacity_ah = 280.0  # Ah
 usable_fraction = shared["max_soc_fraction"] - shared["min_soc_fraction"]
@@ -97,8 +100,7 @@ print(f"Exclusive control months: {control['exclusive_control_months']}")
 print(f"Controller horizon: {control['n_control_window_hours']} h")
 
 # ---------------------------------------------------------------------------
-# Run the optimized battery dispatch. Grid purchases are metered from actual battery
-# charging; battery discharge is sold to the grid through the plant-config connection.
+# Run the optimized battery dispatch over 24-hour windows.
 # ---------------------------------------------------------------------------
 model.run()
 
@@ -110,6 +112,8 @@ model.run()
 # not need to be imported into this script.
 # ---------------------------------------------------------------------------
 index = pd.date_range("2026-01-01", periods=n_steps, freq=f"{int(dt)}s")
+controller = model.control_strategies[0]
+commanded_discharge = controller.p_discharge_upstream_history + controller.p_discharge_local_history
 df = pd.DataFrame(
     {
         "soc": model.prob.get_val("battery.SOC", units="unitless"),
@@ -122,6 +126,8 @@ df = pd.DataFrame(
         "power_ac": model.prob.get_val("battery.power_ac", units="W"),
         "power_dc": model.prob.get_val("battery.power_dc", units="W"),
         "conv_loss": model.prob.get_val("battery.converter_loss", units="W"),
+        "commanded_discharge": commanded_discharge,
+        "actual_discharge": model.prob.get_val("battery.storage_electricity_discharge", units="kW"),
     },
     index=index,
 )
@@ -144,6 +150,20 @@ ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x / 1e6:.2f}"))
 fig.tight_layout()
 fig.savefig(HERE / "plot_power.png", dpi=150)
 print("Saved plot_power.png")
+
+# ---------------------------------------------------------------------------
+# Plot 1b: commanded vs actual discharge (first 7 days)
+# ---------------------------------------------------------------------------
+fig, ax = plt.subplots(figsize=(12, 3))
+df["commanded_discharge"].iloc[:week].plot(ax=ax, linestyle="-", label="Commanded discharge")
+df["actual_discharge"].iloc[:week].plot(ax=ax, linestyle="--", label="Actual discharge")
+ax.set_title("Commanded vs actual battery discharge -- first 7 days")
+ax.set_ylabel("Discharge power [kW]")
+ax.axhline(0, color="gray", linewidth=0.5)
+ax.legend()
+fig.tight_layout()
+fig.savefig(HERE / "plot_discharge_tracking.png", dpi=150)
+print("Saved plot_discharge_tracking.png")
 
 # ---------------------------------------------------------------------------
 # Plot 2: SOC (hourly mean)

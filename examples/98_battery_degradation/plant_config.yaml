@@ -1,10 +1,9 @@
 name: plant_config
 description: >
   Single-battery plant that exercises the SimSES-backed BatteryPerformanceModel over a
-  long horizon for degradation analysis. The battery follows a fixed daily charge/discharge
-  set-point; it BUYS electricity from the grid to charge (grid_buy) and SELLS its discharge
-  back to the grid (grid_sell), so the ProFAST analysis captures grid purchase cost and
-  sales revenue.
+  long horizon for degradation analysis. An optimized controller dispatches the battery
+  over rolling 24-hour windows, with winter Exclusive Control Months and off-month
+  bill minimization. An electricity feedstock provides charging availability.
 sites:
   site:
     latitude: 39.755
@@ -13,15 +12,17 @@ sites:
       solar_resource:
         resource_model: GOESAggregatedSolarAPI
         resource_parameters:
-          resource_year: 2013
-          resource_filename: 39.7555_-105.2211_psmv3_60_2012.csv
+          resource_year: 2012
+          resource_year_order: [2012, 2012]  #, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012, 2012]
+          resource_filename: [39.7555_-105.2211_psmv3_60_2012.csv, 39.7555_-105.2211_psmv3_60_2012.csv]
+          upsample_method: time
 plant:
   plant_life: 30
   simulation:
     # 15-year degradation study at 15-min resolution (matches the partner reference
     # script): 15 years * 365 days * 96 steps/day = 525600 steps. n_timesteps * dt may
     # cover any horizon up to plant_life years.
-    n_timesteps: 525600
+    n_timesteps: 70080  # 525600
     dt: 900
     timezone: 0
     start_time: 01/01/2026 00:00:00

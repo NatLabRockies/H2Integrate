@@ -3294,7 +3294,11 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
         }
     )
     plant_config["sites"]["site"].update({"latitude": 39.7392, "longitude": -104.9903})
-    plant_config["sites"]["site"]["resources"]["solar_resource"]["resource_parameters"].update(
+    resource_parameters = plant_config["sites"]["site"]["resources"]["solar_resource"][
+        "resource_parameters"
+    ]
+    resource_parameters.clear()
+    resource_parameters.update(
         {
             "resource_year": 2009,
             "resource_filename": "Denver_weather_2009_h2i.csv",
