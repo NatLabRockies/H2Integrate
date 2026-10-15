@@ -5,6 +5,7 @@ import numpy as np
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
 from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
@@ -1578,6 +1579,38 @@ class H2IntegrateModel:
                     f"{dest_tech}.{stream_name}:{var_name}_in",
                 )
 
+    def _connect_parameters(
+        self, source_tech, dest_tech, source_parameter, dest_parameter, src_indices=None
+    ):
+        """Connect two technology parameters for a 3-element technology interconnection.
+
+        The connection is made on the top-level model because OpenMDAO only supports
+        input-to-input connections there. This also works for output-to-input connections.
+        Input-to-input connections need both inputs to share one default value. That default is
+        only set automatically for a demand component's demand input (e.g. to provide the
+        threshold of a threshold statistics model); other input-to-input connections need
+        matching defaults or a manual ``set_input_defaults``.
+        """
+        self.model.connect(
+            f"{source_tech}.{source_parameter}",
+            f"{dest_tech}.{dest_parameter}",
+            src_indices=src_indices,
+        )
+
+        # Only demand inputs get a shared default automatically: their default (the configured
+        # demand profile) is known before setup, and OpenMDAO errors on mismatched defaults.
+        if self.tech_control_classifiers.get(source_tech) == "demand":
+            params = merge_shared_inputs(
+                self.technology_config["technologies"][source_tech]["model_inputs"], "performance"
+            )
+            if source_parameter == f"{params['commodity']}_demand":
+                n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+                self.model.set_input_defaults(
+                    f"{source_tech}.{source_parameter}",
+                    val=np.array(np.broadcast_to(params["demand_profile"], n_timesteps), float),
+                    units=params["commodity_rate_units"],
+                )
+
     def connect_technologies(self):
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
 
@@ -1734,10 +1767,8 @@ class H2IntegrateModel:
                             splitter_counts,
                         )
                     else:
-                        self.plant.connect(
-                            f"{source_tech}.{source_parameter}",
-                            f"{dest_tech}.{dest_parameter}",
-                            src_indices=src_indices,
+                        self._connect_parameters(
+                            source_tech, dest_tech, source_parameter, dest_parameter, src_indices
                         )
                 else:
                     # Check if the connected_parameter is a multivariable stream
@@ -1750,10 +1781,12 @@ class H2IntegrateModel:
                             splitter_counts,
                         )
                     else:
-                        self.plant.connect(
-                            f"{source_tech}.{connected_parameter}",
-                            f"{dest_tech}.{connected_parameter}",
-                            src_indices=src_indices,
+                        self._connect_parameters(
+                            source_tech,
+                            dest_tech,
+                            connected_parameter,
+                            connected_parameter,
+                            src_indices,
                         )
 
             else:
@@ -1976,47 +2009,6 @@ class H2IntegrateModel:
         """
         Extremely light wrapper to setup the OpenMDAO problem and track setup status.
         """
-        ### TODO: SET INPUT DEFAULTS???
-        # 1) find, loop over the demand components
-        technologies = self.technology_config.get("technologies", {})
-        for tech_name, technology in technologies.items():
-            model_name = technology.get("performance_model", {}).get("model", "")
-            if "DemandComponent" not in model_name:
-                continue  # ignore if not a demand component
-            # 2) grab the demand profile quantities set up in the technology configs
-            performance_parameters = technology.get("model_inputs", {}).get(
-                "performance_parameters", {}
-            )
-            demand_profile = performance_parameters.get("demand_profile")
-            commodity = performance_parameters.get("commodity")
-            commodity_rate_units = performance_parameters.get("commodity_rate_units")
-            ### BEGIN ???
-            if demand_profile is None:
-                raise ValueError(
-                    f"`demand_profile` not found in `performance_parameters` in `{model_name}` "
-                    f"for {tech_name}, which is required for default value initialization..."
-                )  # ???, option 1: throw a value error
-            if demand_profile is None:
-                continue  # ???, option 2: do nothing if demand_profile isn't set
-            ### END ???
-            # make sure the demand profile is vector-valued
-            n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
-            demand_profile = np.atleast_1d(demand_profile)  # coerce everything to a numpy type
-            if len(demand_profile) == 1:
-                demand_profile = np.full((n_timesteps), demand_profile[0])
-            # 3) set their default values using set_input_defaults
-            # # if we get here... we've got a demand technology
-            # from pprint import pprint; pprint(technology)  # DEBUG!!!!!
-            self.model.set_input_defaults(
-                f"{tech_name}.{commodity}_demand",
-                val=demand_profile,
-                units=commodity_rate_units,
-            )
-            print(
-                f"setting input default on {tech_name}.{commodity}_demand "
-                f"to value: {demand_profile} with units {commodity_rate_units}"
-            )  # DEBUG!!!!!
-            # raise NotImplementedError(f"got here! model_name: {model_name}")  # DEBUG!!!!!
         self.prob.setup()
         self.state = State.SETUP
 
