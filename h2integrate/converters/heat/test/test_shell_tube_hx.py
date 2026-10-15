@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 import openmdao.api as om
 from pytest import approx, fixture
 
@@ -61,24 +61,16 @@ class TestShellTubeHXPerformanceModel:
         prob.run_model()
 
         # Multivariable-stream outlet values
-        process_temp_out = prob.get_val(
-            "shell_tube_hx.process_fluid:temperature_out", units="degC"
-        )
-        working_temp_out = prob.get_val(
-            "shell_tube_hx.working_fluid:temperature_out", units="degC"
-        )
+        process_temp_out = prob.get_val("shell_tube_hx.process_fluid:temperature_out", units="degC")
+        working_temp_out = prob.get_val("shell_tube_hx.working_fluid:temperature_out", units="degC")
         process_mass_flow_out = prob.get_val(
             "shell_tube_hx.process_fluid:mass_flow_out", units="kg/s"
         )
         working_mass_flow_out = prob.get_val(
             "shell_tube_hx.working_fluid:mass_flow_out", units="kg/s"
         )
-        process_pressure_out = prob.get_val(
-            "shell_tube_hx.process_fluid:pressure_out", units="bar"
-        )
-        working_pressure_out = prob.get_val(
-            "shell_tube_hx.working_fluid:pressure_out", units="bar"
-        )
+        process_pressure_out = prob.get_val("shell_tube_hx.process_fluid:pressure_out", units="bar")
+        working_pressure_out = prob.get_val("shell_tube_hx.working_fluid:pressure_out", units="bar")
 
         # Diagnostic scalar-like outputs (time-series of length 1)
         C_r = prob.get_val("shell_tube_hx.heat_capacity_rate_ratio")

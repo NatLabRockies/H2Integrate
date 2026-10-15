@@ -102,9 +102,7 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     shell_material: str = field(default="carbon_steel")
     process_fluid_name: str = field(default="Water")
     working_fluid_name: str = field(default="Water")
-    k_wall_W_mK: float | None = field(
-        default=None, validator=validators.optional(validators.gt(0))
-    )
+    k_wall_W_mK: float | None = field(default=None, validator=validators.optional(validators.gt(0)))
     t_shell_m: float = field(default=0.02, validator=validators.gt(0))
     N_seg: int = field(default=20, validator=validators.gt(0))
     R_fi_m2K_W: float = field(default=1e-4, validator=validators.ge(0))
@@ -237,9 +235,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         self.add_output(
             "entropy_generation_rate", units="W/K", desc="Entropy generation rate", **ts
         )
-        self.add_output(
-            "exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts
-        )
+        self.add_output("exergy_destruction_rate", units="kW", desc="Exergy destruction rate", **ts)
         self.add_output(
             "roles_swapped",
             units="unitless",
@@ -332,7 +328,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
 
         # Metal props
         tube_k, tube_rho, tube_cp = self.metal_props(tube_material)
-        shell_k, shell_rho, shell_cp = self.metal_props(shell_material)
+        _shell_k, shell_rho, shell_cp = self.metal_props(shell_material)
 
         # Tube wall conductivity: user override, otherwise from tube material
         k_wall = float(cfg.k_wall_W_mK) if cfg.k_wall_W_mK is not None else tube_k
@@ -445,7 +441,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             }
             residual = partial(self.residual_Tc_out, Th_in=Th_in, Tc_in=Tc_in, **stream_state)
 
-            Tc_root, r_min, r_max = self.find_root_bisect(
+            Tc_root, _r_min, _r_max = self.find_root_bisect(
                 residual, Tc_out0_min, Tc_out0_max, fzero_tol, fzero_maxit
             )
             shooting_bracket_ok = True
@@ -535,9 +531,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                     Nu_t_mean = 0.023 * Re_t_mean**0.8 * Pr_h_mean**0.4
             h_i_mean = Nu_t_mean * hot_m["k"] / D_i
 
-            h_o_mean, _, _ = self.shell_h_local(
-                cold_m, m_dot_c, geom, shell, F_shell, shell_model
-            )
+            h_o_mean, _, _ = self.shell_h_local(cold_m, m_dot_c, geom, shell, F_shell, shell_model)
 
             R_o_mean = 1.0 / h_o_mean + R_fo
             R_w_mean = (D_o * log(D_o / D_i)) / (2.0 * k_wall)
@@ -1130,7 +1124,7 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         cold fluid. It calculates the difference between the calculated cold outlet temperature
         at the end of the heat exchanger and the specified cold inlet temperature.
         """
-        Th_, Tc_, *_ = self.march_segments(
+        _, Tc_, *_ = self.march_segments(
             Th_in,
             Tc_out0,
             m_dot_h,
@@ -1189,12 +1183,12 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         print(f"Hot side:  Th_in  = {Th_in:6.2f} degC, Th_out = {Th_out:6.2f} degC")
         print(f"Cold side: Tc_in  = {Tc_in:6.2f} degC, Tc_out = {Tc_out:6.2f} degC\n")
 
-        print(f"Q_total          = {res['Q_total']/1e3:8.1f} kW")
-        print(f"Q_hot (bulk)     = {res['Q_hot']/1e3:8.1f} kW")
-        print(f"Q_cold (bulk)    = {res['Q_cold']/1e3:8.1f} kW")
+        print(f"Q_total          = {res['Q_total'] / 1e3:8.1f} kW")
+        print(f"Q_hot (bulk)     = {res['Q_hot'] / 1e3:8.1f} kW")
+        print(f"Q_cold (bulk)    = {res['Q_cold'] / 1e3:8.1f} kW")
         print(
-            f"Q_loss_tot       = {res['Q_loss_tot']/1e3:8.1f} kW "
-            f"({100*res['Q_loss_tot']/max(1e-9,res['Q_total']):.2f} %)\n"
+            f"Q_loss_tot       = {res['Q_loss_tot'] / 1e3:8.1f} kW "
+            f"({100 * res['Q_loss_tot'] / max(1e-9, res['Q_total']):.2f} %)\n"
         )
 
         print(f"epsilon          = {res['epsilon']:.3f}")
@@ -1203,10 +1197,8 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         print(f"LMTD_global      = {res['LMTD_global']:.2f} K")
         print(f"U_global         = {res['U_global']:.1f} W/m^2-K")
         print(f"U_lumped         = {res['U_lumped']:.1f} W/m^2-K")
-        print(f"Q_LMTD_lumped    = {res['Q_LMTD_lumped']/1e3:8.1f} kW")
-        print(
-            f"Q_error_frac     = {res['Q_error_frac']:.3f} " f"({100*res['Q_error_frac']:.1f} %)\n"
-        )
+        print(f"Q_LMTD_lumped    = {res['Q_LMTD_lumped'] / 1e3:8.1f} kW")
+        print(f"Q_error_frac     = {res['Q_error_frac']:.3f} ({100 * res['Q_error_frac']:.1f} %)\n")
 
         print(f"U_seg  min / max = {res['U_seg'].min():.1f} / {res['U_seg'].max():.1f} W/m^2-K")
         print(f"h_i    min / max = {res['h_i_seg'].min():.1f} / {res['h_i_seg'].max():.1f} W/m^2-K")
@@ -1225,11 +1217,11 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         print(f"V_tube_mean      = {res['V_tube_mean']:.3f} m/s")
         print(f"V_shell_mean     = {res['V_shell_mean']:.3f} m/s\n")
 
-        print(f"dp_tube_total    = {res['dp_tube_total']/1e3:.2f} kPa")
-        print(f"dp_shell_total   = {res['dp_shell_total']/1e3:.2f} kPa")
-        print(f"P_pump_tube      = {res['P_pump_tube']/1e3:.3f} kW")
-        print(f"P_pump_shell     = {res['P_pump_shell']/1e3:.3f} kW")
-        print(f"P_pump_total     = {res['P_pump_total']/1e3:.3f} kW\n")
+        print(f"dp_tube_total    = {res['dp_tube_total'] / 1e3:.2f} kPa")
+        print(f"dp_shell_total   = {res['dp_shell_total'] / 1e3:.2f} kPa")
+        print(f"P_pump_tube      = {res['P_pump_tube'] / 1e3:.3f} kW")
+        print(f"P_pump_shell     = {res['P_pump_shell'] / 1e3:.3f} kW")
+        print(f"P_pump_total     = {res['P_pump_total'] / 1e3:.3f} kW\n")
 
         print(f"tau_hot          = {res['tau_hot']:.1f} s")
         print(f"tau_cold         = {res['tau_cold']:.1f} s\n")
@@ -1242,9 +1234,9 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         )
 
         print(f"S_gen_dot (seg)  = {res['S_gen_dot']:.2f} W/K")
-        print(f"Ex_dest_dot (seg)= {res['Ex_dest_dot']/1e3:.2f} kW")
+        print(f"Ex_dest_dot (seg)= {res['Ex_dest_dot'] / 1e3:.2f} kW")
         print(f"S_gen_dot_bulk   = {res['S_gen_dot_bulk']:.2f} W/K")
-        print(f"Ex_dest_dot_bulk = {res['Ex_dest_dot_bulk']/1e3:.2f} kW\n")
+        print(f"Ex_dest_dot_bulk = {res['Ex_dest_dot_bulk'] / 1e3:.2f} kW\n")
 
         print("Flags:")
         for k, v in res["flags"].items():
