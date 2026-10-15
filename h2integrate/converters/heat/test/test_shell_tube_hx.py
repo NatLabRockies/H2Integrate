@@ -3,7 +3,7 @@ import numpy as np
 import openmdao.api as om
 from pytest import approx, fixture
 
-from h2integrate.converters.heat.shell_tube_hx import ShellTubeHXPerformanceModel
+from h2integrate.converters.heat.shell_tube_hx_performance_model import ShellTubeHXPerformanceModel
 
 
 @fixture

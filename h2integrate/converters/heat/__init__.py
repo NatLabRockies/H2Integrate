@@ -1,2 +1,2 @@
-from h2integrate.converters.heat.shell_tube_hx import ShellTubeHXPerformanceModel
+from h2integrate.converters.heat.shell_tube_hx_performance_model import ShellTubeHXPerformanceModel
 from h2integrate.converters.heat.shell_tube_hx_cost_model import ShellTubeHXCostModel
