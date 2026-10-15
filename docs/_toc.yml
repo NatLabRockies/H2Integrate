@@ -64,6 +64,7 @@ parts:
         sections:
           - file: storage/simple_generic_storage.md
           - file: storage/pysam_battery.md
+          - file: storage/simses_battery.md
           - file: storage/hydrogen_storage.md
   - caption: Resource Models
     chapters:

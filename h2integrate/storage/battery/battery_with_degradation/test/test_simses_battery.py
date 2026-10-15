@@ -1,4 +1,4 @@
-"""Tests for the container/HVAC-equipped BatteryPerformanceModel with degradation.
+"""Tests for the container/HVAC-equipped SimSESBatteryPerformanceModel.
 
 Short component tests use synthetic weather. Integration coverage includes a two-year
 state-continuity check and notebook-aligned one-year regressions using bundled Denver
@@ -14,9 +14,9 @@ import openmdao.api as om
 
 from h2integrate import RESOURCE_DEFAULT_DIR, H2IntegrateModel
 from h2integrate.core.file_utils import load_yaml
-from h2integrate.storage.battery.battery_with_degradation.battery_performance import (
-    BatteryPerformanceModel,
-    BatteryPerformanceModelConfig,
+from h2integrate.storage.battery.battery_with_degradation.simses_battery import (
+    SimSESBatteryPerformanceModel,
+    SimSESBatteryPerformanceModelConfig,
 )
 
 
@@ -67,7 +67,7 @@ def _build_problem(
     start_time="01/01 00:00:00",
     timezone=0,
 ):
-    """Build an OpenMDAO problem with a single BatteryPerformanceModel subsystem.
+    """Build an OpenMDAO problem with a single SimSESBatteryPerformanceModel subsystem.
 
     Latitude/longitude are connected via a site IndepVarComp (required since those
     inputs use ``require_connection=True``). The ``solar_resource_data`` discrete
@@ -88,7 +88,7 @@ def _build_problem(
     prob.model.add_subsystem("site", site_ivc, promotes=["*"])
     prob.model.add_subsystem(
         "battery",
-        BatteryPerformanceModel(
+        SimSESBatteryPerformanceModel(
             plant_config=_plant_config(n_timesteps, dt, start_time, timezone),
             tech_config=_tech_config(**(performance_overrides or {})),
         ),
@@ -194,7 +194,7 @@ def _assert_notebook_weather_year_outputs(prob, dt, subtests):
 
 @pytest.mark.unit
 def test_config_defaults():
-    config = BatteryPerformanceModelConfig.from_dict(SHARED_PARAMETERS, strict=False)
+    config = SimSESBatteryPerformanceModelConfig.from_dict(SHARED_PARAMETERS, strict=False)
 
     assert config.deg_scale == pytest.approx(0.115)
     assert config.eol_soh_capacity == pytest.approx(0.8)

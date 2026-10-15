@@ -197,7 +197,7 @@ class ScaledLFPCyclicDegradation(SonyLFPCyclicDegradation):
 
 @register
 @define(kw_only=True)
-class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
+class SimSESBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     """Configuration class for storage performance models.
 
     This class defines configuration parameters for simulating storage
@@ -346,7 +346,7 @@ class BatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
 
 @register
-class BatteryPerformanceModel(StoragePerformanceBase):
+class SimSESBatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component for a storage component."""
 
     _time_step_bounds = (
@@ -363,7 +363,7 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        self.config = BatteryPerformanceModelConfig.from_dict(
+        self.config = SimSESBatteryPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -737,7 +737,7 @@ class BatteryPerformanceModel(StoragePerformanceBase):
         # Convert SimSES AC power (W, +charge) back to H2I convention
         # (commodity_rate_units, +discharge).
         soc_ts = log["soc"]
-        # --- BatteryPerformanceModel outputs ---
+        # --- SimSESBatteryPerformanceModel outputs ---
         outputs[f"{self.commodity}_auxiliary_demand"] = om_units.convert_units(
             hvac_power_el, "W", self.commodity_rate_units
         )
