@@ -140,6 +140,69 @@ from h2integrate.resource.solar.nlr_developer_himawari_api_models import Himawar
             None,
             Himawari7SolarAPI,
         ),
+        # Multi-year with timestep resample (upsample)
+        (
+            47.5233,
+            -92.5366,
+            "tmy-2023",
+            -1,
+            1800,
+            35040,
+            False,
+            [
+                "47.5233_-92.5366_tmy-2023_goes_tmy_v4_60min_local_tz.csv",
+                "47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv",
+            ],
+            None,
+            GOESTMYSolarAPI,
+        ),
+        (
+            -27.3649,
+            152.67935,
+            2012,
+            0,
+            1800,
+            35088,
+            True,
+            [
+                "-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv",
+                "-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv",
+            ],
+            None,
+            Himawari7SolarAPI,
+        ),
+        # Multi-year with timestep resample (downsample)
+        (
+            47.5233,
+            -92.5366,
+            "tmy-2023",
+            -1,
+            7200,
+            8760,
+            False,
+            [
+                "47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv",
+                "47.5233_-92.5366_tmy-2022_goes_tmy_v4_60min_local_tz.csv",
+            ],
+            None,
+            GOESTMYSolarAPI,
+        ),
+        (
+            -27.3649,
+            152.67935,
+            2012,
+            0,
+            7200,
+            13164,
+            True,
+            [
+                "-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv",
+                "-27.3649_152.67935_2013_himawari7_v3_60min_utc_tz.csv",
+                "-27.3649_152.67935_2012_himawari7_v3_60min_utc_tz.csv",
+            ],
+            None,
+            Himawari7SolarAPI,
+        ),
     ],
     ids=[
         # --- Multiple years ---
@@ -161,6 +224,13 @@ from h2integrate.resource.solar.nlr_developer_himawari_api_models import Himawar
         "Himawari7:2.5years-without-leapday-year_order",
         "Himawari7:2.5years-with-leapday-year_order",
         "Himawari7:0.5years-with-leapday-start_year_with_filename",
+        # --- Multi year with timestep resample ---
+        # upsample (target dt of 1800, actual dt of 3600)
+        "GOESTMY:2years-filenames-upsample",
+        "Himawari7:2years-with-leapday-filenames-upsample",
+        # downsample (target dt of 7200, actual dt of 3600)
+        "GOESTMY:2years-filenames-downsample",
+        "Himawari7:3years-with-leapday-filenames-downsample",
     ],
 )
 def test_solar_resource_nonannual(
@@ -170,7 +240,13 @@ def test_solar_resource_nonannual(
     site_config_multiyear,
     plant_simulation_multiyear,
     n_timesteps,
+    dt,
 ):
+
+    if dt < 3600:
+        resource_config_multiyear["upsample_method"] = "time"
+    if dt > 3600:
+        resource_config_multiyear["downsample_method"] = "mean"
 
     plant_config = {"plant": plant_simulation_multiyear, "site": site_config_multiyear}
 
