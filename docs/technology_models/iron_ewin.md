@@ -17,7 +17,7 @@ The first study is by [Humbert et al.](https://doi.org/10.1007/s40831-024-00878-
 These authors gather information on the specific energy required for electrolysis and associated pretreatments needed, which is applied in the `HumbertEwinPerformanceComponent` performance model.
 In their supporting information, they also model the full operational expenditures for each process, which is applied in the `HumbertStinnEwinCostComponent` cost model.
 
-The second study is by [Stinn & Allanore](https://doi.org/10.1149.2/2.F06202IF), who present a generalized capital cost model for electrowinning of many different metals.
+The second study is by [Stinn & Allanore](https://doi.org/10.1149/2.F06202IF), who present a generalized capital cost model for electrowinning of many different metals.
 These authors use both cost data and physical parameters from existing studies to fit the model to be applicable to any metal, including iron.
 This model is applied in the `HumbertStinnEwinCostComponent` cost model.
 
@@ -29,12 +29,12 @@ The cost model will calculate capex costs based on the Stinn correlations and op
 
 For API details, see:
 
-- [`HumbertEwinConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
+- [`HumbertEwinPerformanceComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
 - [`HumbertEwinPerformanceComponent`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
 
 ## Cost Model
 
 For API details, see:
 
-- [`HumbertStinnEwinCostConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
+- [`HumbertStinnEwinCostComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
 - [`HumbertStinnEwinCostComponent`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)

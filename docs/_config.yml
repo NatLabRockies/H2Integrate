@@ -1,9 +1,9 @@
 # Book settings
 # Learn more at https://jupyterbook.org/customize/config.html
 title: H2Integrate
-author: National Renewable Energy Laboratory
+author: NLR
 # logo: logo.png
-copyright: '2025'
+copyright: 2026, NLR
 only_build_toc_files: false
 # exclude_patterns: [_build, Thumbs.db, .DS_Store, "**.ipynb_checkpoints", .github]
 # Force re-execution of notebooks on each build.
@@ -30,21 +30,30 @@ latex:
 repository:
   url: https://github.com/NatLabRockies/H2Integrate
   path_to_book: docs
-  branch: main
+  branch: develop
 # Add GitHub buttons to your book
 # See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
 html:
   use_issues_button: true
   use_repository_button: true
-  baseurl: https://nrel.github.io/H2Integrate/
+  baseurl: https://h2integrate.readthedocs.io/en/latest/
 sphinx:
   extra_extensions:
     - sphinx.ext.autodoc
     - sphinx.ext.autosummary
     - sphinx.ext.napoleon
+    - h2integrate.core.docs_sphinx
   config:
     language: python
     autosummary_generate: true
+    html_theme_options:
+      check_switcher: false
+      navbar_end:
+        - version-switcher
+        - navbar-icon-links
+      switcher:
+        json_url: https://h2integrate.readthedocs.io/en/latest/_static/switcher.json
+        version_match: latest
     autodoc_default_options:
       members: true
       member-order: bysource
@@ -65,8 +74,7 @@ sphinx:
     # pytest ``conftest.py`` submodules from the generated stubs (they can't be
     # imported outside a pytest session, so autosummary would emit "failed to
     # import" warnings for every one).
-    templates_path:
-      - _templates
+    templates_path: [_templates]
     napoleon_use_admonition_for_notes: true
     napoleon_use_rtype: false
     # Render "Attributes:" sections with the :ivar: role instead of separate
@@ -95,7 +103,16 @@ sphinx:
     # toctrees are how ``autosummary :recursive:`` links its child module
     # pages together and can't be moved into ``_toc.yml``, so the warnings
     # are noise rather than a real problem to fix.
-    suppress_warnings:
-      - etoc.toctree
+    suppress_warnings: [etoc.toctree]
+    linkcheck_ignore:
+      # These exact publisher URLs return 403 to automated linkcheck requests.
+      - https://www\.cell\.com/cell-reports-sustainability/pdfExtended/S2949-7906\(25\)00034-5
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319906005726
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319917347237#bib27
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319924051577
+      - https://www\.sciencedirect\.com/science/article/pii/S0360319921030834\?via%3Dihub
+      - https://www\.researchgate\.net/publication/344260178_Faraday%27s_Efficiency_Modeling_of_a_Proton_Exchange_Membrane_Electrolyzer_Based_on_Experimental_Data
+      - https://assets-eu\.researchsquare\.com/files/rs-4326648/v1_covered_338a5071-b74b-4ecd-9d2a-859e8d988b5c\.pdf\?c=1716199726
+      - https://fred\.stlouisfed\.org/series/CUUR0000SEHF01
     nb_merge_streams: true
     nb_execution_raise_on_error: true

@@ -8,7 +8,8 @@ from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi
 
 
@@ -37,7 +38,7 @@ def get_mine_from_coordinates(latitude, longitude):
 
 
 @define(kw_only=True)
-class NRRIIronMinePerformanceConfig(BaseConfig):
+class NRRIIronMinePerformanceComponentConfig(BaseConfig):
     """Configuration class for NRRIIronMinePerformanceComponent.
 
     Attributes:
@@ -79,6 +80,7 @@ class NRRIIronMinePerformanceConfig(BaseConfig):
         self.longitude = MINE_LOCATIONS[self.mine]["longitude"]
 
 
+@register
 class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
     _time_step_bounds = (
         3600,
@@ -93,7 +95,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "t"
 
     def setup(self):
-        self.config = NRRIIronMinePerformanceConfig.from_dict(
+        self.config = NRRIIronMinePerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -305,7 +307,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         if system_capacity * 8760 > ref_pellets:
             msg = (
                 f"System capacity of {system_capacity} t/yr exceeds the reference pellet"
-                f" production of {ref_pellets/8760} t/yr."
+                f" production of {ref_pellets / 8760} t/yr."
                 f" This may lead to unrealistic results."
             )
             warnings.warn(msg, UserWarning)
@@ -438,7 +440,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class NRRIIronMineCostConfig(BaseConfig):
+class NRRIIronMineCostComponentConfig(BaseConfig):
     """Configuration class for NRRIIronMineCostComponent.
 
     Attributes:
@@ -485,6 +487,7 @@ class NRRIIronMineCostConfig(BaseConfig):
         self.longitude = MINE_LOCATIONS[self.mine]["longitude"]
 
 
+@register
 class NRRIIronMineCostComponent(CostModelBaseClass):
     _time_step_bounds = (
         3600,
@@ -523,7 +526,7 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
 
         config_dict.update({"cost_year": self.target_dollar_year})
 
-        self.config = NRRIIronMineCostConfig.from_dict(
+        self.config = NRRIIronMineCostComponentConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

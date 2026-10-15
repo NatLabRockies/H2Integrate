@@ -47,7 +47,7 @@ eta_h2_hhv = 39.41  # Higher-heating value of H2 in kWh/kg
 def calc_current(
     P_T, p1, p2, p3, p4, p5, p6
 ):  # calculates i-v curve coefficients given the stack power and stack temp
-    pwr, tempc = P_T
+    pwr, _tempc = P_T
     # i_stack=p1*(pwr**2) + p2*(tempc**2)+ (p3*pwr*tempc) +  (p4*pwr) + (p5*tempc) + (p6)
     i_stack = p1 * (pwr**3) + p2 * (pwr**2) + (p3 * pwr) + (p4 * pwr ** (1 / 2)) + p5
     return i_stack
@@ -716,7 +716,7 @@ class PEM_H2_Clusters:
         #     calc_current, (powers, temps_C), currents, p0=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
         # )  # updates IV curve coeff
         warnings.filterwarnings("ignore", category=scipy.optimize.OptimizeWarning)
-        curve_coeff, curve_cov = scipy.optimize.curve_fit(
+        curve_coeff, _curve_cov = scipy.optimize.curve_fit(
             calc_current,
             (df["Power"][temp_oi_idx].values, df["Temp"][temp_oi_idx].values),
             df["Current"][temp_oi_idx].values,

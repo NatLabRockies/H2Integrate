@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -121,6 +122,7 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class StoragePerformanceModel(StoragePerformanceBase):
     """OpenMDAO component for a storage component."""
 

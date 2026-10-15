@@ -2,10 +2,11 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     ResizeablePerformanceModelBaseConfig,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
     ElectrolyzerCostBaseClass,
@@ -14,7 +15,7 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
 
 
 @define(kw_only=True)
-class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
+class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """Configuration class for the HTSE performance model.
 
     Args:
@@ -38,6 +39,7 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
     turndown_ratio: float = field(default=0.1, validator=validators.gt(0))
 
 
+@register
 class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """A simplified high-temperature steam electrolysis (HTSE) model.
 
@@ -65,7 +67,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
 
     def setup(self) -> None:
-        self.config = HTSEElectrolyzerPerformanceModelConfig.from_dict(
+        self.config = HTSEPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -283,6 +285,7 @@ class HTSECostModelConfig(CostModelBaseConfig):
             self.fixed_opex = 0.0 if self.fixed_capex is None else float(self.fixed_capex)
 
 
+@register
 class HTSECostModel(ElectrolyzerCostBaseClass):
     """A simple size-based cost model for HTSE.
 

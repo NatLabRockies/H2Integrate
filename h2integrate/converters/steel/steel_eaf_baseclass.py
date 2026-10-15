@@ -5,7 +5,7 @@ from openmdao.utils import units
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,

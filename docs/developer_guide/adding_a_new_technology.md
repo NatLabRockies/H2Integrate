@@ -46,6 +46,18 @@ Within the class for a technology you have three basic functions that are always
     - Calculations use inputs defined in the `setup()`.
     - Sets the standard outputs that were declared in the setup method.
 
+Configuration classes should follow the model naming convention: append `Config`
+to the complete model class name. For example, `MyPerformanceModel` should use
+`MyPerformanceModelConfig`, and `MyCostModel` should use
+`MyCostModelConfig`. Define the class with `attrs` and inherit from
+`BaseConfig`, `CostModelBaseConfig`, or the appropriate existing config base
+class. Instantiate the matching config in `setup()`.
+
+This convention allows `populate_tech_yaml` to discover the configuration class
+automatically and generate the model's input template. If a model intentionally
+shares a base config or requires a specialized config name, document that
+relationship and ensure the model's own setup path remains unambiguous.
+
 ```{note}
 `setup` is where the configuration object is built and where any additional I/O is registered. Always call `super().setup()` first so that the baseclass can register the standard production outputs (and, for flexible models, the command-value input). The `compute` signature is
 `compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because performance models may use discrete I/O (e.g. resource data dictionaries).
@@ -62,7 +74,7 @@ are flagged immediately.
 Here is an example of setting up a solar performance model in H2Integrate.
 
 ```python
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 class SolarPerformanceClass(PerformanceModelBaseClass):
@@ -164,34 +176,27 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         self.add_output('efficiency', val=0.0, desc='Average efficiency of the electrolyzer')
 ```
 
-## Add the new technology to the `supported_models.py` file
-This file contains the registry of every technology available in H2Integrate.
-Add your new technology with the appropriate key depending on whether it is a performance, cost, control, or financial model.
-
-```{important}
-Use a string version of the class name as the dictionary key. This greatly simplifies debugging configuration issues and improves model findability in the documentation and code.
-```
-
-The registry uses lazy imports to decrease computational overhead: each value is a
-`"relative.module.path:ClassName"` string relative to the `h2integrate`
-package, and the class is imported the first time it is accessed. Here's what
-the updated `supported_models.py` looks like with the new solar entries:
+## Register the new technology with `@register`
+Decorate every model class (performance, cost, control, dispatch, resource, or finance) with `register` from `h2integrate/core/supported_models.py`:
 
 ```python
-supported_models = _ModelRegistry(
-    {
-        # ...
-        "PYSAMSolarPlantPerformanceModel": "converters.solar:PYSAMSolarPlantPerformanceModel",
-        "ATBUtilityPVCostModel": "converters.solar:ATBUtilityPVCostModel",
-        "ECOElectrolyzerPerformanceModel": "converters.hydrogen:ECOElectrolyzerPerformanceModel",
-        "SingliticoCostModel": "converters.hydrogen:SingliticoCostModel",
-        # ...
-    }
-)
+from h2integrate.core.supported_models import register
+
+
+@register
+class SolarPerformanceModel(PerformanceModelBaseClass):
+    ...
 ```
 
-For the import to resolve, also export your class from the relevant subpackage
-`__init__.py` (for example, `h2integrate/converters/solar/__init__.py`).
+The model is registered under its class name, which is the name used in YAML and in its `{ModelName}Config` class. Optional keyword arguments:
+
+- `name`: register under a different name (for example, the `cable` and `pipe` transporters).
+- `no_cost=True`: the model does not contribute costs to the finance stackup.
+- `no_replacement_schedule=True`: the model has no `replacement_schedule` output.
+
+```{important}
+The registry finds models by scanning the source as text, so each model's module is only imported when the model is used. Put `@register` directly above the `class` definition line.
+```
 
 ## More complex cases
 

@@ -3,11 +3,12 @@ from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -32,6 +33,7 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
     electricity_usage_kwh_per_kg: float = field(validator=validators.ge(0))
 
 
+@register
 class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for steam methane reforming (SMR) hydrogen production plants.
@@ -264,6 +266,7 @@ class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
     variable_opex_per_kwh: float | int = field(validator=validators.ge(0))
 
 
+@register
 class SteamMethaneReformerCostModel(CostModelBaseClass):
     """
     Cost model for steam methane reforming hydrogen production plants.

@@ -10,11 +10,10 @@ Visual encoding:
   - **Color**  → product / application group (electricity, chemical, metal, etc.)
   - **Border width** → inheritance depth (thicker = higher-level parent)
 
-Usage:
-    python docs/generate_class_hierarchy.py
+This script is invoked automatically by ``docs/build_book.sh`` before Jupyter Book runs.
 
 Outputs:
-    docs/_static/class_hierarchy.html  — interactive graph
+    docs/_static/class_hierarchy.html  — ignored build-time interactive graph
 """
 
 import os
@@ -33,8 +32,8 @@ from h2integrate import ROOT_DIR
 # Configuration
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = ROOT_DIR.parent
-OUTPUT_HTML = REPO_ROOT / "docs" / "_static" / "class_hierarchy.html"
+DOCS_DIR = Path(__file__).resolve().parent
+OUTPUT_HTML = DOCS_DIR / "_static" / "class_hierarchy.html"
 
 # Directories / path fragments that indicate test code (case-insensitive check)
 TEST_INDICATORS = {"test", "tests", "conftest", "test_"}
@@ -77,6 +76,7 @@ CATEGORY_RULES = [
     ("transporters", ("Transporter", "General")),
     ("control", ("Control", "General")),
     ("simulation", ("Simulation", "General")),
+    ("reliability", ("Reliability", "General")),
     ("tools", ("Tools", "General")),
     ("postprocess", ("Post-processing", "General")),
     ("preprocess", ("Pre-processing", "General")),
@@ -95,6 +95,7 @@ CATEGORY_SHAPES_PYVIS = {
     "Control": "hexagon",
     "Simulation": "triangleDown",
     "Tools": "box",
+    "Reliability": "box",
     "Post-processing": "box",
     "Pre-processing": "box",
 }
@@ -453,7 +454,7 @@ def build_interactive_html(G: nx.DiGraph, output_path: Path):
     n_cats = len(used_categories)
     CLUSTER_RADIUS = 600
     INTRA_SCATTER = 180
-    _cat_counter: dict[str, int] = {c: 0 for c in used_categories}
+    _cat_counter: dict[str, int] = dict.fromkeys(used_categories, 0)
 
     # Determine node sizes based on out-degree
     max_degree = max((G.out_degree(n) for n in G.nodes), default=1) or 1

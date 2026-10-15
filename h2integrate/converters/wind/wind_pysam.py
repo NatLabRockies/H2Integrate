@@ -1,5 +1,4 @@
 import operator
-import warnings
 import functools
 from typing import Any
 
@@ -9,6 +8,11 @@ import matplotlib.pyplot as plt
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.converters.tools import (
+    check_pysam_lifetime_options,
+    apply_non_native_lifetime_degradation,
+)
+from h2integrate.core.supported_models import register
 from h2integrate.converters.wind.wind_plant_baseclass import WindPerformanceBaseClass
 from h2integrate.converters.wind.layout.simple_grid_layout import (
     BasicGridLayoutConfig,
@@ -179,6 +183,7 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
         return design_dict
 
 
+@register
 class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
     """
     An OpenMDAO component that wraps a WindPlant model.
@@ -252,11 +257,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             desc="turbine hub-height in meters",
         )
 
-        if self.config.create_model_from == "default":
-            self.system_model = Windpower.default(self.config.config_name)
-        elif self.config.create_model_from == "new":
-            self.system_model = Windpower.new()
-
         design_dict = self.config.create_input_dict()
         if bool(self.config.pysam_options):
             for group, group_parameters in self.config.pysam_options.items():
@@ -265,46 +265,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                 else:
                     design_dict.update({group: group_parameters})
 
-        lifetime_options = design_dict.get("Lifetime", {})
-        self.use_lifetime_output = bool(lifetime_options.get("system_use_lifetime_output", 0))
-        self.native_lifetime_output = hasattr(self.system_model, "Lifetime")
-        if self.use_lifetime_output:
-            analysis_period = lifetime_options.get("analysis_period", self.plant_life)
-            if analysis_period != self.plant_life:
-                warnings.warn(
-                    f"Updating analysis_period from {analysis_period} to {self.plant_life} "
-                    "(plant_life)",
-                    UserWarning,
-                    stacklevel=2,
-                )
+        design_dict = check_pysam_lifetime_options(design_dict, self.plant_life, "ac_degradation")
 
-            degradation = lifetime_options.get("ac_degradation")
-            if degradation is None:
-                degradation = [0.0] * self.plant_life
-            else:
-                degradation = list(degradation)
-                if not degradation:
-                    raise ValueError("Lifetime.ac_degradation must contain at least one value.")
-                if len(degradation) not in (1, self.plant_life):
-                    warnings.warn(
-                        f"Updating ac_degradation from length {len(degradation)} to "
-                        f"length {self.plant_life}",
-                        UserWarning,
-                        stacklevel=2,
-                    )
-                    degradation = np.resize(degradation, self.plant_life).tolist()
-
-            lifetime_options["analysis_period"] = self.plant_life
-            lifetime_options["ac_degradation"] = degradation
-            design_dict["Lifetime"] = lifetime_options
-
-        self.design_dict = design_dict
-        model_inputs = design_dict
-        if self.use_lifetime_output and not self.native_lifetime_output:
-            model_inputs = {
-                group: values for group, values in design_dict.items() if group != "Lifetime"
-            }
-        self.system_model.assign(model_inputs)
+        self.design_dict = design_dict.copy()
 
         self.data_to_field_number = {
             "temperature": 1,
@@ -436,10 +399,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         }
         return data
 
-    def recalculate_power_curve(self, rotor_diameter, turbine_rating_kw):
+    def recalculate_power_curve(self, system_model, rotor_diameter, turbine_rating_kw):
         """Update the turbine power curve for a given rotor diameter and rated turbine capacity.
 
         Args:
+            system_model (Windpower): PySAM Windpower object
             rotor_diameter (int): turbine rotor diameter in meters.
             turbine_rating_kw (float | int): desired turbine rated capacity in kW
 
@@ -456,7 +420,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         old_ct_curve = list(turbine_opts.get("wind_turbine_ct_curve", []))
         old_windspeeds = list(turbine_opts.get("wind_turbine_powercurve_windspeeds", []))
 
-        self.system_model.Turbine.calculate_powercurve(
+        system_model.Turbine.calculate_powercurve(
             turbine_rating_kw,
             int(rotor_diameter),
             self.power_curve_config.elevation,
@@ -470,7 +434,7 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
         # Resample the CT curve (if one was provided) onto the regenerated windspeeds so
         # the two arrays remain length-aligned for PySAM execution.
-        new_windspeeds = list(self.system_model.value("wind_turbine_powercurve_windspeeds"))
+        new_windspeeds = list(system_model.value("wind_turbine_powercurve_windspeeds"))
         if (
             len(old_ct_curve) > 0
             and len(old_windspeeds) == len(old_ct_curve)
@@ -481,13 +445,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
                 np.asarray(old_windspeeds, dtype=float),
                 np.asarray(old_ct_curve, dtype=float),
             )
-            self.system_model.value("wind_turbine_ct_curve", tuple(resampled_ct.tolist()))
+            system_model.value("wind_turbine_ct_curve", tuple(resampled_ct.tolist()))
 
-        success = False
-        if max(self.system_model.value("wind_turbine_powercurve_powerout")) == float(
-            turbine_rating_kw
-        ):
-            success = True
+        max_power_from_curve = max(system_model.value("wind_turbine_powercurve_powerout"))
+        success = np.isclose(max_power_from_curve, float(turbine_rating_kw), rtol=1e-12, atol=1e-9)
+
         return success
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
@@ -504,86 +466,98 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             self.apply_curtailment(outputs)
             return
 
+        if self.config.create_model_from == "default":
+            system_model = Windpower.default(self.config.config_name)
+        elif self.config.create_model_from == "new":
+            system_model = Windpower.new()
+
+        design_dict = self.design_dict.copy()
+
+        if "Lifetime" in design_dict and not hasattr(system_model, "Lifetime"):
+            design_dict.pop("Lifetime")
+
+        system_model.assign(design_dict)
+
         # format resource data and input into model
         data = self.format_resource_data(
             inputs["hub_height"][0], discrete_inputs["wind_resource_data"]
         )
-        self.system_model.value("wind_resource_data", data)
+        system_model.value("wind_resource_data", data)
 
         # recalculate power curve based on rotor diameter and turbine rating
         success = True
         if self.config.run_recalculate_power_curve:
-            success = self.recalculate_power_curve(rotor_diameter, turbine_rating_kw)
+            success = self.recalculate_power_curve(system_model, rotor_diameter, turbine_rating_kw)
 
         # if power-curve could not be adjusted to match input values
         if not success:
             msg = (
-                "Could not adjust turbine powercurve to match turbine rating of ",
-                f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters",
+                "Could not adjust turbine powercurve to match turbine rating of "
+                f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters"
             )
             raise ValueError(msg)
 
         # assign new turbine specs to the model
-        turbine_rated_power_kW = max(self.system_model.value("wind_turbine_powercurve_powerout"))
+        turbine_rated_power_kW = max(system_model.value("wind_turbine_powercurve_powerout"))
         farm_capacity = turbine_rated_power_kW * n_turbs
-        self.system_model.value("wind_turbine_rotor_diameter", rotor_diameter)
-        self.system_model.value("wind_turbine_hub_ht", inputs["hub_height"][0])
-        self.system_model.value("system_capacity", farm_capacity)
+        system_model.value("wind_turbine_rotor_diameter", rotor_diameter)
+        system_model.value("wind_turbine_hub_ht", inputs["hub_height"][0])
+        system_model.value("system_capacity", farm_capacity)
 
         # make layout for number of turbines
         if self.layout_mode == "basicgrid":
             x_pos, y_pos = make_basic_grid_turbine_layout(
-                self.system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
+                system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
             )
 
         # Override the 300-turbine maximum, if needed
         if n_turbs > 300:
-            self.system_model.value("max_turbine_override", n_turbs)
+            system_model.value("max_turbine_override", n_turbs)
 
-        self.system_model.value("wind_farm_xCoordinates", tuple(x_pos))
-        self.system_model.value("wind_farm_yCoordinates", tuple(y_pos))
+        system_model.value("wind_farm_xCoordinates", tuple(x_pos))
+        system_model.value("wind_farm_yCoordinates", tuple(y_pos))
 
         # run the model
-        self.system_model.execute(0)
+        system_model.execute(0)
 
-        outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
-        generation = np.asarray(self.system_model.Outputs.gen)
+        outputs["rated_electricity_production"] = system_model.Farm.system_capacity
+        generation = np.asarray(system_model.Outputs.gen)
         time_step_hours = self.dt / 3600
 
-        if self.use_lifetime_output:
-            if not self.native_lifetime_output:
+        use_lifetime_output = bool(
+            self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)
+        )
+        native_lifetime_output = hasattr(system_model, "Lifetime")
+
+        if use_lifetime_output:
+            if not native_lifetime_output:
                 degradation = self.design_dict["Lifetime"]["ac_degradation"]
-                if len(degradation) == 1:
-                    year_indices = np.arange(self.plant_life)
-                    degradation_factors = 1 - degradation[0] * year_indices / 100
-                    degradation_factors[0] = 1.0
-                else:
-                    degradation_factors = 1 - np.asarray(degradation) / 100
-                generation = np.concatenate(
-                    [generation * degradation_factor for degradation_factor in degradation_factors]
+                generation = apply_non_native_lifetime_degradation(
+                    generation, degradation, self.plant_life
                 )
 
             generation_per_year = np.split(generation, self.plant_life)
             annual_energy = np.array(
                 [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
             )
+            n_timesteps_per_yr = np.array(
+                [len(year_generation) for year_generation in generation_per_year]
+            )
             max_production = (
-                outputs["rated_electricity_production"]
-                * np.array([len(year_generation) for year_generation in generation_per_year])
-                * time_step_hours
+                outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
             )
             outputs["electricity_out"] = generation[: self.n_timesteps]
             outputs["annual_electricity_produced"] = annual_energy
             outputs["capacity_factor"] = annual_energy / max_production
         else:
             outputs["electricity_out"] = generation
-            outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+            outputs["annual_electricity_produced"] = system_model.Outputs.annual_energy
             max_production = (
                 self.n_timesteps * outputs["rated_electricity_production"] * time_step_hours
             )
 
         outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * time_step_hours
-        if not self.use_lifetime_output:
+        if not use_lifetime_output:
             outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
 
         # Apply curtailment based on set_point
@@ -618,8 +592,12 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             if ax is None:
                 _, ax = plt.subplots()
 
-            xpos = self.system_model.value("wind_farm_xCoordinates")
-            ypos = self.system_model.value("wind_farm_yCoordinates")
+            # NOTE: this would require setting the system_model attribute just for plotting
+            # ...
+            # xpos = system_model.value("wind_farm_xCoordinates")
+            # ypos = system_model.value("wind_farm_yCoordinates")
+            xpos = getattr(self, "x_coords", [0.0])
+            ypos = getattr(self, "y_coords", [0.0])
 
             # Generate plotting dictionary
             default_plotting_dict = {

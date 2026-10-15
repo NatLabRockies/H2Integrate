@@ -12,10 +12,12 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase
+from h2integrate.core.supported_models import register
 from h2integrate.core.inputs.validation import write_yaml
+from h2integrate.finances.profast_baseclass import ProFastBase
 
 
+@register
 class ProFastLCO(ProFastBase):
     """Calculate the Levelized Cost of Commodity (LCO) with ProFAST.
 
@@ -106,22 +108,26 @@ class ProFastLCO(ProFastBase):
         self.price_units = io_meta_data[self.LCO_str]["units"]
         self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
-        pf = self.populate_profast(inputs)
+        non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
+        has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
 
-        if "system_level_control" in self.options["plant_config"] and np.all(
-            inputs["capacity_factor"] == 0.0
-        ):
+        if non_pos_prod or has_zero_cf:
+            bug_desc = "capacity" if non_pos_prod else "capacity factor"
             outputs[self.LCO_str] = 1e12
             msg = (
-                f"Commodity stream for finance group has a zero capacity factor. "
-                "If you recieve this warning multiple times, there may be a problem "
+                f"Commodity stream for finance group has a zero {bug_desc}. "
+                "If you receive this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
                 f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
             )
             warnings.warn(msg, UserWarning)
             return
+
+        # populate ProFAST
+        pf = self.populate_profast(inputs)
+
         # simulate ProFAST
-        sol, summary, price_breakdown = run_profast(pf)
+        sol, _summary, price_breakdown = run_profast(pf)
 
         # populate outputs
         # Output names based on naming convention for finance subgroups
@@ -137,7 +143,7 @@ class ProFastLCO(ProFastBase):
         pf_config_dict = convert_pf_to_dict(pf)
 
         # make LCO cost breakdown
-        lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
         # Check whether to export profast object to .yaml file

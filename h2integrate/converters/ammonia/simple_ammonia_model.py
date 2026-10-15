@@ -1,15 +1,16 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
-class AmmoniaPerformanceModelConfig(BaseConfig):
+class SimpleAmmoniaPerformanceModelConfig(BaseConfig):
     """Configuration inputs for the ammonia performance model, including plant capacity and
     capacity factor.
 
@@ -23,6 +24,7 @@ class AmmoniaPerformanceModelConfig(BaseConfig):
     plant_capacity_factor: float = field()
 
 
+@register
 class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an ammonia plant.
@@ -43,7 +45,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
     def setup(self):
         super().setup()
-        self.config = AmmoniaPerformanceModelConfig.from_dict(
+        self.config = SimpleAmmoniaPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -64,7 +66,7 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class AmmoniaCostModelConfig(CostModelBaseConfig):
+class SimpleAmmoniaCostModelConfig(CostModelBaseConfig):
     """
     Configuration inputs for the ammonia cost model, including plant capacity and
     feedstock details.
@@ -106,6 +108,7 @@ class AmmoniaCostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
+@register
 class SimpleAmmoniaCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with ammonia production.
@@ -118,7 +121,7 @@ class SimpleAmmoniaCostModel(CostModelBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = AmmoniaCostModelConfig.from_dict(
+        self.config = SimpleAmmoniaCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )

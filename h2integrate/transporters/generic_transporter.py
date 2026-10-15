@@ -2,6 +2,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -15,6 +16,7 @@ class GenericTransporterPerformanceConfig(BaseConfig):
     commodity_rate_units: str = field()
 
 
+@register(no_cost=True, no_replacement_schedule=True)
 class GenericTransporterPerformanceModel(om.ExplicitComponent):
     """
     Transport any commodity from a source technology to a destination technology.

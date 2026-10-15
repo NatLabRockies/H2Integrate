@@ -28,7 +28,7 @@ from h2integrate.control.control_strategies.passthrough_controller import Passth
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     _get_tech_buy_price_input_name,
 )
 

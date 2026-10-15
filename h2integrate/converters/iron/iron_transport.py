@@ -8,12 +8,13 @@ from geopy import distance
 
 from h2integrate import ROOT_DIR
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeffs
 
 
 @define(kw_only=True)
-class IronTransportPerformanceConfig(BaseConfig):
+class IronTransportPerformanceComponentConfig(BaseConfig):
     find_closest_ship_site: bool = field()
     shipment_site: str = field(
         converter=(str.lower, str.capitalize),
@@ -27,6 +28,7 @@ class IronTransportPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
+@register(no_replacement_schedule=True)
 class IronTransportPerformanceComponent(om.ExplicitComponent):
     _time_step_bounds = (
         3600,
@@ -39,7 +41,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = IronTransportPerformanceConfig.from_dict(
+        self.config = IronTransportPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -161,12 +163,13 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 
 
 @define(kw_only=True)
-class IronTransportCostConfig(BaseConfig):
+class IronTransportCostComponentConfig(BaseConfig):
     transport_year: int = field(converter=int, validator=(validators.ge(2022), validators.le(2065)))
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
     marginal_cost: float = field(default=0.0)
 
 
+@register
 class IronTransportCostComponent(CostModelBaseClass):
     _time_step_bounds = (
         3600,
@@ -188,7 +191,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         )
         config_dict.update({"cost_year": target_dollar_year})
 
-        self.config = IronTransportCostConfig.from_dict(
+        self.config = IronTransportCostComponentConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

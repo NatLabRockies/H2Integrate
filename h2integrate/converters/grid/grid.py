@@ -2,11 +2,12 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -20,6 +21,7 @@ class GridPerformanceModelConfig(BaseConfig):
     interconnection_size: float = field()  # kW
 
 
+@register
 class GridPerformanceModel(PerformanceModelBaseClass):
     """Model a grid interconnection point.
 
@@ -209,6 +211,7 @@ class GridCostModelConfig(CostModelBaseConfig):
     )
 
 
+@register
 class GridCostModel(CostModelBaseClass):
     """
     An OpenMDAO component that computes costs for grid connections.
