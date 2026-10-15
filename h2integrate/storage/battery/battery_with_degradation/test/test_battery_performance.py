@@ -362,8 +362,8 @@ def test_notebook_weather_year_full_h2i_system(subtests):
     dt = 60
     n_timesteps = 365 * 24 * 3600 // dt
     power_profile_kw = _notebook_power_profile(n_timesteps, dt)
-    example_dir = Path(__file__).resolve().parents[5] / "examples" / "98_battery_degradation"
-    config = load_yaml(example_dir / "98_battery_degradation.yaml")
+    example_dir = Path(__file__).resolve().parents[5] / "examples" / "38_battery_degradation"
+    config = load_yaml(example_dir / "38_battery_degradation.yaml")
     for key in ("driver_config", "technology_config", "plant_config"):
         config[key] = load_yaml(example_dir / config[key])
 

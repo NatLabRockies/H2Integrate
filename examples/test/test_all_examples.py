@@ -3264,11 +3264,11 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("98_battery_degradation", None)]
+    "example_folder,resource_example_folder", [("38_battery_degradation", None)]
 )
 def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
-    config = load_yaml(example_folder / "98_battery_degradation.yaml")
+    config = load_yaml(example_folder / "38_battery_degradation.yaml")
     for config_key in ("driver_config", "technology_config", "plant_config"):
         config[config_key] = load_yaml(example_folder / config[config_key])
     config["driver_config"].setdefault("general", {})["create_om_reports"] = False
