@@ -26,6 +26,45 @@ The combined commodity profile and rated production are sums of the input stream
 capacity factor is a rated-production-weighted average; it is zero when total rated production is
 zero. Each input must provide its commodity profile, rated production, and capacity factor.
 
+### Inputs and outputs
+
+For each input stream $i$ (numbered $1, 2, \ldots$, `in_streams`), the combiner has these inputs:
+
+- `{commodity}_in{i}`: time-series commodity profile from source $i$, in `commodity_rate_units`.
+- `rated_{commodity}_production{i}`: rated (nameplate) production of source $i$, in
+  `commodity_rate_units` (scalar).
+- `{commodity}_capacity_factor{i}`: annual capacity factor of source $i$ (unitless, with one
+  value per year of plant life).
+
+Its outputs are:
+
+- `{commodity}_out`: combined commodity time-series profile, the element-wise sum of all inputs.
+- `rated_{commodity}_production`: total rated production, the sum of all input rated productions.
+- `capacity_factor`: combined capacity factor (unitless, with one value per year of plant life).
+
+### Commodity output
+
+The combined output profile is the element-wise sum of all input profiles:
+
+$$
+\text{commodity\_out} = \sum_{i=1}^{N} \text{commodity\_in}_i
+$$
+
+where $N$ is `in_streams`.
+
+### Capacity factor calculation
+
+The combined capacity factor is a weighted average of the input capacity factors, weighted by each
+stream's rated production:
+
+$$
+CF_{out} = \frac{\sum_{i=1}^{N} CF_i \cdot S_i}{\sum_{i=1}^{N} S_i}
+$$
+
+where $CF_i$ is the capacity factor and $S_i$ is the rated commodity production of input stream $i$.
+This weighting ensures that larger sources contribute proportionally more to the combined capacity
+factor. If the total rated production is zero, the output capacity factor is set to zero.
+
 In `plant_config.yaml`, connect each source to the combiner, then connect the combiner to whatever
 uses the combined stream. The combiner's output is `{commodity}_out`.
 
