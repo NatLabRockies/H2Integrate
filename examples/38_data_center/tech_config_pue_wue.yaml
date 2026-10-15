@@ -1,0 +1,61 @@
+name: technology_config
+description: >
+  Grid-connected data center whose total facility power and water use are
+  determined from Power Usage Effectiveness (PUE) and Water Usage Effectiveness
+  (WUE). PUE and WUE are looked up from the IECC climate zone of the site.
+technologies:
+  water_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: water
+        commodity_rate_units: galUS/h
+      performance_parameters:
+        rated_capacity: 1.e+6  # galUS/h
+      cost_parameters:
+        cost_year: 2026
+        price: 0.01  # $/galUS
+        annual_cost: 0.
+        start_up_cost: 0.
+  data_center:
+    performance_model:
+      model: DataCenterPUEWUEPerformanceModel
+    cost_model:
+      model: DataCenterPUEWUECostModel
+    model_inputs:
+      shared_parameters:
+        system_capacity_mw: 80.  # MW of IT capacity
+      performance_parameters:
+        # IT workload profile (MW); overwritten in run_data_center.py with an hourly profile
+        compute_it_workload_profile: 60.0
+        # PUE and WUE are not supplied, so the IECC climate zone is determined from the
+        # site latitude/longitude and PUE/WUE are looked up for the cooling configuration.
+        # Cooling configuration 1: large-scale data center with airside economizer +
+        # adiabatic cooling + water-cooled chiller.
+        cooling_configuration: 1
+        efficiency_level: efficient
+      cost_parameters:
+        cost_year: 2026
+        capex_per_mw: 4.0625e+6  # $/MW of IT capacity
+        fixed_opex_per_mw_per_year: 1.5e+5  # $/MW/year
+        # Electricity and water are purchased through grid_buy and water_feedstock,
+        # so these rates are zero to avoid double counting those costs.
+        electricity_rate: 0.0  # $/kWh
+        water_rate: 0.0  # $/galUS
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e+6  # kW
+      cost_parameters:
+        cost_year: 2026
+        electricity_buy_price: 0.04574  # $/kWh - only buying, no selling
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost

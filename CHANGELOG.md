@@ -3,6 +3,7 @@
 ## Unreleased [TBD]
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
+- Added data center models that produce a `compute_load` commodity: `DataCenterPerformanceModel` and `DataCenterCostModel`, which use a compute electrical efficiency and cooling load ratio, and `DataCenterPUEWUEPerformanceModel` and `DataCenterPUEWUECostModel`, which use PUE and WUE values looked up by IECC climate zone, site latitude/longitude, and cooling configuration. Added example 38 and the `eeweather` dependency. [PR 929](https://github.com/NatLabRockies/H2Integrate/pull/929)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 
 

@@ -58,6 +58,7 @@ parts:
       - file: technology_models/diesel.md
       - file: technology_models/PEM_h2_fuel_cell.md
       - file: technology_models/SO_NG_fuel_cell.md
+      - file: technology_models/data_center.md
   - caption: Storage Models
     chapters:
       - file: storage/storage_models_index.md

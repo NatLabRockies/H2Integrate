@@ -38,6 +38,7 @@ license = {file = "LICENSE"}
 dependencies = [
   "attrs",
   "CoolProp",
+  "eeweather",
   "geopy",
   "jsonschema",
   "marine-carbon-management",

@@ -1,0 +1,55 @@
+name: technology_config
+description: >
+  Grid-connected data center using the simple data center model, where total
+  electricity demand is the compute load scaled by an electrical efficiency plus
+  a proportional cooling load.
+technologies:
+  water_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: water
+        commodity_rate_units: galUS/h
+      performance_parameters:
+        rated_capacity: 1.e+6  # galUS/h
+      cost_parameters:
+        cost_year: 2026
+        price: 0.01
+        annual_cost: 0.
+        start_up_cost: 0.
+  data_center:
+    performance_model:
+      model: DataCenterPerformanceModel
+    cost_model:
+      model: DataCenterCostModel
+    model_inputs:
+      shared_parameters:
+        system_capacity_mw: 80.  # MW of compute capacity
+      performance_parameters:
+        compute_electrical_efficiency: 0.92
+        cooling_load_ratio: 0.2  # cooling load as a fraction of electrical compute load
+        water_use_gal_per_mwh: 1200.
+        # Compute load demand (MW); overwritten in run_data_center.py with an hourly profile
+        demand_profile: 60.0
+      cost_parameters:
+        capex_per_mw: 4.0625e+6  # $/MW
+        fixed_opex_per_mw_per_year: 1.5e+5  # $/MW/year
+        variable_opex_per_mwh: 0.0  # $/MWh
+        cost_year: 2026
+  grid_buy:
+    performance_model:
+      model: GridPerformanceModel
+    cost_model:
+      model: GridCostModel
+    model_inputs:
+      shared_parameters:
+        interconnection_size: 1.e+6  # kW
+      cost_parameters:
+        cost_year: 2026
+        electricity_buy_price: 0.04574  # $/kWh - only buying, no selling
+        interconnection_capex_per_kw: 0.0  # $/kW capital cost
+        interconnection_opex_per_kw: 0.0  # $/kW/year O&M cost
+        fixed_interconnection_cost: 0.0  # $ one-time fixed cost

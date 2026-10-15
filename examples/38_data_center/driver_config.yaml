@@ -1,0 +1,4 @@
+name: driver_config
+description: This analysis runs a grid-connected data center
+general:
+  folder_output: outputs

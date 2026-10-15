@@ -3330,3 +3330,64 @@ def test_paper_mill_example(subtests, temp_copy_of_example):
         lignin_out = h2i.prob.get_val("paper_mill.lignin_out", units="kg/h")
         lignin_in = h2i.prob.get_val("saf.lignin_in", units="kg/h")
         np.testing.assert_allclose(lignin_in, lignin_out, rtol=1e-6)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("38_data_center", None)])
+def test_data_center_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    compute_load_profile = load_yaml(example_folder / "compute_load_profile.yaml")[
+        "hourly_power_MW"
+    ]
+    total_compute_load = 517574.4952965634  # MW*h
+
+    # Simple data center model
+    h2i = H2IntegrateModel(example_folder / "data_center.yaml")
+    h2i.setup()
+    h2i.prob.set_val("data_center.compute_load_demand", compute_load_profile, units="MW")
+    h2i.run()
+
+    with subtests.test("Simple model: compute load served"):
+        compute_load = h2i.prob.get_val("data_center.compute_load_out", units="MW").sum()
+        assert compute_load == pytest.approx(total_compute_load, rel=1e-6)
+
+    with subtests.test("Simple model: grid electricity covers compute and cooling load"):
+        electricity = h2i.prob.get_val("grid_buy.electricity_out", units="MW").sum()
+        assert electricity == pytest.approx(total_compute_load / 0.92 * 1.2, rel=1e-6)
+
+    with subtests.test("Simple model: water consumed"):
+        water = h2i.prob.get_val("data_center.water_consumed", units="galUS/h").sum()
+        assert water == pytest.approx(total_compute_load * 1200, rel=1e-6)
+
+    with subtests.test("Simple model: CapEx"):
+        capex = h2i.prob.get_val("data_center.CapEx", units="USD")[0]
+        assert capex == pytest.approx(4.0625e6 * 80, rel=1e-6)
+
+    with subtests.test("Simple model: LCOC"):
+        lcoc = h2i.prob.get_val("finance_subgroup_compute_load.LCOC", units="USD/(MW*h)")[0]
+        assert lcoc == pytest.approx(190.78733311869132, rel=1e-6)
+
+    # PUE/WUE data center model
+    h2i = H2IntegrateModel(example_folder / "data_center_pue_wue.yaml")
+    h2i.setup()
+    h2i.prob.set_val("data_center.compute_it_workload", compute_load_profile, units="MW")
+    h2i.run()
+
+    dc_perf = h2i.prob.model.plant.data_center.DataCenterPUEWUEPerformanceModel
+
+    with subtests.test("PUE/WUE model: climate zone and PUE lookup"):
+        assert dc_perf.config.climate_zone == "7"
+        assert dc_perf.config.pue == pytest.approx(1.10)
+
+    with subtests.test("PUE/WUE model: grid electricity equals IT load times PUE"):
+        electricity = h2i.prob.get_val("grid_buy.electricity_out", units="MW").sum()
+        assert electricity == pytest.approx(total_compute_load * dc_perf.config.pue, rel=1e-6)
+
+    with subtests.test("PUE/WUE model: water consumed"):
+        water = h2i.prob.get_val("data_center.water_consumed", units="galUS/h").sum()
+        assert water == pytest.approx(9572051.43216894, rel=1e-6)
+
+    with subtests.test("PUE/WUE model: LCOC"):
+        lcoc = h2i.prob.get_val("finance_subgroup_compute_load.LCOC", units="USD/(MW*h)")[0]
+        assert lcoc == pytest.approx(169.44705064238948, rel=1e-6)

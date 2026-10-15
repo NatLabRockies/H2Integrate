@@ -1,0 +1,47 @@
+name: plant_config
+description: Grid-connected data center (simple model) located in Minnesota
+sites:
+  site:
+    latitude: 46.7867
+    longitude: -92.1005
+technology_interconnections:
+  # The grid supplies the data center's total electricity demand (compute + cooling)
+  - [data_center, grid_buy, [unmet_electricity_demand_out, electricity_set_point]]
+  - [water_feedstock, data_center, water, pipe]
+plant:
+  plant_life: 15
+  simulation:
+    n_timesteps: 8760
+finance_parameters:
+  finance_groups:
+    profast_model:
+      finance_model: ProFastLCO
+      model_inputs:
+        params:
+          analysis_start_year: 2032
+          installation_time: 36
+          inflation_rate: 0.0
+          discount_rate: 0.09
+          debt_equity_ratio: 0.93
+          property_tax_and_insurance: 0.03
+          total_income_tax_rate: 0.21
+          capital_gains_tax_rate: 0.15
+          sales_tax_rate: 0.0
+          debt_interest_rate: 0.07
+          debt_type: Revolving debt
+          loan_period_if_used: 0
+          cash_onhand_months: 1
+          admin_expense: 0.00
+        capital_items:
+          depr_type: MACRS
+          depr_period: 5
+          refurb: [0.]
+  cost_adjustment_parameters:
+    cost_year_adjustment_inflation: 0.025
+    target_dollar_year: 2026
+  finance_subgroups:
+    compute_load:
+      commodity: compute_load
+      commodity_stream: data_center
+      finance_groups: [profast_model]
+      technologies: [data_center, grid_buy, water_feedstock]
