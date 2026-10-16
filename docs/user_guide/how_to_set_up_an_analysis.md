@@ -62,6 +62,7 @@ If you are running a basic analysis and not an optimization, the driver config f
 
 If you are running an optimization, the driver config file will contain additional keys to define the optimization settings, including design variables, constraints, and objective functions.
 Further details of more complex instances of the driver config file can be found in more advanced examples as they are developed.
+See the [Driver Configuration Reference](driver_config_reference.md) for a description of every driver config field, and [Design Optimization](design_optimization_in_h2i.md) and [Parameter Sweeps](parameter_sweep_in_h2i.md) for complete workflows.
 
 ## Technology config file
 
@@ -88,6 +89,7 @@ Model inputs vary by model. Configuration classes may provide defaults for some 
 require others. Use [`populate_tech_yaml`](populate_tech_yaml.md) to generate a configuration
 template, and see the model documentation in the [API documentation](../api.md) for parameter details and valid values.
 The available models are registered with the `@register` decorator from `h2integrate/core/supported_models.py`; see the {ref}`technology models overview <technology-models-overview>` for the full list.
+See the [Technology Configuration Reference](technology_config_reference.md) for a description of the technology config fields.
 
 ```{note}
 Every technology group also contains a controller that converts a `{commodity}_demand` signal into the `{commodity}_set_point` consumed by the performance model. If you do not specify a `control_strategy` for a technology, H2Integrate automatically inserts an implicit passthrough controller that simply maps demand to set-point. See the [technology-level control overview](../control/technology_level_control/technology_control_overview.md) for more details.
@@ -115,6 +117,7 @@ If the list is length 4, then the third entry in the list is what's being passed
 If the list is length 3, then the third entry in the list is what is connected directly between the technologies.
 
 The `site_to_tech_connections` section defines how resources (like wind or solar data) are connected to the technologies that use them.
+See the [Plant Configuration Reference](plant_config_reference.md) for a description of every plant config field.
 
 ```{note}
 For more information on how to define and interpret technology interconnections, see the {ref}`connecting_technologies:overview` page.
