@@ -1,4 +1,7 @@
+import math
+import warnings
 from datetime import timezone, timedelta
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
@@ -188,7 +191,7 @@ def add_resource_start_end_times(data: dict):
     time_start_end_info = {
         "start_time": f"{start_date} ({tz_str})",
         "end_time": f"{end_date} ({tz_str})",
-        "dt": dt.seconds,
+        "dt": int(dt.total_seconds()),
     }
 
     # Update resource data with time information
@@ -276,3 +279,306 @@ def get_number_of_resource_years_needed(dt: int, n_timesteps: int, include_leap:
 
     # conservative estimate of number of years needed
     return int((hours_simulated // 8760) + 1)
+
+
+def _regenerate_time_columns_at_dt(
+    data, start_timestamp, dt_seconds, n_timesteps, present_time_keys, include_leap_day=True
+):
+    """Regenerate time columns as ``n_timesteps`` steps of ``dt_seconds`` starting at
+    ``start_timestamp``.
+
+    When ``include_leap_day`` is False, February 29 is skipped so the regenerated calendar
+    keeps the leap day excluded even at the new timestep.
+
+    Args:
+        data (dict): resource data dictionary whose time column arrays are to be updated.
+        start_timestamp (pandas.Timestamp | datetime.datetime): timestamp of the first sample.
+        dt_seconds (int | float): new timestep duration in seconds.
+        n_timesteps (int): number of timesteps to generate.
+        present_time_keys (list[str]): list of time column keys (e.g. "year", "month",
+            "day", "hour", "minute", "second") present in the data to regenerate.
+        include_leap_day (bool, optional): whether to include February 29 when generating the
+            calendar index. Defaults to True.
+
+    Returns:
+        dict: resource data dictionary with updated time columns.
+    """
+    freq = pd.Timedelta(seconds=dt_seconds)
+    if not include_leap_day:
+        # Upper bound on skipped timestamps: every leap year up to one year past the nominal end
+        start_year = pd.Timestamp(start_timestamp).year
+        n_years = get_number_of_resource_years_needed(dt_seconds, n_timesteps, include_leap=False)
+        last_year = start_year + n_years + 1  # +1 needed for upper-bound calculation
+        n_leap_years = sum(is_leap_year(y) for y in range(start_year, last_year + 1))
+        extra = n_leap_years * math.ceil(86400 / dt_seconds)
+        new_index = pd.date_range(start=start_timestamp, periods=n_timesteps + extra, freq=freq)
+        new_index = new_index[~((new_index.month == 2) & (new_index.day == 29))][:n_timesteps]
+    else:
+        new_index = pd.date_range(start=start_timestamp, periods=n_timesteps, freq=freq)
+    field_map = {
+        "year": new_index.year,
+        "month": new_index.month,
+        "day": new_index.day,
+        "hour": new_index.hour,
+        "minute": new_index.minute,
+        "second": new_index.second,
+    }
+    for k in present_time_keys:
+        data[k] = np.asarray(field_map[k], dtype=float)
+    return data
+
+
+def resample_resource_data_to_dt(
+    data: dict,
+    target_dt,
+    upsample_method: str | None = None,
+    downsample_method: str | None = None,
+):
+    """Resample resource timeseries from its native timestep to ``target_dt``.
+
+    Resampling is driven by the actual time span of the data (its native timestep(s), inferred
+    from the time columns), not by the number of timesteps. When the simulation timestep is
+    smaller than the native timestep the data is upsampled (finer resolution) using
+    `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_;
+    when it is larger the data is downsampled (coarser resolution) using
+    `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_.
+    Time columns are regenerated at ``target_dt`` and scalar metadata is left unchanged.
+
+    Resampling operates on an elapsed timeline constructed from the input timestamps,
+    so non-uniform sample intervals (for example 1-hour and 2-hour intervals) receive target
+    timestamps proportional to their physical duration. For multi-year or discontinuous data,
+    the transition between segments completes each period using the preceding interval,
+    interpolating across the boundary between the final value of the preceding segment and the
+    first value of the subsequent segment. Time columns are regenerated at ``target_dt``,
+    preserving the original sequence of years and leap-day settings.
+
+    Args:
+        data (dict): resource data dictionary with timeseries arrays and time columns.
+        target_dt (int | float): desired simulation timestep in seconds.
+        upsample_method (str | None): interpolation method passed to
+            `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_
+            when upsampling. Must be explicitly set when upsampling is needed; otherwise a
+            ``ValueError`` is raised.
+        downsample_method (str | None): aggregation passed to
+            `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_
+            when downsampling. Must be explicitly set when downsampling is needed; otherwise a
+            ``ValueError`` is raised.
+
+    Returns:
+        dict: resource data resampled to ``target_dt``.
+    """
+    if not isinstance(data, dict) or not target_dt:
+        return data
+
+    present_time_keys = [k for k in TIME_DATA_KEYS if k in data]
+    if not present_time_keys:
+        msg = (
+            "Cannot resample resource data to the simulation timestep because the data has "
+            "no time columns (year/month/day/hour/minute) to determine its native timestep(s). "
+            "Provide resource data that includes time information."
+        )
+        raise ValueError(msg)
+
+    time_dict = {k: np.asarray(data[k]).astype(int) for k in present_time_keys}
+    calendar_index = pd.DatetimeIndex(pd.to_datetime(time_dict))
+    if len(calendar_index) < 2:
+        return data
+
+    deltas = pd.Series((calendar_index[1:] - calendar_index[:-1]).total_seconds())
+    pos_deltas = deltas[deltas > 0]
+    if pos_deltas.empty:
+        msg = (
+            "Cannot resample resource data: no positive time steps could be derived from the "
+            "data's time columns. Ensure the resource data has increasing timestamps."
+        )
+        raise ValueError(msg)
+
+    # Detect non-chronological transitions (e.g. out-of-order years or TMY month jumps)
+    has_negative_deltas = bool((deltas < 0).any())
+    if has_negative_deltas:
+        warnings.warn(
+            "Resource data contains negative time steps (e.g., timestamps out of chronological "
+            "order or non-chronological resource years). Resampling will process segments in "
+            "their given order, preserving block transitions.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    # Detect indices of annual or segment boundaries where chronological year/month resets
+    native_len = len(calendar_index)
+    calendar_months = calendar_index.month.to_numpy()
+    calendar_years = calendar_index.year.to_numpy()
+    block_starts = [0]
+    for i in range(native_len - 1):
+        if calendar_months[i + 1] < calendar_months[i]:
+            block_starts.append(i + 1)
+        elif calendar_years[i + 1] < calendar_years[i]:
+            block_starts.append(i + 1)
+    block_starts.append(native_len)
+
+    # Compute effective step durations across samples
+    # For transitions across boundaries, large TMY gaps, or calendar gaps (e.g. removed leap day),
+    # complete the period using the local step duration of the preceding sample.
+    # Positive steps exclude backward jumps; their median resists isolated large forward gaps.
+    median_dt = float(pos_deltas.median())
+    effective_deltas = deltas.to_numpy().copy()
+    for b_idx in range(1, len(block_starts) - 1):
+        trans_i = block_starts[b_idx] - 1
+        effective_deltas[trans_i] = effective_deltas[trans_i - 1] if trans_i > 0 else median_dt
+    for i in range(len(effective_deltas)):
+        # Any delta exceeding 24 hours when typical step is sub-daily represents a calendar gap
+        if deltas.iloc[i] > 24 * 3600 and median_dt <= 24 * 3600:
+            effective_deltas[i] = effective_deltas[i - 1] if i > 0 else median_dt
+        elif deltas.iloc[i] > 28 * 86400:
+            effective_deltas[i] = effective_deltas[i - 1] if i > 0 else median_dt
+
+    # Check if native data already matches target timestep uniformly
+    if abs(median_dt - float(target_dt)) < 1e-6 and np.allclose(
+        effective_deltas, float(target_dt), atol=1e-6
+    ):
+        return data
+
+    step_durations = np.append(effective_deltas, effective_deltas[-1])
+    elapsed = np.insert(np.cumsum(effective_deltas), 0, 0.0)
+
+    # Calculate target step count per block to ensure correct time coverage
+    # Inputs are seconds; Timedelta.value returns integer nanoseconds.
+    target_dt_ns = pd.Timedelta(seconds=float(target_dt)).value
+    block_target_n_timesteps = []
+    for s_i, e_i in pairwise(block_starts):
+        block_duration_ns = pd.to_timedelta(step_durations[s_i:e_i], unit="s").sum().value
+        # Integer ceiling division retains any positive remainder without a float tolerance.
+        block_target_n_timesteps.append((block_duration_ns + target_dt_ns - 1) // target_dt_ns)
+
+    target_n = sum(block_target_n_timesteps)
+    total_duration = float(np.sum(step_durations))
+    if float(target_dt) > total_duration:
+        msg = (
+            f"Cannot resample resource data to a timestep of {target_dt} s: it is larger than "
+            f"the total time span of the data ({native_len} samples, total span "
+            f"{total_duration} s), so resampling would produce no timesteps. Use a smaller "
+            "timestep or provide more resource data."
+        )
+        raise ValueError(msg)
+
+    target_offsets = np.arange(target_n) * float(target_dt)
+    # Pandas 3 may infer second resolution, which cannot represent fractional resampling bins.
+    native_index = pd.to_timedelta(elapsed, unit="s").as_unit("ns")
+    target_index = pd.to_timedelta(target_offsets, unit="s").as_unit("ns")
+
+    # Only numeric timeseries columns are resampled; time columns are regenerated afterward.
+    _, ts_data = separate_timeseries_and_meta_data(data)
+    data_keys = [
+        k
+        for k in ts_data
+        if k not in present_time_keys and len(np.atleast_1d(ts_data[k])) == native_len
+    ]
+    frame = pd.DataFrame(
+        {k: np.asarray(data[k], dtype=float) for k in data_keys}, index=native_index
+    )
+
+    min_step = np.min(effective_deltas)
+    max_step = np.max(effective_deltas)
+    upsampling = min_step > float(target_dt) or max_step > float(target_dt)
+    downsampling = min_step < float(target_dt) or max_step < float(target_dt)
+
+    if upsampling and upsample_method is None:
+        raise ValueError(
+            f"Resource data has time steps larger than {float(target_dt):g} s, which requires "
+            "upsampling. Resampling is not performed automatically: set the resource "
+            "`upsample_method` (for example 'time') to explicitly enable upsampling."
+        )
+    if downsampling and downsample_method is None:
+        raise ValueError(
+            f"Resource data has time steps smaller than {float(target_dt):g} s, which requires "
+            "downsampling. Resampling is not performed automatically: set the resource "
+            "`downsample_method` (for example 'mean') to explicitly enable downsampling."
+        )
+
+    direction = (
+        "upsampling"
+        if (upsampling and not downsampling)
+        else ("downsampling" if (downsampling and not upsampling) else "mixed resampling")
+    )
+    method_desc = (
+        f"'{upsample_method}'"
+        if (upsampling and not downsampling)
+        else (
+            f"'{downsample_method}'"
+            if (downsampling and not upsampling)
+            else f"upsample: '{upsample_method}', downsample: '{downsample_method}'"
+        )
+    )
+    warnings.warn(
+        f"Resampling resource data to the simulation timestep of {float(target_dt):g} s "
+        f"({direction} with {method_desc}).",
+        UserWarning,
+        stacklevel=2,
+    )
+
+    if upsampling and not downsampling:
+        # Upsample: interpolate onto the (finer) target grid
+        union_index = frame.index.union(target_index)
+        resampled_frame = (
+            frame.reindex(union_index).interpolate(method=upsample_method).reindex(target_index)
+        )
+    elif downsampling and not upsampling:
+        # Downsample: aggregate native samples within each (coarser) target interval
+        target_freq = pd.Timedelta(seconds=float(target_dt))
+        resampled_frame = (
+            frame.resample(target_freq, origin="start").agg(downsample_method).reindex(target_index)
+        )
+    else:
+        # Mixed: first aggregate finer intervals, then interpolate coarser intervals
+        target_freq = pd.Timedelta(seconds=float(target_dt))
+        resampled_frame = (
+            frame.resample(target_freq, origin="start")
+            .agg(downsample_method)
+            .reindex(target_index)
+            .interpolate(method=upsample_method)
+        )
+
+    # Fill any residual NaNs at the grid edges introduced by reindexing
+    resampled_frame = resampled_frame.ffill().bfill()
+
+    resampled = dict(data)
+    for k in data_keys:
+        resampled[k] = resampled_frame[k].to_numpy()
+
+    # Detect whether the source data has a leap day removed so the regenerated calendar keeps
+    # February 29 excluded at the new timestep.
+    has_feb29 = bool(((calendar_index.month == 2) & (calendar_index.day == 29)).any())
+    spans_leap_year = any(is_leap_year(int(y)) for y in np.unique(calendar_index.year.to_numpy()))
+    include_leap_day = not spans_leap_year or has_feb29
+
+    # Regenerate calendar time columns per block at target_dt, preserving original block order
+    # (even when years are non-chronological) and leap-day settings.
+    if len(block_starts) > 2:
+        reg_time_cols = {k: [] for k in present_time_keys}
+        for b in range(len(block_starts) - 1):
+            b_start_idx = block_starts[b]
+            b_start_ts = calendar_index[b_start_idx]
+            b_target_n = block_target_n_timesteps[b]
+            b_dict = {}
+            _regenerate_time_columns_at_dt(
+                b_dict,
+                b_start_ts,
+                float(target_dt),
+                b_target_n,
+                present_time_keys,
+                include_leap_day=include_leap_day,
+            )
+            for k in present_time_keys:
+                reg_time_cols[k].append(b_dict[k])
+        for k in present_time_keys:
+            resampled[k] = np.concatenate(reg_time_cols[k])
+    else:
+        resampled = _regenerate_time_columns_at_dt(
+            resampled,
+            calendar_index[0],
+            float(target_dt),
+            target_n,
+            present_time_keys,
+            include_leap_day=include_leap_day,
+        )
+    return resampled
