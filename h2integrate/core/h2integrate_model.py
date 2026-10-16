@@ -26,11 +26,13 @@ from h2integrate.postprocess.reporting import (
 )
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
+from h2integrate.control.control_strategies.system_level.slc_topology import (
+    detect_commodity_converters,
+)
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
-    detect_commodity_converters,
     _get_tech_buy_price_input_name,
 )
 
@@ -632,7 +634,7 @@ class H2IntegrateModel:
             if classifier in converter_input_classifiers
         }
         produced_by_tech = defaultdict(set)
-        for tech, commodity in tech_to_commodity:
+        for tech, commodity in sorted(tech_to_commodity):
             produced_by_tech[tech].add(commodity)
         slc_topology["converters"] = detect_commodity_converters(
             upstream_tech_graph, converter_input_techs, produced_by_tech
@@ -859,9 +861,9 @@ class H2IntegrateModel:
         classifiers = slc_topology["tech_control_classifiers"]
         converter_input_classifiers = {"fixed", "flexible", "dispatchable", "storage"}
         produced_by_tech = defaultdict(set)
-        for tech_name, commodity in slc_topology["tech_to_commodity"]:
+        for tech_name, commodity in sorted(slc_topology["tech_to_commodity"]):
             produced_by_tech[tech_name].add(commodity)
-        for in_commodity, converter_tech, _out_commodity in converters:
+        for in_commodity, converter_tech, _out_commodity in sorted(converters):
             has_producers = any(
                 in_commodity in produced_by_tech[tech]
                 for tech, classifier in classifiers.items()

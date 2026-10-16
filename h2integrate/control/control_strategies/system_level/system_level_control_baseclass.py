@@ -5,6 +5,11 @@ import numpy as np
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.control.control_strategies.system_level.slc_topology import (
+    find_commodity_suppliers,
+    detect_commodity_converters,
+)
+
 
 def _get_tech_buy_price_input_name(tech_config, tech_name):
     """Return the variable name of a tech's buy-price input, or ``None`` if absent.
@@ -82,58 +87,6 @@ def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_
         return default_price, 1
 
     return 0.0, n_timesteps
-
-
-def detect_commodity_converters(technology_graph, input_techs, produced_by_tech):
-    """Detect commodity converters from the technology graph.
-
-    A converter is a controller-managed technology that produces a commodity it
-    does not itself consume (for example an electrolyzer: electricity ->
-    hydrogen, or an ammonia synloop: hydrogen -> ammonia). Consumed commodities
-    are read directly from each technology's incoming graph edges and produced
-    commodities from ``produced_by_tech``; this direct-edge definition is robust
-    for converter chains (A -> B -> C, where B and C both convert).
-
-    This module-level helper is shared by the controller component (which calls
-    it with its own graph and classification) and ``H2IntegrateModel`` (which
-    calls it during classification so the same converter set drives the
-    consumption-signal connections).
-
-    Args:
-        technology_graph (nx.DiGraph): Directed technology graph with a
-            ``commodity`` attribute on each edge.
-        input_techs (Iterable[str]): Controller-managed technologies that may
-            produce a commodity (fixed, flexible, dispatchable, storage).
-        produced_by_tech (Mapping[str, Iterable[str]]): Mapping of technology
-            name to the commodities it produces.
-
-    Returns:
-        set[tuple[str, str, str]]: ``(in_commodity, tech_name, out_commodity)``
-        tuples, one per detected conversion.
-    """
-
-    def _as_list(commodity):
-        if commodity is None:
-            return []
-        if isinstance(commodity, str):
-            return [commodity]
-        return list(commodity)
-
-    converters = set()
-    for tech_name in input_techs:
-        produced_commodities = set(produced_by_tech.get(tech_name, ()))
-        if not produced_commodities:
-            continue
-
-        consumed_commodities = set()
-        for _src, _dst, edge_commodity in technology_graph.in_edges(tech_name, data="commodity"):
-            consumed_commodities.update(_as_list(edge_commodity))
-
-        for out_commodity in produced_commodities - consumed_commodities:
-            for in_commodity in consumed_commodities - produced_commodities:
-                converters.add((in_commodity, tech_name, out_commodity))
-
-    return converters
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -641,7 +594,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
             # Storage tech has its own sub-controller: emit a combined demand
             # signal (always positive) equal to the commodity flowing into
             # storage from upstream techs plus any remaining demand.
-            upstream_techs = self.get_upstream_techs_for_commodity(storage_tech, commodity)
+            upstream_techs = find_commodity_suppliers(
+                self.technology_graph,
+                storage_tech,
+                commodity,
+                supplier_techs=self.input_techs | set(self.feedstock_comps),
+            )
             commodity_into_storage = np.zeros(self.n_timesteps)
             for tech_name in upstream_techs:
                 commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
@@ -690,7 +648,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         - ``self._converters``: set of ``(in_commodity, tech_name,
           out_commodity)`` tuples (empty for single-commodity systems).
         - ``self._converter_upstreams``: mapping of ``(in_commodity, tech_name)``
-          to the list of controller-managed and feedstock technologies that
+          to the sorted tuple of controller-managed and feedstock technologies that
           supply ``in_commodity`` to the converter. ``_capacity_ratio`` sums
           their rated capacities to seed the conversion ratio.
         - ``self._converter_consumed_names``: mapping of ``(tech_name,
@@ -712,7 +670,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         converters = self.options["slc_topology"].get("converters")
         if converters is None:
             produced_by_tech = defaultdict(set)
-            for tech_name, commodity in self.techs_to_commodities:
+            for tech_name, commodity in sorted(self.techs_to_commodities):
                 produced_by_tech[tech_name].add(commodity)
             converters = detect_commodity_converters(
                 self.technology_graph, self.input_techs, produced_by_tech
@@ -724,11 +682,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # upstream producers (and any feedstock sources) are summed by
         # ``_capacity_ratio`` to seed the conversion ratio from rated capacities.
         self._converter_upstreams = {}
-        for in_commodity, tech_name, _out_commodity in self._converters:
+        for in_commodity, tech_name, _out_commodity in sorted(self._converters):
             key = (in_commodity, tech_name)
             if key not in self._converter_upstreams:
-                self._converter_upstreams[key] = self.get_upstream_techs_for_commodity(
-                    tech_name, in_commodity
+                self._converter_upstreams[key] = find_commodity_suppliers(
+                    self.technology_graph,
+                    tech_name,
+                    in_commodity,
+                    supplier_techs=self.input_techs | set(self.feedstock_comps),
                 )
 
         # Register a measured-consumption input for every converter whose input
@@ -739,7 +700,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # component standalone
         self._converter_consumed_names = {}
         registered_consumed = set()
-        for in_commodity, tech_name, out_commodity in self._converters:
+        for in_commodity, tech_name, out_commodity in sorted(self._converters):
             has_producers = any(
                 in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
             )
@@ -840,7 +801,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         demand_flow = nx.DiGraph()
         demand_flow.add_node(self.commodity)
         converters_by_output = defaultdict(list)
-        for in_commodity, tech_name, out_commodity in converters:
+        for in_commodity, tech_name, out_commodity in sorted(converters):
             demand_flow.add_edge(out_commodity, in_commodity)
             converters_by_output[out_commodity].append((in_commodity, tech_name, out_commodity))
 
@@ -1407,45 +1368,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
             marginal_cost_scalar = 0.0
 
         return np.full(self.n_timesteps, marginal_cost_scalar)
-
-    def get_upstream_techs_for_commodity(
-        self, tech_name: str, commodity: str, include_feedstock_sources=True
-    ):
-        """Find controlled technologies upstream of ``tech_name`` that output ``commodity``.
-
-        Walks the technology graph backwards from ``tech_name``, finds all ancestor
-        nodes that have an outgoing edge carrying ``commodity``, then filters to only
-        those managed by the controller.
-
-        Args:
-            tech_name (str): Technology whose upstream suppliers are sought.
-            commodity (str): Commodity of interest (e.g. ``"electricity"``).
-            include_feedstock_sources (bool, optional): If True, feedstock techs are
-                included in the set of controller-managed technologies. Defaults to True.
-
-        Returns:
-            list[str]: Controller-managed technologies upstream of ``tech_name``
-                that produce ``commodity``.
-        """
-        # Build the set of techs the controller can see
-        if include_feedstock_sources:
-            input_techs = self.input_techs | set(self.feedstock_comps)
-        else:
-            input_techs = self.input_techs.copy()
-
-        # All graph ancestors of tech_name (any depth)
-        ancestors = nx.ancestors(self.technology_graph, tech_name)
-
-        # Keep only ancestors that have an outgoing edge carrying the target commodity.
-        # Edges are (source, dest, commodity) tuples
-        ancestors_with_commodity = {
-            src
-            for src, _, comm in self.technology_graph.edges(data="commodity")
-            if src in ancestors and commodity in (comm or [])
-        }
-
-        # Intersect with controller-managed techs
-        return list(ancestors_with_commodity & input_techs)
 
     def find_converter_techs(self, include_feedstock_sources=True):
         """Identify technologies that transform one commodity into another.
