@@ -139,6 +139,10 @@ def test_demo_case(subtests):
         "electricity_out": 216.2495760842288,  # MW
     }
 
+    with subtests.test("no modeled availability"):
+        assert not h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.use_reliability
+        assert np.all(h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.availability == 1)
+
     with subtests.test("config_value_fuel_set"):
         assert (
             h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.fuel_source
