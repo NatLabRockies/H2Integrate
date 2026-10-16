@@ -13,16 +13,19 @@ This greatly simplifies the process of building tech configs, especially for
 storage models where parameters must be carefully organized across multiple
 configuration sections.
 
-Usage (CLI):
+Usage (CLI)::
+
     python -m h2integrate.preprocess.populate_tech_yaml \\
         <path_to_skeleton_tech_config.yaml> \\
         [--output-path <output_path>]
 
-    Or use the command-line entry point:
+    Or use the command-line entry point::
+
     populate_tech_yaml <path_to_skeleton_tech_config.yaml> \\
         [--output-path <output_path>]
 
-Usage (Python):
+Usage (Python)::
+
     from h2integrate.preprocess.populate_tech_yaml import populate_tech_yaml_from_file
     populated_config = populate_tech_yaml_from_file(
         "path/to/skeleton_tech_config.yaml",
