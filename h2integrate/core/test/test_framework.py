@@ -18,7 +18,11 @@ from h2integrate import (
     load_plant_yaml,
     load_driver_yaml,
 )
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_is_steppable,
+    check_model_control_classifier,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -956,6 +960,43 @@ def test_check_control_classifier_accepts_classified_model():
         _control_classifier = "dispatchable"
 
     check_model_control_classifier("ClassifiedModel", ClassifiedModel, True)
+
+
+@pytest.mark.unit
+def test_check_model_is_steppable(subtests):
+
+    class TechControllerSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "TechControllerSteppable"
+
+    class TechControllerNonSteppable:
+        def __str__(self):
+            return "TechControllerNonSteppable"
+
+    class PerformanceModelSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "PerformanceModelSteppable"
+
+    class PerformanceModelNonSteppable:
+        def __str__(self):
+            return "PerformanceModelNonSteppable"
+
+    with subtests.test("Steppable classes"):
+        check_model_is_steppable(
+            control_strategies=[TechControllerSteppable()],
+            performance_models=[PerformanceModelSteppable()],
+        )
+
+    with subtests.test("Nonsteppable classes"):
+        with pytest.raises(AttributeError):
+            check_model_is_steppable(
+                control_strategies=[TechControllerNonSteppable()],
+                performance_models=[PerformanceModelSteppable(), PerformanceModelNonSteppable()],
+            )
 
 
 @pytest.mark.unit

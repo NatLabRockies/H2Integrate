@@ -44,3 +44,44 @@ def check_model_control_classifier(model_name, model_object, system_level_contro
     """
     if system_level_control_enabled and not hasattr(model_object, "_control_classifier"):
         raise ValueError(f"Model {model_name} is missing a control classifier")
+
+
+def check_model_is_steppable(control_strategies, performance_models):
+    """Check that all technology control strategies and performance models have the attribute
+    _is_steppable == True. If _is_steppable attribute is missing or evaluates to False, then the
+    system is suitable for steppable simulation and an error is raised.
+
+    Args:
+        control_strategies (list):
+        performance_models (list):
+
+    Returns:
+        None: Returns if all models are steppable.
+
+    Raises:
+        AttributeError: If control strategies or performance models are not flagged as steppable.
+    """
+
+    error_msg_list = []
+
+    non_steppable_control_strategies = [
+        cs.__str__() for cs in control_strategies if not getattr(cs, "_is_steppable", False)
+    ]
+    if non_steppable_control_strategies:
+        control_msg = f"Control strategy(ies): {sorted(non_steppable_control_strategies)}"
+        error_msg_list.append(control_msg)
+
+    non_steppable_performance_models = [
+        pm.__str__() for pm in performance_models if not getattr(pm, "_is_steppable", False)
+    ]
+    if non_steppable_performance_models:
+        performance_msg = f"Performance model(s): {sorted(non_steppable_performance_models)}"
+        error_msg_list.append(performance_msg)
+
+    if error_msg_list:
+        error_msg = (
+            "Attempting to run a steppable simulation with unsupported models:\n\t"
+            + "\n\t".join(error_msg_list)
+            + "\n\t are not flagged as capable of steppable simulation."
+        )
+        raise AttributeError(error_msg)

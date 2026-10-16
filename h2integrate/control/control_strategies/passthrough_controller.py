@@ -19,6 +19,8 @@ class PassthroughController(om.ExplicitComponent):
 
     _time_step_bounds = (1, float("inf"))
 
+    _is_steppable = True
+
     def initialize(self):
         self.options.declare("commodity", types=str)
         self.options.declare("n_timesteps", types=int)
