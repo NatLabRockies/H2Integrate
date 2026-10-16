@@ -2,6 +2,7 @@ import yaml
 import numpy as np
 import pytest
 
+from h2integrate import EXAMPLE_DIR
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -543,3 +544,131 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
             reordered_ammonia_production, baseline_ammonia_production, rtol=1e-6, atol=1e-8
         )
         np.testing.assert_allclose(reordered_lcoa, baseline_lcoa, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("35_system_level_control/heterogeneous_commodity", None)],
+)
+def test_slc_grid_backs_haber_bosch_only(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    config_path = example_folder / "heterogeneous_commodity.yaml"
+
+    baseline_model = H2IntegrateModel(config_path)
+    baseline_model.run()
+
+    def ammonia_hours_met(model):
+        demand = model.prob.get_val("ammonia_load_demand.ammonia_demand", units="kg/h")
+        production = model.prob.get_val("haber_bosch.ammonia_out", units="kg/h")
+        # The Aitken solver can leave a small residual below the exact demand value.
+        return int(np.count_nonzero((demand > 0.0) & (production >= demand * (1.0 - 1e-2))))
+
+    baseline_served_hours = ammonia_hours_met(baseline_model)
+
+    plant_path = example_folder / "plant_config.yaml"
+    with plant_path.open(encoding="utf-8") as config_file:
+        plant_config = yaml.safe_load(config_file)
+    connections = [
+        edge
+        for edge in plant_config["technology_interconnections"]
+        if "electricity_splitter" not in edge[:2]
+    ]
+    connections.extend(
+        [
+            ["elec_combiner", "electrolyzer", "electricity", "cable"],
+            ["grid", "haber_bosch", "electricity", "cable"],
+        ]
+    )
+    plant_config["technology_interconnections"] = connections
+    plant_config["system_level_control"]["control_parameters"]["cost_per_tech"] = {
+        "grid": "buy_price",
+        "haber_bosch": "feedstock",
+    }
+    finance_techs = plant_config["finance_parameters"]["finance_subgroups"]["ammonia"][
+        "technologies"
+    ]
+    if "grid" not in finance_techs:
+        finance_techs.append("grid")
+    with plant_path.open("w", encoding="utf-8") as config_file:
+        yaml.safe_dump(plant_config, config_file, sort_keys=False)
+
+    tech_path = example_folder / "tech_config.yaml"
+    with tech_path.open(encoding="utf-8") as config_file:
+        tech_config = yaml.safe_load(config_file)
+    with (EXAMPLE_DIR / "24_solar_battery_grid" / "tech_config.yaml").open(
+        encoding="utf-8"
+    ) as config_file:
+        grid_template = yaml.safe_load(config_file)["technologies"]["grid_buy"]
+    # A 5 MW limit exceeds the loop's direct load without an oversized seed at zero output.
+    grid_template["model_inputs"]["shared_parameters"]["interconnection_size"] = 5000.0
+    tech_config["technologies"].pop("electricity_splitter")
+    tech_config["technologies"]["grid"] = grid_template
+    with tech_path.open("w", encoding="utf-8") as config_file:
+        yaml.safe_dump(tech_config, config_file, sort_keys=False)
+
+    grid_model = H2IntegrateModel(config_path)
+    grid_model.run()
+
+    with subtests.test("grid connection is only on the Haber-Bosch electricity path"):
+        assert ["grid", "haber_bosch", "electricity", "cable"] in connections
+        assert not any(edge[0] == "grid" and edge[1] == "electrolyzer" for edge in connections)
+
+    with subtests.test("grid set point tracks Haber-Bosch electricity consumption"):
+        grid_set_point = grid_model.prob.get_val(
+            "system_level_controller.grid_electricity_set_point", units="kW"
+        )
+        haber_bosch_consumption = grid_model.prob.get_val(
+            "haber_bosch.electricity_consumed", units="kW"
+        )
+        haber_bosch_production = grid_model.prob.get_val("haber_bosch.ammonia_out", units="kg/h")
+        haber_bosch_set_point = grid_model.prob.get_val(
+            "system_level_controller.haber_bosch_ammonia_set_point", units="kg/h"
+        )
+        # When hydrogen-limited, demanded electricity can exceed actual loop consumption.
+        unconstrained = np.isclose(haber_bosch_production, haber_bosch_set_point, rtol=1e-3)
+        assert unconstrained.any()
+        np.testing.assert_allclose(
+            grid_set_point[unconstrained],
+            haber_bosch_consumption[unconstrained],
+            rtol=1e-3,
+            atol=1e-2,
+        )
+
+    with subtests.test("grid dispatch cannot be routed to the electrolyzer bus"):
+        assert not any(
+            edge[0] == "grid" and edge[1] in {"electrolyzer", "elec_combiner"}
+            for edge in connections
+        )
+        assert grid_set_point.sum() > 0.0
+
+    with subtests.test("grid backup serves ammonia demand in at least as many hours"):
+        grid_production = np.asarray(grid_model.prob.get_val("haber_bosch.ammonia_out"))
+        grid_demand = np.asarray(grid_model.prob.get_val("ammonia_load_demand.ammonia_demand"))
+        hydrogen_set_point_sum = grid_model.prob.get_val(
+            "system_level_controller.electrolyzer_hydrogen_set_point"
+        ).sum()
+        assert ammonia_hours_met(grid_model) >= baseline_served_hours, (
+            f"baseline served {baseline_served_hours} hours; grid case served "
+            f"{ammonia_hours_met(grid_model)}, produced {grid_production.sum()} kg, "
+            f"max production {grid_production.max()} kg/h, demand sum {grid_demand.sum()} kg, "
+            f"grid set-point sum {grid_set_point.sum()} kW, electrolyzer set-point sum "
+            f"{hydrogen_set_point_sum} kg/h"
+        )
+
+    set_point_sums = {
+        name: np.asarray(
+            grid_model.prob.get_val(f"system_level_controller.{name}", units=units)
+        ).sum()
+        for name, units in (
+            ("grid_electricity_set_point", "kW"),
+            ("electrolyzer_hydrogen_set_point", "kg/h"),
+        )
+    }
+    expected_set_point_sums = {
+        "grid_electricity_set_point": 20478447.819791533,
+        "electrolyzer_hydrogen_set_point": 7082756.410321653,
+    }
+    with subtests.test("grid and electrolyzer set-point sums"):
+        for name, expected in expected_set_point_sums.items():
+            assert set_point_sums[name] == pytest.approx(expected, rel=1e-5)
