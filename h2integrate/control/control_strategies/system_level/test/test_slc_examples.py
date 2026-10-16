@@ -420,7 +420,7 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
     with subtests.test("Ammonia set point follows demand"):
         assert np.all(
             model.prob.get_val("system_level_controller.ammonia_ammonia_set_point", units="kg/h")
-            == model.prob.get_val("ammonia_load_demand.ammonia_demand_out", units="kg/h")
+            == model.prob.get_val("ammonia_load_demand.ammonia_demand", units="kg/h")
         )
 
     with subtests.test("Hydrogen demand propagated from ammonia"):
@@ -457,8 +457,7 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
     with subtests.test("Ammonia production does not exceed demand"):
         assert (
             model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
-            <= model.prob.get_val("ammonia_load_demand.ammonia_demand_out", units="kg/h").sum()
-            + 1e-6
+            <= model.prob.get_val("ammonia_load_demand.ammonia_demand", units="kg/h").sum() + 1e-6
         )
 
     with subtests.test("Ammonia annual production"):

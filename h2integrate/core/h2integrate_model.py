@@ -648,13 +648,7 @@ class H2IntegrateModel:
         # the first connected consumer is the priority (out1) technology.
         splitters = []
         for tech in upstream_controllable_techs:
-            model = (
-                self.technology_config["technologies"]
-                .get(tech, {})
-                .get("performance_model", {})
-                .get("model", None)
-            )
-            if model != "GenericSplitterPerformanceModel":
+            if upstream_tech_control_classifiers.get(tech) != "splitter":
                 continue
             downstream_consumers = [
                 connection[1] for connection in upstream_interconnections if connection[0] == tech

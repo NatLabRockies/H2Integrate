@@ -4,9 +4,9 @@ import warnings
 
 import numpy as np
 import pytest
-import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.connection_utils import create_technology_graph as _build_technology_graph
 from h2integrate.control.control_strategies.system_level.demand_following_control import (
     DemandFollowingControl,
 )
@@ -37,36 +37,6 @@ def _build_plant_config(
         },
         "technology_interconnections": technology_interconnections,
     }
-
-
-def _build_technology_graph(technology_interconnections):
-    technology_graph = nx.DiGraph()
-
-    def _as_list(commodity):
-        if commodity is None:
-            return []
-        if isinstance(commodity, str):
-            return [commodity]
-        return list(commodity)
-
-    for connection in technology_interconnections:
-        source = connection[0]
-        destination = connection[1]
-        if len(connection) == 4:
-            # Mirror ``H2IntegrateModel.create_technology_graph``: keep edge
-            # commodities as a list and merge parallel connections between the
-            # same pair of technologies (a co-product converter feeding one
-            # downstream tech with several commodities).
-            new_commodities = _as_list(connection[2])
-            if technology_graph.has_edge(source, destination):
-                existing = _as_list(technology_graph.edges[source, destination].get("commodity"))
-                merged = list(set(existing + new_commodities))
-                technology_graph.add_edge(source, destination, commodity=merged)
-            else:
-                technology_graph.add_edge(source, destination, commodity=new_commodities)
-        else:
-            technology_graph.add_edge(source, destination)
-    return technology_graph
 
 
 def _build_tech_control_classifiers(
@@ -784,6 +754,7 @@ def _build_hetero_problem(
     commodity_units = commodity_units or {}
     n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
     demand_commodity = slc_topology["demand_commodity"]
+    slc_topology["demand_profile"] = demand
 
     prob = om.Problem()
 

@@ -37,7 +37,7 @@ technology_interconnections:
   - [n2_feedstock, ammonia, nitrogen, pipe]
   # ammonia supply to the ammonia demand
   - [ammonia, ammonia_load_demand, ammonia, pipe]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
   # connect the solar resource to the solar technology
