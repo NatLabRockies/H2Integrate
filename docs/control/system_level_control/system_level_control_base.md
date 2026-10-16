@@ -25,13 +25,30 @@ to produce it (for example, translating ammonia demand into hydrogen demand acro
 synthesis loop, and then into electricity demand across an electrolyzer).
 - `detect_commodity_converters()`
     - Module-level helper that identifies converter technologies (technologies whose
-      output commodity differs from an input commodity) that have a controllable
-      producer for that input commodity, so demand can propagate backward across them.
+      output commodity differs from an input commodity), so demand can propagate backward
+      across them.
+- `build_dispatch_topology()`
+    - Module-level helper, run once at setup, that groups the technology graph into supply
+      buses. A supply bus is the set of producers and consumers that share one physical
+      stream of a commodity. Producers of the same commodity that are wired to different
+      consumers, such as a grid wired only to a Haber-Bosch loop and wind wired only to an
+      electrolyzer, are on different buses, so a surplus on one never offsets a deficit on
+      the other. It also returns the conversion links between buses, the order in which
+      buses are dispatched (demand bus first), and the splitters whose allocation the
+      controller sets. It raises an error if the conversions form a cycle, and warns if a
+      bus holds a producer that cannot reach every consumer.
 - `_build_converters()`
-    - Detects the converters, registers each converter's `{commodity}_consumed` inputs,
-      and caches the upstream producers of each converter input. Conversion ratios are
-      never authored by the user; they are derived automatically from measured
-      consumption and from rated capacities.
+    - Registers each dispatched converter input's `{commodity}_consumed` input from the
+      topology's conversion links, and caches the upstream producers of each converter
+      input. Conversion ratios are never authored by the user; they are derived
+      automatically from measured consumption and from rated capacities.
+- `_run_dispatch()`
+    - Dispatches each supply bus in the topology's dispatch order, using only the
+      producers on that bus, and translates each converter's committed output into demand
+      on the bus that supplies its input.
+- `_set_splitter_setpoints()`
+    - Sets each controller-managed splitter's prescribed priority allocation to the demand
+      of the consumers behind its first output.
 - `_capacity_ratio()`
     - Returns a scalar input-per-output ratio seeded from rated capacities: the summed
       rated input capacity of a converter's upstream producers divided by the
@@ -49,7 +66,7 @@ synthesis loop, and then into electricity demand across an electrolyzer).
 Functions for controlling components based on assigned control classifier.
 - `_subtract_curtailable()`
 - `_dispatch_storage()`
-- `get_upstream_techs_for_commodity()`
+- `find_commodity_suppliers()`
 
 Helper functions for cost-aware controllers.
 - `_setup_marginal_costs()`

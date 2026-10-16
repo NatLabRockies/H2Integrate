@@ -1,6 +1,5 @@
 import importlib.util
 from enum import IntEnum
-from collections import defaultdict
 
 import networkx as nx
 import openmdao.api as om
@@ -26,9 +25,7 @@ from h2integrate.postprocess.reporting import (
 )
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
-from h2integrate.control.control_strategies.system_level.slc_topology import (
-    detect_commodity_converters,
-)
+from h2integrate.control.control_strategies.system_level.slc_topology import build_dispatch_topology
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
@@ -497,6 +494,9 @@ class H2IntegrateModel:
                   to its ``_control_classifier`` (one of ``"fixed"``, ``"flexible"``,
                   ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
                   the SLC interacts with each tech.
+                - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
+                  links, dispatch order, and controller-managed splitters, built once
+                  from the technology graph by ``build_dispatch_topology``.
         """
         slc_topology = {}
         technologies = self.technology_config.get("technologies", {})
@@ -624,59 +624,17 @@ class H2IntegrateModel:
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
-        # Detect commodity converters (e.g. electrolyzer: electricity -> hydrogen)
-        # so the same converter set drives backward demand propagation in the
-        # controller and the consumption-signal connections made below
-        converter_input_classifiers = {"fixed", "flexible", "dispatchable", "storage"}
-        converter_input_techs = {
-            tech
-            for tech, classifier in upstream_tech_control_classifiers.items()
-            if classifier in converter_input_classifiers
-        }
-        produced_by_tech = defaultdict(set)
-        for tech, commodity in sorted(tech_to_commodity):
-            produced_by_tech[tech].add(commodity)
-        slc_topology["converters"] = detect_commodity_converters(
-            upstream_tech_graph, converter_input_techs, produced_by_tech
+        # Build the supply buses, conversion links (e.g. electrolyzer: electricity ->
+        # hydrogen), dispatch order, and controller-managed splitters once, so the
+        # controller and the consumption-signal and splitter connections made below
+        # all use the same topology
+        slc_topology["dispatch_topology"] = build_dispatch_topology(
+            upstream_tech_graph,
+            upstream_tech_control_classifiers,
+            tech_to_commodity,
+            demand_tech,
+            slc_topology["demand_commodity"],
         )
-
-        # Detect controller-managed splitters. A GenericSplitterPerformanceModel
-        # divides one commodity bus between two downstream consumers, but its
-        # split is a static config value. When the splitter sits on a bus the
-        # system-level controller manages, the correct split varies per timestep
-        # with the two consumers' backpropagated demand, so the controller drives
-        # the splitter's prescribed allocation instead. Record each such splitter
-        # with its transported commodity and its ordered downstream consumers;
-        # the first connected consumer is the priority (out1) technology.
-        splitters = []
-        for tech in upstream_controllable_techs:
-            if upstream_tech_control_classifiers.get(tech) != "splitter":
-                continue
-            downstream_consumers = [
-                connection[1] for connection in upstream_interconnections if connection[0] == tech
-            ]
-            split_commodities = [
-                connection[2]
-                for connection in upstream_interconnections
-                if connection[0] == tech and len(connection) > 2
-            ]
-            if not downstream_consumers or not split_commodities:
-                continue
-            perf_params = (
-                self.technology_config["technologies"][tech]
-                .get("model_inputs", {})
-                .get("performance_parameters", {})
-            )
-            splitters.append(
-                {
-                    "name": tech,
-                    "commodity": split_commodities[0],
-                    "commodity_rate_units": perf_params.get("commodity_rate_units", None),
-                    "priority_tech": downstream_consumers[0],
-                    "consumers": downstream_consumers,
-                }
-            )
-        slc_topology["splitters"] = splitters
 
         return slc_topology
 
@@ -762,6 +720,10 @@ class H2IntegrateModel:
                   has its own sub-controller.
                 - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
                   interconnections.
+                - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
+                  links, and controller-managed splitters. Its converter inputs are
+                  connected to the controller's measured-consumption inputs and its
+                  splitters to the controller's splitter set points.
 
         Raises:
             ValueError: If ``control_strategy`` is not found in ``self.supported_models``.
@@ -853,24 +815,12 @@ class H2IntegrateModel:
             )
 
         # --- Step 3b: Connect converter consumption signals ---------------
-        # For each detected converter whose input commodity has a
-        # controller-managed producer, wire the converter's measured
-        # ``{in_commodity}_consumed`` output to the controller so it can derive
-        # a per-timestep conversion ratio (heterogeneous-commodity control).
-        converters = slc_topology.get("converters", set())
-        classifiers = slc_topology["tech_control_classifiers"]
-        converter_input_classifiers = {"fixed", "flexible", "dispatchable", "storage"}
-        produced_by_tech = defaultdict(set)
-        for tech_name, commodity in sorted(slc_topology["tech_to_commodity"]):
-            produced_by_tech[tech_name].add(commodity)
-        for in_commodity, converter_tech, _out_commodity in sorted(converters):
-            has_producers = any(
-                in_commodity in produced_by_tech[tech]
-                for tech, classifier in classifiers.items()
-                if classifier in converter_input_classifiers
-            )
-            if not has_producers:
-                continue
+        # For each converter input that a dispatched supply bus feeds, wire the
+        # converter's measured ``{in_commodity}_consumed`` output to the controller
+        # so it can derive a per-timestep conversion ratio (heterogeneous-commodity
+        # control).
+        dispatch_topology = slc_topology["dispatch_topology"]
+        for converter_tech, in_commodity in dispatch_topology.consumption_signals:
             self.plant.connect(
                 f"{converter_tech}.{in_commodity}_consumed",
                 f"system_level_controller.{converter_tech}_{in_commodity}_consumed",
@@ -878,13 +828,13 @@ class H2IntegrateModel:
 
         # --- Step 3c: Connect controller-managed splitter allocations -----
         # For each splitter on a controller-managed bus, route the SLC's
-        # per-timestep prescribed allocation for the priority consumer to the
+        # per-timestep prescribed allocation for the priority consumers to the
         # splitter's ``prescribed_commodity_to_priority_tech`` input so the
-        # split tracks the backpropagated demand of the two consumers.
-        for splitter in slc_topology.get("splitters", []):
+        # split tracks the backpropagated demand of the consumers behind out1.
+        for splitter in dispatch_topology.splitters:
             self.plant.connect(
-                f"system_level_controller.{splitter['name']}_{splitter['commodity']}_set_point",
-                f"{splitter['name']}.prescribed_commodity_to_priority_tech",
+                f"system_level_controller.{splitter.name}_{splitter.commodity}_set_point",
+                f"{splitter.name}.prescribed_commodity_to_priority_tech",
             )
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -

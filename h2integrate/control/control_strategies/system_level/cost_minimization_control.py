@@ -44,6 +44,16 @@ class CostMinimizationControl(SystemLevelControlBase):
     def compute(self, inputs, outputs):
         self._run_dispatch(inputs, outputs)
 
-    def _dispatch_dispatchables(self, commodity, remaining_demand, inputs, outputs):
+    def _dispatch_dispatchables(
+        self,
+        commodity,
+        remaining_demand,
+        inputs,
+        outputs,
+        producers=None,
+        is_demand_bus=False,
+    ):
         """Merit-order dispatch: cheapest dispatchables first, up to rated capacity."""
-        return self._merit_order_dispatch(commodity, remaining_demand, inputs, outputs)
+        return self._merit_order_dispatch(
+            commodity, remaining_demand, inputs, outputs, producers=producers
+        )

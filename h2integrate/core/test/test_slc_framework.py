@@ -43,13 +43,15 @@ def tech_control_classifiers(connection_case):
     return tech_control_classification
 
 
-def make_mock_tech_config(demand_tech, storage_techs, demand_class_name="GenericDemandComponent"):
+def make_mock_tech_config(
+    demand_tech, storage_techs, demand_class_name="GenericDemandComponent", commodity="electricity"
+):
     demand_config = {
         demand_tech: {
             "performance_model": {"model": demand_class_name},
             "model_inputs": {
                 "performance_parameters": {
-                    "commodity": "electricity",
+                    "commodity": commodity,
                     "commodity_rate_units": "kW",
                 }
             },
@@ -319,7 +321,7 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
     model.tech_control_classifiers = tech_control_classifiers
     demand_tech = plant_config["system_level_control"]["demand_component"]
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
-    tech_config = make_mock_tech_config(demand_tech, storage_techs)
+    tech_config = make_mock_tech_config(demand_tech, storage_techs, commodity="ammonia")
     model.technology_config = tech_config
     model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
@@ -359,3 +361,15 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
     )
     with subtests.test("Electrolyzer is upstream of Haber Bosch"):
         assert upstream_techs == ("electrolyzer",)
+
+    with subtests.test("Dispatch order for the multi-commodity system"):
+        # The feedstock-only buses (nitrogen, natural gas, salt water) are never dispatched.
+        assert slc_topology["dispatch_topology"].dispatch_order == (
+            "ammonia:nh3_load_demand",
+            "electricity:haber_bosch",
+            "heat:haber_bosch",
+            "hydrogen:haber_bosch",
+            "oxygen:haber_bosch",
+            "electricity:electrolyzer",
+            "fresh_water:electrolyzer",
+        )

@@ -66,7 +66,10 @@ def _build_slc_topology(
     }
 
     tech_to_commodities = {
-        (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers
+        (e[0], e[-1])
+        for e in sources_to_commodities
+        if tech_control_classifiers.get(e[0])
+        in ("fixed", "flexible", "dispatchable", "storage", "feedstock")
     }
 
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
@@ -812,7 +815,8 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
-        assert prob.model.slc._converters == {
+        links = prob.model.slc._dispatch_topology.links
+        assert {(link.in_commodity, link.tech, link.out_commodity) for link in links} == {
             ("electricity", "electrolyzer", "hydrogen"),
             ("hydrogen", "haber_bosch", "ammonia"),
         }
@@ -1279,8 +1283,10 @@ class TestHeterogeneousCommodityControl:
             },
         )
         # Reformer co-product converter detected for both outputs from one input.
-        assert ("natural_gas", "reformer", "hydrogen") in prob.model.slc._converters
-        assert ("natural_gas", "reformer", "electricity") in prob.model.slc._converters
+        links = prob.model.slc._dispatch_topology.links
+        converters = {(link.in_commodity, link.tech, link.out_commodity) for link in links}
+        assert ("natural_gas", "reformer", "hydrogen") in converters
+        assert ("natural_gas", "reformer", "electricity") in converters
 
         # Haber-Bosch uses capacity ratios: hydrogen 200/1000 = 0.2, electricity 300/1000 = 0.3.
         prob.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)

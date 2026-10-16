@@ -104,18 +104,28 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     def compute(self, inputs, outputs):
         self._run_dispatch(inputs, outputs)
 
-    def _dispatch_dispatchables(self, commodity, remaining_demand, inputs, outputs):
-        """Merit-order dispatch, profit-gated for the primary demand commodity.
+    def _dispatch_dispatchables(
+        self,
+        commodity,
+        remaining_demand,
+        inputs,
+        outputs,
+        producers=None,
+        is_demand_bus=False,
+    ):
+        """Merit-order dispatch, profit-gated for the bus that delivers the demand commodity.
 
-        The demand commodity is dispatched only at timesteps where a
-        technology's marginal cost is below the sell price. Upstream (derived)
-        commodities are dispatched at minimum cost to supply the profitable
-        primary production, since the profitability decision has already been
-        made at the demand-commodity level.
+        The demand bus is dispatched only at timesteps where a technology's
+        marginal cost is below the sell price. Upstream (derived) buses are
+        dispatched at minimum cost to supply the profitable primary production,
+        since the profitability decision has already been made on the demand bus.
         """
-        if commodity == self.commodity:
-            sell_price = inputs["commodity_sell_price"]
-            return self._merit_order_dispatch(
-                commodity, remaining_demand, inputs, outputs, sell_price=sell_price
-            )
-        return self._merit_order_dispatch(commodity, remaining_demand, inputs, outputs)
+        sell_price = inputs["commodity_sell_price"] if is_demand_bus else None
+        return self._merit_order_dispatch(
+            commodity,
+            remaining_demand,
+            inputs,
+            outputs,
+            sell_price=sell_price,
+            producers=producers,
+        )

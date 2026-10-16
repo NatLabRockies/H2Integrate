@@ -6,8 +6,8 @@ import networkx as nx
 import openmdao.api as om
 
 from h2integrate.control.control_strategies.system_level.slc_topology import (
+    build_dispatch_topology,
     find_commodity_suppliers,
-    detect_commodity_converters,
 )
 
 
@@ -129,6 +129,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         ``"fixed"``, ``"flexible"``, ``"dispatchable"``, ``"storage"``, or
         ``"feedstock"``).
 
+    It may also contain ``dispatch_topology``, the ``DispatchTopology`` built by
+    ``H2IntegrateModel``. When it is absent (for example in standalone unit tests), the
+    component builds the topology itself from the keys above.
+
     Controller-specific configuration parameters may be read from
     ``plant_config["system_level_control"]["control_parameters"]``.
 
@@ -214,27 +218,58 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self._setup_tech_category("storage", self.storage_techs)
         self._setup_feedstock_category(self.feedstock_comps)
 
-        # Detect commodity converters and register their measured-consumption
-        # inputs. Conversion ratios are derived automatically (measured first,
-        # then a capacity-based seed), enabling backward demand propagation
-        # across converter boundaries for heterogeneous-commodity systems.
+        # Get the setup-time dispatch topology: which supply buses exist, in what order
+        # demand propagates across them, and which conversions link them.
+        self._dispatch_topology = slc_topology.get("dispatch_topology")
+        if self._dispatch_topology is None:
+            self._dispatch_topology = build_dispatch_topology(
+                self.technology_graph,
+                slc_topology["tech_control_classifiers"],
+                self.techs_to_commodities,
+                self.demand_tech,
+                self.commodity,
+            )
+
+        # Register the converters' measured-consumption inputs. Conversion ratios are derived
+        # automatically (measured first, then a capacity-based seed), enabling backward demand
+        # propagation across converter boundaries for heterogeneous-commodity systems.
         self._build_converters()
+
+        # Storage with its own sub-controller is told how much commodity flows into it
+        self._storage_suppliers = {
+            (storage_tech, commodity): find_commodity_suppliers(
+                self.technology_graph,
+                storage_tech,
+                commodity,
+                supplier_techs=self.input_techs | set(self.feedstock_comps),
+            )
+            for storage_tech in self.storage_techs
+            if self.storage_techs_to_control.get(storage_tech, False)
+            for commodity in self._get_commodity_for_tech(storage_tech)
+        }
 
         # Register a set-point output for every controller-managed splitter so
         # the controller can drive its per-timestep priority allocation from the
-        # backpropagated demand of the two downstream consumers.
-        self.splitters = slc_topology.get("splitters", [])
-        for splitter in self.splitters:
+        # backpropagated demand of the consumers behind its first output.
+        for splitter in self._dispatch_topology.splitters:
             self.add_output(
-                f"{splitter['name']}_{splitter['commodity']}_set_point",
+                f"{splitter.name}_{splitter.commodity}_set_point",
                 val=0.0,
                 shape=self.n_timesteps,
-                units=splitter.get("commodity_rate_units", None),
+                units=self._get_splitter_rate_units(splitter.name),
                 desc=(
-                    f"Prescribed {splitter['commodity']} allocation to the priority "
-                    f"consumer of splitter {splitter['name']}"
+                    f"Prescribed {splitter.commodity} allocation to the priority "
+                    f"consumer of splitter {splitter.name}"
                 ),
             )
+
+    def _get_splitter_rate_units(self, splitter_name):
+        """Return the ``commodity_rate_units`` of a splitter from the tech config, or ``None``."""
+        splitter_config = self.options["tech_config"].get("technologies", {}).get(splitter_name, {})
+        performance_parameters = splitter_config.get("model_inputs", {}).get(
+            "performance_parameters", {}
+        )
+        return performance_parameters.get("commodity_rate_units", None)
 
     def _setup_commodity(
         self,
@@ -594,12 +629,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             # Storage tech has its own sub-controller: emit a combined demand
             # signal (always positive) equal to the commodity flowing into
             # storage from upstream techs plus any remaining demand.
-            upstream_techs = find_commodity_suppliers(
-                self.technology_graph,
-                storage_tech,
-                commodity,
-                supplier_techs=self.input_techs | set(self.feedstock_comps),
-            )
+            upstream_techs = self._storage_suppliers[(storage_tech, commodity)]
             commodity_into_storage = np.zeros(self.n_timesteps)
             for tech_name in upstream_techs:
                 commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
@@ -632,21 +662,21 @@ class SystemLevelControlBase(om.ExplicitComponent):
     # ------------------------------------------------------------------
 
     def _build_converters(self):
-        """Detect commodity converters and register their measured-consumption inputs.
+        """Register the converters' measured-consumption inputs from the dispatch topology.
 
         A converter is a controller-managed technology that produces a commodity
         it does not itself consume (for example an electrolyzer:
         electricity -> hydrogen, or an ammonia synloop: hydrogen -> ammonia).
-        Converters are taken from ``slc_topology["converters"]`` when
-        ``H2IntegrateModel`` provides them, and otherwise detected here with
-        ``detect_commodity_converters`` so the component remains usable
+        The converters come from the conversion links of ``self._dispatch_topology``,
+        which ``H2IntegrateModel`` builds, or which ``setup`` builds when running
         standalone (for example in unit tests).
 
         Populates the attributes used by ``_run_dispatch`` to translate demand
-        for one commodity into demand for an upstream (input) commodity:
+        on one bus into demand on the bus that supplies the converter's input:
 
-        - ``self._converters``: set of ``(in_commodity, tech_name,
-          out_commodity)`` tuples (empty for single-commodity systems).
+        - ``self._links_by_out_bus``: mapping of an output bus name to the
+          conversion links whose demand it feeds. Only links whose input and
+          output buses are both dispatched are kept.
         - ``self._converter_upstreams``: mapping of ``(in_commodity, tech_name)``
           to the sorted tuple of controller-managed and feedstock technologies that
           supply ``in_commodity`` to the converter. ``_capacity_ratio`` sums
@@ -663,49 +693,34 @@ class SystemLevelControlBase(om.ExplicitComponent):
         reports its consumption via a connected ``{in_commodity}_consumed``
         output (wired by ``H2IntegrateModel``), and a capacity-based ratio
         derived from the connected rated-production inputs as the
-        first-iteration and zero-output seed. Converters whose input commodity
-        has no controller-managed producer (for example a feedstock-supplied
-        nitrogen stream) do not require a ratio.
+        first-iteration and zero-output seed. Converters whose input bus has no
+        controller-managed producer (for example a feedstock-supplied nitrogen
+        stream) are not dispatched, so they do not require a ratio.
         """
-        converters = self.options["slc_topology"].get("converters")
-        if converters is None:
-            produced_by_tech = defaultdict(set)
-            for tech_name, commodity in sorted(self.techs_to_commodities):
-                produced_by_tech[tech_name].add(commodity)
-            converters = detect_commodity_converters(
-                self.technology_graph, self.input_techs, produced_by_tech
-            )
-        self._converters = set(converters)
+        dispatch_links = self._dispatch_topology.dispatch_links
         self._missing_ratio_warned = set()
 
-        # Map each converter input to the technologies that supply it. These
-        # upstream producers (and any feedstock sources) are summed by
-        # ``_capacity_ratio`` to seed the conversion ratio from rated capacities.
-        self._converter_upstreams = {}
-        for in_commodity, tech_name, _out_commodity in sorted(self._converters):
-            key = (in_commodity, tech_name)
-            if key not in self._converter_upstreams:
-                self._converter_upstreams[key] = find_commodity_suppliers(
-                    self.technology_graph,
-                    tech_name,
-                    in_commodity,
-                    supplier_techs=self.input_techs | set(self.feedstock_comps),
-                )
+        self._links_by_out_bus = defaultdict(list)
+        for link in dispatch_links:
+            self._links_by_out_bus[link.out_bus].append(link)
 
-        # Register a measured-consumption input for every converter whose input
-        # commodity has a controller-managed producer. H2IntegrateModel wires
-        # the converter's ``{in_commodity}_consumed`` output to this input so
-        # the ratio can be measured per timestep. The NaN default marks the
-        # input as unconnected (dynamic ratio unavailable) when running the
-        # component standalone
+        # The upstream producers (and any feedstock sources) of each converter input are
+        # summed by ``_capacity_ratio`` to seed the conversion ratio from rated capacities.
+        self._converter_upstreams = {
+            (link.in_commodity, link.tech): link.suppliers for link in dispatch_links
+        }
+
+        # Register a measured-consumption input for every dispatched converter
+        # input. H2IntegrateModel wires the converter's ``{in_commodity}_consumed``
+        # output to this input so the ratio can be measured per timestep. The NaN
+        # default marks the input as unconnected (dynamic ratio unavailable) when
+        # running the component standalone
         self._converter_consumed_names = {}
         registered_consumed = set()
-        for in_commodity, tech_name, out_commodity in sorted(self._converters):
-            has_producers = any(
-                in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
-            )
-            if not has_producers:
-                continue
+        for link in dispatch_links:
+            tech_name = link.tech
+            in_commodity = link.in_commodity
+            out_commodity = link.out_commodity
 
             consumed_name = f"{tech_name}_{in_commodity}_consumed"
             # A co-product converter (one technology, one input, several
@@ -733,38 +748,39 @@ class SystemLevelControlBase(om.ExplicitComponent):
             self._converter_consumed_names[(tech_name, in_commodity, out_commodity)] = consumed_name
 
     def _run_dispatch(self, inputs, outputs):
-        """Dispatch every commodity level required to meet the demand profile.
+        """Dispatch every supply bus needed to meet the demand profile.
 
-        The demand commodity is dispatched first. For each converter that
-        produces a just-dispatched commodity, the converter's committed output
-        set-point is translated into demand for its input commodity (via its
-        conversion ratio, measured when available and otherwise seeded from
-        rated capacities) and accumulated. Commodities are processed in
-        topological order of this demand-flow graph so that all contributions to
-        an input commodity are gathered before it is dispatched.
+        Demand starts on the demand bus. Buses are processed in
+        ``self._dispatch_topology.dispatch_order``, which is fixed at setup, so all
+        contributions to a bus are gathered before it is dispatched. For each bus
+        the shared fixed, flexible, storage, and dispatchable steps run on that
+        bus's producers only. Then every conversion link that supplies the bus
+        translates the converter's committed output set-point into demand on the bus
+        the converter draws from (via its conversion ratio, measured when available
+        and otherwise seeded from rated capacities).
 
-        Demand is aggregated per commodity in a single flat ``derived_demand``
-        map (commodity -> profile), not per converter or per producer group.
-        This is a deliberate design choice that generalizes cleanly to two
-        topologies beyond the simple single-input, single-output chain:
+        Demand is held per supply bus in a single ``derived_demand`` map (bus name ->
+        profile), not per commodity. Producers of one commodity that are wired to
+        different consumers (for example a grid wired only to a Haber-Bosch loop and
+        wind wired only to an electrolyzer) sit on different buses, so a surplus on
+        one never offsets a deficit on the other. The map also handles two topologies
+        beyond the simple single-input, single-output chain:
 
-        - Splitters / multiple consumers of one commodity: when several
-          converters (or loads) draw the same input commodity, each contributes
-          its translated demand into the same ``derived_demand[in_commodity]``
-          entry, so the upstream producers are sized against the summed draw
-          without any special grouping logic.
-        - Multi-output converters: each ``(in_commodity, tech, out_commodity)``
-          tuple is handled independently, so a converter that produces several
-          commodities propagates demand for each output separately. Byproduct
-          outputs that carry no demand are simply never dispatched and never
-          generate upstream demand.
+        - Splitters / multiple consumers of one bus: when several converters (or
+          loads) draw from the same bus, each contributes its translated demand
+          into the same ``derived_demand[bus]`` entry, so the upstream producers
+          are sized against the summed draw without any special grouping logic.
+        - Multi-output converters: each conversion link is handled independently,
+          so a converter that produces several commodities propagates demand for
+          each output separately. Byproduct outputs that carry no demand are simply
+          never dispatched and never generate upstream demand.
 
         Co-product converters (one technology that produces several demanded
         outputs from the same input commodity) are handled so the shared input
         is not double-counted: contributions from different outputs of the same
         converter are combined by the binding (element-wise maximum) requirement,
         since one physical unit produces its co-products together, while distinct
-        converters that draw on the same commodity still sum. See
+        converters that draw on the same bus still sum. See
         ``_accumulate_derived_demand``.
 
         Subclasses implement the strategy-specific dispatchable step by
@@ -772,7 +788,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         storage steps are shared across all strategies.
         """
         # Reset the per-converter contribution tracker used to combine multiple
-        # outputs of a single converter that draw on the same input commodity.
+        # outputs of a single converter that draw on the same input bus.
         self._converter_contributions = defaultdict(dict)
 
         # Flexible techs can only curtail, so they always run at their rated
@@ -786,86 +802,75 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 if rated_name in inputs and set_point_name in outputs:
                     outputs[set_point_name] = inputs[rated_name] * np.ones(self.n_timesteps)
 
-        converters = getattr(self, "_converters", None) or set()
+        topology = self._dispatch_topology
+        derived_demand = {}
+        if topology.demand_bus is not None:
+            derived_demand[topology.demand_bus] = inputs[self.demand_input_name].copy()
 
-        # Single-commodity system: dispatch the demand commodity and return
-        if not converters:
-            self._dispatch_commodity(
-                self.commodity, inputs[self.demand_input_name].copy(), inputs, outputs
-            )
-            self._set_splitter_setpoints(outputs)
-            return
-
-        # Build the demand-flow graph (out_commodity -> in_commodity) and group
-        # converters by the commodity they output
-        demand_flow = nx.DiGraph()
-        demand_flow.add_node(self.commodity)
-        converters_by_output = defaultdict(list)
-        for in_commodity, tech_name, out_commodity in sorted(converters):
-            demand_flow.add_edge(out_commodity, in_commodity)
-            converters_by_output[out_commodity].append((in_commodity, tech_name, out_commodity))
-
-        try:
-            commodity_order = list(nx.topological_sort(demand_flow))
-        except nx.NetworkXUnfeasible:
-            # Commodity cycle (unusual): process the demand commodity first,
-            # then the remaining commodities in arbitrary order
-            commodity_order = [self.commodity] + [
-                c for c in demand_flow.nodes if c != self.commodity
-            ]
-
-        derived_demand = {self.commodity: inputs[self.demand_input_name].copy()}
-
-        for commodity in commodity_order:
-            demand = derived_demand.get(commodity)
+        for bus_name in topology.dispatch_order:
+            demand = derived_demand.get(bus_name)
             if demand is None:
+                # Demand never reached this bus because an upstream conversion had no ratio
                 continue
 
-            self._dispatch_commodity(commodity, demand.copy(), inputs, outputs)
+            bus = topology.buses[bus_name]
+            self._dispatch_commodity(
+                bus.commodity,
+                demand.copy(),
+                inputs,
+                outputs,
+                producers=bus.producers,
+                is_demand_bus=bus_name == topology.demand_bus,
+            )
 
-            # Translate committed converter output into upstream input demand
-            for in_commodity, tech_name, out_commodity in converters_by_output.get(commodity, []):
-                self._accumulate_derived_demand(
-                    derived_demand, tech_name, in_commodity, out_commodity, inputs, outputs
-                )
+            # Translate committed converter output into demand on the converters' input buses
+            for link in self._links_by_out_bus.get(bus_name, ()):
+                self._accumulate_derived_demand(derived_demand, link, inputs, outputs)
 
-        self._set_splitter_setpoints(outputs)
+        self._set_splitter_setpoints(inputs, outputs)
 
-    def _set_splitter_setpoints(self, outputs):
+    def _set_splitter_setpoints(self, inputs, outputs):
         """Set each controller-managed splitter's prescribed priority allocation.
 
         A ``GenericSplitterPerformanceModel`` in ``prescribed_commodity`` mode
         divides its input commodity so the priority output (out1) receives a
         prescribed per-timestep amount and the second output (out2) receives the
         remainder. For a splitter placed on a controller-managed bus, the correct
-        prescribed amount is the backpropagated demand of the priority consumer
-        (the first technology connected downstream of the splitter). The dispatch
-        already accumulates that consumer's draw as its converter contribution to
-        the split commodity, so setting the prescribed amount to the priority
-        consumer's draw makes out2 equal the second consumer's draw whenever the
-        upstream producers deliver the summed demand. Both consumers are then
-        served from a single physical stream without starving either one.
+        prescribed amount is the backpropagated demand of the consumers behind
+        out1, found at setup by tracing forward through combiners, splitters, and
+        storage. The dispatch already accumulates each converter's draw on the bus
+        as its converter contribution, and the demand technology's draw is the
+        demand profile itself. Setting the prescribed amount to the sum of those
+        draws makes out2 equal the other consumers' draw whenever the upstream
+        producers deliver the summed demand. Every consumer is then served from a
+        single physical stream without starving any of them.
 
         Args:
+            inputs: OpenMDAO inputs.
             outputs: OpenMDAO outputs; each splitter's
                 ``{name}_{commodity}_set_point`` output is written in place.
         """
-        for splitter in getattr(self, "splitters", []):
-            set_point_name = f"{splitter['name']}_{splitter['commodity']}_set_point"
-            if set_point_name not in outputs:
-                continue
-            contributions = self._converter_contributions.get(splitter["commodity"], {})
-            priority_demand = contributions.get(splitter["priority_tech"])
-            if priority_demand is None:
-                priority_demand = np.zeros(self.n_timesteps)
-            outputs[set_point_name] = np.maximum(priority_demand, 0.0)
+        for splitter in self._dispatch_topology.splitters:
+            contributions = self._converter_contributions.get(splitter.bus, {})
+            priority_demand = np.zeros(self.n_timesteps)
+            for consumer in splitter.priority_consumers:
+                if consumer == self.demand_tech:
+                    priority_demand = priority_demand + inputs[self.demand_input_name]
+                elif consumer in contributions:
+                    priority_demand = priority_demand + contributions[consumer]
+            outputs[f"{splitter.name}_{splitter.commodity}_set_point"] = np.maximum(
+                priority_demand, 0.0
+            )
 
-    def _dispatch_commodity(self, commodity, demand, inputs, outputs):
-        """Dispatch all technologies producing ``commodity`` to meet ``demand``.
+    def _dispatch_commodity(
+        self, commodity, demand, inputs, outputs, producers=None, is_demand_bus=False
+    ):
+        """Dispatch the technologies producing ``commodity`` to meet ``demand``.
 
         Applies the shared four-step priority order (fixed, flexible, storage,
         dispatchable) for a single commodity. Only technologies that produce
-        ``commodity`` participate. The dispatchable step is delegated to
+        ``commodity`` participate, and when ``producers`` is given, only those that
+        are also in it. The dispatchable step is delegated to
         ``_dispatch_dispatchables`` so cost-aware subclasses can override it.
 
         Args:
@@ -873,51 +878,89 @@ class SystemLevelControlBase(om.ExplicitComponent):
             demand (np.ndarray): Demand profile for ``commodity`` (may be mutated).
             inputs: OpenMDAO inputs.
             outputs: OpenMDAO outputs.
+            producers (Iterable[str] | None, optional): Technologies on the supply bus
+                being dispatched. ``None`` allows every technology that produces
+                ``commodity``.
+            is_demand_bus (bool, optional): True when the bus being dispatched
+                delivers the demand technology's commodity. Defaults to False.
 
         Returns:
             np.ndarray: Remaining unmet demand after dispatchables.
         """
+
+        def _on_bus(tech_names):
+            return [
+                tech_name
+                for tech_name in tech_names
+                if commodity in self._get_commodity_for_tech(tech_name)
+                and (producers is None or tech_name in producers)
+            ]
+
         # 1. Fixed techs: always produce, subtract from demand
-        for fixed_tech in self.fixed_techs:
-            if commodity in self._get_commodity_for_tech(fixed_tech):
-                demand = self._subtract_fixed(fixed_tech, demand, commodity, inputs)
+        for fixed_tech in _on_bus(self.fixed_techs):
+            demand = self._subtract_fixed(fixed_tech, demand, commodity, inputs)
 
         # 2. Flexible techs: run at rated production, subtract from demand
-        for flexible_tech in self.flexible_techs:
-            if commodity in self._get_commodity_for_tech(flexible_tech):
-                updated = self._subtract_flexible(flexible_tech, demand, commodity, inputs, outputs)
-                if updated is not None:
-                    demand = updated
+        for flexible_tech in _on_bus(self.flexible_techs):
+            updated = self._subtract_flexible(flexible_tech, demand, commodity, inputs, outputs)
+            if updated is not None:
+                demand = updated
 
         # 3. Storage techs: split residual demand evenly and dispatch
-        n_storage = len(
-            [s for s in self.storage_techs if commodity in self._get_commodity_for_tech(s)]
-        )
-        for storage_tech in self.storage_techs:
-            if commodity in self._get_commodity_for_tech(storage_tech):
-                updated = self._dispatch_storage(
-                    storage_tech, demand / n_storage, commodity, inputs, outputs
-                )
-                if updated is not None:
-                    demand = updated
+        storage_techs = _on_bus(self.storage_techs)
+        for storage_tech in storage_techs:
+            updated = self._dispatch_storage(
+                storage_tech, demand / len(storage_techs), commodity, inputs, outputs
+            )
+            if updated is not None:
+                demand = updated
 
         # 4. Dispatchable techs: strategy-specific (subclass hook)
         remaining = np.maximum(demand, 0.0)
-        return self._dispatch_dispatchables(commodity, remaining, inputs, outputs)
+        return self._dispatch_dispatchables(
+            commodity,
+            remaining,
+            inputs,
+            outputs,
+            producers=producers,
+            is_demand_bus=is_demand_bus,
+        )
 
-    def _dispatch_dispatchables(self, commodity, remaining_demand, inputs, outputs):
+    def _dispatch_dispatchables(
+        self,
+        commodity,
+        remaining_demand,
+        inputs,
+        outputs,
+        producers=None,
+        is_demand_bus=False,
+    ):
         """Split remaining demand evenly across dispatchables producing ``commodity``.
 
         This is the default (cost-agnostic) dispatchable step used by
         ``DemandFollowingControl``. Cost-aware controllers override this method
         to apply merit-order or profit-aware dispatch.
 
+        Args:
+            commodity (str): Commodity being dispatched.
+            remaining_demand (np.ndarray): Non-negative demand left after the fixed,
+                flexible, and storage steps.
+            inputs: OpenMDAO inputs.
+            outputs: OpenMDAO outputs.
+            producers (Iterable[str] | None, optional): Technologies on the supply bus
+                being dispatched. ``None`` allows every technology.
+            is_demand_bus (bool, optional): True when the bus delivers the demand
+                technology's commodity. Defaults to False.
+
         Returns:
             np.ndarray: Remaining unmet demand (zeros under the even-split
             assumption that dispatchables absorb their full share).
         """
         dispatchables = [
-            t for t in self.dispatchable_techs if commodity in self._get_commodity_for_tech(t)
+            t
+            for t in self.dispatchable_techs
+            if commodity in self._get_commodity_for_tech(t)
+            and (producers is None or t in producers)
         ]
         n_dispatchable = len(dispatchables)
         if n_dispatchable == 0:
@@ -928,13 +971,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return np.zeros(self.n_timesteps)
 
-    def _merit_order_dispatch(self, commodity, remaining_demand, inputs, outputs, sell_price=None):
+    def _merit_order_dispatch(
+        self, commodity, remaining_demand, inputs, outputs, sell_price=None, producers=None
+    ):
         """Dispatch dispatchables producing ``commodity`` in ascending marginal-cost order.
 
         Each technology is dispatched up to its rated production until demand
         is met. When ``sell_price`` is provided, a technology is only
         dispatched at timesteps where its marginal cost is below the sell price
-        (profit gating); demand may then go unmet.
+        (profit gating); demand may then go unmet. When ``producers`` is given,
+        only dispatchables in it take part.
 
         Marginal costs come from ``_compute_marginal_costs`` and are aligned
         with ``self.dispatchable_techs``. Requires ``_setup_marginal_costs`` to
@@ -944,7 +990,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
             np.ndarray: Remaining unmet demand after dispatch.
         """
         dispatchables = [
-            t for t in self.dispatchable_techs if commodity in self._get_commodity_for_tech(t)
+            t
+            for t in self.dispatchable_techs
+            if commodity in self._get_commodity_for_tech(t)
+            and (producers is None or t in producers)
         ]
 
         # Initialize set-points for these dispatchables to zero
@@ -974,35 +1023,36 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return remaining
 
-    def _accumulate_derived_demand(
-        self, derived_demand, tech_name, in_commodity, out_commodity, inputs, outputs
-    ):
-        """Add a converter's induced input-commodity demand to ``derived_demand``.
+    def _accumulate_derived_demand(self, derived_demand, link, inputs, outputs):
+        """Add a converter's induced demand on its input bus to ``derived_demand``.
 
         The converter's committed output (its ``{tech}_{out}_set_point``) is
         multiplied by the input-per-output conversion ratio to obtain the demand
-        it places on its input commodity. Converters whose input commodity has
-        no controller-managed producer (for example a feedstock-supplied stream)
-        are skipped.
+        it places on the bus that supplies its input commodity. Only links whose
+        input bus has a controller-managed producer reach this method, so
+        feedstock-supplied streams are never translated.
 
-        Backward propagation is opt-in: if a converter whose input commodity has
-        controllable producers exposes neither a connected consumption signal nor
-        nonzero rated capacities to seed a ratio, the propagation is skipped
-        (upstream techs keep their default dispatch, the legacy behavior) and a
-        one-time warning is emitted so the missing ratio is discoverable when
-        heterogeneous-commodity control is intended.
+        Backward propagation is opt-in: if a converter exposes neither a connected
+        consumption signal nor nonzero rated capacities to seed a ratio, the
+        propagation is skipped (upstream techs keep their default dispatch, the
+        legacy behavior) and a one-time warning is emitted so the missing ratio is
+        discoverable when heterogeneous-commodity control is intended.
 
         When one converter produces several demanded outputs from the same input
         commodity (a co-product converter), each output's induced demand is
         combined by the element-wise maximum rather than summed, so the shared
         input is not double-counted. Distinct converters that draw on the same
-        commodity (a splitter) still sum.
+        bus (a splitter) still sum.
+
+        Args:
+            derived_demand (dict[str, np.ndarray]): Demand per bus name. Updated in place.
+            link (ConversionLink): Conversion whose output set-point is translated.
+            inputs: OpenMDAO inputs.
+            outputs: OpenMDAO outputs.
         """
-        has_producers = any(
-            in_commodity in self._get_commodity_for_tech(t) for t in self.input_techs
-        )
-        if not has_producers:
-            return
+        tech_name = link.tech
+        in_commodity = link.in_commodity
+        out_commodity = link.out_commodity
 
         ratio = self._conversion_ratio(tech_name, in_commodity, out_commodity, inputs)
         if ratio is None:
@@ -1028,11 +1078,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Combine multiple outputs of the SAME converter that draw on this input
         # by the binding (element-wise maximum) requirement rather than summing,
         # since one physical unit produces its co-products together. Distinct
-        # converters still sum into the shared input's derived demand. The demand
+        # converters still sum into the shared input bus's derived demand. The demand
         # is updated by the incremental delta so it stays correct as each output
-        # of a co-product converter is processed (commodities are dispatched in
-        # topological order, so all contributions land before the input is used).
-        by_tech = self._converter_contributions[in_commodity]
+        # of a co-product converter is processed (buses are dispatched in
+        # topological order, so all contributions land before the bus is used).
+        by_tech = self._converter_contributions[link.in_bus]
         previous = by_tech.get(tech_name)
         if previous is None:
             combined = contribution
@@ -1042,10 +1092,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
             delta = combined - previous
         by_tech[tech_name] = combined
 
-        if in_commodity in derived_demand:
-            derived_demand[in_commodity] = derived_demand[in_commodity] + delta
+        if link.in_bus in derived_demand:
+            derived_demand[link.in_bus] = derived_demand[link.in_bus] + delta
         else:
-            derived_demand[in_commodity] = delta
+            derived_demand[link.in_bus] = delta
 
     def _capacity_ratio(self, tech_name, in_commodity, out_commodity, inputs):
         """Return a scalar input-per-output ratio from rated capacities, or ``None``.
