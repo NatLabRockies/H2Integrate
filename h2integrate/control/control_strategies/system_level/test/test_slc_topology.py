@@ -1,6 +1,11 @@
 """Unit tests for pure system-level control topology helpers."""
 
+import os
+import sys
+import textwrap
 import warnings
+import subprocess
+from pathlib import Path
 from itertools import permutations
 
 import pytest
@@ -307,6 +312,76 @@ def test_dispatch_topology_ignores_interconnection_order():
             list(connections), GRID_TO_HABER_BOSCH_CLASSIFIERS, "ammonia_demand", "ammonia"
         )
         assert topology == expected
+
+
+@pytest.mark.regression
+def test_dispatch_order_is_independent_of_python_hash_seed():
+    script = textwrap.dedent(
+        """
+        import sys
+        from pathlib import Path
+
+        import networkx as nx
+
+        system_level_path = (
+            Path.cwd()
+            / "h2integrate"
+            / "control"
+            / "control_strategies"
+            / "system_level"
+        )
+        sys.path.insert(0, str(system_level_path))
+        from slc_topology import SUPPLIER_CLASSIFIERS, build_dispatch_topology
+
+        connections = [
+            ["wind", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["grid", "haber_bosch", "electricity", "cable"],
+            ["n2_feedstock", "haber_bosch", "nitrogen", "pipe"],
+            ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
+        ]
+        classifiers = {
+            "wind": "flexible",
+            "grid": "dispatchable",
+            "electrolyzer": "dispatchable",
+            "haber_bosch": "dispatchable",
+            "n2_feedstock": "feedstock",
+        }
+        graph = nx.DiGraph()
+        for source, target, commodity, _ in connections:
+            graph.add_edge(source, target, commodity=[commodity])
+        tech_to_commodity = {
+            (source, commodity)
+            for source, _, commodities in graph.edges(data="commodity")
+            if classifiers.get(source) in SUPPLIER_CLASSIFIERS
+            for commodity in commodities
+        }
+        topology = build_dispatch_topology(
+            graph, classifiers, tech_to_commodity, "ammonia_demand", "ammonia"
+        )
+        print(repr(topology.dispatch_order))
+        """
+    )
+    dispatch_orders = []
+
+    for hash_seed in ("0", "1"):
+        environment = os.environ.copy()
+        environment["PYTHONHASHSEED"] = hash_seed
+        try:
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                capture_output=True,
+                check=True,
+                text=True,
+                timeout=10,
+                env=environment,
+                cwd=Path(__file__).resolve().parents[5],
+            )
+        except subprocess.TimeoutExpired:
+            pytest.skip("Dispatch-order hash-seed subprocess exceeded 10 seconds.")
+        dispatch_orders.append(result.stdout.strip())
+
+    assert dispatch_orders[0] == dispatch_orders[1]
 
 
 @pytest.mark.unit

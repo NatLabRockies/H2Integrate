@@ -1242,7 +1242,7 @@ class TestHeterogeneousCommodityControl:
         #   Haber-Bosch: 100 * 10.2 = 1020 kW  ->  total 2040 kW
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 2040.0)
 
-    def test_coproduct_converter_shares_input_without_double_counting(self):
+    def test_coproduct_converter_max_combines_input_demand_without_double_counting(self):
         """A converter with two demanded outputs shares one input, no double-count.
 
         A reformer produces both hydrogen and electricity from natural gas (a

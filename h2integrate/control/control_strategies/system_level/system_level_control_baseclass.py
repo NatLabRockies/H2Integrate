@@ -9,6 +9,11 @@ from h2integrate.control.control_strategies.system_level.slc_topology import (
     build_dispatch_topology,
     find_commodity_suppliers,
 )
+from h2integrate.control.control_strategies.system_level.slc_conversion import (
+    capacity_ratio as calculate_capacity_ratio,
+    conversion_ratio as calculate_conversion_ratio,
+    accumulate_derived_demand,
+)
 
 
 def _get_tech_buy_price_input_name(tech_config, tech_name):
@@ -786,10 +791,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         Subclasses implement the strategy-specific dispatchable step by
         overriding ``_dispatch_dispatchables``; the fixed, flexible, and
         storage steps are shared across all strategies.
+
+        After each run, ``self.dispatch_trace`` contains a snapshot of bus
+        demands, unmet residuals, conversion ratios and their sources, and
+        converter contributions. It is a debugging aid, not a public API.
         """
         # Reset the per-converter contribution tracker used to combine multiple
         # outputs of a single converter that draw on the same input bus.
-        self._converter_contributions = defaultdict(dict)
+        self._converter_contributions = {}
 
         # Flexible techs can only curtail, so they always run at their rated
         # production for every commodity they produce. Commanding them here
@@ -804,6 +813,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         topology = self._dispatch_topology
         derived_demand = {}
+        bus_demand = {}
+        bus_residual = {}
+        ratio_trace = {}
         if topology.demand_bus is not None:
             derived_demand[topology.demand_bus] = inputs[self.demand_input_name].copy()
 
@@ -814,7 +826,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 continue
 
             bus = topology.buses[bus_name]
-            self._dispatch_commodity(
+            bus_demand[bus_name] = demand.copy()
+            residual = self._dispatch_commodity(
                 bus.commodity,
                 demand.copy(),
                 inputs,
@@ -822,12 +835,27 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 producers=bus.producers,
                 is_demand_bus=bus_name == topology.demand_bus,
             )
+            bus_residual[bus_name] = np.asarray(residual, dtype=float).copy()
 
             # Translate committed converter output into demand on the converters' input buses
             for link in self._links_by_out_bus.get(bus_name, ()):
-                self._accumulate_derived_demand(derived_demand, link, inputs, outputs)
+                derived_demand, self._converter_contributions = self._accumulate_derived_demand(
+                    derived_demand, link, inputs, outputs, ratio_trace
+                )
 
         self._set_splitter_setpoints(inputs, outputs)
+        self.dispatch_trace = {
+            "dispatch_order": tuple(topology.dispatch_order),
+            "bus_demand": bus_demand,
+            "bus_residual": bus_residual,
+            "ratios": ratio_trace,
+            "contributions": {
+                bus_name: {
+                    tech_name: value.copy() for tech_name, value in bus_contributions.items()
+                }
+                for bus_name, bus_contributions in self._converter_contributions.items()
+            },
+        }
 
     def _set_splitter_setpoints(self, inputs, outputs):
         """Set each controller-managed splitter's prescribed priority allocation.
@@ -1023,7 +1051,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         return remaining
 
-    def _accumulate_derived_demand(self, derived_demand, link, inputs, outputs):
+    def _accumulate_derived_demand(self, derived_demand, link, inputs, outputs, ratio_trace):
         """Add a converter's induced demand on its input bus to ``derived_demand``.
 
         The converter's committed output (its ``{tech}_{out}_set_point``) is
@@ -1045,17 +1073,97 @@ class SystemLevelControlBase(om.ExplicitComponent):
         bus (a splitter) still sum.
 
         Args:
-            derived_demand (dict[str, np.ndarray]): Demand per bus name. Updated in place.
+            derived_demand (dict[str, np.ndarray]): Current demand per bus name.
             link (ConversionLink): Conversion whose output set-point is translated.
             inputs: OpenMDAO inputs.
             outputs: OpenMDAO outputs.
+            ratio_trace (dict): Per-compute conversion-ratio snapshots.
+
+        Returns:
+            tuple[dict, dict]: Updated demand and converter contribution mappings.
+
+        Examples:
+            In Appendix A, four timesteps each demand 100 kg/h of ammonia. The
+            Haber-Bosch set point is 100 kg/h, its measured ratios are 0.5 kW
+            electricity and 0.18 kg hydrogen per kg ammonia, and the electrolyzer
+            ratio is 55 kW per kg hydrogen. The maps change after each link:
+
+            .. code-block:: python
+
+                from h2integrate.control.control_strategies.system_level.slc_conversion import (
+                    accumulate_derived_demand,
+                )
+                from h2integrate.control.control_strategies.system_level.slc_topology import (
+                    ConversionLink,
+                )
+
+                derived_demand = {"ammonia:ammonia_demand": np.full(4, 100.0)}
+                contributions = {}
+
+                # Before call 1:
+                # derived_demand = {"ammonia:ammonia_demand": [100] * 4}
+                # contributions = {}
+                derived_demand, contributions = accumulate_derived_demand(
+                    derived_demand,
+                    contributions,
+                    ConversionLink(
+                        "electricity",
+                        "haber_bosch",
+                        "ammonia",
+                        "electricity:haber_bosch",
+                        "ammonia:ammonia_demand",
+                    ),
+                    np.full(4, 100.0),
+                    np.full(4, 0.5),
+                )
+                # After call 1:
+                # derived_demand = {"ammonia:ammonia_demand": [100] * 4,
+                #                   "electricity:haber_bosch": [50] * 4}
+                # contributions = {"electricity:haber_bosch": {"haber_bosch": [50] * 4}}
+
+                # Before call 2, the maps equal the state shown after call 1.
+                derived_demand, contributions = accumulate_derived_demand(
+                    derived_demand,
+                    contributions,
+                    ConversionLink(
+                        "hydrogen",
+                        "haber_bosch",
+                        "ammonia",
+                        "hydrogen:haber_bosch",
+                        "ammonia:ammonia_demand",
+                    ),
+                    np.full(4, 100.0),
+                    np.full(4, 0.18),
+                )
+                # After call 2:
+                # derived_demand = {"ammonia:ammonia_demand": [100] * 4,
+                #                   "electricity:haber_bosch": [50] * 4,
+                #                   "hydrogen:haber_bosch": [18] * 4}
+                # contributions also contains hydrogen:haber_bosch: {haber_bosch: [18] * 4}.
+
+                # Before call 3, the maps equal the state shown after call 2.
+                derived_demand, contributions = accumulate_derived_demand(
+                    derived_demand,
+                    contributions,
+                    ConversionLink(
+                        "electricity",
+                        "electrolyzer",
+                        "hydrogen",
+                        "electricity:electrolyzer",
+                        "hydrogen:haber_bosch",
+                    ),
+                    np.full(4, 18.0),
+                    np.full(4, 55.0),
+                )
+                # After call 3, derived_demand also contains
+                # "electricity:electrolyzer": [990] * 4, with the matching contribution.
         """
         tech_name = link.tech
         in_commodity = link.in_commodity
         out_commodity = link.out_commodity
 
-        ratio = self._conversion_ratio(tech_name, in_commodity, out_commodity, inputs)
-        if ratio is None:
+        ratio_and_source = self._conversion_ratio(tech_name, in_commodity, out_commodity, inputs)
+        if ratio_and_source is None:
             key = (tech_name, in_commodity, out_commodity)
             if key not in self._missing_ratio_warned:
                 self._missing_ratio_warned.add(key)
@@ -1070,32 +1178,22 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     f"capacity-based ratio can seed heterogeneous-commodity control.",
                     stacklevel=2,
                 )
-            return
+            return derived_demand, self._converter_contributions
 
+        ratio, source = ratio_and_source
+        ratio_trace[(in_commodity, tech_name, out_commodity)] = {
+            "value": ratio.copy(),
+            "source": source.copy(),
+        }
         set_point = np.asarray(outputs[f"{tech_name}_{out_commodity}_set_point"], dtype=float)
-        contribution = np.maximum(set_point, 0.0) * ratio
-
-        # Combine multiple outputs of the SAME converter that draw on this input
-        # by the binding (element-wise maximum) requirement rather than summing,
-        # since one physical unit produces its co-products together. Distinct
-        # converters still sum into the shared input bus's derived demand. The demand
-        # is updated by the incremental delta so it stays correct as each output
-        # of a co-product converter is processed (buses are dispatched in
-        # topological order, so all contributions land before the bus is used).
-        by_tech = self._converter_contributions[link.in_bus]
-        previous = by_tech.get(tech_name)
-        if previous is None:
-            combined = contribution
-            delta = contribution
-        else:
-            combined = np.maximum(previous, contribution)
-            delta = combined - previous
-        by_tech[tech_name] = combined
-
-        if link.in_bus in derived_demand:
-            derived_demand[link.in_bus] = derived_demand[link.in_bus] + delta
-        else:
-            derived_demand[link.in_bus] = delta
+        updated_demand, updated_contributions = accumulate_derived_demand(
+            derived_demand,
+            self._converter_contributions,
+            link,
+            set_point,
+            ratio,
+        )
+        return updated_demand, updated_contributions
 
     def _capacity_ratio(self, tech_name, in_commodity, out_commodity, inputs):
         """Return a scalar input-per-output ratio from rated capacities, or ``None``.
@@ -1113,28 +1211,27 @@ class SystemLevelControlBase(om.ExplicitComponent):
         zero, or when the total upstream input capacity is zero (no meaningful
         seed is available).
         """
+        supplier_rated_capacities = []
+        feedstock_supplies = []
         upstreams = self._converter_upstreams.get((in_commodity, tech_name), [])
-        total_input_capacity = 0.0
         for upstream in upstreams:
             rated_name = f"{upstream}_rated_{in_commodity}_production"
             if rated_name in inputs:
-                total_input_capacity += float(np.sum(inputs[rated_name]))
+                supplier_rated_capacities.append(inputs[rated_name])
             elif upstream in self.feedstock_comps:
                 out_name = f"{upstream}_{in_commodity}_out"
                 if out_name in inputs:
-                    total_input_capacity += float(np.mean(inputs[out_name]))
+                    feedstock_supplies.append(inputs[out_name])
 
         rated_out_name = f"{tech_name}_rated_{out_commodity}_production"
         if rated_out_name not in inputs:
             return None
-        rated_out = float(np.asarray(inputs[rated_out_name]).reshape(-1)[0])
-
-        if rated_out == 0.0 or total_input_capacity == 0.0:
-            return None
-        return total_input_capacity / rated_out
+        return calculate_capacity_ratio(
+            supplier_rated_capacities, feedstock_supplies, inputs[rated_out_name]
+        )
 
     def _conversion_ratio(self, tech_name, in_commodity, out_commodity, inputs):
-        """Return a per-timestep input-per-output conversion ratio, or ``None``.
+        """Return per-timestep conversion ratios and their sources, or ``None``.
 
         Ratio precedence (conversion ratios are derived automatically; the user
         never authors them):
@@ -1153,7 +1250,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         Returns ``None`` when neither a capacity ratio nor a connected
         consumption signal is available, signalling the caller to skip
-        propagation.
+        propagation. Otherwise returns ``(ratio, source)`` arrays, where source
+        is ``"measured"`` for valid measurements and ``"capacity"`` for the
+        capacity-based seed or fallback.
         """
         key = (tech_name, in_commodity, out_commodity)
         capacity = self._capacity_ratio(tech_name, in_commodity, out_commodity, inputs)
@@ -1167,24 +1266,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
             if np.any(np.isfinite(measured)):
                 consumed = measured
 
-        if capacity is None and consumed is None:
+        produced = np.asarray(inputs[f"{tech_name}_{out_commodity}_out"], dtype=float)
+        if consumed is None:
+            if capacity is None:
+                return None
+            consumed = np.full(produced.shape, np.nan)
+
+        valid = np.isfinite(consumed) & np.isfinite(produced) & (produced != 0.0)
+        if capacity is None and not np.any(valid):
             return None
 
-        if consumed is None:
-            return np.full(self.n_timesteps, float(capacity))
-
-        produced = np.asarray(inputs[f"{tech_name}_{out_commodity}_out"], dtype=float)
-        valid = np.isfinite(consumed) & (produced != 0.0)
-        dynamic = np.divide(consumed, produced, out=np.zeros_like(produced), where=valid)
-
-        if capacity is not None:
-            nominal = float(capacity)
-        elif np.any(valid):
-            nominal = float(dynamic[valid].mean())
-        else:
-            nominal = 0.0
-
-        return np.where(valid, dynamic, nominal)
+        return calculate_conversion_ratio(consumed, produced, capacity)
 
     # ------------------------------------------------------------------
     # Marginal-cost helpers for cost-aware controllers

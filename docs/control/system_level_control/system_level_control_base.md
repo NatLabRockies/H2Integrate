@@ -49,6 +49,9 @@ synthesis loop, and then into electricity demand across an electrolyzer).
 - `_set_splitter_setpoints()`
     - Sets each controller-managed splitter's prescribed priority allocation to the demand
       of the consumers behind its first output.
+    - The first outgoing splitter connection is out1 and receives priority. This is the only
+      intentional connection-order dependence; other technology interconnection orders do not
+      change dispatch results.
 - `_capacity_ratio()`
     - Returns a scalar input-per-output ratio seeded from rated capacities: the summed
       rated input capacity of a converter's upstream producers divided by the

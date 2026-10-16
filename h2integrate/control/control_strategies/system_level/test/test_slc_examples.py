@@ -1,3 +1,4 @@
+import yaml
 import numpy as np
 import pytest
 
@@ -416,6 +417,19 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
     model = H2IntegrateModel(example_folder / "heterogeneous_commodity.yaml")
 
     model.run()
+    set_point_names = [
+        name
+        for name in model.prob.model.plant.system_level_controller._var_rel2meta
+        if name.endswith("_set_point")
+    ]
+    baseline_set_point_sums = {
+        name: np.asarray(model.prob.get_val(f"system_level_controller.{name}")).sum()
+        for name in set_point_names
+    }
+    baseline_ammonia_production = np.asarray(model.prob.get_val("haber_bosch.ammonia_out")).sum()
+    baseline_lcoa = np.asarray(
+        model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")
+    ).reshape(-1)[0]
 
     with subtests.test("Ammonia set point follows demand"):
         assert np.all(
@@ -484,3 +498,48 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         assert pytest.approx(3.39502411, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )
+
+    plant_config_path = example_folder / "plant_config.yaml"
+    with plant_config_path.open(encoding="utf-8") as config_file:
+        plant_config = yaml.safe_load(config_file)
+    connections = plant_config["technology_interconnections"]
+    priority_connections = [edge for edge in connections if edge[0] == "electricity_splitter"]
+    assert len(priority_connections) == 2
+    reversed_connections = list(reversed(connections))
+    splitter_positions = [
+        index
+        for index, edge in enumerate(reversed_connections)
+        if edge[0] == "electricity_splitter"
+    ]
+    for position, edge in zip(splitter_positions, priority_connections, strict=True):
+        reversed_connections[position] = edge
+    plant_config["technology_interconnections"] = reversed_connections
+    with plant_config_path.open("w", encoding="utf-8") as config_file:
+        yaml.safe_dump(plant_config, config_file, sort_keys=False)
+
+    reordered_model = H2IntegrateModel(example_folder / "heterogeneous_commodity.yaml")
+    reordered_model.run()
+    reordered_set_point_sums = {
+        name: np.asarray(reordered_model.prob.get_val(f"system_level_controller.{name}")).sum()
+        for name in set_point_names
+    }
+    reordered_ammonia_production = np.asarray(
+        reordered_model.prob.get_val("haber_bosch.ammonia_out")
+    ).sum()
+    reordered_lcoa = np.asarray(
+        reordered_model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")
+    ).reshape(-1)[0]
+
+    with subtests.test("reversing connections preserves outputs and splitter priority"):
+        assert reordered_set_point_sums.keys() == baseline_set_point_sums.keys()
+        for name in baseline_set_point_sums:
+            np.testing.assert_allclose(
+                reordered_set_point_sums[name],
+                baseline_set_point_sums[name],
+                rtol=1e-6,
+                atol=1e-8,
+            )
+        np.testing.assert_allclose(
+            reordered_ammonia_production, baseline_ammonia_production, rtol=1e-6, atol=1e-8
+        )
+        np.testing.assert_allclose(reordered_lcoa, baseline_lcoa, rtol=1e-6, atol=1e-8)
