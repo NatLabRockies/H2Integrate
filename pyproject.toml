@@ -33,7 +33,7 @@ maintainers = [
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
 description = "Holistic Hybrids Optimization and Design Tool"
-requires-python = ">=3.11, <3.14"
+requires-python = ">=3.12, <3.14"
 license = {file = "LICENSE"}
 dependencies = [
   "attrs",
@@ -59,6 +59,7 @@ dependencies = [
   "rich>=13.7.0",
   "ruamel.yaml",
   "scipy",
+  "simses>=2.1.1",
   "floris",
   "timezonefinder",
   "turbine-models>=0.2.1",
@@ -84,7 +85,6 @@ classifiers = [  # https://pypi.org/classifiers/
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
@@ -188,7 +188,7 @@ line_length = 100
 [tool.ruff]
 src = ["h2integrate", "tests"]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 fix = true
 exclude = [
   ".git",

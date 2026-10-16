@@ -280,7 +280,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
     dr_model: Any
     problem_state: DispatchProblemState
-    _time_step_bound = (300, 3600)
+    _time_step_bounds = (300, 3600)
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         """Initialize config, register OpenMDAO inputs, and pre-compute static masks.
@@ -290,7 +291,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 ``plant_config`` does not match ``n_timesteps``.
         """
         self.config = PeakLoadManagementOptimizedStorageControllerConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            strict=False,
         )
 
         self.add_input(
