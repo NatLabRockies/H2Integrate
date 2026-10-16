@@ -16,5 +16,7 @@
    storage
    transporters
    tools
+   preprocess
+   postprocess
    demand
    reliability

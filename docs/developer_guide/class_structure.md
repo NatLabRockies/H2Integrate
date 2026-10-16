@@ -70,6 +70,32 @@ directly) means the baseclass:
     - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
     - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
 
+Annualization uses fixed 365-day plant years. Until framework-wide calendar alignment is
+supported, `H2IntegrateModel` rejects site resources configured with `include_leap_day: true`
+during configuration loading. Set this resource option to `false` or omit it. Standalone
+resource models retain their leap-day processing support. This restriction does not change
+the timestamps generated from the simulation's `start_time` and `dt`.
+
+The CF/replacement helper requires finite, one-dimensional performance and SOH arrays
+of identical length, positive rated performance and timestep, and a positive integer
+plant life. SOH and its EOL threshold are fractions in [0, 1]. CF projection remains
+annual: annual means retain their elapsed durations, including a partial final year.
+When cycles repeat, their overlaps with plant years are duration-weighted; timestep
+performance is not reconstructed or projected.
+
+An upward SOH jump greater than `1e-9` is assumed to mark a replacement at that sample's
+elapsed offset. It closes the outgoing unit's cycle, not the new unit's cycle. SOH alone
+cannot reveal a first-sample reset or repeated replacements with identical fresh SOH.
+The trailing cycle is completed using the last two post-reset samples' SOH loss per
+elapsed year. Projected EOL is checked only at the end of each full annual projection
+interval; threshold-crossing times are not interpolated. Fewer than two post-reset samples
+or stalled degradation do not imply an EOL replacement. The completed history then repeats
+as either all cycles or the final cycle, using identical durations for CF and events.
+Replacement counts are discrete events in `[year, year + 1)`, never annualized or rounded.
+An event on a year boundary belongs to the following year; initial installation and an
+event at retirement are excluded. Observed and projected events can share a plant year.
+For example, a completed half-year cycle produces counts `[1, 2, 2]` over three years.
+
 ### Multiple layers of inheritance
 
 Individual technology classes could inherit directly from the core baseclasses. If there are multiple technologies that have a lot of the same inputs, outputs, and/or methods we can use an additional layer of class inheritance that helps reduce duplicated code and potential errors.

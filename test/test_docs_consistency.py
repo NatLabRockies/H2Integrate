@@ -49,12 +49,8 @@ UNDOCUMENTED_MODELS = {
     "SimpleGasConsumerPerformance",
     "SimpleGasConsumerCost",
 }
-UNREFERENCED_EXAMPLES = {
-    "04_geo_h2",
-    "31_tidal",
-    "36_nuclear_reactor_htse",
-    "38_battery_degradation",
-}
+
+UNREFERENCED_EXAMPLES = set()
 CUSTOM_MODEL_NAMES = {"CustomRiverResource", "SimpleLCOFinance"}
 KNOWN_MISSING_PATHS = set()
 

@@ -204,6 +204,16 @@ class H2IntegrateModel:
             config.get("plant_config"), config_path, load_plant_yaml
         )
 
+        for site_name, site_config in self.plant_config.get("sites", {}).items():
+            for resource_name, resource_config in site_config.get("resources", {}).items():
+                if resource_config.get("resource_parameters", {}).get("include_leap_day", False):
+                    raise ValueError(
+                        f"Resource '{site_name}.{resource_name}' sets include_leap_day=True. "
+                        "H2Integrate currently annualizes using 365-day plant years and does "
+                        "not support leap-day-inclusive resource timelines. "
+                        "Set include_leap_day to False."
+                    )
+
         for name, vals in self.technology_config["technologies"].items():
             if "control_strategy" in vals:
                 controller_model_name = vals["control_strategy"]["model"]
