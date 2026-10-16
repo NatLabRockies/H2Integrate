@@ -344,6 +344,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             availability[-1, :] = np.minimum(
                 availability[-1, :], num_turbines - (num_turbines_int - 1)
             )
+        self.availability = availability
 
         # calculate the available net work and mass flowrates per turbine
         turbine_net_work_available = turbine_net_work_max * availability
