@@ -347,8 +347,8 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         self.availability = availability
 
         # calculate the available net work and mass flowrates per turbine
-        turbine_net_work_available = turbine_net_work_max * availability
-        turbine_mass_flowrates_available = turbine_mass_flowrates_max * availability
+        turbine_net_work_available = turbine_net_work_max * self.availability
+        turbine_mass_flowrates_available = turbine_mass_flowrates_max * self.availability
 
         # do simplified throttling of the mass flowrates if we are below the command value
         electricity_command_value = inputs["electricity_command_value"]  # total plant command
