@@ -8,7 +8,7 @@ technologies:
       model: ATBWindPlantCostModel
     model_inputs:
       performance_parameters:
-        num_turbines: 100  # number of turbines in the farm
+        num_turbines: 25  # number of turbines in the farm
         hub_height: 65.0  # turbine hub-height
         operational_losses: 12.83  # percentage of non-wake losses
         floris_wake_config: !include "floris_v4_default_template.yaml" #floris wake model file

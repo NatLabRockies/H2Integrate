@@ -7,7 +7,8 @@ To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance
 ```yaml
 technologies:
   wind:
-     performance_model: "PYSAMWindPlantPerformanceModel"
+         performance_model:
+             model: "PYSAMWindPlantPerformanceModel"
      model_inputs:
          performance_parameters:
             num_turbines: 10
@@ -144,3 +145,14 @@ The model automatically formats wind resource data from the H2I wind resource da
 - Wind direction in degrees east of north
 
 The model handles interpolation between available resource heights to match the specified hub height and uses the closest available data when exact matches are not available.
+
+## Turbine file preprocessing
+The `h2integrate.preprocess.wind_turbine_file_tools` module can create turbine files from the
+[turbine-models](https://github.com/NatLabRockies/turbine-models) library, so you do not have to
+write them by hand:
+
+- `export_turbine_to_pysam_format(turbine_name)` writes a PySAM options turbine YAML file (named `pysam_options_{turbine_name}.yaml` by default) to the H2I library folder, or to `output_folder`
+if given. Use its path as the `pysam_options` turbine configuration input for this model.
+
+See [Turbine Models Library Pre-Processing](../misc_resources/turbine_models_library_preprocessing.md)
+for a worked example that exports a turbine, updates the `tech_config`, and runs [Example 26](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/26_floris).

@@ -1,1 +1,1 @@
-from h2integrate.converters.grid.grid import GridPerformanceModel, GridCostModel
+from h2integrate.converters.grid.grid import GridCostModel, GridPerformanceModel

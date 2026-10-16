@@ -249,7 +249,7 @@ def save_case_timeseries_as_csv(
 
     # save file to csv
     if save_to_file:
-        csv_fname = f"{sql_fpath.name.replace('.sql','_').strip('_')}_Case{case_index}.csv"
+        csv_fname = f"{sql_fpath.name.replace('.sql', '_').strip('_')}_Case{case_index}.csv"
         output_fpath = sql_fpath.parent / csv_fname
         results.to_csv(output_fpath, index=False)
 

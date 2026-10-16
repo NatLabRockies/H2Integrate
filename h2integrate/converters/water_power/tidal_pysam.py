@@ -1,9 +1,9 @@
 import PySAM.MhkTidal as MhkTidal
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -31,17 +31,19 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 
     """
 
-    device_rating_kw: float = field(validator=gt_zero)
-    num_devices: int = field(validator=gt_zero)
+    device_rating_kw: float = field(validator=validators.gt(0))
+    num_devices: int = field(validator=validators.gt(0))
     tidal_power_curve: list[list[float]] | None = field(default=None)
 
     create_model_from: str = field(
-        default="new", validator=contains(["default", "new"]), converter=(str.strip, str.lower)
+        default="new",
+        validator=validators.in_(["default", "new"]),
+        converter=(str.strip, str.lower),
     )
 
     config_name: str = field(
         default="MEtidalNone",
-        validator=contains(
+        validator=validators.in_(
             [
                 "MEtidalLCOECalculator",
                 "MEtidalNone",
@@ -61,8 +63,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 
         if self.create_model_from == "new" and self.tidal_power_curve is None:
             msg = (
-                "To create a new MhkTidal object, please provide a "
-                "tidal_power_curve in the config."
+                "To create a new MhkTidal object, please provide a tidal_power_curve in the config."
             )
             raise ValueError(msg)
 
@@ -115,6 +116,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
         return design_dict
 
 
+@register
 class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
     """An OpenMDAO component that wraps the PySAM MhkTidal model.
     It takes tidal parameters as input and outputs power generation data.

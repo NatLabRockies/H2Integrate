@@ -1,9 +1,9 @@
-from attrs import field, define
+from attrs import field, define, validators
 from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, contains, gte_zero, range_val, must_equal
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 def setup_electrodialysis_inputs(config):
@@ -50,27 +50,28 @@ class DOCPerformanceConfig(BaseConfig):
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
     """
 
-    number_ed_min: int = field(validator=gt_zero)
-    number_ed_max: int = field(validator=gt_zero)
+    number_ed_min: int = field(validator=validators.gt(0))
+    number_ed_max: int = field(validator=validators.gt(0))
     use_storage_tanks: bool = field()
-    store_hours: float = field(validator=gte_zero)
-    power_single_ed_w: float = field(validator=gte_zero)
-    flow_rate_single_ed_m3s: float = field(validator=gt_zero)
-    E_HCl: float = field(validator=gte_zero)
-    E_NaOH: float = field(validator=gte_zero)
-    y_ext: float = field(validator=range_val(0, 1))
-    y_pur: float = field(validator=range_val(0, 1))
-    y_vac: float = field(validator=range_val(0, 1))
-    frac_ed_flow: float = field(validator=range_val(0, 1))
-    temp_C: float = field(validator=gte_zero)
-    sal: float = field(validator=gte_zero)
-    dic_i: float = field(validator=gte_zero)
-    pH_i: float = field(validator=gte_zero)
-    initial_tank_volume_m3: float = field(validator=gte_zero)
+    store_hours: float = field(validator=validators.ge(0))
+    power_single_ed_w: float = field(validator=validators.ge(0))
+    flow_rate_single_ed_m3s: float = field(validator=validators.gt(0))
+    E_HCl: float = field(validator=validators.ge(0))
+    E_NaOH: float = field(validator=validators.ge(0))
+    y_ext: float = field(validator=(validators.ge(0), validators.le(1)))
+    y_pur: float = field(validator=(validators.ge(0), validators.le(1)))
+    y_vac: float = field(validator=(validators.ge(0), validators.le(1)))
+    frac_ed_flow: float = field(validator=(validators.ge(0), validators.le(1)))
+    temp_C: float = field(validator=validators.ge(0))
+    sal: float = field(validator=validators.ge(0))
+    dic_i: float = field(validator=validators.ge(0))
+    pH_i: float = field(validator=validators.ge(0))
+    initial_tank_volume_m3: float = field(validator=validators.ge(0))
     save_outputs: bool = field(default=False)
     save_plots: bool = field(default=False)
 
 
+@register
 class DOCPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a Direct Ocean Capture (DOC) plant.
@@ -112,7 +113,7 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
     def compute(self, inputs, outputs):
         ED_inputs = setup_electrodialysis_inputs(self.config)
 
-        co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
+        _co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
             power_profile_w=inputs["electricity_in"],
             initial_tank_volume_m3=self.config.initial_tank_volume_m3,
             electrodialysis_config=ED_inputs,
@@ -150,10 +151,11 @@ class DOCCostModelConfig(DOCPerformanceConfig):
         cost_year (int): dollar year corresponding to cost values
     """
 
-    infrastructure_type: str = field(validator=contains(["desal", "swCool", "new"]))
-    cost_year: int = field(default=2023, converter=int, validator=must_equal(2023))
+    infrastructure_type: str = field(validator=validators.in_(["desal", "swCool", "new"]))
+    cost_year: int = field(default=2023, converter=int, validator=validators.in_([2023]))
 
 
+@register
 class DOCCostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     direct ocean capture (DOC) system.

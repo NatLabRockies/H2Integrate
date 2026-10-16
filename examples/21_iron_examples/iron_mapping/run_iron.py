@@ -34,7 +34,7 @@ save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
 case_results_filepath = ex_out_dir / "cases.csv"
 ore_prices_filepath = ex_dir / "example_ore_prices.csv"
-shipping_coords_filepath = ROOT_DIR / "converters/iron/martin_transport/shipping_coords.csv"
+shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
 shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
 
 # Plot the LCOI results with geopandas and contextily

@@ -791,10 +791,11 @@ def auto_colorbar_limits(values: gpd.GeoSeries | pd.Series | np.ndarray):
     Automatically compute colorbar limits.
 
     This function calculates lower (`vmin`) and upper (`vmax`) limits for a colorbar
-    based on the range of the input data. It ensures that the limits:
-      - Extend slightly beyond the data's minimum and maximum.
-      - Are rounded to "nice" numbers for readability and colorbar tick placement.
-      - Handles very small or nearly constant data ranges gracefully.
+        based on the range of the input data. It ensures that the limits:
+
+        - Extend slightly beyond the data's minimum and maximum.
+        - Are rounded to "nice" numbers for readability and colorbar tick placement.
+        - Handle very small or nearly constant data ranges gracefully.
 
     Args:
         values (gpd.GeoSeries | pd.Series | np.ndarray): Numeric data to compute colorbar limits.

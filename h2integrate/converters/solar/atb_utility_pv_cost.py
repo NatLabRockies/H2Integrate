@@ -1,8 +1,8 @@
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import gt_zero
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -21,10 +21,11 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
         cost_year (int): dollar year corresponding to input costs
     """
 
-    capex_per_kWac: float | int = field(validator=gt_zero)
-    opex_per_kWac_per_year: float | int = field(validator=gt_zero)
+    capex_per_kWac: float | int = field(validator=validators.gt(0))
+    opex_per_kWac_per_year: float | int = field(validator=validators.gt(0))
 
 
+@register
 class ATBUtilityPVCostModel(CostModelBaseClass):
     _time_step_bounds = (
         3600,

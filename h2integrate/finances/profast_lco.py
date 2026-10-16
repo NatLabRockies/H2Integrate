@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+from openmdao.utils.units import simplify_unit
 
 from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
@@ -11,10 +12,12 @@ from h2integrate.tools.profast_tools import (
     make_price_breakdown,
     format_profast_price_breakdown_per_year,
 )
-from h2integrate.finances.profast_base import ProFastBase
+from h2integrate.core.supported_models import register
 from h2integrate.core.inputs.validation import write_yaml
+from h2integrate.finances.profast_baseclass import ProFastBase
 
 
+@register
 class ProFastLCO(ProFastBase):
     """Calculate the Levelized Cost of Commodity (LCO) with ProFAST.
 
@@ -103,31 +106,28 @@ class ProFastLCO(ProFastBase):
 
         io_meta_data = self.get_io_metadata()
         self.price_units = io_meta_data[self.LCO_str]["units"]
-        self.commodity_amount_units = self.price_units.replace("USD/", "").strip("()")
+        self.commodity_amount_units = simplify_unit(f"USD/({self.price_units})")
 
-        pf = self.populate_profast(inputs)
+        non_pos_prod = inputs[f"rated_{self.options['commodity_type']}_production"][0] <= 0
+        has_zero_cf = np.all(inputs["capacity_factor"] == 0.0)
 
-        if "system_level_control" in self.options["plant_config"] and np.all(
-            inputs["capacity_factor"] == 0.0
-        ):
-            # Zero capacity factor: ProFAST cannot compute a levelized cost (it would
-            # divide by zero production). During a nonlinear (gauss-seidel) solve the
-            # commodity stream can be momentarily zero on an intermediate iteration before
-            # demand propagates forward into production, so writing a large sentinel here
-            # would swing the LCO output by orders of magnitude and dominate the coupled
-            # residual, stalling convergence. Instead, hold the current output value: it
-            # starts at 0.0 and retains the last valid LCO once production begins, so a
-            # transient zero-capacity iteration does not perturb the coupled residual.
+        if non_pos_prod or has_zero_cf:
+            bug_desc = "capacity" if non_pos_prod else "capacity factor"
+            outputs[self.LCO_str] = 1e12
             msg = (
-                f"Commodity stream for finance group has a zero capacity factor. "
-                "If you recieve this warning multiple times, there may be a problem "
+                f"Commodity stream for finance group has a zero {bug_desc}. "
+                "If you receive this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
                 f"{self.LCO_str} is being held at its current value ({self.price_units})"
             )
             warnings.warn(msg, UserWarning)
             return
+
+        # populate ProFAST
+        pf = self.populate_profast(inputs)
+
         # simulate ProFAST
-        sol, summary, price_breakdown = run_profast(pf)
+        sol, _summary, price_breakdown = run_profast(pf)
 
         # populate outputs
         # Output names based on naming convention for finance subgroups
@@ -143,7 +143,7 @@ class ProFastLCO(ProFastBase):
         pf_config_dict = convert_pf_to_dict(pf)
 
         # make LCO cost breakdown
-        lco_breakdown, lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
+        lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
         # Check whether to export profast object to .yaml file

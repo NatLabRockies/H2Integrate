@@ -12,7 +12,7 @@ build:
   commands:
     # Install the package and docs dependencies.
     - pip install --upgrade pip
-    - pip install .[develop]
+    - pip install .[all]
     # Build the book exactly the way we do locally.
     - bash docs/build_book.sh
     # Read the Docs expects the built HTML under $READTHEDOCS_OUTPUT/html/.

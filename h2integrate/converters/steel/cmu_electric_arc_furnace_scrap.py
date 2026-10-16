@@ -18,11 +18,12 @@ from h2integrate.tools.constants import (
     P_STD_KPA,
     LHV_CH4_MJ_PER_KG,
 )
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define
-class CMUElectricArcFurnaceScrapOnlyPerformanceConfig(BaseConfig):
+class CMUElectricArcFurnaceScrapOnlyPerformanceComponentConfig(BaseConfig):
     """Configuration baseclass for CMUElectricArcFurnaceScrapOnlyPerformanceComponent.
 
     Attributes:
@@ -99,6 +100,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceConfig(BaseConfig):
     )
 
 
+@register
 class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseClass):
     """Electric Arc Furnace performance model based on CMU decarbSTEEL EAF Model v5"""
 
@@ -117,7 +119,7 @@ class CMUElectricArcFurnaceScrapOnlyPerformanceComponent(PerformanceModelBaseCla
     def setup(self):
         super().setup()
 
-        self.config = CMUElectricArcFurnaceScrapOnlyPerformanceConfig.from_dict(
+        self.config = CMUElectricArcFurnaceScrapOnlyPerformanceComponentConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,

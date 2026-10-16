@@ -11,15 +11,15 @@ connection feature. They produce and consume wellhead_gas_mixture streams with
 """
 
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import gt_zero, gte_zero
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.core.commodity_stream_definitions import (
     add_multivariable_input,
     add_multivariable_output,
@@ -41,15 +41,16 @@ class SimpleGasProducerPerformanceConfig(BaseConfig):
         random_seed: Seed for random number generator (for reproducibility)
     """
 
-    base_flow_rate: float = field(default=100.0, validator=gt_zero)
-    base_temperature: float = field(default=300.0, validator=gt_zero)
-    base_pressure: float = field(default=10.0, validator=gt_zero)
-    flow_variation: float = field(default=20.0, validator=gte_zero)
-    temp_variation: float = field(default=10.0, validator=gte_zero)
-    pressure_variation: float = field(default=1.0, validator=gte_zero)
+    base_flow_rate: float = field(default=100.0, validator=validators.gt(0))
+    base_temperature: float = field(default=300.0, validator=validators.gt(0))
+    base_pressure: float = field(default=10.0, validator=validators.gt(0))
+    flow_variation: float = field(default=20.0, validator=validators.ge(0))
+    temp_variation: float = field(default=10.0, validator=validators.ge(0))
+    pressure_variation: float = field(default=1.0, validator=validators.ge(0))
     random_seed: int | None = field(default=None)
 
 
+@register
 class SimpleGasProducerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
@@ -133,6 +134,7 @@ class SimpleGasProducerPerformance(PerformanceModelBaseClass):
         )
 
 
+@register
 class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
@@ -210,10 +212,11 @@ class SimpleGasProducerCostConfig(CostModelBaseConfig):
         opex: Fixed operational expenditure in USD/year
     """
 
-    capex: float = field(default=1_000_000.0, validator=gte_zero)
-    opex: float = field(default=50_000.0, validator=gte_zero)
+    capex: float = field(default=1_000_000.0, validator=validators.ge(0))
+    opex: float = field(default=50_000.0, validator=validators.ge(0))
 
 
+@register
 class SimpleGasProducerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas producer.
@@ -246,10 +249,11 @@ class SimpleGasConsumerCostConfig(CostModelBaseConfig):
         opex: Fixed operational expenditure in USD/year
     """
 
-    capex: float = field(default=2_000_000.0, validator=gte_zero)
-    opex: float = field(default=100_000.0, validator=gte_zero)
+    capex: float = field(default=2_000_000.0, validator=validators.ge(0))
+    opex: float = field(default=100_000.0, validator=validators.ge(0))
 
 
+@register
 class SimpleGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.

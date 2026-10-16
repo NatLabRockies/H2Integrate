@@ -1,8 +1,8 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.validators import range_val
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfacePerformanceConfig,
     GeoH2SubsurfacePerformanceBaseClass,
@@ -62,12 +62,13 @@ class NaturalGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     initial_wellhead_flow: float = field()
     gas_flow_density: float = field()
     ramp_up_time_months: float = field()
-    percent_increase_during_rampup: float = field(validator=range_val(0, 100))
+    percent_increase_during_rampup: float = field(validator=(validators.ge(0), validators.le(100)))
     gas_reservoir_size: float = field()
     use_arps_decline_curve: bool = field()
     decline_fit_params: dict = field(default=None)
 
 
+@register
 class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
     """OpenMDAO component for modeling the performance of a subsurface well for a
         natural geologic hydrogen plant.

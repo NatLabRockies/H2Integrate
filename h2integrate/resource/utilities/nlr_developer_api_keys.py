@@ -9,9 +9,7 @@ _DEPRECATION_MSG = (
     "Please use '{new}' instead. The nrel.gov API domain has moved to nlr.gov."
 )
 
-_ENV_MISSING_MSG = (
-    "{new} (or {old}) has not been set. " "Please set the {new} environment variable."
-)
+_ENV_MISSING_MSG = "{new} (or {old}) has not been set. Please set the {new} environment variable."
 
 
 def get_nlr_developer_api_credential(
@@ -24,6 +22,8 @@ def get_nlr_developer_api_credential(
             retrieved.
         env_path (None | Path | str, optional): Filepath to file containing NLR API credentials.
             Defaults to None.
+        set_vars (bool, optional): If True, set the environment variables if they
+            haven't already been set. Defaults to True.
 
     Raises:
         ValueError: Raised if an invalid value was passed to :py:attr:`which`.

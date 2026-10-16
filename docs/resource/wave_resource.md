@@ -3,7 +3,7 @@
 
 The wave resource model reads and processes ocean wave data for use in the H2I framework. It expects a CSV file containing timeseries significant wave height (Hs) and energy period (Te) data, and outputs hourly arrays suitable for the {ref}`wave_performance` model.
 
-The wave resource file format follows the [DOE Water Power Technologies Office (WPTO) US Wave Dataset](https://developer.nrel.gov/docs/wave/wave-hindcast-download-v1/) convention. Wave resource files for US coastal locations can be downloaded via the [MHKiT-Python](https://mhkit-software.github.io/MHKiT/) library or the WPTO Hindcast dataset API.
+The wave resource file format follows the [DOE Water Power Technologies Office (WPTO) US Wave Dataset convention](https://developer.nlr.gov/docs/wave/hindcast/). Wave resource files for US coastal locations can be downloaded via the [MHKiT-Python](https://mhkit-software.github.io/MHKiT/) library.
 
 ```{note}
 H2I expects the wave resource data to be in a timeseries format (not a joint probability distribution).
@@ -41,10 +41,10 @@ sites:
 
 The `resource_year` parameter is used to generate the hourly timestamp arrays (year, month, day, hour, minute) that are passed internally to the PySAM MhkWave model in timeseries mode.
 
-The wave resource outputs are connected to the wave performance model via `resource_to_tech_connections` in `plant_config.yaml`:
+The wave resource outputs are connected to the wave performance model via `site_to_tech_connections` in `plant_config.yaml`:
 
 ```yaml
-resource_to_tech_connections:
+site_to_tech_connections:
   - [site.wave_resource, wave, significant_wave_height]
   - [site.wave_resource, wave, energy_period]
 ```

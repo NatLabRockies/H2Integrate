@@ -1,14 +1,14 @@
 import numpy as np
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.validators import contains, range_val
 from h2integrate.tools.constants import N_MW, AR_MW, O2_MW
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -42,10 +42,18 @@ class SimpleASUPerformanceConfig(BaseConfig):
     rated_N2_kg_pr_hr: float | None = field(default=None)
     ASU_rated_power_kW: float | None = field(default=None)
 
-    N2_fraction_in_air: float = field(default=0.7811, validator=range_val(0, 1))
-    O2_fraction_in_air: float = field(default=0.2096, validator=range_val(0, 1))
-    Ar_fraction_in_air: float = field(default=0.0093, validator=range_val(0, 1))
-    efficiency_kWh_pr_kg_N2: float = field(default=0.29, validator=range_val(0.10, 0.50))
+    N2_fraction_in_air: float = field(
+        default=0.7811, validator=(validators.ge(0), validators.le(1))
+    )
+    O2_fraction_in_air: float = field(
+        default=0.2096, validator=(validators.ge(0), validators.le(1))
+    )
+    Ar_fraction_in_air: float = field(
+        default=0.0093, validator=(validators.ge(0), validators.le(1))
+    )
+    efficiency_kWh_pr_kg_N2: float = field(
+        default=0.29, validator=(validators.ge(0.1), validators.le(0.5))
+    )
     # 0.29 is efficiency of pressure swing absorption
     # 0.119 is efficiency of cryogenic
 
@@ -60,6 +68,7 @@ class SimpleASUPerformanceConfig(BaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     """Simple linear converter to model nitrogen production from an
     Air Separation Unit.
@@ -155,7 +164,7 @@ class SimpleASUPerformanceModel(PerformanceModelBaseClass):
                     msg = (
                         f"User defined size for ASU system ({ASU_rated_power_kW} kg N2/hour at "
                         f"{rated_N2_kg_pr_hr} kW) has an efficiency of "
-                        f"{ASU_rated_power_kW/rated_N2_kg_pr_hr} kWh/kg-N2, this does not "
+                        f"{ASU_rated_power_kW / rated_N2_kg_pr_hr} kWh/kg-N2, this does not "
                         f"match the ASU efficiency of {self.config.efficiency_kWh_pr_kg_N2}"
                     )
                     raise ValueError(msg)
@@ -261,14 +270,16 @@ class SimpleASUCostConfig(CostModelBaseConfig):
     capex_usd_per_unit: float = field()
 
     capex_unit: str = field(
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
+        validator=validators.in_(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day"]),
         converter=(str.strip, str.lower),
     )
 
     opex_usd_per_unit_per_year: float = field(default=0.0)
     opex_unit: str = field(
         default="none",
-        validator=contains(["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]),
+        validator=validators.in_(
+            ["kg/hour", "kw", "mw", "tonne/hour", "kg/day", "tonne/day", "none"]
+        ),
         converter=(str.strip, str.lower),
     )
 
@@ -282,6 +293,7 @@ class SimpleASUCostConfig(CostModelBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleASUCostModel(CostModelBaseClass):
     _time_step_bounds = (
         3600,

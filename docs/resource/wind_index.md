@@ -1,16 +1,22 @@
 (wind_resource:models)=
 # Wind Resource: Model Overview
 
-- [**"WTKNLRDeveloperAPIWindResource"**](wind_resource:wtk_v2_api): this requires an API key for the NLR developer network
+- [**Wind Toolkit API**](wind_resource:wtk_v2_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
+    - "WTKNLRDeveloperAPIWindResource"
+    - "HRRRMETToolkitWindAPI"
 - [**"OpenMeteoHistoricalWindResource"**](wind_resource:openmeteo_archive)
+
+Some API resource models support multi-year simulations when the requested resource data covers
+the configured time range. See the [Resource Model Index](resource_index.md) for details on
+multi-year resource handling.
 
 
 ```{note}
-Please refer to the `Setting Environment Variables` doc page for information on setting up an NLR API key if you haven't yet.
+Please refer to the [Setting Environment Variables](../getting_started/environment_variables) doc page for information on setting up an NLR API key if you haven't yet.
 ```
 
 (windresource:overview)=
-# Wind Resource: Output Data
+## Wind Resource: Output Data
 
 Wind resource models may output wind resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a wind resource model.
 

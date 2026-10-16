@@ -1,6 +1,6 @@
 """
 This file is based on the WISDEM file of the same name: https://github.com/NLRWindSystems/WISDEM
-and also based off of the H2Integrate file of the same name originally adapted by Jared Thomas.
+Originally adapted by Jared Thomas.
 """
 
 import warnings

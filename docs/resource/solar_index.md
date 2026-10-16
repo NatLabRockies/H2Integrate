@@ -14,7 +14,11 @@
 - [Meteosat Prime Meridian PSM v4 API](meteosat_prime_meridian_v4_api): these models require an API key from the [NLR developer network](https://developer.nlr.gov/signup/), the available models are:
     - "MeteosatPrimeMeridianSolarAPI"
     - "MeteosatPrimeMeridianTMYSolarAPI"
+- [OpenMeteo Historical API](#solar_resource:openmeteo_historical)
 
+Some API resource models support multi-year simulations when the requested resource data covers
+the configured time range. See the [Resource Model Index](resource_index.md) for details on
+multi-year resource handling.
 
 ```{note}
 Please refer to the [Setting Environment Variables](../getting_started/environment_variables) doc page for information on setting up an NLR API key if you haven't yet.
@@ -22,7 +26,7 @@ Please refer to the [Setting Environment Variables](../getting_started/environme
 
 (solarresource:overview)=
 (solar-resource-output-data)=
-# Solar Resource: Output Data
+## Solar Resource: Output Data
 
 Solar resource models may output solar resource data, site information, information about the data source, and time information. This information is outputted as a dictionary. The following sections detail the naming convention for the dictionary keys, standardized units, and descriptions of all the output data that may be output from a solar resource model.
 

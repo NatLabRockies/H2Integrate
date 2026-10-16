@@ -1,14 +1,13 @@
 import openmdao.api as om
-from attrs import field, define
+from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.core.validators import range_val
 
 
 @define
 class SiteBaseConfig(BaseConfig):
-    latitude: float = field(default=0.0, validator=range_val(-90.0, 90.0))
-    longitude: float = field(default=0.0, validator=range_val(-180.0, 180.0))
+    latitude: float = field(default=0.0, validator=(validators.ge(-90), validators.le(90)))
+    longitude: float = field(default=0.0, validator=(validators.ge(-180), validators.le(180)))
 
 
 class SiteBaseComponent(om.IndepVarComp):

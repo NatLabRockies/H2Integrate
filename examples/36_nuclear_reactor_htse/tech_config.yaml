@@ -3,6 +3,13 @@ description: This is a nuclear plant generating electricity and can also provide
 general:
   folder_output: nuclear_htse
 technologies:
+  heat_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    model_inputs:
+      shared_parameters:
+        commodity: heat
+        commodity_rate_units: kW
   water_feedstock:
     performance_model:
       model: FeedstockPerformanceModel

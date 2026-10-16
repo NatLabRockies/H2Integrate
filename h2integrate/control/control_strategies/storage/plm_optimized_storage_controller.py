@@ -5,11 +5,11 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pyomo.environ as pyomo
-from attrs import field, define
+from attrs import field, define, validators
 from pyomo.opt import SolverStatus, TerminationCondition
 
 from h2integrate.core.utilities import merge_shared_inputs, build_time_series_from_plant_config
-from h2integrate.core.validators import range_val
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_strategies.controller_opt_problem_state import DispatchProblemState
 from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
     SolverOptions,
@@ -19,7 +19,7 @@ from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass i
 
 
 @define
-class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConfig):
+class PeakLoadManagementOptimizedStorageControllerConfig(PyomoStorageControllerBaseConfig):
     """Configuration for the Peak Load Management optimized storage controller.
 
     Inherits base fields from ``PyomoStorageControllerBaseConfig``:
@@ -30,11 +30,17 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
 
     Attributes:
         max_charge_rate (float): Maximum charge and discharge rate (kW).
-        supervisory_signal (list[float]): Price, demand, or price*demand
-            forecast time series. The rolling horizon solver uses one window of
-            length ``n_control_window_hours`` per solve.
+        lmp_signal (list[float]): Locational Marginal Price (LMP)
+            forecast time series ($/kWh).
+        demand_signal (list[float]): Consumer demand forecast time series (kW).
         peak_window (dict): Hours eligible for dispatch. Keys ``'start'``
             and ``'end'`` must be strings in ``HH:MM:SS`` format.
+        upstream_pricingfunction_coeffs (list[float]): Coefficients for the upstream
+            pricing function. The coefficients of the polynominal function representing
+            the price the upstream party charges the local party based on the LMP. The
+            list contains the coefficients of the polynomial function in decreasing order.
+            (e.g. [1,2] represent 1*x + 2 and [1,2,3] represent 1*x^2 + 2*x + 3). This
+            function should be a monotonically non-decreasing function.
         performance_incentive (float): Incentive revenue in $/kWh.
             Mutually exclusive with ``performance_incentive_per_event``.
         performance_incentive_per_event (float): Incentive revenue in
@@ -72,24 +78,103 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
             ``event_duration``. When set, the eligible timesteps identified
             by ``signal_threshold_percentile`` are treated as peaks and
             the first peak is chosen as eligible.
+        pyomo_solver (str): Name of the solver used by pyomo to solve the MILP.
+            Can be any of ``highs`` or ``glpk``. Default is ``highs``.
+        pyomo_solver_options (dict): A dictionary containing options for pyomo solver.
+        upstream_to_local_limit (float): Upper limit of power transferred from the
+            upstream party to the local party (kW)
+        constrain_dispatch_to_set_point (bool): When ``True``, caps
+            ``p_discharge``/``p_charge`` each timestep at
+            ``{commodity}_set_point - {commodity}_in`` (positive = system
+            needs discharge, negative = surplus to absorb),
+        exclusive_control_months (list[int]): Calendar months (1-12) that
+            are "Exclusive Control Months". When set (including to an
+            empty list), this layers a seasonal on/off-month split on top
+            of the upstream/local dispatch above, and the two regimes are
+            always solved as two separate MILPs:
+
+            - During Exclusive Control Months, the MILP above still
+              applies unchanged (DR incentive maximization) except that
+              the monthly cap on discharge is expressed as cycled energy
+              (``max_cycles_per_day``) rather than a count of events
+              (``n_max_events``), and discharge
+              eligibility is evaluated across the whole Exclusive Control
+              Month rather than gated to the daily ``peak_window``.
+              ``peak_window`` instead doubles as the utility's Class A
+              Peak Period: charging is disallowed inside it.
+            - Outside Exclusive Control Months (any month not in this
+              list) the local party has control of the BESS, so this
+              controller instead solves a second, independent MILP that
+              minimizes the local party's own bill (energy +
+              demand/transmission charges) against ``demand_signal`` (the
+              local party's own facility load).
+
+            ``n_control_window_hours`` must be chosen so that no rolling
+            window straddles an Exclusive Control Month boundary (e.g. a
+            window can't contain both late-November and early-December
+            timesteps when only winter months are listed) -
+            ``setup()`` raises ``ValueError`` if one does, since a single
+            window can only be solved as one of the two MILPs above, never
+            a mix of both.
+            An explicit empty list means zero
+            months are Exclusive Control, so every window solves the
+            off-month bill-minimization MILP instead. Defaults to
+            ``None`` (feature off: no seasonal split, every window solves
+            the DR MILP).
+        max_cycles_per_day (float): During Exclusive Control Months, the
+            maximum full-cycle-equivalent energy (relative to
+            ``max_capacity * (max_soc_fraction - min_soc_fraction)``) that
+            may be discharged per calendar day. Only used when
+            ``exclusive_control_months`` is set. Defaults to ``1.0`` cycle/day.
+        energy_rate (float): Flat energy charge in $/kWh, applied to the
+            local party's net metered load (``demand_signal - discharge +
+            charge``) during off-months. Required (together with
+            ``demand_charge_rate`` and ``demand_charge_window``) whenever
+            ``exclusive_control_months`` is set, to run the off-month
+            bill-minimization problem described above. ``demand_signal``
+            doubles as the local party's own facility load for this
+            purpose - there is no separate local load profile field,
+            since it is the same underlying facility demand either way.
+        demand_charge_rate (float): Combined demand + transmission charge
+            in $/kW-month, applied once per off-month to that month's
+            single highest net load within ``demand_charge_window``.
+            Required together with ``energy_rate``.
+        demand_charge_window (dict): Time-of-day window, as ``{'start',
+            'end'}`` in 24-hour ``HH:MM:SS`` format, during which the monthly
+            demand/transmission peak is determined (e.g.
+            ``15:00:00``-``23:00:00`` for "3pm-11pm"). Required together
+            with ``energy_rate``.
     """
 
     max_charge_rate: float = field()
-    supervisory_signal: list = field()
+    lmp_signal: list = field()
+    demand_signal: list = field()
     peak_window: dict = field()
+    upstream_pricingfunction_coeffs: list = field()
     performance_incentive: float = field(default=None)
     performance_incentive_per_event: float = field(default=None)
-    charge_efficiency: float = field(validator=range_val(0, 1), default=1.0)
-    discharge_efficiency: float = field(validator=range_val(0, 1), default=1.0)
+    charge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=1.0)
+    discharge_efficiency: float = field(validator=(validators.ge(0), validators.le(1)), default=1.0)
     n_max_events: int = field(default=10)
     n_control_window_hours: float = field(default=24.0)
-    signal_threshold_percentile: float = field(default=0.0, validator=range_val(0, 100))
+    signal_threshold_percentile: float = field(
+        default=0.0, validator=(validators.ge(0), validators.le(100))
+    )
     event_duration: dict = field(default=None)
     min_peak_separation: dict = field(default=None)
+    pyomo_solver: str = field(default="highs")
+    pyomo_solver_options: dict = field(default={})
+    upstream_to_local_limit: float = field(default=None)
+    constrain_dispatch_to_set_point: bool = field(default=False)
+    exclusive_control_months: list = field(default=None)
+    max_cycles_per_day: float = field(default=1.0)
+    energy_rate: float = field(default=None)
+    demand_charge_rate: float = field(default=None)
+    demand_charge_window: dict = field(default=None)
 
     def __attrs_post_init__(self):
         # Make sure n_control_window_hours is an int
-        self.n_control_window_hours = int(math.ceil(self.n_control_window_hours))
+        self.n_control_window_hours = math.ceil(self.n_control_window_hours)
         super().__attrs_post_init__()
 
         both_set = (
@@ -123,15 +208,74 @@ class PeakLoadManagementOptimizedControllerConfig(PyomoStorageControllerBaseConf
                         f"(int or float), got {type(value['val']).__name__}."
                     )
 
+        if self.exclusive_control_months is not None and any(
+            m not in range(1, 13) for m in self.exclusive_control_months
+        ):
+            raise ValueError(
+                "exclusive_control_months must contain only calendar months 1-12; "
+                f"got {self.exclusive_control_months!r}."
+            )
 
+        if self.max_cycles_per_day <= 0:
+            raise ValueError(f"max_cycles_per_day must be > 0; got {self.max_cycles_per_day!r}.")
+
+        peak_shaving_fields = {
+            "energy_rate": self.energy_rate,
+            "demand_charge_rate": self.demand_charge_rate,
+            "demand_charge_window": self.demand_charge_window,
+        }
+        n_set = sum(v is not None for v in peak_shaving_fields.values())
+
+        # Partially set values
+        if n_set not in (0, len(peak_shaving_fields)):
+            missing = [k for k, v in peak_shaving_fields.items() if v is None]
+            raise ValueError(
+                "energy_rate, demand_charge_rate, and demand_charge_window must be set "
+                f"together; missing: {missing}."
+            )
+        # Exclusive control months are set but none of the peak-shaving fields are set
+        if self.exclusive_control_months is not None and n_set == 0:
+            raise ValueError(
+                "exclusive_control_months requires energy_rate, demand_charge_rate, and "
+                "demand_charge_window to be set, to solve the off-month bill-minimization "
+                "problem."
+            )
+        # Peak-shaving fields are set but exclusive_control_months is not set
+        if self.exclusive_control_months is None and n_set > 0:
+            raise ValueError(
+                "energy_rate/demand_charge_rate/demand_charge_window require "
+                "exclusive_control_months to be set."
+            )
+        # Check that demand_charge_window has both 'start' and 'end' keys if it is set
+        if self.demand_charge_window is not None:
+            for key in ("start", "end"):
+                if key not in self.demand_charge_window:
+                    raise ValueError("demand_charge_window must contain 'start' and 'end' keys")
+
+
+@register
 class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseClass):
     """Demand-response storage controller using a rolling-horizon MILP.
 
     Each call to the dispatch solver iterates over the full simulation in
     windows of length ``n_control_window_hours``. For each window it builds
-    and solves a MILP that maximizes incentive revenue, then passes the
-    resulting dispatch commands to the performance model. The terminal SOC
-    of each window is carried forward as the initial SOC of the next window.
+    and solves a MILP that maximizes incentive revenue and minimizes local cost.
+    It then passes the resulting dispatch commands to the performance model.
+    The terminal SOC of each window is carried forward as the initial SOC of
+    the next window.
+
+    Works standalone via ``plant_config["tech_to_dispatch_connections"]`` (as
+    in ``examples/34_plm_optimized_dispatch``), or as a storage tech's SLC
+    sub-controller with no extra wiring (``examples/35_system_level_control/
+    plm_optimized_storage``). Set ``constrain_dispatch_to_set_point=True`` to
+    have the SLC's demand signal cap dispatch.
+
+    Setting ``exclusive_control_months`` switches on the BESS "Exclusive
+    Control Months" seasonal behavior: each rolling window is solved as either the
+    Exclusive-Control-Month MILP above or the off-month bill-minimization
+    MILP, never a combination of both - ``setup()`` raises ``ValueError`` if
+    ``n_control_window_hours`` is such that a window would straddle an
+    Exclusive Control Month boundary.
     """
 
     dr_model: Any
@@ -145,7 +289,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ValueError: If the length of the time series built from
                 ``plant_config`` does not match ``n_timesteps``.
         """
-        self.config = PeakLoadManagementOptimizedControllerConfig.from_dict(
+        self.config = PeakLoadManagementOptimizedStorageControllerConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
         )
 
@@ -167,7 +311,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         self.dt_seconds = int(sim["dt"])  # length of each timestep in seconds
 
         # n_control_window_hours is stored in hours; convert to timesteps now that dt is known.
-        n_cw_steps = max(1, int(round(self.config.n_control_window_hours * 3600 / self.dt_seconds)))
+        n_cw_steps = max(1, round(self.config.n_control_window_hours * 3600 / self.dt_seconds))
         object.__setattr__(self.config, "n_control_window_hours", n_cw_steps)
 
         super().setup()
@@ -191,6 +335,12 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         self.in_peak_window = self._compute_peak_window_mask()  # bool array, shape (T,)
         self.month_ids = self._compute_month_ids()  # int array, shape (T,)
 
+        self.in_exclusive_control_month = self._compute_exclusive_control_mask()
+        self.days_in_month_lookup = self._compute_days_in_month_lookup()
+        self.in_demand_charge_window = self._compute_demand_charge_window_mask()
+        if self.config.exclusive_control_months is not None:
+            self._check_windows_do_not_span_control_boundary()
+
         # Computes the number of timesteps in an event based on event_duration and dt_seconds,
         # rounded to nearest int and at least 1.
         if self.config.event_duration is not None:
@@ -206,18 +356,6 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             )
         else:
             self.steps_per_event = 1
-
-    def initialize_parameters(self, inputs):
-        """Sync OpenMDAO inputs into the config.
-
-        Args:
-            inputs (dict): OpenMDAO inputs dict. Recognized keys are
-                ``'max_charge_rate'`` and ``'storage_capacity'``.
-        """
-        if "max_charge_rate" in inputs:
-            object.__setattr__(self.config, "max_charge_rate", float(inputs["max_charge_rate"][0]))
-        if "storage_capacity" in inputs:
-            object.__setattr__(self.config, "max_capacity", float(inputs["storage_capacity"][0]))
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Build the DR dispatch solver and write it to discrete outputs.
@@ -269,55 +407,158 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             storage_out = np.zeros(self.n_timesteps)
             soc_out = np.zeros(self.n_timesteps)
 
-            # Track events used per calendar month so the monthly cap is
-            # respected across window boundaries.
+            # Per-timestep history of the MILP decision variables, accumulated
+            # across all rolling windows. Exposed as attributes so callers
+            # (e.g. plotting scripts) can read them via
+            # ``model.control_strategies[i].p_discharge_upstream_history`` etc.
+            # Off-month bill-minimization dispatch (local-party-controlled, no
+            # upstream interaction) is recorded into the local-side histories.
+            self.p_discharge_upstream_history = np.zeros(self.n_timesteps)
+            self.p_discharge_local_history = np.zeros(self.n_timesteps)
+            self.p_charge_history = np.zeros(self.n_timesteps)
+            self.p_to_local_history = np.zeros(self.n_timesteps)
+            self.discharge_upstream_bin_history = np.zeros(self.n_timesteps)
+            self.discharge_local_bin_history = np.zeros(self.n_timesteps)
+            self.charge_bin_history = np.zeros(self.n_timesteps)
+
+            # Track usage per calendar month so each regime's monthly cap is
+            # respected across window boundaries: when exclusive_control_months is
+            # empty, use events per month, when set use cycled energy (kWh).
             events_used_per_month = {}
+            energy_used_per_month = {}
 
             n_w: int = int(self.config.n_control_window_hours)
             # Compute the starting index of each rolling window.
             window_start_indices = list(range(0, self.n_timesteps, n_w))
 
+            # positive = discharge, negative = charge.
+            net_demand = (
+                inputs[f"{commodity_name}_set_point"] - inputs[f"{commodity_name}_in"]
+                if self.config.constrain_dispatch_to_set_point
+                else None
+            )
+
             for window_start in window_start_indices:
                 window_len: int = min(n_w, self.n_timesteps - window_start)
                 month_ids_w = self.month_ids[window_start : window_start + window_len]
-                # Since this is a rolling horizon, we need to compute the remaining budget
-                # for the  next optimization call
-                remaining_budget = {
-                    int(m): max(
-                        0,
-                        self.config.n_max_events
-                        - (events_used_per_month[int(m)] if int(m) in events_used_per_month else 0),
+                is_exclusive = self.config.exclusive_control_months is None or bool(
+                    self.in_exclusive_control_month[window_start]
+                )
+                set_point_w = (
+                    net_demand[window_start : window_start + window_len]
+                    if net_demand is not None
+                    else None
+                )
+
+                if is_exclusive:
+                    if self.config.exclusive_control_months is not None:
+                        # Exclusive Control Months: cap is cycled energy (kWh) per
+                        # calendar month
+                        E_max = storage_capacity * (
+                            self.config.max_soc_fraction - self.config.min_soc_fraction
+                        )
+                        remaining_budget = {
+                            int(m): max(
+                                0.0,
+                                self.config.max_cycles_per_day
+                                * self.days_in_month_lookup.get(int(m), 30)
+                                * E_max
+                                - energy_used_per_month.get(int(m), 0.0),
+                            )
+                            for m in np.unique(month_ids_w)
+                        }
+                    else:
+                        # Event-based budget
+                        remaining_budget = {
+                            int(m): max(
+                                0,
+                                self.config.n_max_events - events_used_per_month.get(int(m), 0),
+                            )
+                            for m in np.unique(month_ids_w)
+                        }
+
+                    # Construct the MILP for this window
+                    self.dr_model = self._build_dr_model(
+                        window_start=window_start,
+                        window_len=window_len,
+                        init_soc=self.updated_initial_soc,
+                        remaining_budget=remaining_budget,
+                        P_max=P_max,
+                        storage_capacity=storage_capacity,
+                        set_point_w=set_point_w,
                     )
-                    for m in np.unique(month_ids_w)
-                }
-                # Construct the MILP for this window
-                self.dr_model = self._build_dr_model(
-                    window_start=window_start,
-                    window_len=window_len,
-                    init_soc=self.updated_initial_soc,
-                    remaining_budget=remaining_budget,
-                    P_max=P_max,
-                    storage_capacity=storage_capacity,
-                )
-                self.problem_state = DispatchProblemState()
+                    self.problem_state = DispatchProblemState()
 
-                # Solve the optimzation problem
-                self.solve_dispatch_model(
-                    start_time=window_start,
-                    n_days=int(math.ceil(self.n_timesteps * self.dt_seconds / 86400)),
-                )
+                    # Solve the optimization problem
+                    self.solve_dispatch_model(
+                        start_time=window_start,
+                        n_days=math.ceil(self.n_timesteps * self.dt_seconds / 86400),
+                    )
 
-                # Count new discharge events to track the monthly cap.
-                for t in range(window_len):
-                    discharging = pyomo.value(self.dr_model.discharge[t]) > 0.5
-                    prev_discharging = t > 0 and pyomo.value(self.dr_model.discharge[t - 1]) > 0.5
-                    # Detect the rising edge of a discharge event (0 -> 1) and count
-                    # it if it occurs in this window.
-                    if discharging and not prev_discharging:
-                        month = int(month_ids_w[t])
-                        if month not in events_used_per_month:
-                            events_used_per_month[month] = 0
-                        events_used_per_month[month] += 1
+                    # Track budget usage, and record the per-timestep MILP
+                    # decision variables.
+                    for t in range(window_len):
+                        abs_t = window_start + t
+
+                        d1_val = pyomo.value(self.dr_model.discharge_upstream[t])
+                        d2_val = pyomo.value(self.dr_model.discharge_local[t])
+                        c_val = pyomo.value(self.dr_model.charge[t])
+                        p_d1 = pyomo.value(self.dr_model.p_discharge_upstream[t])
+                        p_d2 = pyomo.value(self.dr_model.p_discharge_local[t])
+
+                        self.discharge_upstream_bin_history[abs_t] = d1_val
+                        self.discharge_local_bin_history[abs_t] = d2_val
+                        self.charge_bin_history[abs_t] = c_val
+                        self.p_discharge_upstream_history[abs_t] = p_d1
+                        self.p_discharge_local_history[abs_t] = p_d2
+                        self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
+                        self.p_to_local_history[abs_t] = pyomo.value(self.dr_model.p_to_local[t])
+
+                        if self.config.exclusive_control_months is not None:
+                            month = int(month_ids_w[t])
+                            energy_used_per_month[month] = energy_used_per_month.get(month, 0.0) + (
+                                p_d1 + p_d2
+                            ) * (self.dt_seconds / 3600.0)
+                        else:
+                            discharging = d1_val > 0.5
+                            prev_discharging = (
+                                t > 0 and pyomo.value(self.dr_model.discharge_upstream[t - 1]) > 0.5
+                            )
+                            # Detect the rising edge of a discharge event (0 -> 1)
+                            # and count it if it occurs in this window.
+                            if discharging and not prev_discharging:
+                                month = int(month_ids_w[t])
+                                events_used_per_month[month] = (
+                                    events_used_per_month.get(month, 0) + 1
+                                )
+                else:
+                    # Off-months: the local party retains control of the DBESS and
+                    # runs its own bill-minimization problem instead of dispatching
+                    # nothing.
+                    self.dr_model = self._build_bill_min_model(
+                        window_start=window_start,
+                        window_len=window_len,
+                        init_soc=self.updated_initial_soc,
+                        P_max=P_max,
+                        storage_capacity=storage_capacity,
+                    )
+                    self.problem_state = DispatchProblemState()
+
+                    self.solve_dispatch_model(
+                        start_time=window_start,
+                        n_days=math.ceil(self.n_timesteps * self.dt_seconds / 86400),
+                    )
+
+                    for t in range(window_len):
+                        abs_t = window_start + t
+                        self.p_discharge_local_history[abs_t] = pyomo.value(
+                            self.dr_model.p_discharge[t]
+                        )
+                        self.p_charge_history[abs_t] = pyomo.value(self.dr_model.p_charge[t])
+                        self.discharge_local_bin_history[abs_t] = pyomo.value(
+                            self.dr_model.discharge[t]
+                        )
+                        self.charge_bin_history[abs_t] = pyomo.value(self.dr_model.charge[t])
 
                 # Run the performance model for this window.
                 storage_out_window, soc_window = performance_model(
@@ -340,12 +581,18 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
         return pyomo_dispatch_solver
 
-    def _parse_peak_window(self) -> tuple:
-        """Parse the ``peak_window`` config entry into ``datetime.time`` objects.
+    @staticmethod
+    def _parse_time_window(window: dict, field_name: str = "peak_window") -> tuple:
+        """Parse a ``{'start', 'end'}`` time-of-day config entry into ``datetime.time`` objects.
 
         Accepts values either as ``HH:MM:SS`` strings or as plain integers
         (seconds since midnight). PyYAML parses unquoted ``HH:MM:SS`` values
         as sexagesimal integers, so both forms are equivalent in YAML.
+
+        Args:
+            window (dict): Dict with ``'start'`` and ``'end'`` keys.
+            field_name (str): Name used in error messages. Defaults to
+                ``'peak_window'``.
 
         Returns:
             tuple[datetime.time, datetime.time]: ``(start, end)`` times.
@@ -354,9 +601,9 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ValueError: If ``'start'`` or ``'end'`` keys are missing, or
                 if a value is neither a valid ``HH:MM:SS`` string nor an integer.
         """
-        pw = dict(self.config.peak_window)
+        pw = dict(window)
         if "start" not in pw or "end" not in pw:
-            raise ValueError("peak_window must contain 'start' and 'end' keys")
+            raise ValueError(f"{field_name} must contain 'start' and 'end' keys")
         for key in ("start", "end"):
             val = pw[key]
             if isinstance(val, int | float):
@@ -368,9 +615,39 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 pw[key] = datetime.strptime(val, "%H:%M:%S").time()
             else:
                 raise ValueError(
-                    f"peak_window '{key}' must be HH:MM:SS string or integer seconds, got {val!r}."
+                    f"{field_name} '{key}' must be HH:MM:SS string or integer seconds, got {val!r}."
                 )
         return pw["start"], pw["end"]
+
+    def _parse_peak_window(self) -> tuple:
+        """Parse the ``peak_window`` config entry into ``datetime.time`` objects.
+
+        Returns:
+            tuple[datetime.time, datetime.time]: ``(start, end)`` times.
+
+        Raises:
+            ValueError: If ``'start'`` or ``'end'`` keys are missing, or
+                if a value is neither a valid ``HH:MM:SS`` string nor an integer.
+        """
+        return self._parse_time_window(self.config.peak_window, "peak_window")
+
+    def _compute_time_mask(self, start, end) -> np.ndarray:
+        """Build a boolean mask that is ``True`` for timesteps inside ``[start, end)``.
+
+        Args:
+            start (datetime.time): Window start (inclusive).
+            end (datetime.time): Window end (exclusive).
+
+        Returns:
+            np.ndarray: Boolean array of shape ``(n_timesteps,)``.
+
+        Raises:
+            ValueError: If ``end`` is before ``start``.
+        """
+        times = pd.DatetimeIndex(self.time_index).time
+        if end < start:
+            raise ValueError("window end time must be after start time.")
+        return np.array([start <= t < end for t in times])
 
     def _compute_peak_window_mask(self) -> np.ndarray:
         """Build a boolean mask that is ``True`` for timesteps inside the peak window.
@@ -382,10 +659,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             ValueError: If ``peak_window`` end time is before start time.
         """
         start, end = self._parse_peak_window()
-        times = pd.DatetimeIndex(self.time_index).time
-        if end < start:
-            raise ValueError("peak_window end time must be after start time.")
-        return np.array([start <= t < end for t in times])
+        return self._compute_time_mask(start, end)
 
     def _compute_month_ids(self) -> np.ndarray:
         """Return the calendar month index (1-12) for each timestep.
@@ -394,6 +668,88 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             np.ndarray: Integer array of shape ``(n_timesteps,)``.
         """
         return pd.DatetimeIndex(self.time_index).month.to_numpy()
+
+    def _compute_exclusive_control_mask(self) -> np.ndarray:
+        """Build a boolean mask that is ``True`` for timesteps in an Exclusive Control Month.
+
+        A timestep is in an Exclusive Control Month when its calendar month
+        (1-12) is in ``exclusive_control_months``. This is evaluated by
+        calendar month only (the year is ignored), so the same pattern
+        applies to every year of a multi-year simulation.
+
+        Returns:
+            np.ndarray: Boolean array of shape ``(n_timesteps,)``. All
+            ``False`` when ``exclusive_control_months`` is ``None`` or ``[]``
+            (an empty list correctly yields all-``False`` via ``np.isin``,
+            which is what makes every window resolve to bill-minimization).
+        """
+        if self.config.exclusive_control_months is None:
+            return np.zeros(len(self.month_ids), dtype=bool)
+        return np.isin(self.month_ids, self.config.exclusive_control_months)
+
+    def _compute_demand_charge_window_mask(self) -> np.ndarray:
+        """Build a boolean mask that is ``True`` during the demand-charge window.
+
+        This is the time-of-day window (e.g. "1pm-9pm") used to determine
+        each off-month's demand/transmission-charge-setting peak.
+
+        Returns:
+            np.ndarray: Boolean array of shape ``(n_timesteps,)``. All
+            ``False`` when ``demand_charge_window`` is ``None``.
+        """
+        if self.config.demand_charge_window is None:
+            return np.zeros(len(self.month_ids), dtype=bool)
+        start, end = self._parse_time_window(
+            self.config.demand_charge_window, "demand_charge_window"
+        )
+        return self._compute_time_mask(start, end)
+
+    def _compute_days_in_month_lookup(self) -> dict:
+        """Map each calendar month present in the simulation to its day count.
+
+        For simulations spanning multiple years, the day count is taken
+        from the first occurrence of that calendar month (matching the
+        existing ``month_ids`` simplification of not tracking year).
+
+        Returns:
+            dict[int, int]: Mapping of month (1-12) to number of days.
+        """
+        idx = pd.DatetimeIndex(self.time_index)
+        lookup = {}
+        for month in range(1, 13):
+            matches = idx[idx.month == month]
+            if len(matches) == 0:
+                continue
+            lookup[month] = int(
+                pd.Timestamp(year=matches[0].year, month=month, day=1).days_in_month
+            )
+        return lookup
+
+    def _check_windows_do_not_span_control_boundary(self) -> None:
+        """Raise if any rolling window mixes Exclusive Control and off-month timesteps.
+
+        The Exclusive Control Month MILP (``_build_dr_model``) and the
+        off-month bill-minimization MILP (``_build_bill_min_model``) are two
+        different optimization problems; a single rolling window must not have both
+        objectives.
+
+        Raises:
+            ValueError: If a rolling window contains both Exclusive Control
+                and off-month timesteps.
+        """
+        n_w = int(self.config.n_control_window_hours)
+        for window_start in range(0, self.n_timesteps, n_w):
+            window_len = min(n_w, self.n_timesteps - window_start)
+            status = self.in_exclusive_control_month[window_start : window_start + window_len]
+            if status.any() and not status.all():
+                raise ValueError(
+                    "Rolling window starting at timestep "
+                    f"{window_start} (length {window_len}) spans an Exclusive "
+                    "Control Month boundary, mixing Exclusive Control and "
+                    "off-month timesteps within a single window. Choose "
+                    "n_control_window_hours so that rolling windows align with "
+                    "Exclusive Control Month boundaries."
+                )
 
     def _compute_eligible_mask(
         self,
@@ -498,21 +854,34 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         remaining_budget: dict,
         P_max: float,
         storage_capacity: float,
+        set_point_w: np.ndarray | None = None,
     ) -> pyomo.ConcreteModel:
         """Build the DR MILP for a single rolling window.
 
         Decision variables
         ------------------
-        discharge[t] : binary
-            Event indicator — 1 if a discharge event is active at timestep t.
-            Used for event counting and window feasibility constraints only.
+        discharge_upstream[t] : binary
+            Event indicator — 1 if a discharge event due to the upstream party is
+            active at timestep t. Used for event counting and window feasibility
+            constraints only.
+        discharge_local[t] : binary
+            Event indicator — 1 if a discharge event due to the local party is
+            active at timestep t. Used for event counting and window feasibility
+            constraints only.
         charge[t] : binary
             Event indicator — 1 if a charge event is active at timestep t.
-        p_discharge[t] : continuous in [0, P_max]
-            Actual discharge power (kW). Linked to the binary via the
-            McCormick upper-bound constraint ``p_discharge[t] <= P_max * discharge[t]``.
+        p_discharge_upstream[t] : continuous in [0, P_max]
+            Actual discharge power (kW) due to the upstream party. Linked to the
+            binary via the McCormick upper-bound constraint
+            ``p_discharge_upstream[t] <= P_max * discharge_upstream[t]``.
+        p_discharge_local[t] : continuous in [0, P_max]
+            Actual discharge power (kW) due to the local party. Linked to the
+            binary via the McCormick upper-bound constraint
+            ``p_discharge_local[t] <= P_max * discharge_local[t]``.
         p_charge[t] : continuous in [0, P_max]
             Actual charge power (kW). Linked via ``p_charge[t] <= P_max * charge[t]``.
+        p_to_local[t]: continuous
+            Power supplied (kW) by the upstream party to the local party
         soc[t] : continuous in [soc_min, soc_max]
             State of charge (fraction).
 
@@ -522,22 +891,30 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             window_len (int): Number of timesteps in this window.
             init_soc (float): State-of-charge fraction at the start of
                 this window.
-            remaining_budget (dict): Mapping of ``month_id (int)`` to
-                remaining event slots for that month. Computed by
-                subtracting events already dispatched in earlier windows
-                from ``n_max_events``, so the monthly cap is respected
-                across windows.
+            remaining_budget (dict): Mapping of ``month_id (int)`` to the
+                remaining monthly budget for that month, computed by
+                subtracting usage already dispatched in earlier windows.
+                When ``exclusive_control_months`` is ``None`` this is a
+                count of remaining event slots (``n_max_events`` minus
+                events used). When it is set (including to ``[]``) it is
+                instead a remaining energy budget in kWh
+                (``max_cycles_per_day * days_in_month * E_max`` minus
+                energy already discharged that month).
             P_max (float): Maximum charge/discharge rate (kW), taken
                 from OpenMDAO inputs so optimizer changes are reflected.
             storage_capacity (float): Total storage capacity (kWh), taken
                 from OpenMDAO inputs so optimizer changes are reflected.
+            set_point_w (np.ndarray | None): Per-timestep net-demand slice
+                (already netted by the caller), or ``None`` when
+                ``config.constrain_dispatch_to_set_point`` is ``False``.
+                When provided, caps ``p_discharge``/``p_charge`` at its
+                magnitude each timestep.
 
         Returns:
             pyomo.ConcreteModel: Fully formed MILP ready to solve.
         """
         m: Any = pyomo.ConcreteModel(name="plm_dr")
 
-        E_max = storage_capacity * (self.config.max_soc_fraction - self.config.min_soc_fraction)
         eta_c = self.config.charge_efficiency
         eta_d = self.config.discharge_efficiency
         soc_max = self.config.max_soc_fraction
@@ -559,13 +936,24 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         w = slice(window_start, window_start + window_len)
         in_peak_window_w = self.in_peak_window[w]
         month_ids_w = self.month_ids[w]
-        signal_w = np.asarray(self.config.supervisory_signal, dtype=float)[w]
+        signal_w = np.asarray(self.config.lmp_signal, dtype=float)[w]
+        signal_d = np.asarray(self.config.demand_signal, dtype=float)[w]
 
-        # Eligible timesteps for discharge based on percentile
-        eligible_t_w = self._compute_eligible_mask(signal_w, in_peak_window_w)
-        # Expand eligible timesteps into event windows based on event_duration
-        dispatch_window_w = self._compute_event_window_mask(eligible_t_w)
-        eligible_t_w = dispatch_window_w
+        has_exclusive_control_months = self.config.exclusive_control_months is not None
+        if has_exclusive_control_months:
+            # Exclusive Control Months:
+            # Use percentage threshold to determine eligible timesteps for discharge.
+            # Charging is disallowed during the peak window.
+            eligible_t_w = self._compute_eligible_mask(signal_w, None)
+            dispatch_window_w = eligible_t_w
+            charge_restricted_w = in_peak_window_w
+        else:
+            # Eligible timesteps for discharge based on percentile
+            eligible_t_w = self._compute_eligible_mask(signal_w, in_peak_window_w)
+            # Expand eligible timesteps into event windows based on event_duration
+            dispatch_window_w = self._compute_event_window_mask(eligible_t_w)
+            eligible_t_w = dispatch_window_w
+            charge_restricted_w = dispatch_window_w
 
         months_in_window = np.unique(month_ids_w).tolist()
 
@@ -573,20 +961,33 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         m.T = pyomo.Set(initialize=range(window_len), doc="Timesteps in window")
         m.M = pyomo.Set(initialize=months_in_window, doc="Months in window")
 
-        ## Variables
+        ## Decision Variables
         # Binary event indicators- used for event counting and window constraints.
-        m.discharge = pyomo.Var(
-            m.T, domain=pyomo.Binary, doc="1 if a discharge event is active at timestep t"
+        m.discharge_upstream = pyomo.Var(
+            m.T,
+            domain=pyomo.Binary,
+            doc="1 if a discharge to the upstream party event is active at timestep t",
+        )
+        m.discharge_local = pyomo.Var(
+            m.T,
+            domain=pyomo.Binary,
+            doc="1 if a discharge to the local party event is active at timestep t",
         )
         m.charge = pyomo.Var(
             m.T, domain=pyomo.Binary, doc="1 if a charge event is active at timestep t"
         )
         # Actual kW dispatched each timestep.
-        m.p_discharge = pyomo.Var(
+        m.p_discharge_upstream = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
             bounds=(0, P_max),
-            doc="Discharge power (kW) at timestep t",
+            doc="Discharge power (kW) due to the upstream party at timestep t",
+        )
+        m.p_discharge_local = pyomo.Var(
+            m.T,
+            domain=pyomo.NonNegativeReals,
+            bounds=(0, P_max),
+            doc="Discharge power due to the local party (kW) at timestep t",
         )
         m.p_charge = pyomo.Var(
             m.T,
@@ -594,6 +995,7 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             bounds=(0, P_max),
             doc="Charge power (kW) at timestep t",
         )
+        # Battery SOC
         m.soc = pyomo.Var(
             m.T,
             domain=pyomo.NonNegativeReals,
@@ -601,9 +1003,20 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             doc="State of charge SoC_t",
         )
 
-        # Incentive revenue is earned for every kWh discharged.
+        # Power transmitted to the local party
+        m.p_to_local = pyomo.Var(
+            m.T,
+            domain=pyomo.NonNegativeReals,
+            bounds=(0, self.config.upstream_to_local_limit),
+            doc="Power supplied by the upstream party to the local party (kW)",
+        )
+
+        # Objective is maximizing incentive revenue is earned for every kWh discharged and
+        # minimizing the cost of energy for the local party.
         m.objective = pyomo.Objective(
-            expr=-incentive * dt_hours * sum(m.p_discharge[t] for t in m.T),
+            expr=-incentive * dt_hours * sum(m.p_discharge_upstream[t] for t in m.T)
+            + dt_hours
+            * sum(self._upstream_pricingfunction(signal_w[t]) * m.p_to_local[t] for t in m.T),
             sense=pyomo.minimize,
         )
 
@@ -612,68 +1025,286 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         m.peak_window_only = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
-                mdl.discharge[t] == 0 if not dispatch_window_w[t] else pyomo.Constraint.Skip
+                mdl.discharge_upstream[t] == 0
+                if not dispatch_window_w[t]
+                else pyomo.Constraint.Skip
             ),
         )
 
         # Discharge can only occur at eligible timesteps.
         m.high_signal_only = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.discharge[t] <= int(eligible_t_w[t]),
+            rule=lambda mdl, t: mdl.discharge_upstream[t] <= int(eligible_t_w[t]),
         )
 
-        # There is a limit on the number of events, not discharge timesteps.
-        # However, we know the number of timesteps in the event from steps_per_event,
-        # so we can indirectly limit the number of discharge timesteps in each month
-        # by multiplying the event cap by steps_per_event.
-        def max_events_rule(mdl, month):
-            ts_in_month = [t for t in mdl.T if month_ids_w[t] == month]
-            if not ts_in_month:
-                return pyomo.Constraint.Skip
-            budget_steps = (
-                remaining_budget[month] if month in remaining_budget else N_max
-            ) * self.steps_per_event
-            return sum(mdl.discharge[t] for t in ts_in_month) <= budget_steps
+        if has_exclusive_control_months:
+            # Exclusive Control Months: the upper-bound is on cycled energy (kWh) per calendar
+            # month, not on the total number of events.
+            E_max = storage_capacity * (soc_max - soc_min)
 
-        m.max_events = pyomo.Constraint(m.M, rule=max_events_rule)
+            def monthly_cycle_cap_rule(mdl, month):
+                ts_in_month = [t for t in mdl.T if month_ids_w[t] == month]
+                if not ts_in_month:
+                    return pyomo.Constraint.Skip
+                default_budget_kwh = (
+                    self.config.max_cycles_per_day
+                    * self.days_in_month_lookup.get(month, 30)
+                    * E_max
+                )
+                budget_kwh = (
+                    remaining_budget[month] if month in remaining_budget else default_budget_kwh
+                )
+                return (
+                    sum(mdl.p_discharge_upstream[t] + mdl.p_discharge_local[t] for t in ts_in_month)
+                    * dt_hours
+                    <= budget_kwh
+                )
+
+            m.max_events = pyomo.Constraint(m.M, rule=monthly_cycle_cap_rule)
+        else:
+            # There is a limit on the number of events, not discharge timesteps.
+            # However, we know the number of timesteps in the event from steps_per_event,
+            # so we can indirectly limit the number of discharge timesteps in each month
+            # by multiplying the event cap by steps_per_event.
+            def max_events_rule(mdl, month):
+                ts_in_month = [t for t in mdl.T if month_ids_w[t] == month]
+                if not ts_in_month:
+                    return pyomo.Constraint.Skip
+                budget_steps = (
+                    remaining_budget[month] if month in remaining_budget else N_max
+                ) * self.steps_per_event
+                return sum(mdl.discharge_upstream[t] for t in ts_in_month) <= budget_steps
+
+            m.max_events = pyomo.Constraint(m.M, rule=max_events_rule)
 
         # Power is zero when the binary is 0, and at most P_max when 1.
-        m.discharge_power_link = pyomo.Constraint(
+        m.discharge_upstream_power_link = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.p_discharge[t] <= P_max * mdl.discharge[t],
+            rule=lambda mdl, t: mdl.p_discharge_upstream[t] <= P_max * mdl.discharge_upstream[t],
+        )
+        m.discharge_local_power_link = pyomo.Constraint(
+            m.T,
+            rule=lambda mdl, t: mdl.p_discharge_local[t] <= P_max * mdl.discharge_local[t],
         )
         m.charge_power_link = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: mdl.p_charge[t] <= P_max * mdl.charge[t],
         )
 
+        if set_point_w is not None:
+            # Cap dispatch at what the system actually needs/can absorb this timestep.
+            m.discharge_set_point_cap_upstream = pyomo.Constraint(
+                m.T,
+                rule=lambda mdl, t: mdl.p_discharge_upstream[t] <= max(float(set_point_w[t]), 0.0),
+            )
+            m.discharge_set_point_cap_local = pyomo.Constraint(
+                m.T,
+                rule=lambda mdl, t: mdl.p_discharge_local[t] <= max(float(set_point_w[t]), 0.0),
+            )
+            m.charge_set_point_cap = pyomo.Constraint(
+                m.T,
+                rule=lambda mdl, t: mdl.p_charge[t] <= max(-float(set_point_w[t]), 0.0),
+            )
+
         m.soc_init = pyomo.Constraint(expr=m.soc[0] == init_soc)
 
         # Dynamics of the battery SOC evolution.
         def soc_evolution_rule(mdl, t):
             if t == 0:
-                return pyomo.Constraint.Skip
+                return mdl.soc[t] == (
+                    init_soc
+                    + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
+                    - mdl.p_discharge_upstream[t] * dt_hours / (eta_d * storage_capacity)
+                    - mdl.p_discharge_local[t] * dt_hours / (eta_d * storage_capacity)
+                )
             return mdl.soc[t] == (
                 mdl.soc[t - 1]
-                + eta_c * mdl.p_charge[t] * dt_hours / E_max
-                - mdl.p_discharge[t] * dt_hours / (eta_d * E_max)
+                + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
+                - mdl.p_discharge_upstream[t] * dt_hours / (eta_d * storage_capacity)
+                - mdl.p_discharge_local[t] * dt_hours / (eta_d * storage_capacity)
             )
 
         m.soc_evolution = pyomo.Constraint(m.T, rule=soc_evolution_rule)
 
-        # Can't charge and discharge at the same time.
+        # Can't simultaneously discharge according to both the upstream and local
+        # party, or charge and discharge at the same time.
         m.no_simultaneous = pyomo.Constraint(
             m.T,
-            rule=lambda mdl, t: mdl.discharge[t] + mdl.charge[t] <= 1,
+            rule=lambda mdl, t: (
+                mdl.discharge_upstream[t] + mdl.discharge_local[t] + mdl.charge[t] <= 1
+            ),
         )
 
-        # Can't charge in the dispatch window.
+        # Can't charge during the dispatch window (or, when exclusive_control_months is
+        # set, the Class A Peak Period).
         m.no_charge_in_window = pyomo.Constraint(
             m.T,
             rule=lambda mdl, t: (
-                mdl.charge[t] == 0 if dispatch_window_w[t] else pyomo.Constraint.Skip
+                mdl.charge[t] == 0 if charge_restricted_w[t] else pyomo.Constraint.Skip
             ),
         )
+
+        # Can't follow discharge commands from the local party during the dispatch
+        # window (or, when exclusive_control_months is set, the Class A Peak Period).
+        m.no_discharge_local_in_window = pyomo.Constraint(
+            m.T,
+            rule=lambda mdl, t: (
+                mdl.discharge_local[t] == 0 if charge_restricted_w[t] else pyomo.Constraint.Skip
+            ),
+        )
+
+        # Meet consumer demand
+        m.consumer_demand = pyomo.Constraint(
+            m.T,
+            rule=lambda mdl, t: (
+                signal_d[t]
+                == mdl.p_to_local[t]
+                + mdl.p_discharge_upstream[t]
+                + mdl.p_discharge_local[t]
+                - mdl.p_charge[t]
+            ),
+        )
+
+        return m
+
+    def _build_bill_min_model(
+        self,
+        window_start: int,
+        window_len: int,
+        init_soc: float,
+        P_max: float,
+        storage_capacity: float,
+    ) -> pyomo.ConcreteModel:
+        """Build the off-month local-party bill-minimization MILP for a single rolling window.
+
+        Solved instead of ``_build_dr_model`` for timesteps outside the
+        Exclusive Control Months, where the local party
+        has control of the battery.
+        The battery is dispatched purely to reduce the local party's own
+        energy and demand charges against ``demand_signal``. Charging is
+        still disallowed during ``peak_window`` (the Class A Peak Period),
+        same as in ``_build_dr_model``.
+
+        Decision variables
+        ------------------
+        discharge[t] : binary
+            Event indicator - 1 if discharging at timestep t.
+        charge[t] : binary
+            Event indicator - 1 if charging at timestep t.
+        p_discharge[t] : continuous in [0, P_max]
+            Actual discharge power (kW).
+        p_charge[t] : continuous in [0, P_max]
+            Actual charge power (kW).
+        soc[t] : continuous in [soc_min, soc_max]
+            State of charge (fraction).
+        peak_demand[month] : continuous
+            Peak net metered load (kW) during ``demand_charge_window`` that
+            month - the demand-charge basis.
+
+        Args:
+            window_start (int): Timestep index of the first timestep in this window.
+            window_len (int): Number of timesteps in this window.
+            init_soc (float): State-of-charge fraction at the start of this window.
+            P_max (float): Maximum charge/discharge rate (kW).
+            storage_capacity (float): Total storage capacity (kWh).
+
+        Returns:
+            pyomo.ConcreteModel: Fully formed MILP ready to solve.
+        """
+        m: Any = pyomo.ConcreteModel(name="plm_bill_min")
+
+        eta_c = self.config.charge_efficiency
+        eta_d = self.config.discharge_efficiency
+        soc_max = self.config.max_soc_fraction
+        soc_min = self.config.min_soc_fraction
+        dt_hours = self.dt_seconds / 3600.0
+
+        w = slice(window_start, window_start + window_len)
+        month_ids_w = self.month_ids[w]
+        demand_w = np.asarray(self.config.demand_signal, dtype=float)[w]
+        in_demand_window_w = self.in_demand_charge_window[w]
+        in_peak_window_w = self.in_peak_window[w]
+
+        months_in_window = sorted({int(mo) for mo in month_ids_w})
+
+        m.T = pyomo.Set(initialize=range(window_len), doc="Timesteps in window")
+        m.M = pyomo.Set(initialize=months_in_window, doc="Off-months in window")
+
+        m.discharge = pyomo.Var(m.T, domain=pyomo.Binary, doc="1 if discharging at timestep t")
+        m.charge = pyomo.Var(m.T, domain=pyomo.Binary, doc="1 if charging at timestep t")
+        m.p_discharge = pyomo.Var(
+            m.T, domain=pyomo.NonNegativeReals, bounds=(0, P_max), doc="Discharge power (kW)"
+        )
+        m.p_charge = pyomo.Var(
+            m.T, domain=pyomo.NonNegativeReals, bounds=(0, P_max), doc="Charge power (kW)"
+        )
+        m.soc = pyomo.Var(
+            m.T,
+            domain=pyomo.NonNegativeReals,
+            bounds=(soc_min, soc_max),
+            doc="State of charge SoC_t",
+        )
+        m.peak_demand = pyomo.Var(
+            m.M,
+            domain=pyomo.NonNegativeReals,
+            doc="Peak net metered load (kW) during the demand-charge window that month",
+        )
+
+        # peak_demand[month] >= net load at every (month, demand-window) timestep;
+        # minimizing its coefficient in the objective drives it down to exactly the
+        # month's single highest net load in that window - the demand-charge basis.
+        m.demand_tracking = pyomo.ConstraintList()
+        for month in months_in_window:
+            for t in range(window_len):
+                if month_ids_w[t] == month and in_demand_window_w[t]:
+                    m.demand_tracking.add(
+                        m.peak_demand[month] >= demand_w[t] - m.p_discharge[t] + m.p_charge[t]
+                    )
+
+        # Minimize the local party's own bill: flat energy charge on net metered load, plus
+        # a combined demand+transmission charge on this window's highest net load
+        # within demand_charge_window, for each month in the window. A penalty is added
+        # to the objective to discourage unnecessary cycling of the battery.
+        m.objective = pyomo.Objective(
+            expr=self.config.energy_rate
+            * dt_hours
+            * sum((demand_w[t] - m.p_discharge[t] + m.p_charge[t]) for t in m.T)
+            + self.config.demand_charge_rate
+            * sum(m.peak_demand[month] for month in months_in_window)
+            + 1e-6 * sum(m.p_discharge[t] + m.p_charge[t] for t in m.T),
+            sense=pyomo.minimize,
+        )
+
+        m.discharge_power_link = pyomo.Constraint(
+            m.T, rule=lambda mdl, t: mdl.p_discharge[t] <= P_max * mdl.discharge[t]
+        )
+        m.charge_power_link = pyomo.Constraint(
+            m.T, rule=lambda mdl, t: mdl.p_charge[t] <= P_max * mdl.charge[t]
+        )
+        m.no_simultaneous = pyomo.Constraint(
+            m.T, rule=lambda mdl, t: mdl.discharge[t] + mdl.charge[t] <= 1
+        )
+
+        # Can't charge during the Class A Peak Period, same restriction as the
+        # Exclusive Control Month model.
+        m.no_charge_in_peak_window = pyomo.Constraint(
+            m.T,
+            rule=lambda mdl, t: (
+                mdl.charge[t] == 0 if in_peak_window_w[t] else pyomo.Constraint.Skip
+            ),
+        )
+
+        m.soc_init = pyomo.Constraint(expr=m.soc[0] == init_soc)
+
+        def soc_evolution_rule(mdl, t):
+            prev_soc = init_soc if t == 0 else mdl.soc[t - 1]
+            return mdl.soc[t] == (
+                prev_soc
+                + eta_c * mdl.p_charge[t] * dt_hours / storage_capacity
+                - mdl.p_discharge[t] * dt_hours / (eta_d * storage_capacity)
+            )
+
+        m.soc_evolution = pyomo.Constraint(m.T, rule=soc_evolution_rule)
 
         return m
 
@@ -692,7 +1323,9 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 unacceptable termination condition.
         """
 
-        solver_results = self.glpk_solve_call(self.dr_model)
+        solver_results = self.pyomosolver_solve_call(
+            self.dr_model, self.config.pyomo_solver, self.config.pyomo_solver_options
+        )
 
         status = solver_results.solver.status
         tc = solver_results.solver.termination_condition
@@ -717,37 +1350,81 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
         )
 
     @staticmethod
-    def glpk_solve_call(
+    def pyomosolver_solve_call(
         pyomo_model: pyomo.ConcreteModel,
+        pyomo_solver: str = "highs",
+        pyomo_solver_options: dict = {},
         log_name: str = "",
         user_solver_options: dict | None = None,
     ):
-        """Solve a Pyomo MILP with GLPK.
+        """Solve a Pyomo MILP with highs
 
         Args:
             pyomo_model (pyomo.ConcreteModel): The model to solve.
             log_name (str): Optional log file name passed to
                 ``SolverOptions``. Defaults to ``''``.
             user_solver_options (dict | None): Optional overrides for
-                GLPK solver options. Defaults to ``None``.
+                highs solver options. Defaults to ``None``.
 
         Returns:
-            pyomo.opt.SolverResults: Raw results object from GLPK.
+            pyomo.opt.SolverResults: Raw results object from highs.
         """
-        glpk_solver_options = {"cuts": None, "presol": None, "tmlim": 300}
-        solver_options = SolverOptions(glpk_solver_options, log_name, user_solver_options, "log")
-        with pyomo.SolverFactory("glpk") as solver:
+        default_solver_specs = {
+            "highs": {
+                "time_limit": 300,
+                "presolve": "on",
+            },
+            "glpk": {"cuts": None, "presol": None, "tmlim": 300},
+        }
+        default_solver_spec_options = default_solver_specs[pyomo_solver]
+        # Update the default_solver_spec_options with pyomo_solver_options from input configuration
+        # Note that the syntax `A|B` uses values from B for keys that exist in both A and B.
+        solver_spec_options = default_solver_spec_options | pyomo_solver_options
+
+        solver_options = SolverOptions(solver_spec_options, log_name, user_solver_options, "log")
+
+        with pyomo.SolverFactory(pyomo_solver) as solver:
             results = solver.solve(pyomo_model, options=solver_options.constructed, tee=False)
         return results
 
     def _get_storage_dispatch_commands(self) -> list:
         """Net dispatch commands for the solved window.
 
+        Works for either model built by this controller: the  MILP
+        from ``_build_dr_model``, or
+        the off-month bill-minimization MILP from ``_build_bill_min_model``.
+
         Returns:
             list[float]: ``p_discharge_t - p_charge_t`` (kW) for each timestep
             in the solved window. Positive = discharge, negative = charge.
         """
+        if hasattr(self.dr_model, "p_discharge_upstream"):
+            return [
+                pyomo.value(self.dr_model.p_discharge_upstream[t])
+                + pyomo.value(self.dr_model.p_discharge_local[t])
+                - pyomo.value(self.dr_model.p_charge[t])  # type: ignore[index]
+                for t in self.dr_model.T
+            ]
         return [
             pyomo.value(self.dr_model.p_discharge[t]) - pyomo.value(self.dr_model.p_charge[t])  # type: ignore[index]
             for t in self.dr_model.T
         ]
+
+    def _upstream_pricingfunction(self, lmp: float) -> float:
+        """Compute the cost the upstream party charges the local party based on the
+        current grid price.
+
+        Args:
+            lmp (float): Current grid price (locational marginal price), e.g., in $/kWh.
+
+        Returns:
+            float: Cost charged by the upstream party in the same units as `lmp`.
+        """
+        num_coeffs = len(self.config.upstream_pricingfunction_coeffs)
+        price = 0.0
+        for idx_coeff in range(num_coeffs):
+            price += self.config.upstream_pricingfunction_coeffs[idx_coeff] * lmp ** (
+                num_coeffs - 1 - idx_coeff
+            )
+
+        return price

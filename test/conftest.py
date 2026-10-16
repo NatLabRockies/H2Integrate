@@ -65,7 +65,7 @@ def pytest_collection_modifyitems(config, items):
     """Enforce the usage marking tests as either unit, regression, or integration tests.
     This method will need to be imported into all subsequent ``contest.py`` files.
     """
-    test_types = {"unit", "regression", "integration"}
+    test_types = {"unit", "regression", "integration", "hpc"}
     missing_type_mark = [
         f"{item.path}::{item.name}"
         for item in items
@@ -74,8 +74,8 @@ def pytest_collection_modifyitems(config, items):
     if missing_type_mark:
         errors = "\n".join(missing_type_mark)
         msg = (
-            "The following tests must be marked as either 'unit', 'regression', or 'integration'"
-            f" tests using `@pytest.mark.<test-type>`:\n{errors}"
+            "The following tests must be marked as either 'unit', 'regression', "
+            f"'integration', or 'hpc' tests using `@pytest.mark.<test-type>`:\n{errors}"
         )
         raise pytest.UsageError(msg)
 

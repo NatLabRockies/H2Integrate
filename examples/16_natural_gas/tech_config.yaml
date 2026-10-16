@@ -11,7 +11,7 @@ technologies:
         pv_capacity_kWdc: 200000  # 200 MWdc
         dc_ac_ratio: 1.34
         create_model_from: new
-        tilt_angle_func: none
+        tilt_angle_setting: input
         tilt: 0
         pysam_options:
           SystemDesign:
@@ -92,9 +92,9 @@ technologies:
     cost_model:
       model: NaturalGasCostModel
     model_inputs:
-      shared_parameters:
-        heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
+      performance_parameters:
         system_capacity_mw: 100.
+        heat_rate_mmbtu_per_mwh: 7.5  # MMBtu/MWh - typical for NGCC
       cost_parameters:
         capex_per_kw: 1000  # $/kW - typical for NGCC
         fixed_opex_per_kw_per_year: 10.0  # $/kW/year
