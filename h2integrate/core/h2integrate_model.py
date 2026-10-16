@@ -29,7 +29,7 @@ from h2integrate.control.control_strategies.system_level.slc_topology import bui
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
+from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
     _get_tech_buy_price_input_name,
 )
 

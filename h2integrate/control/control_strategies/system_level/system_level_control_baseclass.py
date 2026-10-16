@@ -14,84 +14,12 @@ from h2integrate.control.control_strategies.system_level.slc_conversion import (
     conversion_ratio as calculate_conversion_ratio,
     accumulate_derived_demand,
 )
-
-
-def _get_tech_buy_price_input_name(tech_config, tech_name):
-    """Return the variable name of a tech's buy-price input, or ``None`` if absent.
-
-    Used by the ``"buy_price"`` ``cost_per_tech`` mode to figure out which
-    OpenMDAO input on the technology cost model carries the per-unit purchase
-    price. Currently recognizes:
-
-    - ``"electricity_buy_price"`` (Grid technologies)
-    - ``"price"`` (Feedstock technologies)
-
-    Args:
-        tech_config (dict): The full ``tech_config`` dictionary.
-        tech_name (str): Name of the technology.
-
-    Returns:
-        str | None: The input variable name, or ``None`` if the tech has no
-        recognized buy-price input in its cost / shared parameters.
-    """
-    tech_def = tech_config.get("technologies", {}).get(tech_name, {})
-    model_inputs = tech_def.get("model_inputs", {})
-    cost_params = model_inputs.get("cost_parameters", {})
-    shared_params = model_inputs.get("shared_parameters", {})
-    all_params = {**shared_params, **cost_params}
-    if "electricity_buy_price" in all_params:
-        return "electricity_buy_price"
-    if "price" in all_params:
-        return "price"
-    return None
-
-
-def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_life):
-    """Return the default buy-price value and OpenMDAO input shape for a tech.
-
-    Mirrors the shape logic used by the technology cost models themselves so
-    the SLC's ``{tech_name}_buy_price`` input can be safely connected
-    input-to-input with the tech's own buy-price input:
-
-    - Grid (``electricity_buy_price``): shape is determined by
-      ``buy_price_mode`` (``per_timestep`` → ``n_timesteps``, ``per_year`` →
-      ``plant_life``, ``constant`` → ``1``).
-    - Feedstock (``price``): shape is the length of the configured price
-      array, or ``1`` for a scalar.
-    - Anything else: falls back to ``n_timesteps`` with a default of ``0.0``.
-
-    Args:
-        tech_config (dict): The full ``tech_config`` dictionary.
-        tech_name (str): Name of the technology.
-        n_timesteps (int): Number of simulation timesteps.
-        plant_life (int): Plant life in years.
-
-    Returns:
-        tuple[float | list | np.ndarray, int]: ``(default_value, shape)``
-        suitable for ``add_input(val=..., shape=...)``.
-    """
-    tech_def = tech_config.get("technologies", {}).get(tech_name, {})
-    model_inputs = tech_def.get("model_inputs", {})
-    cost_params = model_inputs.get("cost_parameters", {})
-    shared_params = model_inputs.get("shared_parameters", {})
-    all_params = {**shared_params, **cost_params}
-
-    if "electricity_buy_price" in all_params:
-        default_price = all_params["electricity_buy_price"]
-        buy_price_mode = all_params.get("buy_price_mode", "per_timestep")
-        if buy_price_mode == "per_year":
-            return default_price, plant_life
-        if buy_price_mode == "constant":
-            return default_price, 1
-        return default_price, n_timesteps
-
-    if "price" in all_params:
-        default_price = all_params["price"]
-        if isinstance(default_price, list | np.ndarray):
-            return default_price, len(default_price)
-        return default_price, 1
-
-    return 0.0, n_timesteps
+from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
+    buy_price_profile,
+    annualized_marginal_cost,
+    _get_tech_buy_price_input_name,
+    _get_buy_price_default_and_shape,
+)
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -209,11 +137,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
 
         self.techs_to_commodities = slc_topology["tech_to_commodity"]
-
-        # There are multiple commodities being produced by technologies in the system
-        self.multi_commodity_system = (
-            True if len({e[-1] for e in self.techs_to_commodities}) > 1 else False
-        )
 
         self.commodities_to_units = {self.commodity: self.commodity_rate_units}
         self.commodities_to_ref_var = {}
@@ -1456,17 +1379,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         per-year (shape ``(plant_life,)``); the value is broadcast or
         repeated as needed to span all simulation timesteps.
         """
-        buy_price = np.asarray(inputs[f"{tech_name}_buy_price"])
-
-        if buy_price.shape == (self.n_timesteps,) or buy_price.shape == (1,):
-            return np.broadcast_to(buy_price, self.n_timesteps).copy()
-
-        if buy_price.shape == (int(self.options["plant_config"]["plant"]["plant_life"]),):
-            # Per-year price: use the first year's value as a representative
-            # per-timestep marginal cost for dispatch decisions.
-            return np.full(self.n_timesteps, buy_price[0])
-
-        return np.broadcast_to(buy_price, self.n_timesteps).copy()
+        return buy_price_profile(
+            inputs[f"{tech_name}_buy_price"],
+            self.n_timesteps,
+            int(self.options["plant_config"]["plant"]["plant_life"]),
+        )
 
     def _varopex_marginal_cost(self, inputs, tech_name):
         """Compute marginal cost from VarOpEx and commodity output.
@@ -1484,15 +1401,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         commodity = tech_commodities[0] if tech_commodities else self.commodity
 
         production = inputs[f"{tech_name}_{commodity}_out"]  # rate units, shape=n_timesteps
-        total_production = production.sum() * self.dt_hours
-
-        if total_production > 0:
-            annual_production = total_production / self.fraction_of_year_simulated
-            marginal_cost_scalar = varopex[0] / annual_production
-        else:
-            marginal_cost_scalar = 0.0
-
-        return np.full(self.n_timesteps, marginal_cost_scalar)
+        return np.full(
+            self.n_timesteps,
+            annualized_marginal_cost(
+                varopex[0], production, self.dt_hours, self.fraction_of_year_simulated
+            ),
+        )
 
     def _find_feedstock_techs(self, tech_name):
         """Find feedstock technologies upstream of ``tech_name`` at any depth.
@@ -1535,89 +1449,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         commodity = tech_commodities[0] if tech_commodities else self.commodity
 
         production = inputs[f"{tech_name}_{commodity}_out"]
-        total_production = production.sum() * self.dt_hours
-
-        if total_production > 0:
-            annual_production = total_production / self.fraction_of_year_simulated
-            marginal_cost_scalar = total_varopex / annual_production
-        else:
-            marginal_cost_scalar = 0.0
-
-        return np.full(self.n_timesteps, marginal_cost_scalar)
-
-    def find_converter_techs(self, include_feedstock_sources=True):
-        """Identify technologies that transform one commodity into another.
-
-        A "converter" is a tech whose output commodities differ from the commodities
-        produced by its upstream ancestors (e.g. an electrolyzer: electricity → hydrogen).
-
-        Args:
-            include_feedstock_sources (bool, optional): If True, include feedstock techs
-                in the set of candidate technologies. Defaults to True.
-
-        Returns:
-            set[tuple[str, str, str]]: Set of ``(input_commodity, tech_name, output_commodity)``
-                tuples for each detected conversion. Returns ``None`` for single-commodity systems.
-        """
-        if include_feedstock_sources:
-            input_techs = self.input_techs | set(self.feedstock_comps)
-        else:
-            input_techs = self.input_techs.copy()
-
-        # Single-commodity systems have no special handling by definition
-        if not self.multi_commodity_system:
-            return
-
-        converter_techs = set()
-        node_order = list(self.technology_graph.nodes())
-        edges = list(self.technology_graph.edges(data="commodity"))
-
-        # Track the most recently discovered converter so we can scope
-        # upstream searches for chained converters (A→B→C where B and C
-        # both convert). Without this, C would see A's commodity as upstream
-        # input even though B already consumed it.
-        last_converter = None
-
-        for source_tech, _, _ in edges:
-            if source_tech not in input_techs:
-                continue
-
-            # Get the commodities produced by this tech (the "output" side of the conversion)
-            output_commodities = set(self._get_commodity_for_tech(source_tech))
-
-            # Find controlled ancestors of this tech
-            all_ancestors = nx.ancestors(self.technology_graph, source_tech) & input_techs
-
-            if last_converter is not None:
-                # Only consider ancestors that appear after the last converter
-                # in topological order, preventing double-counting across
-                # chained converters.
-                converter_idx = node_order.index(last_converter)
-                nodes_after_converter = set(node_order[converter_idx + 1 :])
-                ancestors = all_ancestors & nodes_after_converter
-            else:
-                ancestors = all_ancestors
-
-            # Keep only ancestors actually connected (reachable) to this tech
-            connected_ancestors = [
-                t for t in ancestors if nx.has_path(self.technology_graph, t, source_tech)
-            ]
-
-            # Gather all commodities produced by connected ancestors
-            input_commodities = set()
-            for ancestor in connected_ancestors:
-                input_commodities.update(self._get_commodity_for_tech(ancestor))
-
-            # A converter has commodities that appear only on one side:
-            # upstream-only commodities are consumed, output-only are produced.
-            consumed = input_commodities - output_commodities
-            produced = output_commodities - input_commodities
-
-            # If both sides have unique commodities, this tech is a converter
-            if consumed and produced:
-                for in_comm in consumed:
-                    for out_comm in produced:
-                        converter_techs.add((in_comm, source_tech, out_comm))
-                last_converter = source_tech
-
-        return converter_techs
+        return np.full(
+            self.n_timesteps,
+            annualized_marginal_cost(
+                total_varopex, production, self.dt_hours, self.fraction_of_year_simulated
+            ),
+        )

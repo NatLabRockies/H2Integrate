@@ -5,6 +5,12 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.core.connection_utils import create_technology_graph as _build_technology_graph
+from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
+    buy_price_profile,
+    annualized_marginal_cost,
+    _get_tech_buy_price_input_name,
+    _get_buy_price_default_and_shape,
+)
 from h2integrate.control.control_strategies.system_level.demand_following_control import (
     DemandFollowingControl,
 )
@@ -14,6 +20,78 @@ from h2integrate.control.control_strategies.system_level.cost_minimization_contr
 from h2integrate.control.control_strategies.system_level.profit_maximization_control import (
     ProfitMaximizationControl,
 )
+
+
+@pytest.mark.unit
+def test_buy_price_configuration_helpers(subtests):
+    cases = [
+        ({"electricity_buy_price": 0.04}, "electricity_buy_price", 0.04, 4),
+        (
+            {"electricity_buy_price": 0.04, "buy_price_mode": "constant"},
+            "electricity_buy_price",
+            0.04,
+            1,
+        ),
+        (
+            {"electricity_buy_price": [0.04] * 3, "buy_price_mode": "per_year"},
+            "electricity_buy_price",
+            [0.04] * 3,
+            3,
+        ),
+        ({"price": 0.02}, "price", 0.02, 1),
+        ({"price": [0.02, 0.03]}, "price", [0.02, 0.03], 2),
+        ({"price": np.array([0.02, 0.03])}, "price", [0.02, 0.03], 2),
+        ({}, None, 0.0, 4),
+    ]
+    for parameters, input_name, price, shape in cases:
+        with subtests.test(parameters=parameters):
+            config = {"technologies": {"tech": {"model_inputs": {"cost_parameters": parameters}}}}
+            assert _get_tech_buy_price_input_name(config, "tech") == input_name
+            actual_price, actual_shape = _get_buy_price_default_and_shape(config, "tech", 4, 3)
+            np.testing.assert_array_equal(actual_price, price)
+            assert actual_shape == shape
+
+    with subtests.test("cost parameters override shared defaults"):
+        config = {
+            "technologies": {
+                "tech": {
+                    "model_inputs": {
+                        "shared_parameters": {"price": 0.01},
+                        "cost_parameters": {"price": 0.02},
+                    }
+                }
+            }
+        }
+        assert _get_tech_buy_price_input_name(config, "tech") == "price"
+        assert _get_buy_price_default_and_shape(config, "tech", 4, 3) == (0.02, 1)
+
+
+@pytest.mark.unit
+def test_buy_price_profiles(subtests):
+    for price, expected in [
+        (0.04, [0.04] * 4),
+        ([0.04], [0.04] * 4),
+        ([0.01, 0.02, 0.03, 0.04], [0.01, 0.02, 0.03, 0.04]),
+        ([0.04, 0.05, 0.06], [0.04] * 4),
+    ]:
+        with subtests.test(price=price):
+            source = np.asarray(price)
+            actual = buy_price_profile(source, 4, 3)
+            np.testing.assert_array_equal(actual, expected)
+            assert not np.shares_memory(actual, source)
+    with subtests.test("timesteps take precedence over matching plant-life length"):
+        np.testing.assert_array_equal(
+            buy_price_profile([0.01, 0.02, 0.03], 3, 3), [0.01, 0.02, 0.03]
+        )
+
+
+@pytest.mark.unit
+def test_annualized_marginal_cost(subtests):
+    with subtests.test("partial-year and subhourly production"):
+        assert annualized_marginal_cost(876.0, [100.0] * 4, 0.5, 2 / 8760) == pytest.approx(0.001)
+    for production in ([0.0] * 4, [-100.0] * 4):
+        with subtests.test(production=production):
+            assert annualized_marginal_cost(876.0, production, 0.5, 2 / 8760) == 0.0
 
 
 def _build_plant_config(

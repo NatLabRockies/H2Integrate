@@ -9,6 +9,19 @@ SLC demand is supplied by a demand component. When SLC is enabled, only one dema
 
 The base class also abstracts logic that may be shared across different controller types. It includes methods that could be useful, but not all methods will be relevant to every controller you implement.
 
+## Implementation Layout
+
+| Module | Responsibility | Main helpers |
+|---|---|---|
+| `slc_topology` | Pure setup-time graph analysis. | `find_commodity_suppliers()`, `detect_commodity_converters()`, `build_supply_buses()`, `build_dispatch_topology()` |
+| `slc_conversion` | Pure compute-time ratio and demand arithmetic. | `capacity_ratio()`, `measured_ratio()`, `conversion_ratio()`, `accumulate_derived_demand()` |
+| `slc_marginal_costs` | Pure buy-price configuration and operating-cost arithmetic. | `buy_price_profile()`, `annualized_marginal_cost()` |
+| `system_level_control_baseclass` | OpenMDAO I/O registration, named-input wrappers, and dispatch orchestration. | `setup()`, `_run_dispatch()`, `_dispatch_commodity()`, `_setup_marginal_costs()`, `_compute_marginal_costs()` |
+
+The model and controller share the buy-price configuration helpers in `slc_marginal_costs`.
+The base class keeps cost-input registration and feedstock lookup at setup, while delegating
+price broadcasting and annualized cost calculations to the pure helpers.
+
 ## Heterogeneous-commodity dispatch
 
 All three controllers use the same backward demand walk. They differ only in how they
@@ -36,8 +49,8 @@ electrolyzer cannot offset electricity demand on a separate grid-to-Haber-Bosch 
 
 ### Call Trees
 
-The trees separate setup-time graph analysis from compute-time arithmetic. Names without a
-leading underscore are pure helpers in `slc_topology` or `slc_conversion`.
+The trees separate setup-time graph analysis from compute-time arithmetic. Pure helpers live
+in `slc_topology`, `slc_conversion`, and `slc_marginal_costs`.
 
 ````{dropdown} Setup: construct topology, register signals, cache suppliers
 :open:
@@ -54,6 +67,7 @@ H2IntegrateModel._classify_slc_technologies()
   store slc_topology["dispatch_topology"]
 H2IntegrateModel.add_system_level_controller()
   wire production, rated capacity, consumed signals, and splitter set points
+  _get_tech_buy_price_input_name()              -> shared price-input identification
 
 SystemLevelControlBase.setup()
   _setup_fixed_category()
@@ -69,6 +83,8 @@ CostMinimizationControl.setup() / ProfitMaximizationControl.setup()
   super().setup()                               -> base setup above
   ProfitMaximization only: register commodity_sell_price input
   _setup_marginal_costs()                       -> strategy-specific cost inputs
+    _get_buy_price_default_and_shape()          -> technology-compatible price shape
+    _get_tech_buy_price_input_name()            -> electricity-specific price units
 ```
 ````
 
@@ -92,6 +108,9 @@ compute()                                      # all three controllers
           CostMinimization: _merit_order_dispatch()
           ProfitMaximization: _merit_order_dispatch(), sell-price gate on demand bus
             _compute_marginal_costs()           -> price / VarOpEx / feedstock costs
+              _buy_price_marginal_cost() -> buy_price_profile()
+              _varopex_marginal_cost() / _feedstock_marginal_cost()
+                annualized_marginal_cost()      -> shared cost / annual production
       snapshot bus_residual[bus]
       for link supplying this output bus:
         _accumulate_derived_demand()
@@ -347,6 +366,18 @@ arithmetic. The base class below owns OpenMDAO I/O and orchestration.
 ```
 
 ## Base Class and Methods
+
+### Marginal-Cost Helpers
+
+```{eval-rst}
+.. autofunction:: h2integrate.control.control_strategies.system_level.slc_marginal_costs.buy_price_profile
+  :noindex:
+
+.. autofunction:: h2integrate.control.control_strategies.system_level.slc_marginal_costs.annualized_marginal_cost
+  :noindex:
+```
+
+### OpenMDAO Orchestration
 
 ```{eval-rst}
 .. autoclass:: h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase
