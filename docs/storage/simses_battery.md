@@ -1,7 +1,7 @@
 (simses-battery-performance)=
 # SimSES Battery Model
 
-H2Integrate's `SimSESBatteryPerformanceModel` wraps the stateful battery and converter models from [SimSES](https://github.com/SimSES/SimSES). It adds H2I integration for container thermal behavior, HVAC control, ambient solar-resource data, safety interlocks, and battery degradation.
+H2Integrate's `SimSESBatteryPerformanceModel` wraps the stateful battery and converter models from [SimSES](https://github.com/tum-ees/simses). It adds H2I integration for container thermal behavior, HVAC control, ambient solar-resource data, safety interlocks, and battery degradation.
 
 Use `SimSESBatteryPerformanceModel` as the battery `performance_model` in a technology configuration. Example 38 demonstrates a complete H2I setup with the optimized Pyomo storage controller and Exclusive Control Months:
 
@@ -55,7 +55,7 @@ project annual degradation. Projected EOL occurs at the end of the first full pr
 annual interval reaching the threshold, not at an interpolated fractional-year crossing.
 Fewer than two post-reset samples or stalled degradation do not imply a projected EOL.
 ProFAST applies the configured `replacement_cost_percent` to this schedule when calculating
-replacement capital costs; initial ATB battery capital costs are unchanged.
+replacement capital costs.
 
 ## Outputs
 
