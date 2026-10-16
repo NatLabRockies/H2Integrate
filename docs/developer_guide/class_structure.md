@@ -57,6 +57,44 @@ directly) means the baseclass:
     - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
     - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
     - Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+    - Provides `calculate_annual_cf_and_replacement_schedule()` to project annual capacity factors and a replacement schedule across the plant life from a simulated horizon of any length (optionally accounting for degradation).
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
+
+Similarly, inheriting from `CostModelBaseClass` (rather than `om.ExplicitComponent`
+directly) means the baseclass:
+    - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
+    - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
+    - Registers the standard cost outputs `CapEx`, `OpEx`, and `VarOpEx` consumed by the finance models, along with the discrete `cost_year` output and a `marginal_cost` output used for dispatch decisions.
+    - Provides `calculate_annual_varopex()` to annualize timestep-level variable operating costs across the plant life.
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
+
+Annualization uses fixed 365-day plant years. Until framework-wide calendar alignment is
+supported, `H2IntegrateModel` rejects site resources configured with `include_leap_day: true`
+during configuration loading. Set this resource option to `false` or omit it. Standalone
+resource models retain their leap-day processing support. This restriction does not change
+the timestamps generated from the simulation's `start_time` and `dt`.
+
+The CF/replacement helper requires finite, one-dimensional performance and SOH arrays
+of identical length, positive rated performance and timestep, and a positive integer
+plant life. SOH and its EOL threshold are fractions in [0, 1]. CF projection remains
+annual: annual means retain their elapsed durations, including a partial final year.
+When cycles repeat, their overlaps with plant years are duration-weighted; timestep
+performance is not reconstructed or projected.
+
+An upward SOH jump greater than `1e-9` is assumed to mark a replacement at that sample's
+elapsed offset. It closes the outgoing unit's cycle, not the new unit's cycle. SOH alone
+cannot reveal a first-sample reset or repeated replacements with identical fresh SOH.
+The trailing cycle is completed using the last two post-reset samples' SOH loss per
+elapsed year. Projected EOL is checked only at the end of each full annual projection
+interval; threshold-crossing times are not interpolated. Fewer than two post-reset samples
+or stalled degradation do not imply an EOL replacement. The completed history then repeats
+as either all cycles or the final cycle, using identical durations for CF and events.
+Replacement counts are discrete events in `[year, year + 1)`, never annualized or rounded.
+An event on a year boundary belongs to the following year; initial installation and an
+event at retirement are excluded. Observed and projected events can share a plant year.
+For example, a completed half-year cycle produces counts `[1, 2, 2]` over three years.
 
 ### Multiple layers of inheritance
 
