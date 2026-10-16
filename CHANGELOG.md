@@ -6,6 +6,7 @@
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Add heterogeneous-commodity system-level control that translates demand for one commodity into upstream set-points across converters, deriving per-technology conversion ratios automatically rather than reading them from the config. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Documented heterogeneous dispatch call trees, state ownership, conversion helpers, and a worked topology and trace example. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
 
 
 ## 0.10.0 [October 12, 2026]

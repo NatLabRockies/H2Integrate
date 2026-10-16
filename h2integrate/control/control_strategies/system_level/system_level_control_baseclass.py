@@ -1323,8 +1323,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
           whose default value is read from the technology's cost config
           (``electricity_buy_price`` for Grid, ``price`` for Feedstock).
           Can be scalar or time-varying and may be overridden at runtime
-                    via ``prob.set_val()``. Grid electricity prices use ``USD/(kW*h)``
-                    regardless of the SLC demand commodity.
+          via ``prob.set_val()``. Grid electricity prices use ``USD/(kW*h)``
+          regardless of the SLC demand commodity.
         - ``"VarOpEx"``: creates a ``{tech_name}_VarOpEx`` input
           connected to the cost model's ``VarOpEx`` output. The
           per-unit marginal cost is computed at run time by dividing
