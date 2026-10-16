@@ -139,36 +139,30 @@ def test_demo_case(subtests):
         "electricity_out": 216.2495760842288,  # MW
     }
 
-    with subtests.test("config_value_fuel_set"):
-        assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.fuel_source
-            == ref_values["fuel_source"]
-        )
+    simple_turbine = h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel
+    n_turb = simple_turbine.get_val("num_turbines")
+    with subtests.test("check variation in availability"):
+        assert simple_turbine.use_reliability
+        assert simple_turbine.availability.shape[0] == np.ceil(n_turb)
+        assert not np.all(np.unique(simple_turbine.availability.sum(axis=0)) != n_turb)
 
+    with subtests.test("config_value_fuel_set"):
+        assert simple_turbine.config.fuel_source == ref_values["fuel_source"]
     with subtests.test("config_value_capacity_set"):
-        assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.turbine_capacity_mw
-            == ref_values["turbine_capacity"]
-        )
+        assert simple_turbine.config.turbine_capacity_mw == ref_values["turbine_capacity"]
         assert (
             h2i.model.get_val("ng.turbine_capacity", units="MW") == ref_values["turbine_capacity"]
         )
 
     with subtests.test("config_value_firing_temp_set"):
-        assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.firing_temp_C
-            == ref_values["firing_temp_C"]
-        )
+        assert simple_turbine.config.firing_temp_C == ref_values["firing_temp_C"]
 
     with subtests.test("config_value_pressure_ratio_set"):
-        assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.pressure_ratio
-            == ref_values["pressure_ratio"]
-        )
+        assert simple_turbine.config.pressure_ratio == ref_values["pressure_ratio"]
 
     with subtests.test("config_value_volumetric_flowerate_set"):
         assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.flowrate_max_fluid_cubic_m_per_s
+            simple_turbine.config.flowrate_max_fluid_cubic_m_per_s
             == ref_values["flowrate_max_fluid_cubic_m_per_s"]
         )
         assert (
@@ -178,21 +172,18 @@ def test_demo_case(subtests):
 
     with subtests.test("config_value_isen_eff_comp_set"):
         assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.isentropic_efficiency_compressor
+            simple_turbine.config.isentropic_efficiency_compressor
             == ref_values["isentropic_efficiency_compressor"]
         )
 
     with subtests.test("config_value_isen_eff_turb_set"):
         assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.isentropic_efficiency_turbine
+            simple_turbine.config.isentropic_efficiency_turbine
             == ref_values["isentropic_efficiency_turbine"]
         )
 
     with subtests.test("config_value_eff_gen_set"):
-        assert (
-            h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel.config.generator_efficiency
-            == ref_values["generator_efficiency"]
-        )
+        assert simple_turbine.config.generator_efficiency == ref_values["generator_efficiency"]
 
     with subtests.test("input_value_controller_set_point_value"):
         assert np.all(
