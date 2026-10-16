@@ -14,7 +14,7 @@ The base class also abstracts logic that may be shared across different controll
 | Module | Responsibility | Main helpers |
 |---|---|---|
 | `slc_topology` | Pure setup-time graph analysis. | `find_commodity_suppliers()`, `detect_commodity_converters()`, `build_supply_buses()`, `build_dispatch_topology()` |
-| `slc_conversion` | Pure compute-time ratio and demand arithmetic. | `capacity_ratio()`, `measured_ratio()`, `conversion_ratio()`, `accumulate_derived_demand()` |
+| `slc_conversion` | Pure compute-time ratio and demand arithmetic. | `capacity_ratio()`, `measured_ratio()`, `conversion_ratio()`, `accumulate_derived_demand()`, `demand_ratios()` |
 | `slc_marginal_costs` | Pure buy-price configuration and operating-cost arithmetic. | `buy_price_profile()`, `annualized_marginal_cost()` |
 | `system_level_control_baseclass` | OpenMDAO I/O registration, named-input wrappers, and dispatch orchestration. | `setup()`, `_run_dispatch()`, `_dispatch_commodity()`, `_setup_marginal_costs()`, `_compute_marginal_costs()` |
 
@@ -127,6 +127,7 @@ compute()                                      # all three controllers
         assign derived_demand, _converter_contributions from returned maps
     _set_splitter_setpoints()                   -> write priority allocations
     assign dispatch_trace                      -> snapshot for this compute only
+      demand_ratios()                          -> plant-wide upstream need per unit demand
 ```
 ````
 
@@ -136,7 +137,7 @@ compute()                                      # all three controllers
 |---|---|---|
 | `_dispatch_topology` | Model classification builds it; base `setup()` stores it or builds a standalone fallback. | Model wiring, `_build_converters()`, `_run_dispatch()`, splitter allocation. Reused across computes. |
 | OpenMDAO I/O names and units | Category setup helpers and `_build_converters()`. | Dispatch and ratio wrappers. Registered once at setup. |
-| `_links_by_out_bus`, `_converter_upstreams`, `_converter_consumed_names` | `_build_converters()`. | Dispatch loop, capacity and measured-ratio wrappers. Setup-time caches. |
+| `_links_by_out_bus` | `_build_converters()`. | Dispatch loop. Setup-time cache; ratio wrappers read `ConversionLink.suppliers` directly. |
 | `_storage_suppliers` | Base `setup()`, using `find_commodity_suppliers()`. | `_dispatch_storage()`. No graph traversal during compute. |
 | `outputs[*_set_point]` | Flexible pre-pass, flexible/storage/dispatchable steps, then `_set_splitter_setpoints()`. Fixed producers have no commanded set point. | Technology controllers and converter-demand propagation. Set points are commands, not measured production. |
 | `derived_demand` | `_run_dispatch()` seeds this local map; the pure accumulator returns replacements assigned by the loop. | Each bus dispatch and the next accumulation. New each compute. |
@@ -283,9 +284,20 @@ complete trace below. For readability, each array is shown as a four-element lis
         "hydrogen:haber_bosch": {"haber_bosch": [18.0] * 4},
         "electricity:electrolyzer": {"electrolyzer": [990.0] * 4},
     },
+    "demand_ratios": {
+        "electricity": [10.4] * 4,
+        "hydrogen": [0.18] * 4,
+    },
 }
 ```
 ````
+
+`demand_ratios` is the plant-wide conversion read-out: the upstream amount of each
+commodity required per unit of delivered demand, summed over every path and bus. Here,
+`(50 + 990) / 100 = 10.4` kW of electricity and `18 / 100 = 0.18` kg/h of hydrogen per
+kg/h of ammonia. Units are the upstream rate units divided by the demand rate units, and
+timesteps without positive demand report zero. Invert a ratio for output per unit input,
+for example `1 / 10.4` kg of ammonia per kWh of electricity.
 
 ```{note}
 `bus_residual` is unmet **commanded** demand after dispatch, not a plant mass/energy-balance
@@ -370,6 +382,9 @@ arithmetic. The base class below owns OpenMDAO I/O and orchestration.
    :noindex:
 
 .. autofunction:: h2integrate.control.control_strategies.system_level.slc_conversion.accumulate_derived_demand
+   :noindex:
+
+.. autofunction:: h2integrate.control.control_strategies.system_level.slc_conversion.demand_ratios
    :noindex:
 ```
 

@@ -859,11 +859,10 @@ class H2IntegrateModel:
                 f"{tech_name}.{commodity}_set_point",
             )
 
-        # --- Step 3b: Connect converter consumption signals ---------------
-        # For each converter input that a dispatched supply bus feeds, wire the
-        # converter's measured ``{in_commodity}_consumed`` output to the controller
-        # so it can derive a per-timestep conversion ratio (heterogeneous-commodity
-        # control).
+        # --- Step 3b: Hand the topology to the plant group -----------------
+        # _SLCPlantGroup.configure() validates and connects each converter's
+        # ``{in_commodity}_consumed`` output and each splitter's prescribed allocation
+        # once all technology outputs are declared.
         self.plant.options["dispatch_topology"] = slc_topology["dispatch_topology"]
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -

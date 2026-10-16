@@ -626,9 +626,10 @@ def test_slc_grid_backs_haber_bosch_only(subtests, temp_copy_of_example):
     grid_model = H2IntegrateModel(config_path)
     grid_model.run()
 
-    with subtests.test("grid connection is only on the Haber-Bosch electricity path"):
-        assert ["grid", "haber_bosch", "electricity", "cable"] in connections
-        assert not any(edge[0] == "grid" and edge[1] == "electrolyzer" for edge in connections)
+    with subtests.test("grid is a producer only on the Haber-Bosch electricity bus"):
+        topology = grid_model.prob.model.plant.system_level_controller._dispatch_topology
+        grid_buses = [bus.name for bus in topology.buses.values() if "grid" in bus.producers]
+        assert grid_buses == ["electricity:haber_bosch"]
 
     with subtests.test("grid set point tracks Haber-Bosch electricity consumption"):
         grid_set_point = grid_model.prob.get_val(
@@ -644,19 +645,13 @@ def test_slc_grid_backs_haber_bosch_only(subtests, temp_copy_of_example):
         # When hydrogen-limited, demanded electricity can exceed actual loop consumption.
         unconstrained = np.isclose(haber_bosch_production, haber_bosch_set_point, rtol=1e-3)
         assert unconstrained.any()
+        assert grid_set_point.sum() > 0.0
         np.testing.assert_allclose(
             grid_set_point[unconstrained],
             haber_bosch_consumption[unconstrained],
             rtol=1e-3,
             atol=1e-2,
         )
-
-    with subtests.test("grid dispatch cannot be routed to the electrolyzer bus"):
-        assert not any(
-            edge[0] == "grid" and edge[1] in {"electrolyzer", "elec_combiner"}
-            for edge in connections
-        )
-        assert grid_set_point.sum() > 0.0
 
     with subtests.test("grid backup serves ammonia demand in at least as many hours"):
         grid_production = np.asarray(grid_model.prob.get_val("haber_bosch.ammonia_out"))

@@ -30,12 +30,12 @@ class DemandFollowingControl(SystemLevelControlBase):
        across all dispatchable techs that produce the demanded commodity
        (each receives ``remaining_demand / n_dispatchable``).
 
-    For heterogeneous-commodity systems, this four-step order is applied at
-    each commodity level: after the demand commodity is dispatched, the demand
-    placed on upstream converters (for example a hydrogen electrolyzer feeding
-    an ammonia synloop) is translated into demand for their input commodity via
-    the configured conversion ratios and the same dispatch is repeated. See
-    ``SystemLevelControlBase._run_dispatch``.
+    For heterogeneous-commodity systems, this four-step order is applied to
+    each supply bus: after the demand bus is dispatched, the demand placed on
+    upstream converters (for example a hydrogen electrolyzer feeding a
+    Haber-Bosch loop) is translated into demand for their input commodity via
+    measured or capacity-based conversion ratios and the same dispatch is
+    repeated. See ``SystemLevelControlBase._run_dispatch``.
     """
 
     def compute(self, inputs, outputs):

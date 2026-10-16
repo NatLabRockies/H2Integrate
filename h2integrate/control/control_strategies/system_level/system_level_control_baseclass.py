@@ -10,6 +10,7 @@ from h2integrate.control.control_strategies.system_level.slc_topology import (
     find_commodity_suppliers,
 )
 from h2integrate.control.control_strategies.system_level.slc_conversion import (
+    demand_ratios,
     capacity_ratio as calculate_capacity_ratio,
     conversion_ratio as calculate_conversion_ratio,
     accumulate_derived_demand,
@@ -627,7 +628,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         A converter is a controller-managed technology that produces a commodity
         it does not itself consume (for example an electrolyzer:
-        electricity -> hydrogen, or an ammonia synloop: hydrogen -> ammonia).
+        electricity -> hydrogen, or a Haber-Bosch loop: hydrogen -> ammonia).
         The converters come from the conversion links of ``self._dispatch_topology``,
         which ``H2IntegrateModel`` builds, or which ``setup`` builds when running
         standalone (for example in unit tests).
@@ -638,15 +639,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         - ``self._links_by_out_bus``: mapping of an output bus name to the
           conversion links whose demand it feeds. Only links whose input and
           output buses are both dispatched are kept.
-        - ``self._converter_upstreams``: mapping of ``(in_commodity, tech_name)``
-          to the sorted tuple of controller-managed and feedstock technologies that
-          supply ``in_commodity`` to the converter. ``_capacity_ratio`` sums
-          their rated capacities to seed the conversion ratio.
-        - ``self._converter_consumed_names``: mapping of ``(tech_name,
-          in_commodity, out_commodity)`` to the ``{tech}_{in_commodity}_consumed``
-          input registered for the dynamic (measured) ratio path.
         - ``self._missing_ratio_warned``: set used to emit the "missing ratio"
           warning at most once per converter.
+
+        It also registers one ``{tech}_{in_commodity}_consumed`` input per
+        dispatched ``(converter, input commodity)`` pair for the measured ratio.
 
         Conversion ratios are never authored by the user. They are derived
         automatically, with the precedence resolved in ``_conversion_ratio``:
@@ -658,55 +655,32 @@ class SystemLevelControlBase(om.ExplicitComponent):
         controller-managed producer (for example a feedstock-supplied nitrogen
         stream) are not dispatched, so they do not require a ratio.
         """
-        dispatch_links = self._dispatch_topology.dispatch_links
         self._missing_ratio_warned = set()
 
         self._links_by_out_bus = defaultdict(list)
-        for link in dispatch_links:
+        for link in self._dispatch_topology.dispatch_links:
             self._links_by_out_bus[link.out_bus].append(link)
 
-        # The upstream producers (and any feedstock sources) of each converter input are
-        # summed by ``_capacity_ratio`` to seed the conversion ratio from rated capacities.
-        self._converter_upstreams = {
-            (link.in_commodity, link.tech): link.suppliers for link in dispatch_links
-        }
+        # H2IntegrateModel wires each converter's ``{in_commodity}_consumed`` output here.
+        # The NaN default marks the input as unconnected when running standalone.
+        for tech_name, in_commodity in self._dispatch_topology.consumption_signals:
+            if in_commodity in self.commodities_to_units:
+                unit_kwargs = {"units": self.commodities_to_units[in_commodity]}
+            elif in_commodity in self.commodities_to_ref_var:
+                unit_kwargs = {
+                    "units": None,
+                    "copy_units": self.commodities_to_ref_var[in_commodity],
+                }
+            else:
+                unit_kwargs = {"units": None}
 
-        # Register a measured-consumption input for every dispatched converter
-        # input. H2IntegrateModel wires the converter's ``{in_commodity}_consumed``
-        # output to this input so the ratio can be measured per timestep. The NaN
-        # default marks the input as unconnected (dynamic ratio unavailable) when
-        # running the component standalone
-        self._converter_consumed_names = {}
-        registered_consumed = set()
-        for link in dispatch_links:
-            tech_name = link.tech
-            in_commodity = link.in_commodity
-            out_commodity = link.out_commodity
-
-            consumed_name = f"{tech_name}_{in_commodity}_consumed"
-            # A co-product converter (one technology, one input, several
-            # outputs) shares a single measured-consumption input across its
-            # outputs, so register the input at most once per (tech, input).
-            if consumed_name not in registered_consumed:
-                if in_commodity in self.commodities_to_units:
-                    unit_kwargs = {"units": self.commodities_to_units[in_commodity]}
-                elif in_commodity in self.commodities_to_ref_var:
-                    unit_kwargs = {
-                        "units": None,
-                        "copy_units": self.commodities_to_ref_var[in_commodity],
-                    }
-                else:
-                    unit_kwargs = {"units": None}
-
-                self.add_input(
-                    consumed_name,
-                    val=np.full(self.n_timesteps, np.nan),
-                    shape=self.n_timesteps,
-                    desc=f"Measured {in_commodity} consumed by converter {tech_name}",
-                    **unit_kwargs,
-                )
-                registered_consumed.add(consumed_name)
-            self._converter_consumed_names[(tech_name, in_commodity, out_commodity)] = consumed_name
+            self.add_input(
+                f"{tech_name}_{in_commodity}_consumed",
+                val=np.full(self.n_timesteps, np.nan),
+                shape=self.n_timesteps,
+                desc=f"Measured {in_commodity} consumed by converter {tech_name}",
+                **unit_kwargs,
+            )
 
     def _run_dispatch(self, inputs, outputs):
         """Dispatch every supply bus needed to meet the demand profile.
@@ -749,8 +723,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         storage steps are shared across all strategies.
 
         After each run, ``self.dispatch_trace`` contains a snapshot of bus
-        demands, unmet residuals, conversion ratios and their sources, and
-        converter contributions. It is a debugging aid, not a public API.
+        demands, unmet residuals, conversion ratios and their sources,
+        converter contributions, and ``demand_ratios``: the aggregated amount of
+        each upstream commodity required per unit of delivered demand (see
+        ``slc_conversion.demand_ratios``). It is a debugging aid, not a public API.
         """
         # Reset the per-converter contribution tracker used to combine multiple
         # outputs of a single converter that draw on the same input bus.
@@ -811,6 +787,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 }
                 for bus_name, bus_contributions in self._converter_contributions.items()
             },
+            "demand_ratios": demand_ratios(
+                bus_demand,
+                {bus_name: topology.buses[bus_name].commodity for bus_name in bus_demand},
+                topology.demand_bus,
+            ),
         }
 
     def _set_splitter_setpoints(self, inputs, outputs):
@@ -1128,7 +1109,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         in_commodity = link.in_commodity
         out_commodity = link.out_commodity
 
-        ratio_and_source = self._conversion_ratio(tech_name, in_commodity, out_commodity, inputs)
+        ratio_and_source = self._conversion_ratio(link, inputs)
         if ratio_and_source is None:
             key = (tech_name, in_commodity, out_commodity)
             if key not in self._missing_ratio_warned:
@@ -1151,17 +1132,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
             "value": ratio.copy(),
             "source": source.copy(),
         }
-        set_point = np.asarray(outputs[f"{tech_name}_{out_commodity}_set_point"], dtype=float)
-        updated_demand, updated_contributions = accumulate_derived_demand(
+        return accumulate_derived_demand(
             derived_demand,
             self._converter_contributions,
             link,
-            set_point,
+            outputs[f"{tech_name}_{out_commodity}_set_point"],
             ratio,
         )
-        return updated_demand, updated_contributions
 
-    def _capacity_ratio(self, tech_name, in_commodity, out_commodity, inputs):
+    def _capacity_ratio(self, link, inputs):
         """Return a scalar input-per-output ratio from rated capacities, or ``None``.
 
         The ratio is the total rated ``in_commodity`` capacity of the converter's
@@ -1177,10 +1156,10 @@ class SystemLevelControlBase(om.ExplicitComponent):
         zero, or when the total upstream input capacity is zero (no meaningful
         seed is available).
         """
+        in_commodity = link.in_commodity
         supplier_rated_capacities = []
         feedstock_supplies = []
-        upstreams = self._converter_upstreams.get((in_commodity, tech_name), [])
-        for upstream in upstreams:
+        for upstream in link.suppliers:
             rated_name = f"{upstream}_rated_{in_commodity}_production"
             if rated_name in inputs:
                 supplier_rated_capacities.append(inputs[rated_name])
@@ -1189,14 +1168,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 if out_name in inputs:
                     feedstock_supplies.append(inputs[out_name])
 
-        rated_out_name = f"{tech_name}_rated_{out_commodity}_production"
+        rated_out_name = f"{link.tech}_rated_{link.out_commodity}_production"
         if rated_out_name not in inputs:
             return None
         return calculate_capacity_ratio(
             supplier_rated_capacities, feedstock_supplies, inputs[rated_out_name]
         )
 
-    def _conversion_ratio(self, tech_name, in_commodity, out_commodity, inputs):
+    def _conversion_ratio(self, link, inputs):
         """Return per-timestep conversion ratios and their sources, or ``None``.
 
         Ratio precedence (conversion ratios are derived automatically; the user
@@ -1220,29 +1199,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
         is ``"measured"`` for valid measurements and ``"capacity"`` for the
         capacity-based seed or fallback.
         """
-        key = (tech_name, in_commodity, out_commodity)
-        capacity = self._capacity_ratio(tech_name, in_commodity, out_commodity, inputs)
-
-        consumed = None
-        consumed_name = self._converter_consumed_names.get(key)
-        if consumed_name is not None:
-            measured = np.asarray(inputs[consumed_name], dtype=float)
-            # A registered but unconnected input keeps its NaN sentinel; treat it
-            # as "no measurement" so the capacity ratio (or the warning) applies
-            if np.any(np.isfinite(measured)):
-                consumed = measured
-
-        produced = np.asarray(inputs[f"{tech_name}_{out_commodity}_out"], dtype=float)
-        if consumed is None:
-            if capacity is None:
-                return None
-            consumed = np.full(produced.shape, np.nan)
-
-        valid = np.isfinite(consumed) & np.isfinite(produced) & (produced != 0.0)
-        if capacity is None and not np.any(valid):
+        capacity = self._capacity_ratio(link, inputs)
+        produced = inputs[f"{link.tech}_{link.out_commodity}_out"]
+        # An unconnected consumed input keeps its NaN sentinel, so it never counts as measured
+        consumed = inputs[f"{link.tech}_{link.in_commodity}_consumed"]
+        try:
+            return calculate_conversion_ratio(consumed, produced, capacity)
+        except ValueError:
             return None
-
-        return calculate_conversion_ratio(consumed, produced, capacity)
 
     # ------------------------------------------------------------------
     # Marginal-cost helpers for cost-aware controllers

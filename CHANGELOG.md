@@ -5,10 +5,10 @@
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
-- Add heterogeneous-commodity system-level control that translates demand for one commodity into upstream set-points across converters, deriving per-technology conversion ratios automatically rather than reading them from the config. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
-- Documented heterogeneous dispatch call trees, state ownership, conversion helpers, and a worked topology and trace example. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
-- Removed obsolete converter detection and extracted shared buy-price and marginal-cost arithmetic from the system-level controller base class. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
-- Added explicit system-level converter and splitter interface checks, documented the dispatchable hook contract, and corrected the zero-production LCO warning. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
+- Added heterogeneous-commodity system-level control, which propagates demand backward across converters such as electrolyzers and Haber-Bosch loops to set upstream set points for every commodity. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
+  - Demand propagates only along physical supply buses in a deterministic, setup-time dispatch order, so producers wired to one consumer never serve another.
+  - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand.
+  - Added the `35_system_level_control/heterogeneous_commodity` example, a worked dispatch guide, and explicit converter and splitter interface checks.
 
 
 ## 0.10.0 [October 12, 2026]

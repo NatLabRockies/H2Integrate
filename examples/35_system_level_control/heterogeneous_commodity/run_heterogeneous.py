@@ -93,6 +93,21 @@ h2i.run()
 # Post-process the results
 h2i.post_process()
 
+# Plant-wide conversion read-out: upstream commodity required per kg/h of ammonia demand,
+# summed across the electrolyzer and the Haber-Bosch loop's direct electricity draw.
+# Hours where a converter produced nothing use the rated-capacity seed instead of a measured
+# ratio, so the summary averages only hours where every ratio was measured.
+trace = h2i.prob.model.plant.system_level_controller.dispatch_trace
+measured_hours = np.logical_and.reduce(
+    [ratio["source"] == "measured" for ratio in trace["ratios"].values()]
+)
+demand_ratios = trace["demand_ratios"]
+print(
+    f"Over {measured_hours.sum()} hours with measured ratios: "
+    f"{demand_ratios['electricity'][measured_hours].mean():.3f} kWh electricity and "
+    f"{demand_ratios['hydrogen'][measured_hours].mean():.4f} kg hydrogen per kg ammonia"
+)
+
 
 ##################################
 # Plot the resulting dispatch, backward demand propagation, and the dynamic
@@ -141,8 +156,7 @@ def make_plots(figure_dir):
     # Battery state of charge (fraction of capacity).
     battery_soc = _get("battery.SOC", "unitless")
 
-    # Controller set points that show backward propagation of demand.
-    _get("system_level_controller.haber_bosch_ammonia_set_point", "kg/h")
+    # Controller set point that shows backward propagation of demand.
     hydrogen_set_point = _get("system_level_controller.electrolyzer_hydrogen_set_point", "kg/h")
     total_electricity_load_mw = electrolyzer_load_mw + haber_bosch_load_mw
 
@@ -422,8 +436,8 @@ def make_plots(figure_dir):
 
     # -----------------------------------------------------------------
     # Figure 3: how the conversion ratios multiply along the chain to set
-    # the electricity intensity of one kilogram of ammonia. Seeds come from
-    # plant_config; the measured values are what the controller actually used.
+    # the electricity intensity of one kilogram of ammonia, using the measured
+    # yearly-mean ratios the controller actually used.
     # -----------------------------------------------------------------
     elec_via_electrolysis = m_h2_per_nh3 * m_elec_per_h2  # kWh electricity per kg NH3 through H2
     total_elec_per_nh3 = elec_via_electrolysis + m_elec_per_nh3

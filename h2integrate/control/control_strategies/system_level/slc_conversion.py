@@ -86,9 +86,7 @@ def conversion_ratio(
     """Return per-timestep ratios and identify measured versus fallback values.
 
     When no capacity fallback is available but some measurements are valid,
-    invalid timesteps use the mean of the valid measured ratios. A caller with
-    neither a capacity fallback nor any valid measurements should handle that
-    missing-ratio case before calling this function.
+    invalid timesteps use the mean of the valid measured ratios.
 
     Args:
         consumed: Measured input consumption by timestep; NaN marks an
@@ -108,14 +106,10 @@ def conversion_ratio(
     )
     valid = np.isfinite(consumed_array) & np.isfinite(produced_array) & (produced_array != 0.0)
 
-    if fallback is not None and not np.isfinite(fallback):
-        fallback = None
-    if fallback is None:
+    if fallback is None or not np.isfinite(fallback):
         if not np.any(valid):
             raise ValueError("A fallback or at least one valid measured ratio is required.")
-        measured_values = np.zeros(consumed_array.shape, dtype=float)
-        np.divide(consumed_array, produced_array, out=measured_values, where=valid)
-        fallback = float(measured_values[valid].mean())
+        fallback = float(np.mean(consumed_array[valid] / produced_array[valid]))
         fallback_source = "measured"
     else:
         fallback_source = "capacity"
@@ -180,3 +174,64 @@ def accumulate_derived_demand(
         new_demand[link.in_bus] = delta.copy()
 
     return new_demand, new_contributions
+
+
+def demand_ratios(
+    bus_demand: Mapping[str, ArrayLike],
+    bus_commodities: Mapping[str, str],
+    demand_bus: str | None,
+) -> dict[str, NDArray[np.float64]]:
+    """Return the plant-wide upstream requirement per unit of delivered demand.
+
+    Demand on every non-demand bus is summed by commodity and divided by the demand
+    entering the demand bus. Because each bus demand already multiplies the conversion
+    ratios along every path, the result is the aggregated conversion ratio of each
+    upstream commodity to the demanded commodity, for example electricity per unit of
+    ammonia including both the electrolyzer and direct Haber-Bosch loads. Units are the
+    upstream commodity rate units divided by the demand rate units. Timesteps without
+    positive demand report zero.
+
+    Args:
+        bus_demand: Demand entering each dispatched bus.
+        bus_commodities: Commodity carried by each bus name.
+        demand_bus: Name of the bus that delivers the demand, or ``None``.
+
+    Returns:
+        Per-timestep ratios keyed by upstream commodity, sorted by commodity.
+
+    Examples:
+        >>> ratios = demand_ratios(
+        ...     {
+        ...         "ammonia:demand": [100.0],
+        ...         "electricity:haber_bosch": [50.0],
+        ...         "hydrogen:haber_bosch": [18.0],
+        ...         "electricity:electrolyzer": [990.0],
+        ...     },
+        ...     {
+        ...         "ammonia:demand": "ammonia",
+        ...         "electricity:haber_bosch": "electricity",
+        ...         "hydrogen:haber_bosch": "hydrogen",
+        ...         "electricity:electrolyzer": "electricity",
+        ...     },
+        ...     "ammonia:demand",
+        ... )
+        >>> {commodity: ratio.tolist() for commodity, ratio in ratios.items()}
+        {'electricity': [10.4], 'hydrogen': [0.18]}
+    """
+    if demand_bus is None or demand_bus not in bus_demand:
+        return {}
+    demand = np.asarray(bus_demand[demand_bus], dtype=float)
+
+    totals: dict[str, NDArray[np.float64]] = {}
+    for bus_name, profile in bus_demand.items():
+        if bus_name == demand_bus:
+            continue
+        commodity = bus_commodities[bus_name]
+        totals[commodity] = totals.get(commodity, 0.0) + np.asarray(profile, dtype=float)
+
+    ratios = {}
+    for commodity, total in sorted(totals.items()):
+        ratio = np.zeros(np.broadcast_shapes(total.shape, demand.shape))
+        np.divide(total, demand, out=ratio, where=demand > 0.0)
+        ratios[commodity] = ratio
+    return ratios

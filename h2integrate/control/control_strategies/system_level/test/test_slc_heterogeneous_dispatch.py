@@ -33,6 +33,60 @@ from h2integrate.control.control_strategies.system_level.profit_maximization_con
 )
 
 
+# Appendix A: 0.18 kg H2 and 0.5 kWh per kg NH3 at Haber-Bosch, and 55 kWh per kg H2.
+APPENDIX_A_RATED = {
+    "wind_rated_electricity_production": 1500.0,
+    "grid_rated_electricity_production": 500.0,
+    "electrolyzer_rated_hydrogen_production": 40.0,
+    "haber_bosch_rated_ammonia_production": 1000.0,
+}
+APPENDIX_A_MEASURED = {
+    "haber_bosch_ammonia_out": 100.0,
+    "haber_bosch_hydrogen_consumed": 18.0,
+    "haber_bosch_electricity_consumed": 50.0,
+    "electrolyzer_electricity_consumed": 990.0,
+}
+APPENDIX_A_AVAILABLE = {("wind", "electricity"): 1200.0, ("electrolyzer", "hydrogen"): 18.0}
+
+# Small chains used by TestHeterogeneousCommodityControl.
+GRID_ELECTROLYZER = [
+    ["grid", "electrolyzer", "electricity", "cable"],
+    ["electrolyzer", "demand", "hydrogen", "pipe"],
+]
+GRID_ELECTROLYZER_HABER_BOSCH = [
+    ["grid", "electrolyzer", "electricity", "cable"],
+    ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+    ["haber_bosch", "demand", "ammonia", "pipe"],
+]
+
+
+def _chain_problem(
+    connections,
+    classifiers,
+    demand_commodity,
+    commodity_units,
+    controller=DemandFollowingControl,
+    upstream_out=None,
+    cost_per_tech=None,
+):
+    """Build a 4-timestep problem with a demand of 100 kg/h of ``demand_commodity``."""
+    slc_topology = _build_slc_topology(
+        create_technology_graph(connections),
+        classifiers,
+        demand_commodity=demand_commodity,
+        demand_commodity_rate_units="kg/h",
+    )
+    return _build_hetero_problem(
+        controller,
+        _build_plant_config(connections, cost_per_tech=cost_per_tech),
+        slc_topology,
+        {},
+        demand=100.0,
+        upstream_out=upstream_out,
+        commodity_units=commodity_units,
+    )
+
+
 def _grid_to_haber_bosch_problem(
     topology_data,
     controller=DemandFollowingControl,
@@ -59,18 +113,11 @@ def _grid_to_haber_bosch_problem(
         slc_topology,
         {},
         demand=100.0,
-        upstream_out={("wind", "electricity"): 1200.0, ("electrolyzer", "hydrogen"): 18.0},
+        upstream_out=APPENDIX_A_AVAILABLE,
         commodity_units={"electricity": "kW", "hydrogen": "kg/h", "nitrogen": "kg/h"},
     )
-    prob.set_val("slc.wind_rated_electricity_production", 1500.0)
-    prob.set_val("slc.grid_rated_electricity_production", 500.0)
-    prob.set_val("slc.electrolyzer_rated_hydrogen_production", 40.0)
-    prob.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
-    # Measured: 0.18 kg H2 and 0.5 kWh per kg NH3, and 55 kWh per kg H2.
-    prob.set_val("slc.haber_bosch_ammonia_out", 100.0)
-    prob.set_val("slc.haber_bosch_hydrogen_consumed", 18.0)
-    prob.set_val("slc.haber_bosch_electricity_consumed", 50.0)
-    prob.set_val("slc.electrolyzer_electricity_consumed", 990.0)
+    for name, value in (APPENDIX_A_RATED | APPENDIX_A_MEASURED).items():
+        prob.set_val(f"slc.{name}", value)
     return prob
 
 
@@ -135,26 +182,14 @@ def _build_dispatch_topology_from_fixture(topology_data):
 
 
 DISPATCH_CASES = [
-    # Measured 0.5 kW/kg NH3, 0.18 kg H2/kg NH3, and 55 kW/kg H2 give 50, 18, and 990.
+    # Measured ratios give Haber-Bosch 100 x 0.5 = 50 kW (grid only), 100 x 0.18 = 18 kg/h H2,
+    # and 18 x 55 = 990 kW (wind only). Pooling electricity would leave the grid at 0 kW (P2).
     {
         "topology": "grid_to_haber_bosch",
         "demand": 100.0,
-        "rated": {
-            "wind_rated_electricity_production": 1500.0,
-            "grid_rated_electricity_production": 500.0,
-            "electrolyzer_rated_hydrogen_production": 40.0,
-            "haber_bosch_rated_ammonia_production": 1000.0,
-        },
-        "measured": {
-            "haber_bosch_ammonia_out": 100.0,
-            "haber_bosch_hydrogen_consumed": 18.0,
-            "haber_bosch_electricity_consumed": 50.0,
-            "electrolyzer_electricity_consumed": 990.0,
-        },
-        "available": {
-            ("wind", "electricity"): 1200.0,
-            ("electrolyzer", "hydrogen"): 18.0,
-        },
+        "rated": APPENDIX_A_RATED,
+        "measured": APPENDIX_A_MEASURED,
+        "available": APPENDIX_A_AVAILABLE,
         "expected_set_points": {
             "haber_bosch_ammonia_set_point": 100.0,
             "grid_electricity_set_point": 50.0,
@@ -166,12 +201,7 @@ DISPATCH_CASES = [
     {
         "topology": "grid_to_haber_bosch",
         "demand": 100.0,
-        "rated": {
-            "wind_rated_electricity_production": 1500.0,
-            "grid_rated_electricity_production": 500.0,
-            "electrolyzer_rated_hydrogen_production": 40.0,
-            "haber_bosch_rated_ammonia_production": 1000.0,
-        },
+        "rated": APPENDIX_A_RATED,
         "measured": {},
         "available": {("wind", "electricity"): 1200.0},
         "expected_set_points": {
@@ -305,10 +335,8 @@ def _heterogeneous_example_problem(topology_data, connections=None):
         ("haber_bosch", "ammonia", 1000.0),
     ):
         problem.set_val(f"slc.{tech_name}_rated_{commodity}_production", capacity)
-    problem.set_val("slc.haber_bosch_ammonia_out", 100.0)
-    problem.set_val("slc.haber_bosch_hydrogen_consumed", 18.0)
-    problem.set_val("slc.haber_bosch_electricity_consumed", 50.0)
-    problem.set_val("slc.electrolyzer_electricity_consumed", 990.0)
+    for name, value in APPENDIX_A_MEASURED.items():
+        problem.set_val(f"slc.{name}", value)
     return problem
 
 
@@ -438,27 +466,6 @@ def _build_seed_independence_problem(rated_capacities, topology_data, n_timestep
 
 
 @pytest.mark.unit
-def test_grid_to_haber_bosch_does_not_pool_electricity(slc_topologies, subtests):
-    """Wind surplus at the electrolyzer cannot cover the grid-only Haber-Bosch electricity."""
-    prob = _grid_to_haber_bosch_problem(slc_topologies["grid_to_haber_bosch"])
-    prob.run_model()
-
-    with subtests.test("ammonia demand is committed to Haber-Bosch"):
-        np.testing.assert_allclose(prob.get_val("slc.haber_bosch_ammonia_set_point"), 100.0)
-
-    # Haber-Bosch draws 100 kg/h * 0.5 kWh/kg = 50 kW, and only the grid can supply it.
-    with subtests.test("grid covers the Haber-Bosch electricity"):
-        np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 50.0)
-
-    # Haber-Bosch needs 100 kg/h * 0.18 = 18 kg/h of hydrogen.
-    with subtests.test("electrolyzer covers the Haber-Bosch hydrogen"):
-        np.testing.assert_allclose(prob.get_val("slc.electrolyzer_hydrogen_set_point"), 18.0)
-
-    with subtests.test("wind runs at its rated production"):
-        np.testing.assert_allclose(prob.get_val("slc.wind_electricity_set_point"), 1500.0)
-
-
-@pytest.mark.unit
 def test_appendix_a_dispatch_trace(slc_topologies, subtests):
     problem = _grid_to_haber_bosch_problem(slc_topologies["grid_to_haber_bosch"])
     problem.run_model()
@@ -502,6 +509,12 @@ def test_appendix_a_dispatch_trace(slc_topologies, subtests):
                 np.testing.assert_array_equal(
                     trace["contributions"][bus_name][tech_name], np.full(4, expected)
                 )
+
+    with subtests.test("plant-wide electricity and hydrogen per unit of ammonia"):
+        # Electricity: (50 + 990) / 100 = 10.4 kW per kg/h. Hydrogen: 18 / 100 = 0.18.
+        assert set(trace["demand_ratios"]) == {"electricity", "hydrogen"}
+        np.testing.assert_allclose(trace["demand_ratios"]["electricity"], np.full(4, 10.4))
+        np.testing.assert_allclose(trace["demand_ratios"]["hydrogen"], np.full(4, 0.18))
 
 
 @pytest.mark.unit
@@ -661,14 +674,12 @@ def _splitter_problem(splitter_outputs, connections=None):
         slc_topology,
         {},
         demand=100.0,
-        upstream_out={("wind", "electricity"): 1200.0, ("electrolyzer", "hydrogen"): 18.0},
+        upstream_out=APPENDIX_A_AVAILABLE,
         commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
     )
     prob.set_val("slc.wind_rated_electricity_production", 1500.0)
-    prob.set_val("slc.haber_bosch_ammonia_out", 100.0)
-    prob.set_val("slc.haber_bosch_hydrogen_consumed", 18.0)
-    prob.set_val("slc.haber_bosch_electricity_consumed", 50.0)
-    prob.set_val("slc.electrolyzer_electricity_consumed", 990.0)
+    for name, value in APPENDIX_A_MEASURED.items():
+        prob.set_val(f"slc.{name}", value)
     return prob
 
 
@@ -817,26 +828,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_detect_converters_chain(self):
         """Converters are detected across a grid -> electrolyzer -> Haber-Bosch chain."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-            ["haber_bosch", "demand", "ammonia", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "haber_bosch"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph, classifiers, demand_commodity="ammonia", demand_commodity_rate_units="kg/h"
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER_HABER_BOSCH,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer", "haber_bosch"]),
+            "ammonia",
+            {"electricity": "kW", "hydrogen": "kg/h"},
         )
         links = problem.model.slc._dispatch_topology.links
         assert {(link.in_commodity, link.tech, link.out_commodity) for link in links} == {
@@ -846,26 +842,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_single_converter_capacity_propagation(self):
         """A single converter seeds electricity demand from the rated capacity ratio."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
         )
         problem.set_val("slc.grid_rated_electricity_production", 51e6)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
@@ -876,29 +857,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_chained_converter_capacity_propagation(self):
         """Demand propagates through a two-converter chain via capacity ratios."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-            ["haber_bosch", "demand", "ammonia", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "haber_bosch"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="ammonia",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER_HABER_BOSCH,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer", "haber_bosch"]),
+            "ammonia",
+            {"electricity": "kW", "hydrogen": "kg/h"},
         )
         problem.set_val("slc.haber_bosch_rated_ammonia_production", 1e6)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 0.18e6)
@@ -911,30 +874,18 @@ class TestHeterogeneousCommodityControl:
 
     def test_derived_demand_reuses_flexible_and_dispatchable(self):
         """Derived electricity demand flows through the shared flexible/dispatchable steps."""
-        tech_connections = [
-            ["wind", "electrolyzer", "electricity", "cable"],
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            flexible=["wind"], dispatchable=["grid", "electrolyzer"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
+        problem = _chain_problem(
+            [
+                ["wind", "electrolyzer", "electricity", "cable"],
+                ["grid", "electrolyzer", "electricity", "cable"],
+                ["electrolyzer", "demand", "hydrogen", "pipe"],
+            ],
+            _build_tech_control_classifiers(
+                flexible=["wind"], dispatchable=["grid", "electrolyzer"]
+            ),
+            "hydrogen",
+            {"electricity": "kW"},
             upstream_out={("wind", "electricity"): 1000.0},
-            commodity_units={"electricity": "kW"},
         )
         problem.set_val("slc.wind_rated_electricity_production", 2000.0)
         problem.set_val("slc.grid_rated_electricity_production", 48000.0)
@@ -947,26 +898,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_missing_ratio_warns_and_keeps_legacy_dispatch(self):
         """A converter with no measurement and zero rated capacities warns once."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
         )
         with pytest.warns(UserWarning, match="No conversion ratio"):
             problem.run_model()
@@ -984,31 +920,17 @@ class TestHeterogeneousCommodityControl:
     )
     def test_dispatchable_hook_at_derived_level(self, controller, expected_dispatch, subtests):
         """Each strategy writes all dispatchables on the hydrogen and electricity buses."""
-        tech_connections = [
-            ["cheap", "electrolyzer", "electricity", "cable"],
-            ["expensive", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(
-            tech_connections, cost_per_tech={"cheap": 0.03, "expensive": 0.08}
-        )
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["cheap", "expensive", "electrolyzer"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            controller,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            [
+                ["cheap", "electrolyzer", "electricity", "cable"],
+                ["expensive", "electrolyzer", "electricity", "cable"],
+                ["electrolyzer", "demand", "hydrogen", "pipe"],
+            ],
+            _build_tech_control_classifiers(dispatchable=["cheap", "expensive", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
+            controller=controller,
+            cost_per_tech={"cheap": 0.03, "expensive": 0.08},
         )
         problem.set_val("slc.cheap_rated_electricity_production", 3000.0)
         problem.set_val("slc.expensive_rated_electricity_production", 5000.0)
@@ -1037,26 +959,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_dynamic_ratio_overrides_capacity(self):
         """Measured consumption drives the ratio, overriding the capacity seed."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
         )
         problem.set_val("slc.grid_rated_electricity_production", 50e6)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
@@ -1068,26 +975,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_dynamic_ratio_time_varying_with_zero_output_fallback(self):
         """Per-timestep measured ratios apply; a zero-output timestep falls back to capacity."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
         )
         problem.set_val("slc.grid_rated_electricity_production", 50e6)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
@@ -1101,26 +993,11 @@ class TestHeterogeneousCommodityControl:
 
     def test_dynamic_ratio_without_capacity_does_not_warn(self):
         """A connected consumption signal enables propagation with no capacity seed or warning."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW"},
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
         )
         problem.set_val("slc.electrolyzer_hydrogen_out", 100.0)
         problem.set_val("slc.electrolyzer_electricity_consumed", 5100.0)
@@ -1134,28 +1011,12 @@ class TestHeterogeneousCommodityControl:
 
     def test_capacity_seed_scales_with_rated_capacities(self):
         """The capacity seed alone sets demand to rated input divided by rated output."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "demand", "hydrogen", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="hydrogen",
-            demand_commodity_rate_units="kg/h",
-        )
-
         for rated_electricity, expected_ratio in ((40e6, 40.0), (80e6, 80.0)):
-            problem = _build_hetero_problem(
-                DemandFollowingControl,
-                plant_config,
-                slc_topology,
-                {},
-                demand=100.0,
-                commodity_units={"electricity": "kW"},
+            problem = _chain_problem(
+                GRID_ELECTROLYZER,
+                _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+                "hydrogen",
+                {"electricity": "kW"},
             )
             problem.set_val("slc.grid_rated_electricity_production", rated_electricity)
             problem.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)
@@ -1167,31 +1028,17 @@ class TestHeterogeneousCommodityControl:
 
     def test_splitter_aggregates_derived_demand_across_producers(self):
         """A shared input bus sums demand from distinct converter outputs."""
-        tech_connections = [
-            ["grid", "ely_a", "electricity", "cable"],
-            ["grid", "ely_b", "electricity", "cable"],
-            ["ely_a", "haber_bosch", "hydrogen", "pipe"],
-            ["ely_b", "haber_bosch", "hydrogen", "pipe"],
-            ["haber_bosch", "demand", "ammonia", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "ely_a", "ely_b", "haber_bosch"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="ammonia",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        problem = _chain_problem(
+            [
+                ["grid", "ely_a", "electricity", "cable"],
+                ["grid", "ely_b", "electricity", "cable"],
+                ["ely_a", "haber_bosch", "hydrogen", "pipe"],
+                ["ely_b", "haber_bosch", "hydrogen", "pipe"],
+                ["haber_bosch", "demand", "ammonia", "pipe"],
+            ],
+            _build_tech_control_classifiers(dispatchable=["grid", "ely_a", "ely_b", "haber_bosch"]),
+            "ammonia",
+            {"electricity": "kW", "hydrogen": "kg/h"},
         )
         problem.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
         problem.set_val("slc.ely_a_rated_hydrogen_production", 100.0)
@@ -1206,30 +1053,16 @@ class TestHeterogeneousCommodityControl:
 
     def test_electricity_splitter_feeds_electrolyzer_and_haber_bosch(self):
         """Two converters sharing one electricity bus sum their demand."""
-        tech_connections = [
-            ["grid", "electrolyzer", "electricity", "cable"],
-            ["grid", "haber_bosch", "electricity", "cable"],
-            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-            ["haber_bosch", "demand", "ammonia", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "haber_bosch"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="ammonia",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
-            commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+        problem = _chain_problem(
+            [
+                ["grid", "electrolyzer", "electricity", "cable"],
+                ["grid", "haber_bosch", "electricity", "cable"],
+                ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+                ["haber_bosch", "demand", "ammonia", "pipe"],
+            ],
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer", "haber_bosch"]),
+            "ammonia",
+            {"electricity": "kW", "hydrogen": "kg/h"},
         )
         problem.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 200.0)
@@ -1242,31 +1075,17 @@ class TestHeterogeneousCommodityControl:
 
     def test_coproduct_converter_max_combines_input_demand_without_double_counting(self):
         """Two outputs from the same converter combine their shared input by maximum."""
-        tech_connections = [
-            ["ng_source", "reformer", "natural_gas", "pipe"],
-            ["reformer", "haber_bosch", "hydrogen", "pipe"],
-            ["reformer", "haber_bosch", "electricity", "cable"],
-            ["haber_bosch", "demand", "ammonia", "pipe"],
-        ]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = create_technology_graph(tech_connections)
-        classifiers = _build_tech_control_classifiers(
-            dispatchable=["ng_source", "reformer", "haber_bosch"]
-        )
-        slc_topology = _build_slc_topology(
-            tech_graph,
-            classifiers,
-            demand_commodity="ammonia",
-            demand_commodity_rate_units="kg/h",
-        )
-        problem = _build_hetero_problem(
-            DemandFollowingControl,
-            plant_config,
-            slc_topology,
-            {},
-            demand=100.0,
+        problem = _chain_problem(
+            [
+                ["ng_source", "reformer", "natural_gas", "pipe"],
+                ["reformer", "haber_bosch", "hydrogen", "pipe"],
+                ["reformer", "haber_bosch", "electricity", "cable"],
+                ["haber_bosch", "demand", "ammonia", "pipe"],
+            ],
+            _build_tech_control_classifiers(dispatchable=["ng_source", "reformer", "haber_bosch"]),
+            "ammonia",
+            {"natural_gas": "kg/h", "hydrogen": "kg/h", "electricity": "kW"},
             upstream_out={("reformer", "hydrogen"): 10.0, ("reformer", "electricity"): 40.0},
-            commodity_units={"natural_gas": "kg/h", "hydrogen": "kg/h", "electricity": "kW"},
         )
         links = problem.model.slc._dispatch_topology.links
         converters = {(link.in_commodity, link.tech, link.out_commodity) for link in links}

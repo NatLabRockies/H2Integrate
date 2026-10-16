@@ -5,6 +5,7 @@ import pytest
 
 from h2integrate.control.control_strategies.system_level.slc_topology import ConversionLink
 from h2integrate.control.control_strategies.system_level.slc_conversion import (
+    demand_ratios,
     capacity_ratio,
     measured_ratio,
     conversion_ratio,
@@ -97,3 +98,47 @@ def test_accumulate_derived_demand_does_not_mutate_inputs():
     assert updated_contributions is not contributions
     np.testing.assert_array_equal(updated_demand[in_bus], [100.0, 230.0])
     np.testing.assert_array_equal(updated_contributions[in_bus]["reformer"], [30.0, 80.0])
+
+
+@pytest.mark.unit
+def test_demand_ratios(subtests):
+    with subtests.test("Appendix A: (50 + 990) / 100 kW per kg/h and 18 / 100 kg/kg"):
+        ratios = demand_ratios(
+            {
+                "ammonia:demand": [100.0, 0.0],
+                "electricity:haber_bosch": [50.0, 0.0],
+                "hydrogen:haber_bosch": [18.0, 0.0],
+                "electricity:electrolyzer": [990.0, 0.0],
+            },
+            {
+                "ammonia:demand": "ammonia",
+                "electricity:haber_bosch": "electricity",
+                "hydrogen:haber_bosch": "hydrogen",
+                "electricity:electrolyzer": "electricity",
+            },
+            "ammonia:demand",
+        )
+        assert list(ratios) == ["electricity", "hydrogen"]
+        # The zero-demand timestep reports zero instead of dividing by zero.
+        np.testing.assert_allclose(ratios["electricity"], [10.4, 0.0])
+        np.testing.assert_allclose(ratios["hydrogen"], [0.18, 0.0])
+
+    with subtests.test("demand-commodity buses upstream of a fuel cell exclude the demand bus"):
+        ratios = demand_ratios(
+            {
+                "electricity:demand": [100.0],
+                "hydrogen:fuel_cell": [2.5],
+                "electricity:electrolyzer": [137.5],
+            },
+            {
+                "electricity:demand": "electricity",
+                "hydrogen:fuel_cell": "hydrogen",
+                "electricity:electrolyzer": "electricity",
+            },
+            "electricity:demand",
+        )
+        np.testing.assert_allclose(ratios["electricity"], [1.375])
+        np.testing.assert_allclose(ratios["hydrogen"], [0.025])
+
+    with subtests.test("no demand bus gives no ratios"):
+        assert demand_ratios({}, {}, None) == {}
