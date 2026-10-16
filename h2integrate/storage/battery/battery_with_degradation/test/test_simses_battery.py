@@ -263,30 +263,107 @@ def test_hvac_heats_when_battery_is_cold(subtests):
 
 
 @pytest.mark.unit
-def test_eol_replaces_battery_and_updates_finance_schedule(subtests):
-    n_timesteps = 2
+@pytest.mark.parametrize("window_size", [18, 5, 4])
+def test_eol_replaces_battery_and_updates_finance_schedule(subtests, monkeypatch, window_size):
+    n_timesteps = 18
     prob = _build_problem(
-        n_timesteps,
-        dt=60,
-        power_profile=np.full(n_timesteps, 500.0),
-        performance_overrides={"eol_soh_capacity": 1.0},
+        n_timesteps=n_timesteps,
+        dt=3600,
+        power_profile=np.full(n_timesteps, 50.0),
+        performance_overrides={"deg_scale": 1.0, "eol_soh_capacity": 0.9989},
     )
-    _set_resource(prob, n_timesteps, temperature_c=25.0, ghi=0.0)
+    component = prob.model.battery
+    simulate = component.simulate
+    callback_soc = []
+
+    def dispatch_in_windows(storage_dispatch_commands, **kwargs):
+        power_windows = []
+        for start in range(0, n_timesteps, window_size):
+            power, soc = simulate(
+                storage_dispatch_commands=storage_dispatch_commands[start : start + window_size],
+                sim_start_index=start,
+                **kwargs,
+            )
+            power_windows.append(power)
+            callback_soc.append(soc)
+        return np.concatenate(power_windows), np.concatenate(callback_soc)
+
+    monkeypatch.setattr(component, "simulate", dispatch_in_windows)
+    _set_resource(prob, n_timesteps=n_timesteps)
     prob.run_model()
 
     state_of_charge = prob.get_val("battery.SOC")
     state_of_health = prob.get_val("battery.soh_capacity")
     replacement_schedule = prob.get_val("battery.replacement_schedule")
+    reset_indices = np.array([4, 9, 14])
 
-    with subtests.test("replacement restarts SOC from a fresh battery"):
-        np.testing.assert_allclose(state_of_charge[0], state_of_charge[1])
-    with subtests.test("logged SOH reaches EOL before each replacement"):
-        assert np.all(state_of_health < 1.0)
+    with subtests.test("observable SOH resets occur at the replacement samples"):
+        np.testing.assert_array_equal(
+            np.flatnonzero(np.diff(state_of_health) > 1e-9) + 1, reset_indices
+        )
+    with subtests.test("replacement samples log fresh capacity SOH"):
+        np.testing.assert_allclose(state_of_health[reset_indices], 1.0)
+    with subtests.test("replacement samples log fresh resistance SOH"):
+        np.testing.assert_allclose(prob.get_val("battery.soh_resistance")[reset_indices], 1.0)
+    with subtests.test("replacement samples log configured initial SOC"):
+        np.testing.assert_allclose(state_of_charge[reset_indices], 90.0)
+    with subtests.test("output SOC agrees with the controller callback"):
+        np.testing.assert_allclose(state_of_charge, np.concatenate(callback_soc))
+    with subtests.test("post-reset tail continues degrading"):
+        assert np.all(np.diff(state_of_health[14:]) < 0.0)
+    with subtests.test("converter retains the active battery across callback windows"):
+        assert component._sim_state["converter"].storage is component._sim_state["battery"]
+    with subtests.test("thermal model retains the active battery node"):
+        assert component._sim_state["thermal"]._components == [component._sim_state["battery"]]
     with subtests.test("finance schedule spans the full plant life"):
         assert replacement_schedule.shape == (30,)
-        assert replacement_schedule[0] == pytest.approx(0.0)
-    with subtests.test("replacement schedule projects beyond the simulated horizon"):
-        np.testing.assert_allclose(replacement_schedule[1:], np.ones(29))
+    with subtests.test("first year includes all three observed replacements"):
+        assert replacement_schedule[0] == 3
+    with subtests.test("projected tail completes at the end of a full annual interval"):
+        np.testing.assert_array_equal(replacement_schedule[1:], np.full(29, 4))
+    with subtests.test("replacement counts are integer-valued"):
+        np.testing.assert_array_equal(replacement_schedule, np.floor(replacement_schedule))
+
+    discharge = prob.get_val("battery.storage_electricity_discharge", units="kW")
+    rated_discharge = prob.get_val("battery.rated_electricity_production", units="kW")[0]
+    with subtests.test("annual CF weights observed hours and the zero-CF projected tail"):
+        np.testing.assert_allclose(
+            prob.get_val("battery.standard_capacity_factor"),
+            discharge.sum() / (rated_discharge * 8760),
+        )
+    with subtests.test("annual production preserves CF and rate units"):
+        np.testing.assert_allclose(
+            prob.get_val("battery.annual_electricity_produced", units="kW*h/year"),
+            prob.get_val("battery.standard_capacity_factor") * rated_discharge * 8760,
+        )
+
+    reference = _build_problem(
+        n_timesteps=n_timesteps,
+        dt=3600,
+        power_profile=np.full(n_timesteps, 50.0),
+        performance_overrides={"deg_scale": 1.0, "eol_soh_capacity": 0.0},
+    )
+    _set_resource(reference, n_timesteps=n_timesteps)
+    reference.run_model()
+    for name in (
+        "electricity_out",
+        "power_ac",
+        "power_dc",
+        "converter_loss",
+        "battery_loss",
+        "battery_heat",
+        "temperature",
+        "container_air_temperature",
+        "container_wall_temperature_inner",
+        "container_wall_temperature_mid",
+        "container_wall_temperature_outer",
+        "hvac_thermal_power",
+        "hvac_electrical_power",
+    ):
+        with subtests.test(f"{name} retains executed-step accounting at first replacement"):
+            np.testing.assert_allclose(
+                prob.get_val(f"battery.{name}")[:5], reference.get_val(f"battery.{name}")[:5]
+            )
 
 
 @pytest.mark.unit

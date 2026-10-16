@@ -865,6 +865,8 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
                 state["battery"] = battery
                 converter.storage = battery
                 thermal.replace_component(replaced_battery, battery)
+                for key in ("soc", "soh_Q", "soh_R"):
+                    state["log"][key][index] = getattr(battery.state, key)
                 soc[local_index] = battery.state.soc * 100.0
 
         self.current_soc = battery.state.soc

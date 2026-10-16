@@ -33,7 +33,29 @@ For open-loop dispatch, the storage command uses H2I sign convention: positive v
 
 The component supports plant timesteps from 60 to 3600 seconds. However, the underlying SimSES model required timesteps <= 60 seconds. Its thermal solver internally substeps to maintain stability at larger plant timesteps.
 
-When capacity SOH reaches `eol_soh_capacity`, the performance model replaces the SimSES battery with a fresh instance using the configured initial SOC and temperature. The container thermal state is retained. The H2I `replacement_schedule` records the number of physical replacements in each simulated plant year and projects replacement cycles beyond the simulation horizon. ProFAST applies the configured `replacement_cost_percent` to this schedule when calculating replacement capital costs.
+When capacity SOH reaches `eol_soh_capacity`, the performance model replaces the SimSES battery
+with a fresh instance using the configured initial SOC and temperature. Capacity SOH,
+resistance SOH, and SOC at that sample describe the fresh battery; callback SOC and output
+SOC agree. Power, losses, heat, voltage, current, and temperature still describe the executed
+timestep on the outgoing battery. The container thermal state is retained, including across
+controller windows.
+
+The shared annualization helper detects replacement events from upward capacity-SOH jumps
+greater than `1e-9`, at elapsed offsets `sample_index * dt`. These offsets are sample
+conventions, not interpolated physical threshold-crossing times. SOH alone cannot reliably
+identify a first-sample replacement or a reset without an upward jump, including replacement
+at every sample with constant fresh SOH. Such invisible events are not separately counted.
+
+The H2I `replacement_schedule` contains integer-valued event counts in fixed 365-day plant-year
+bins `[year, year + 1)`, excluding initial installation and plant retirement. Multiple
+observable replacements within a year are counted separately. Annual capacity-factor means
+retain their elapsed durations, including partial simulated years, on the same cycle clock
+as replacement events. The trailing cycle uses the last two post-reset SOH samples to
+project annual degradation. Projected EOL occurs at the end of the first full projected
+annual interval reaching the threshold, not at an interpolated fractional-year crossing.
+Fewer than two post-reset samples or stalled degradation do not imply a projected EOL.
+ProFAST applies the configured `replacement_cost_percent` to this schedule when calculating
+replacement capital costs; initial ATB battery capital costs are unchanged.
 
 ## Outputs
 

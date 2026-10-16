@@ -3313,7 +3313,8 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
     ]
     control["lmp_signal"] = lmp_signal.tolist()
     control["demand_signal"] = demand_signal.tolist()
-    performance["eol_soh_capacity"] = 1.0
+    performance["deg_scale"] = 1.0
+    performance["eol_soh_capacity"] = 0.999
 
     model = H2IntegrateModel(config)
     model.setup()
@@ -3322,6 +3323,8 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
     controller = model.control_strategies[0]
     battery_power = model.prob.get_val("battery.electricity_out", units="kW")
     replacement_schedule = model.prob.get_val("battery.replacement_schedule")
+    soh = model.prob.get_val("battery.soh_capacity")
+    reset_indices = np.flatnonzero(np.diff(soh) > 1e-9) + 1
     lcoe = model.prob.get_val("finance_subgroup_battery.LCOE")[0]
     with subtests.test("controller horizon is 24 hours at 15-minute resolution"):
         assert controller.config.n_control_window_hours == 96
@@ -3331,12 +3334,27 @@ def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_exa
         assert controller.in_exclusive_control_month[2 * 96 :].all()
     with subtests.test("optimized battery output covers the simulation"):
         assert battery_power.shape == (n_timesteps,)
+    with subtests.test("optimized battery output is finite"):
         assert np.all(np.isfinite(battery_power))
+    with subtests.test("optimized battery dispatch is nonzero"):
         assert np.any(np.abs(battery_power) > 0.0)
-    with subtests.test("physical EOL replacements populate the finance schedule"):
+    with subtests.test("accelerated degradation produces multiple observable replacements"):
+        assert reset_indices.size > 1
+    with subtests.test("replacement samples log fresh capacity SOH"):
+        np.testing.assert_allclose(soh[reset_indices], 1.0)
+    with subtests.test("replacement samples log configured initial SOC"):
+        np.testing.assert_allclose(model.prob.get_val("battery.SOC")[reset_indices], 90.0)
+    with subtests.test("finance replacement schedule spans the plant life"):
         assert replacement_schedule.shape == (30,)
-        assert replacement_schedule[0] == pytest.approx(0.0)
-        assert np.all(replacement_schedule[1:] == pytest.approx(1.0))
+    with subtests.test("first-year finance count includes each observable physical replacement"):
+        assert replacement_schedule[0] == reset_indices.size
+    with subtests.test("replacement schedule contains only nonnegative integer counts"):
+        np.testing.assert_array_equal(replacement_schedule, np.floor(replacement_schedule))
+    with subtests.test("replacement schedule is nonnegative"):
+        assert np.all(replacement_schedule >= 0)
+    with subtests.test("replacement cycles project beyond the simulated horizon"):
+        assert np.all(replacement_schedule[1:] > 0)
+    with subtests.test("finance remains finite with physical replacement costs"):
         assert np.isfinite(lcoe)
 
 
