@@ -1,8 +1,20 @@
-# Iron Transport Model
+# Iron Transport Models
+
+
+
+Both models require hourly time steps. See the iron DRI and mine documentation for their use in
+complete flowsheets.
 
 The U.S. has developed an infrastructure for transporting iron ore from the northern Minnesota and Michigan iron ranges to ironmaking/steelmaking facilities that takes advantage of barge shipping in the Great Lakes region.
 No other significant practical waterway shipping routes exist for the massive amounts of iron ore required for industrial applications in the inland USA, and rail is the only practicable means of transport over long distances otherwise.
 Therefore, our transport model was developed to model shipping cost via domestic water transportation through the Great Lakes between selected port cities, and via class 1 rail between all other points.
+
+`IronTransportPerformanceComponent` estimates the land and water distances needed to ship iron ore
+to a Great Lakes port. It reads the mine location from `plant_config.sites.site` and uses built-in
+port coordinates and shipping waypoints. Set `find_closest_ship_site: true` and
+`shipment_site: "None"` to select the shortest modeled route, or set `find_closest_ship_site: false`
+and choose `Duluth`, `Chicago`, `Cleveland`, or `Buffalo` explicitly.
+
 
 For the water transportation portion of the model, selected port cities with relevant iron ore infrastructure were selected and waypoints plotted in between to calculate a shipping distance through the Great Lakes.
 A [1997 article](https://msaag.aag.org/wp-content/uploads/2013/05/9_Dager.pdf) identified the charged rates for shipping iron ore through the Great Lakes as ranging between \$6.00 and \$7.50 per ton between Duluth/Superior and Lake Erie docks.
@@ -18,5 +30,29 @@ Therefore, we used the Federal Railroad Administration's recommendation of multi
 Roads in the continental U.S. have an average circuity factor of [1.20](https://doi.org/10.1016/S0965-8564(01)00044-1) and multiplying this by the FRA recommendation of 1.4 gives the final rail circuity ratio of 1.68 used in the model.
 This is unsurprisingly slightly higher than the average European country given the relatively low density of rail networks in the US.
 
-To calculate the final iron ore transport cost, two potential costs are calculated: a rail-only cost and a rail+water cost.
+
+The performance component reports `land_transport_distance`, `water_transport_distance`, and
+`total_transport_distance` in kilometers. `IronTransportCostComponent` uses these distances and the
+`iron_ore_in` profile to calculate transport cost outputs. To calculate the final iron ore transport cost, two potential costs are calculated: a rail-only cost and a rail+water cost.
 Whichever cost is lower is used as the final transportation cost, with the rail+water cost being generally lower in the Eastern US and the rail-only cost being lower in the West.
+Its `transport_year` and `marginal_cost`
+inputs are configured in the technology's cost parameters; the cost year is set from the plant's
+`target_dollar_year`.
+
+
+
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponentConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportCostComponentConfig
+   :members:
+   :no-index:
+```
+
+## Examples
+
+The model is used by the iron mine, DRI, electrowinning, and mapping configurations in
+[Example 21](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/21_iron_examples).

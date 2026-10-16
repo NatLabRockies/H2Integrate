@@ -64,3 +64,8 @@ The modeling approach in this performance model is based on:
 
 The modeling approach in this cost model is based on:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
+
+## Example
+
+[Example 04: Geologic Hydrogen](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/04_geo_h2)
+contains separate configurations for natural and stimulated subsurface hydrogen models.

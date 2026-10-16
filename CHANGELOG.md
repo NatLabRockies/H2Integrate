@@ -3,6 +3,7 @@
 ## Unreleased [TBD]
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
+- Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 
 
@@ -67,6 +68,7 @@
   - Example 12 now uses `PYSAMWindPlantPerformanceModel` (same 148 x 6 MW turbines), example 13 uses 44 GE 1.5 MW turbines (same 66 MW capacity), and example 26 uses 25 turbines instead of 100 for the FLORIS wind plant.
   - The OAE examples and tests now use at most 5 ED units instead of 10 (same maximum capacity), and the OAE unit and regression tests share a single model run.
 - Standardized base class module file names on the `_baseclass.py` suffix, including renaming `h2integrate/core/model_baseclasses.py` to `h2integrate/core/model_baseclass.py`; imports from the old module paths must be updated. [PR 900](https://github.com/NatLabRockies/H2Integrate/pull/900)
+- Added a seasonal `exclusive_control_months` feature to `PeakLoadManagementOptimizedStorageController`. During Exclusive Control Months the upstream MILP runs with a monthly cycle-energy cap; outside those months the controller solves an independent bill-minimization MILP against the local load. [PR 885](https://github.com/NatLabRockies/H2Integrate/pull/885)
 - Replaced the hand-maintained `supported_models` dictionary with a `@register` class decorator. The registry finds decorated classes by scanning the package source and still imports each model module only when that model is used. `no_cost_models` and `no_replacement_schedule_models` are now set with the decorator's `no_cost` and `no_replacement_schedule` arguments. [PR 902](https://github.com/NatLabRockies/H2Integrate/pull/902)
 - Pinned `optiwindnet<0.3.1` in the `ard` extra because `optiwindnet` 0.3.1 is incompatible with `ard-nrel` 0.1.0b5. [PR 902](https://github.com/NatLabRockies/H2Integrate/pull/902)
 - Updates to all GH Actions, pre-commit, isort, and ruff versioning. [PR 904](https://github.com/NatLabRockies/H2Integrate/pull/904)
