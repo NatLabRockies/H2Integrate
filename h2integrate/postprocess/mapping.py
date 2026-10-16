@@ -18,6 +18,8 @@ try:
     import geopandas as gpd
     import contextily as ctx
 
+    ctx.tile.USER_AGENT = "NLR H2Integrate"
+
 except ImportError as exc:
     msg = (
         "Failed to import geopandas or contextily. "
@@ -52,6 +54,8 @@ class GeospatialMapConfig(BaseConfig):
             Defaults to 's' == 'square'.
         markersize (float, optional): A float used to set the gpd.GeoDataFrame.plot() markersize
             parameter. Defaults to 36.0.
+        markerfacecolor (str, optional): A string used to set the gpd.GeoDataFrame.plot()
+            markerfacecolor parameter. Defaults to 'k'.
         edgecolor (str, optional): A string used to set the gpd.GeoDataFrame.plot() edgecolor
             parameter. Defaults to 'black'.
         colorbar_label (str, optional): A string used to set the colorbar label text.
@@ -99,6 +103,8 @@ class GeospatialMapConfig(BaseConfig):
             the decimal size threshold to switch to expontential notation. Defaults to (-3,4).
             See matplotlib.ticker.ScalarFormatter.set_powerlimits() lim parameter documentation
             for more info.
+        colorbar_num_ticks (int, optional): An integer used to set the number of ticks to display on
+            the colorbar. Defaults to 5.
         basemap_leftpad (float, optional): A float used to set the extent the basemap will show
             beyond the left / western most data point in the plot. Defaults to 0.05.
             The value represents a fraction of the width, or longitude range, the data points cover.
@@ -135,7 +141,21 @@ class GeospatialMapConfig(BaseConfig):
             Defaults to 'black'.
         linewidth (float, optional): A float used to set the gpd.GeoDataFrame.plot() linewidth
             parameter. Defaults to 1.5.
-
+        horz_alignment (list[str], optional): A list of strings used to set the horizontal alignment
+            of labels for each point plotted. Must be the same length as the number of points or
+            single-element list to use same alignment for all labels. Defaults to ['left'].
+        vert_alignment (list[str], optional): A list of strings used to set the vertical alignment
+            of labels for each point plotted. Must be the same length as the number of points or
+            single-element list to use same alignment for all labels. Defaults to ['bottom'].
+        label_offset_x (list[float], optional): A list of floats used to set the x offset of labels
+            for each point plotted. Must be the same length as the number of points or
+            single-element list to use same alignment for all labels. Defaults to [3].
+        label_offset_y (list[float], optional): A list of floats used to set the y offset of labels
+            for each point plotted. Must be the same length as the number of points or
+            single-element list to use same alignment for all labels. Defaults to [3].
+        label_format_string (str, optional): A string used to format the label text for each point.
+        legend_label (str, optional): A string used to set the legend label text when plotting
+            non-numeric data. Defaults to 'UPDATE LEGEND LABEL'.
     """
 
     lat_long_crs: str = field(default="EPSG:4326")
@@ -147,6 +167,7 @@ class GeospatialMapConfig(BaseConfig):
     alpha: float = field(default=0.8)
     marker: str = field(default="s")
     markersize: float = field(default=36.0)
+    markerfacecolor: str = field(default="k")
     edgecolor: str = field(default="black")
     colorbar_label: str = field(default="UPDATE LABEL")
     colorbar_label_font_size: float = field(default=8.0)
@@ -178,26 +199,35 @@ class GeospatialMapConfig(BaseConfig):
     colorbar_tick_label_font_size: float = field(default=8.0)
     colorbar_tick_label_use_exp_notation: bool = field(default=True)
     colorbar_tick_label_exp_notation_decimal_limit: tuple[int, ...] = field(default=(-3, 4))
+    colorbar_num_ticks: int = field(default=5)
     basemap_leftpad: float = field(default=0.05)
     basemap_rightpad: float = field(default=0.05)
-    basemap_upperpad: float = field(default=0.2125)
+    basemap_upperpad: float = field(default=0.15)
     basemap_lowerpad: float = field(default=0.05)
     basemap_provider: TileProvider = field(default=ctx.providers.OpenStreetMap.Mapnik)
-    basemap_zoom: int = field(default=6)
-    zorder: int = field(default=1)
+    basemap_zoom: int = field(default=5)
+    zorder: int = field(default=2)
     linestyle: str = field(default="--")
     linecolor: str = field(default="black")
     linewidth: float = field(default=1.5)
+    horz_alignment: list[str] = field(default=["left"])
+    vert_alignment: list[str] = field(default=["bottom"])
+    label_offset_x: list[float] = field(default=[0])
+    label_offset_y: list[float] = field(default=[0])
+    label_format_string: str = field(default=".3f")
+    legend_label: str = field(default="UPDATE LEGEND LABEL")
 
 
 def plot_geospatial_point_heat_map(
     case_results_fpath: Path | str,
     metric_to_plot: str,
+    metric_multiplier: float | None = 1.0,
     latitude_var_name: str | None = None,
     longitude_var_name: str | None = None,
     *,
     fig: plt.Figure | None = None,
     ax: plt.Axes | None = None,
+    leg_texts: list[str] = [],
     base_layer_gdf: gpd.GeoDataFrame
     | list[gpd.GeoDataFrame]
     | tuple[gpd.GeoDataFrame, ...]
@@ -222,6 +252,7 @@ def plot_geospatial_point_heat_map(
             where results are stored.
         metric_to_plot (str): A string representing the column / variable name of the metric of
             interest to plot as heat map points as defined in the .csv or cases.sql file.
+        metric_multiplier (float, optional): A constant factor to multiply the metric by. Default 1.
         latitude_var_name (str, optional): A string representing the column / variable name of the
             latitude data as defined in the .csv or cases.sql file. Defaults to None.
             The code will attempt to automatically detect this column if no string is provided and
@@ -234,6 +265,8 @@ def plot_geospatial_point_heat_map(
             Defaults to None.
         ax (plt.Axes, optional): A plt.Axes object of an existing map on which to add layers.
             Defaults to None.
+        leg_texts (list[str], optional): A list of strings representing legend labels for an
+            existing plot. Defaults to empty list.
         base_layer_gdf (
             gpd.GeoDataFrame | list[gpd.GeoDataFrame] | tuple[gpd.GeoDataFrame, ...],
             optional
@@ -260,6 +293,7 @@ def plot_geospatial_point_heat_map(
             the function to add additional layers.
         ax (plt.Axes): The plt.Axes object for the current plot. This can be passed back into the
             function to add additional layers.
+        leg_texts (list[str]): A list of strings representing legend labels for the current plot.
         results_gdf (gpd.GeoDataFrame): The gpd.GeoDataFrame object created from the parsed results.
             This can be passed back into the function to add additional layers.
 
@@ -290,6 +324,41 @@ def plot_geospatial_point_heat_map(
             "or the .sql file defined in the driver_config.yaml (H2IntegrateModel.recorder_path)",
         )
         raise TypeError(msg)
+
+    # Multiply the metric of interest by a constant factor if provided
+    if results_df[metric_to_plot].dtype in (np.float64, np.float32, np.int64, np.int32):
+        results_df[metric_to_plot] = results_df[metric_to_plot] * metric_multiplier
+
+    # Check that label alignment and offset lists are the same length as number of points to plot
+    num_points = len(results_df)
+    if len(map_preferences.horz_alignment) == 1:
+        map_preferences.horz_alignment = [map_preferences.horz_alignment[0]] * num_points
+    elif len(map_preferences.horz_alignment) != num_points:
+        raise ValueError(
+            f"Length of horz_alignment list ({len(map_preferences.horz_alignment)}) "
+            f"does not match number of points to plot ({num_points})"
+        )
+    if len(map_preferences.vert_alignment) == 1:
+        map_preferences.vert_alignment = [map_preferences.vert_alignment[0]] * num_points
+    elif len(map_preferences.vert_alignment) != num_points:
+        raise ValueError(
+            f"Length of vert_alignment list ({len(map_preferences.vert_alignment)}) "
+            f"does not match number of points to plot ({num_points})"
+        )
+    if len(map_preferences.label_offset_x) == 1:
+        map_preferences.label_offset_x = [map_preferences.label_offset_x[0]] * num_points
+    elif len(map_preferences.label_offset_x) != num_points:
+        raise ValueError(
+            f"Length of label_offset_x list ({len(map_preferences.label_offset_x)}) "
+            f"does not match number of points to plot ({num_points})"
+        )
+    if len(map_preferences.label_offset_y) == 1:
+        map_preferences.label_offset_y = [map_preferences.label_offset_y[0]] * num_points
+    elif len(map_preferences.label_offset_y) != num_points:
+        raise ValueError(
+            f"Length of label_offset_y list ({len(map_preferences.label_offset_y)}) "
+            f"does not match number of points to plot ({num_points})"
+        )
 
     # Auto detect latitude and longitude column names if not provided as argument
     if all(x is None for x in (latitude_var_name, longitude_var_name)):
@@ -334,76 +403,128 @@ def plot_geospatial_point_heat_map(
         gdfs_for_bounds.extend(base_layer_gdf)
 
     # Determine appropriate lower and upper bounds for the colormap and legend
-    if map_preferences.colorbar_limits is None:
+    if map_preferences.colorbar_limits is None and results_gdf[metric_to_plot].dtype in (
+        np.float64,
+        np.float32,
+        np.int64,
+        np.int32,
+    ):
         vmin, vmax = auto_colorbar_limits(results_gdf[metric_to_plot])
     else:
         vmin, vmax = map_preferences.colorbar_limits
 
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
-    results_gdf.plot(
-        ax=ax,
-        column=metric_to_plot,
-        cmap=map_preferences.colormap,
-        alpha=map_preferences.alpha,
-        marker=map_preferences.marker,
-        markersize=map_preferences.markersize,
-        edgecolor=map_preferences.edgecolor,
-        norm=norm,
-        zorder=map_preferences.zorder,
-    )
+    # Plot data labels
+    for idx, result in results_gdf.iterrows():
+        labeltext = f"{result[metric_to_plot]:{map_preferences.label_format_string}}"
+        ax.annotate(
+            text=labeltext,
+            xy=(result.geometry.x, result.geometry.y),
+            xytext=(
+                map_preferences.label_offset_x[idx],
+                map_preferences.label_offset_y[idx],
+            ),
+            textcoords="offset points",
+            fontsize=map_preferences.colorbar_tick_label_font_size,
+            backgroundcolor="white",
+            zorder=map_preferences.zorder - 1,
+            horizontalalignment=map_preferences.horz_alignment[idx],
+            verticalalignment=map_preferences.vert_alignment[idx],
+        )
 
-    # Create inset axis for color bar legend
-    inset_ax = inset_axes(
-        ax,
-        width=map_preferences.colorbar_width,
-        height=map_preferences.colorbar_height,
-        loc=map_preferences.colorbar_location,
-        bbox_to_anchor=map_preferences.colorbar_bbox_to_anchor,
-        bbox_transform=ax.transAxes,
-        borderpad=map_preferences.colorbar_borderpad,
-    )
+    # If data is text, just plot a single color for all points,
+    # otherwise plot the heat map with colormap
+    if results_gdf[metric_to_plot].dtype not in (np.float64, np.float32, np.int64, np.int32):
+        results_gdf.plot(
+            ax=ax,
+            color=map_preferences.markerfacecolor,
+            alpha=map_preferences.alpha,
+            marker=map_preferences.marker,
+            markersize=map_preferences.markersize,
+            edgecolor=map_preferences.edgecolor,
+            norm=norm,
+            zorder=map_preferences.zorder,
+        )
+    else:
+        results_gdf.plot(
+            ax=ax,
+            column=metric_to_plot,
+            cmap=map_preferences.colormap,
+            alpha=map_preferences.alpha,
+            marker=map_preferences.marker,
+            markersize=map_preferences.markersize,
+            edgecolor=map_preferences.edgecolor,
+            norm=norm,
+            zorder=map_preferences.zorder,
+        )
 
-    sm = plt.cm.ScalarMappable(cmap=map_preferences.colormap, norm=norm)
+    # Create legend if data is text
+    if results_gdf[metric_to_plot].dtype not in (np.float64, np.float32, np.int64, np.int32):
+        leg_texts.append(map_preferences.legend_label)
+        plt.legend(
+            leg_texts,
+            title=map_preferences.colorbar_label,
+            frameon=True,
+            bbox_to_anchor=map_preferences.colorbar_bbox_to_anchor,
+            bbox_transform=ax.transAxes,
+        )
 
-    cbar = plt.colorbar(
-        sm,
-        cax=inset_ax,
-        ticklocation=map_preferences.colorbar_tick_location,
-        orientation=map_preferences.colorbar_orientation,
-    )
+    # Otherwise, create inset axis for color bar legend
+    else:
+        inset_ax = inset_axes(
+            ax,
+            width=map_preferences.colorbar_width,
+            height=map_preferences.colorbar_height,
+            loc=map_preferences.colorbar_location,
+            bbox_to_anchor=map_preferences.colorbar_bbox_to_anchor,
+            bbox_transform=ax.transAxes,
+            borderpad=map_preferences.colorbar_borderpad,
+        )
 
-    cbar.set_label(
-        map_preferences.colorbar_label,
-        bbox={
-            "facecolor": map_preferences.colorbar_label_bbox_facecolor,
-            "alpha": map_preferences.colorbar_label_bbox_alpha,
-        },
-        size=map_preferences.colorbar_label_font_size,
-        labelpad=map_preferences.colorbar_labelpad,
-    )
+        sm = plt.cm.ScalarMappable(cmap=map_preferences.colormap, norm=norm)
 
-    # format tick marks on colorbar
-    inset_ax.tick_params(
-        direction=map_preferences.colorbar_tick_direction,
-        labelsize=map_preferences.colorbar_tick_label_font_size,
-    )
+        cbar = plt.colorbar(
+            sm,
+            cax=inset_ax,
+            ticklocation=map_preferences.colorbar_tick_location,
+            orientation=map_preferences.colorbar_orientation,
+        )
 
-    # format color bar legend offset text and position (exp notation for values if applicable)
-    cbar.formatter.set_scientific(map_preferences.colorbar_tick_label_use_exp_notation)
-    cbar.formatter.set_powerlimits(map_preferences.colorbar_tick_label_exp_notation_decimal_limit)
+        cbar.set_label(
+            map_preferences.colorbar_label,
+            bbox={
+                "facecolor": map_preferences.colorbar_label_bbox_facecolor,
+                "alpha": map_preferences.colorbar_label_bbox_alpha,
+            },
+            size=map_preferences.colorbar_label_font_size,
+            labelpad=map_preferences.colorbar_labelpad,
+        )
 
-    offset_text = cbar.ax.xaxis.get_offset_text()
-    offset_text.set_fontsize(map_preferences.colorbar_tick_label_font_size)
+        # format tick marks on colorbar
+        inset_ax.tick_params(
+            direction=map_preferences.colorbar_tick_direction,
+            labelsize=map_preferences.colorbar_tick_label_font_size,
+        )
+        inset_ax.set_xticks(np.linspace(vmin, vmax, num=map_preferences.colorbar_num_ticks))
 
-    # Dynamically set the exponential notation text x position based on the colorbar's width
-    # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
-    colorbar_width = float(map_preferences.colorbar_width[:-1])
-    dyn_exp_notation_x_offset = (colorbar_width + 2.5) / colorbar_width
-    offset_text.set_position((dyn_exp_notation_x_offset, np.nan))
-    # Set the expontential notation y position centered on the colorbar
-    # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
-    cbar.ax.xaxis.OFFSETTEXTPAD = -24
+        # format color bar legend offset text and position (exp notation for values if applicable)
+        cbar.formatter.set_scientific(map_preferences.colorbar_tick_label_use_exp_notation)
+        cbar.formatter.set_powerlimits(
+            map_preferences.colorbar_tick_label_exp_notation_decimal_limit
+        )
+
+        offset_text = cbar.ax.xaxis.get_offset_text()
+        offset_text.set_fontsize(map_preferences.colorbar_tick_label_font_size)
+
+        # Dynamically set the exponential notation text x position based on the colorbar's width
+        # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
+        colorbar_width = float(map_preferences.colorbar_width[:-1])
+        dyn_exp_notation_x_offset = (colorbar_width + 2.5) / colorbar_width
+        offset_text.set_position((dyn_exp_notation_x_offset, np.nan))
+        # Set the expontential notation y position centered on the colorbar
+        # NOTE: hardcoding this for ease of handling and reducing inputs, can be changed if needed
+        cbar.ax.xaxis.OFFSETTEXTPAD = -24
 
     coord_range_dict = calculate_geodataframe_total_bounds(*gdfs_for_bounds)
 
@@ -435,7 +556,7 @@ def plot_geospatial_point_heat_map(
     else:
         fig.savefig(fname=save_plot_fpath, dpi=save_plot_dpi)
 
-    return fig, ax, results_gdf
+    return fig, ax, leg_texts, results_gdf
 
 
 def plot_straight_line_shipping_routes(

@@ -1,9 +1,12 @@
 name: plant_config
 description: This file contains plant-specific parameters for the iron mapping example.
 sites:
-  site:
-    latitude: 41.717
-    longitude: -88.398
+  ore_site:
+    latitude: 47.29415278
+    longitude: -91.25649444
+  dri_site:
+    latitude: 41.6673847
+    longitude: -83.4837739
 technology_interconnections:
   # Connect feedstocks to iron mine.
   - [mine_electricity_feedstock, iron_mine, electricity, cable]
@@ -19,6 +22,9 @@ technology_interconnections:
   - [natural_gas_feedstock, iron_plant, natural_gas, pipe]
   # Use the iron ore consumed by the iron plant to calculate transport costs
   - [iron_plant, iron_transport, [iron_ore_consumed, iron_ore_in]]
+site_to_tech_connections: [[ore_site, iron_transport, [latitude, origin_latitude]], [ore_site, iron_transport, [longitude,
+          origin_longitude]], [dri_site, iron_transport, [latitude, destination_latitude]], [dri_site, iron_transport, [longitude,
+          destination_longitude]]]
 plant:
   plant_life: 30
   simulation:
