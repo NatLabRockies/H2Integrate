@@ -108,7 +108,7 @@ technologies:
       model: GenericSplitterPerformanceModel
     model_inputs:
       performance_parameters:
-        # The synloop's direct electricity is split off the same combined bus
+        # The Haber-Bosch loop's direct electricity is split off the same combined bus
         # that feeds the electrolyzer. The system-level controller sets the
         # prescribed amount sent to the priority tech (the electrolyzer) each
         # timestep so the split matches the backpropagated electricity demand.
@@ -155,7 +155,7 @@ technologies:
         price: 5.0
         annual_cost: 0.
         start_up_cost: 0.0
-  ammonia:
+  haber_bosch:
     performance_model:
       model: AmmoniaSynLoopPerformanceModel
     cost_model:

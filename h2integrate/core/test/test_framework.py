@@ -2,6 +2,7 @@ import os
 import shutil
 from copy import deepcopy
 from pathlib import Path
+from itertools import permutations
 from unittest.mock import patch
 
 import yaml
@@ -331,6 +332,42 @@ def test_validate_technology_interconnections(subtests, temp_copy_of_example):
 # ---------------------------------------------------------------------------
 
 import types
+
+
+@pytest.mark.unit
+def test_create_technology_graph_is_connection_order_independent(subtests):
+    connection_cases = {
+        "Appendix A topology": [
+            ["wind", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["grid", "haber_bosch", "electricity", "cable"],
+            ["n2_feedstock", "haber_bosch", "nitrogen", "pipe"],
+            ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
+        ],
+        "parallel multi-commodity edge": [
+            ["wind", "electrolyzer", "electricity", "cable"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["grid", "haber_bosch", "electricity", "cable"],
+            ["electrolyzer", "haber_bosch", "oxygen", "pipe"],
+            ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
+        ],
+    }
+
+    for case_name, connections in connection_cases.items():
+        with subtests.test(case_name):
+            expected_graph = create_technology_graph(connections)
+            expected_edges = {
+                (source, destination): tuple(attributes["commodity"])
+                for source, destination, attributes in expected_graph.edges(data=True)
+            }
+
+            for ordered_connections in permutations(connections):
+                graph = create_technology_graph(ordered_connections)
+                actual_edges = {
+                    (source, destination): tuple(attributes["commodity"])
+                    for source, destination, attributes in graph.edges(data=True)
+                }
+                assert actual_edges == expected_edges
 
 
 def _make_fake_model(interconnections, classifiers):

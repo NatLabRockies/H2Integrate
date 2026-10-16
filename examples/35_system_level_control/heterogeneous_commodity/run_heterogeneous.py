@@ -106,7 +106,7 @@ def make_plots(figure_dir):
     figure_dir = Path(figure_dir)
     figure_dir.mkdir(parents=True, exist_ok=True)
 
-    n_timesteps = h2i.prob.get_val("ammonia.ammonia_out", units="kg/h").size
+    n_timesteps = h2i.prob.get_val("haber_bosch.ammonia_out", units="kg/h").size
     hours = np.arange(n_timesteps)
 
     # A representative week (7 days) chosen to show variable solar and battery dispatch.
@@ -119,11 +119,11 @@ def make_plots(figure_dir):
     solar_mw = _get("solar.electricity_out", "MW")
     battery_mw = _get("battery.electricity_out", "MW")
     electrolyzer_load_mw = _get("electrolyzer.electricity_consumed", "MW")
-    synloop_load_mw = _get("ammonia.electricity_consumed", "MW")
+    haber_bosch_load_mw = _get("haber_bosch.electricity_consumed", "MW")
 
     # Splitter streams (MW): the combined bus feeds a literal splitter whose
     # priority output (out1) supplies the electrolyzer and whose second output
-    # (out2) supplies the synloop. The controller sets the prescribed priority
+    # (out2) supplies the Haber-Bosch loop. The controller sets the prescribed priority
     # allocation each hour from the two consumers' backpropagated demand.
     bus_mw = _get("elec_combiner.electricity_out", "MW")
     split_out1_mw = _get("electricity_splitter.electricity_out1", "MW")
@@ -132,30 +132,30 @@ def make_plots(figure_dir):
 
     # Hydrogen streams (kg/h).
     h2_produced = _get("electrolyzer.hydrogen_out", "kg/h")
-    h2_to_synloop = _get("ammonia.hydrogen_consumed", "kg/h")
+    h2_to_haber_bosch = _get("haber_bosch.hydrogen_consumed", "kg/h")
 
     # Ammonia streams (kg/h).
-    ammonia_out = _get("ammonia.ammonia_out", "kg/h")
-    ammonia_demand = _get("ammonia_load_demand.ammonia_demand_out", "kg/h")
+    ammonia_out = _get("haber_bosch.ammonia_out", "kg/h")
+    ammonia_demand = _get("ammonia_load_demand.ammonia_demand", "kg/h")
 
     # Battery state of charge (fraction of capacity).
     battery_soc = _get("battery.SOC", "unitless")
 
     # Controller set points that show backward propagation of demand.
-    _get("system_level_controller.ammonia_ammonia_set_point", "kg/h")
+    _get("system_level_controller.haber_bosch_ammonia_set_point", "kg/h")
     hydrogen_set_point = _get("system_level_controller.electrolyzer_hydrogen_set_point", "kg/h")
-    total_electricity_load_mw = electrolyzer_load_mw + synloop_load_mw
+    total_electricity_load_mw = electrolyzer_load_mw + haber_bosch_load_mw
 
     # Measured (dynamic) conversion ratios the controller derives per timestep.
     electrolyzer_load_kw = _get("electrolyzer.electricity_consumed", "kW")
-    synloop_load_kw = _get("ammonia.electricity_consumed", "kW")
+    haber_bosch_load_kw = _get("haber_bosch.electricity_consumed", "kW")
     with np.errstate(divide="ignore", invalid="ignore"):
         electricity_per_hydrogen = np.where(
             h2_produced > 1e-6, electrolyzer_load_kw / h2_produced, np.nan
         )
-        hydrogen_per_ammonia = np.where(ammonia_out > 1e-6, h2_to_synloop / ammonia_out, np.nan)
+        hydrogen_per_ammonia = np.where(ammonia_out > 1e-6, h2_to_haber_bosch / ammonia_out, np.nan)
         electricity_per_ammonia = np.where(
-            ammonia_out > 1e-6, synloop_load_kw / ammonia_out, np.nan
+            ammonia_out > 1e-6, haber_bosch_load_kw / ammonia_out, np.nan
         )
 
     # -----------------------------------------------------------------
@@ -177,7 +177,7 @@ def make_plots(figure_dir):
         total_electricity_load_mw[week],
         color="black",
         lw=1.5,
-        label="Electrolyzer + synloop load",
+        label="Electrolyzer + Haber-Bosch load",
     )
     axes[0].set_ylabel("Electricity (MW)")
     axes[0].set_title(
@@ -187,7 +187,11 @@ def make_plots(figure_dir):
 
     axes[1].plot(week_hours, h2_produced[week], color="#3B7DD8", label="Electrolyzer output")
     axes[1].plot(
-        week_hours, h2_to_synloop[week], color="#D8663B", ls="--", label="Synloop consumption"
+        week_hours,
+        h2_to_haber_bosch[week],
+        color="#D8663B",
+        ls="--",
+        label="Haber-Bosch consumption",
     )
     axes[1].set_ylabel("Hydrogen (kg/h)")
     axes[1].set_title("Hydrogen: electrolyzer output feeds the ammonia synthesis loop")
@@ -214,7 +218,7 @@ def make_plots(figure_dir):
     # -----------------------------------------------------------------
     # Figure 2: system block diagram. Technologies are colored by their
     # control classification, arrows show the commodity flows, and the two
-    # converters (electrolyzer and ammonia synloop) carry the conversion
+    # converters (electrolyzer and Haber-Bosch loop) carry the conversion
     # ratios that the controller multiplies to propagate demand upstream.
     # -----------------------------------------------------------------
     # Annotate the converters with the measured (dynamic) ratios the
@@ -226,7 +230,7 @@ def make_plots(figure_dir):
     nh3_rate = float(ammonia_demand.mean())
     h2_rate = float(hydrogen_set_point.mean())
     electrolyzer_rate_mw = float(electrolyzer_load_mw.mean())
-    synloop_rate_mw = float(synloop_load_mw.mean())
+    haber_bosch_rate_mw = float(haber_bosch_load_mw.mean())
 
     fig, ax = plt.subplots(figsize=(16, 9))
     ax.set_xlim(0, 100)
@@ -262,7 +266,7 @@ def make_plots(figure_dir):
     _box(
         ax,
         (80, 68),
-        "Ammonia synloop\n(dispatchable)\nconverter: H2 -> NH3\n(+ direct electricity)",
+        "Haber-Bosch loop\n(dispatchable)\nconverter: H2 -> NH3\n(+ direct electricity)",
         color_class["dispatchable"],
         width=16,
         height=13,
@@ -284,18 +288,18 @@ def make_plots(figure_dir):
     _flow_arrow(ax, (30.0, 74), (30.5, 70.0), color_flow["electricity"], label="bus", label_dy=1.2)
     # Splitter out1 (priority) supplies the electrolyzer.
     _flow_arrow(ax, (35.8, 68), (51.5, 68), color_flow["electricity"], label="out1")
-    # Splitter out2 supplies the synloop's direct electricity along the same bus.
+    # Splitter out2 supplies the Haber-Bosch loop's direct electricity along the same bus.
     _flow_arrow(
         ax,
         (33.0, 64.5),
         (74.0, 61.5),
         color_flow["electricity"],
         rad=-0.5,
-        label="out2 (direct electricity to synloop)",
+        label="out2 (direct electricity to Haber-Bosch)",
         label_dy=18.0,
     )
 
-    # Hydrogen flows (orange): the electrolyzer feeds the synloop directly.
+    # Hydrogen flows (orange): the electrolyzer feeds the Haber-Bosch loop directly.
     _flow_arrow(ax, (66.5, 68), (72, 68), color_flow["hydrogen"], label="hydrogen")
 
     # Nitrogen feedstock and the final ammonia product.
@@ -354,7 +358,14 @@ def make_plots(figure_dir):
         width=17,
         height=7,
     )
-    _box(ax, (72, 10), f"Synloop direct\n{synloop_rate_mw:,.1f} MW", "#DCE8F8", width=17, height=7)
+    _box(
+        ax,
+        (72, 10),
+        f"Haber-Bosch direct\n{haber_bosch_rate_mw:,.1f} MW",
+        "#DCE8F8",
+        width=17,
+        height=7,
+    )
     _flow_arrow(
         ax,
         (23.5, 15),
@@ -439,7 +450,7 @@ def make_plots(figure_dir):
     _box(
         ax_chain,
         (80, 40),
-        f"{m_elec_per_nh3:0.3f} kWh\n(synloop direct)",
+        f"{m_elec_per_nh3:0.3f} kWh\n(Haber-Bosch direct)",
         "#DCE8F8",
         width=17,
         height=15,
@@ -492,7 +503,7 @@ def make_plots(figure_dir):
         [m_elec_per_nh3],
         left=[elec_via_electrolysis],
         color="#9AA0A6",
-        label="synloop direct",
+        label="Haber-Bosch direct",
     )
     ax_bar.set_yticks([])
     ax_bar.set_xlabel("Electricity per kg ammonia (kWh/kg)")
@@ -511,7 +522,7 @@ def make_plots(figure_dir):
     # between components over a representative week. The top panels show how
     # the literal electricity splitter divides the combined bus: the priority
     # output (out1) tracks the electrolyzer's demand while the second output
-    # (out2) carries the remainder to the synloop, so both loads are served
+    # (out2) carries the remainder to the Haber-Bosch loop, so both loads are served
     # from a single physical stream. The lower panels follow the hydrogen and
     # ammonia signals along the rest of the chain, and the final panel shows the
     # battery state of charge over the same week.
@@ -523,7 +534,7 @@ def make_plots(figure_dir):
         week_hours,
         split_out1_mw[week],
         split_out2_mw[week],
-        labels=["out1 -> electrolyzer", "out2 -> synloop"],
+        labels=["out1 -> electrolyzer", "out2 -> Haber-Bosch"],
         colors=["#3B7DD8", "#9AC4F0"],
     )
     axes[0].plot(
@@ -554,20 +565,25 @@ def make_plots(figure_dir):
     axes[1].plot(week_hours, split_out2_mw[week], color="#9AC4F0", lw=1.4, label="out2")
     axes[1].plot(
         week_hours,
-        synloop_load_mw[week],
+        haber_bosch_load_mw[week],
         color="#7B4FA3",
         ls="--",
         lw=1.2,
-        label="synloop consumed",
+        label="Haber-Bosch consumed",
     )
     axes[1].set_ylabel("Electricity (MW)")
     axes[1].set_title("Split allocations track each consumer's load")
     axes[1].legend(loc="upper right", ncol=2, fontsize=8)
 
-    # Panel 3: hydrogen signals between the electrolyzer and the synloop.
+    # Panel 3: hydrogen signals between the electrolyzer and the Haber-Bosch loop.
     axes[2].plot(week_hours, h2_produced[week], color="#D8663B", lw=1.4, label="electrolyzer out")
     axes[2].plot(
-        week_hours, h2_to_synloop[week], color="black", ls=":", lw=1.2, label="synloop consumed"
+        week_hours,
+        h2_to_haber_bosch[week],
+        color="black",
+        ls=":",
+        lw=1.2,
+        label="Haber-Bosch consumed",
     )
     axes[2].set_ylabel("Hydrogen (kg/h)")
     axes[2].set_title("Hydrogen: electrolyzer output feeds the ammonia synthesis loop")

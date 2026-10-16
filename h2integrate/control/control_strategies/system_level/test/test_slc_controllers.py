@@ -790,16 +790,16 @@ class TestHeterogeneousCommodityControl:
     """Backward demand propagation across commodity converters."""
 
     def test_detect_converters_chain(self):
-        """Converters are detected across a grid -> electrolyzer -> synloop chain."""
+        """Converters are detected across a grid -> electrolyzer -> Haber-Bosch chain."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "synloop", "hydrogen", "pipe"],
-            ["synloop", "demand", "ammonia", "pipe"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["haber_bosch", "demand", "ammonia", "pipe"],
         ]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "synloop"]
+            dispatchable=["grid", "electrolyzer", "haber_bosch"]
         )
         slc_topology = _build_slc_topology(
             tech_graph, classifiers, demand_commodity="ammonia", demand_commodity_rate_units="kg/h"
@@ -814,7 +814,7 @@ class TestHeterogeneousCommodityControl:
         )
         assert prob.model.slc._converters == {
             ("electricity", "electrolyzer", "hydrogen"),
-            ("hydrogen", "synloop", "ammonia"),
+            ("hydrogen", "haber_bosch", "ammonia"),
         }
 
     def test_single_converter_capacity_propagation(self):
@@ -852,13 +852,13 @@ class TestHeterogeneousCommodityControl:
         """Demand propagates through a two-converter chain via capacity ratios."""
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "synloop", "hydrogen", "pipe"],
-            ["synloop", "demand", "ammonia", "pipe"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["haber_bosch", "demand", "ammonia", "pipe"],
         ]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "synloop"]
+            dispatchable=["grid", "electrolyzer", "haber_bosch"]
         )
         slc_topology = _build_slc_topology(
             tech_graph,
@@ -874,14 +874,14 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
-        # hydrogen/ammonia capacity ratio = electrolyzer rated / synloop rated = 0.18.
-        prob.set_val("slc.synloop_rated_ammonia_production", 1e6)
+        # hydrogen/ammonia capacity ratio = electrolyzer rated / Haber-Bosch rated = 0.18.
+        prob.set_val("slc.haber_bosch_rated_ammonia_production", 1e6)
         prob.set_val("slc.electrolyzer_rated_hydrogen_production", 0.18e6)
         # electricity/hydrogen capacity ratio = grid rated / electrolyzer rated = 51.
         prob.set_val("slc.grid_rated_electricity_production", 51.0 * 0.18e6)
         prob.run_model()
 
-        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        np.testing.assert_allclose(prob.get_val("slc.haber_bosch_ammonia_set_point"), 100.0)
         np.testing.assert_allclose(
             prob.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0 * 0.18
         )
@@ -1141,7 +1141,7 @@ class TestHeterogeneousCommodityControl:
     def test_splitter_aggregates_derived_demand_across_producers(self):
         """A shared input commodity sums derived demand from multiple converters.
 
-        Two electrolyzers feed one synloop (a hydrogen combiner) and both draw
+        Two electrolyzers feed one Haber-Bosch loop (a hydrogen combiner) and both draw
         electricity from one grid (an electricity splitter). Flat per-commodity
         aggregation dispatches the derived hydrogen demand across both
         electrolyzers and sums their electricity demand onto the single grid.
@@ -1149,14 +1149,14 @@ class TestHeterogeneousCommodityControl:
         tech_connections = [
             ["grid", "ely_a", "electricity", "cable"],
             ["grid", "ely_b", "electricity", "cable"],
-            ["ely_a", "synloop", "hydrogen", "pipe"],
-            ["ely_b", "synloop", "hydrogen", "pipe"],
-            ["synloop", "demand", "ammonia", "pipe"],
+            ["ely_a", "haber_bosch", "hydrogen", "pipe"],
+            ["ely_b", "haber_bosch", "hydrogen", "pipe"],
+            ["haber_bosch", "demand", "ammonia", "pipe"],
         ]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "ely_a", "ely_b", "synloop"]
+            dispatchable=["grid", "ely_a", "ely_b", "haber_bosch"]
         )
         slc_topology = _build_slc_topology(
             tech_graph,
@@ -1172,8 +1172,8 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
-        # hydrogen/ammonia capacity ratio = (ely_a 100 + ely_b 100) / synloop 1000 = 0.2.
-        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        # hydrogen/ammonia capacity ratio = (ely_a 100 + ely_b 100) / Haber-Bosch 1000 = 0.2.
+        prob.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
         prob.set_val("slc.ely_a_rated_hydrogen_production", 100.0)
         prob.set_val("slc.ely_b_rated_hydrogen_production", 100.0)
         # electricity/hydrogen capacity ratio for each electrolyzer = grid 5100 / 100 = 51.
@@ -1181,31 +1181,31 @@ class TestHeterogeneousCommodityControl:
         prob.run_model()
 
         # Derived hydrogen demand = 100 * 0.2 = 20 kg/h, split evenly across electrolyzers.
-        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        np.testing.assert_allclose(prob.get_val("slc.haber_bosch_ammonia_set_point"), 100.0)
         np.testing.assert_allclose(prob.get_val("slc.ely_a_hydrogen_set_point"), 10.0)
         np.testing.assert_allclose(prob.get_val("slc.ely_b_hydrogen_set_point"), 10.0)
         # Electricity demand from both electrolyzers is summed onto the single grid:
         # (10 * 51) + (10 * 51) = 1020 kW.
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 1020.0)
 
-    def test_electricity_splitter_feeds_electrolyzer_and_synloop(self):
+    def test_electricity_splitter_feeds_electrolyzer_and_haber_bosch(self):
         """One electricity source split between two distinct consumers sums demand.
 
         The canonical splitter topology: a single electricity generator feeds
-        both an electrolyzer and, directly, an ammonia synloop. Because these are
+        both an electrolyzer and, directly, a Haber-Bosch loop. Because these are
         two distinct converters that happen to share the same input commodity,
         their electricity demands sum onto the single source.
         """
         tech_connections = [
             ["grid", "electrolyzer", "electricity", "cable"],
-            ["grid", "synloop", "electricity", "cable"],
-            ["electrolyzer", "synloop", "hydrogen", "pipe"],
-            ["synloop", "demand", "ammonia", "pipe"],
+            ["grid", "haber_bosch", "electricity", "cable"],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["haber_bosch", "demand", "ammonia", "pipe"],
         ]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         classifiers = _build_tech_control_classifiers(
-            dispatchable=["grid", "electrolyzer", "synloop"]
+            dispatchable=["grid", "electrolyzer", "haber_bosch"]
         )
         slc_topology = _build_slc_topology(
             tech_graph,
@@ -1221,42 +1221,42 @@ class TestHeterogeneousCommodityControl:
             demand=100.0,
             commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
         )
-        # hydrogen/ammonia capacity ratio = electrolyzer 200 / synloop 1000 = 0.2.
-        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        # hydrogen/ammonia capacity ratio = electrolyzer 200 / Haber-Bosch 1000 = 0.2.
+        prob.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
         prob.set_val("slc.electrolyzer_rated_hydrogen_production", 200.0)
         # grid electricity seeds two capacity ratios from a single rated capacity:
         #   electricity/hydrogen  = 10200 / 200  = 51   (electrolyzer draw)
-        #   electricity/ammonia   = 10200 / 1000 = 10.2 (synloop direct draw)
+        #   electricity/ammonia   = 10200 / 1000 = 10.2 (Haber-Bosch direct draw)
         prob.set_val("slc.grid_rated_electricity_production", 10200.0)
         prob.run_model()
 
-        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        np.testing.assert_allclose(prob.get_val("slc.haber_bosch_ammonia_set_point"), 100.0)
         # Derived hydrogen demand = 100 * 0.2 = 20 kg/h.
         np.testing.assert_allclose(prob.get_val("slc.electrolyzer_hydrogen_set_point"), 20.0)
         # Electricity from the two distinct converters sums onto the single grid:
         #   electrolyzer: 20 * 51   = 1020 kW
-        #   synloop:      100 * 10.2 = 1020 kW  ->  total 2040 kW
+        #   Haber-Bosch: 100 * 10.2 = 1020 kW  ->  total 2040 kW
         np.testing.assert_allclose(prob.get_val("slc.grid_electricity_set_point"), 2040.0)
 
     def test_coproduct_converter_shares_input_without_double_counting(self):
         """A converter with two demanded outputs shares one input, no double-count.
 
         A reformer produces both hydrogen and electricity from natural gas (a
-        co-product converter), and a synloop consumes both to make ammonia. The
+        co-product converter), and a Haber-Bosch loop consumes both to make ammonia. The
         two outputs of the reformer both draw on natural gas, so their induced
         natural-gas demand is combined by the binding (maximum) requirement
         rather than summed, since the single physical unit makes both together.
         """
         tech_connections = [
             ["ng_source", "reformer", "natural_gas", "pipe"],
-            ["reformer", "synloop", "hydrogen", "pipe"],
-            ["reformer", "synloop", "electricity", "cable"],
-            ["synloop", "demand", "ammonia", "pipe"],
+            ["reformer", "haber_bosch", "hydrogen", "pipe"],
+            ["reformer", "haber_bosch", "electricity", "cable"],
+            ["haber_bosch", "demand", "ammonia", "pipe"],
         ]
         plant_config = _build_plant_config(tech_connections)
         tech_graph = _build_technology_graph(tech_connections)
         classifiers = _build_tech_control_classifiers(
-            dispatchable=["ng_source", "reformer", "synloop"]
+            dispatchable=["ng_source", "reformer", "haber_bosch"]
         )
         slc_topology = _build_slc_topology(
             tech_graph,
@@ -1282,8 +1282,8 @@ class TestHeterogeneousCommodityControl:
         assert ("natural_gas", "reformer", "hydrogen") in prob.model.slc._converters
         assert ("natural_gas", "reformer", "electricity") in prob.model.slc._converters
 
-        # synloop uses capacity ratios: hydrogen 200/1000 = 0.2, electricity 300/1000 = 0.3.
-        prob.set_val("slc.synloop_rated_ammonia_production", 1000.0)
+        # Haber-Bosch uses capacity ratios: hydrogen 200/1000 = 0.2, electricity 300/1000 = 0.3.
+        prob.set_val("slc.haber_bosch_rated_ammonia_production", 1000.0)
         prob.set_val("slc.reformer_rated_hydrogen_production", 200.0)
         prob.set_val("slc.reformer_rated_electricity_production", 300.0)
         # reformer uses a measured natural-gas ratio: 100 kg/h consumed shared across
@@ -1291,7 +1291,7 @@ class TestHeterogeneousCommodityControl:
         prob.set_val("slc.reformer_natural_gas_consumed", 100.0)
         prob.run_model()
 
-        np.testing.assert_allclose(prob.get_val("slc.synloop_ammonia_set_point"), 100.0)
+        np.testing.assert_allclose(prob.get_val("slc.haber_bosch_ammonia_set_point"), 100.0)
         # Derived reformer set points: hydrogen 100 * 0.2 = 20, electricity 100 * 0.3 = 30.
         np.testing.assert_allclose(prob.get_val("slc.reformer_hydrogen_set_point"), 20.0)
         np.testing.assert_allclose(prob.get_val("slc.reformer_electricity_set_point"), 30.0)

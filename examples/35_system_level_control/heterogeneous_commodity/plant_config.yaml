@@ -30,13 +30,13 @@ technology_interconnections:
   # splitter out1 (priority tech) supplies the electrolyzer
   - [electricity_splitter, electrolyzer, electricity, cable]
   # splitter out2 supplies the ammonia synthesis loop's direct electricity
-  - [electricity_splitter, ammonia, electricity, cable]
+  - [electricity_splitter, haber_bosch, electricity, cable]
   # hydrogen supply to the ammonia synthesis loop
-  - [electrolyzer, ammonia, hydrogen, pipe]
+  - [electrolyzer, haber_bosch, hydrogen, pipe]
   # nitrogen feedstock for the synthesis loop
-  - [n2_feedstock, ammonia, nitrogen, pipe]
+  - [n2_feedstock, haber_bosch, nitrogen, pipe]
   # ammonia supply to the ammonia demand
-  - [ammonia, ammonia_load_demand, ammonia, pipe]
+  - [haber_bosch, ammonia_load_demand, ammonia, pipe]
 site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.wind_resource, wind, wind_resource_data]
@@ -63,10 +63,10 @@ system_level_control:
     commodity_sell_price: 0.60  # USD/kg ammonia sell price (above the marginal cost so demand is served)
     cost_per_tech:
       # Ammonia marginal cost is taken from its upstream nitrogen feedstock; wind, solar, and
-      # the battery are not feedstocks and are not summed here. The synloop's direct
+      # the battery are not feedstocks and are not summed here. The Haber-Bosch loop's direct
       # electricity is supplied by the shared electricity bus rather than a dedicated
       # feedstock, so it is costed through the electricity dispatch instead.
-      ammonia: feedstock
+      haber_bosch: feedstock
   solver_options:
     solver_name: gauss_seidel
     max_iter: 50
@@ -101,7 +101,7 @@ finance_parameters:
   finance_subgroups:
     ammonia:
       commodity: ammonia
-      commodity_stream: ammonia
+      commodity_stream: haber_bosch
       finance_groups: [profast_lco]
       technologies:
         - wind
@@ -109,7 +109,7 @@ finance_parameters:
         - battery
         - electrolyzer
         - n2_feedstock
-        - ammonia
+        - haber_bosch
   cost_adjustment_parameters:
     cost_year_adjustment_inflation: 0.025  # used to adjust modeled costs to target_dollar_year
     target_dollar_year: 2022

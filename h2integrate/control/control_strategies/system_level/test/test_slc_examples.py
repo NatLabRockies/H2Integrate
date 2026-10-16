@@ -419,7 +419,9 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
 
     with subtests.test("Ammonia set point follows demand"):
         assert np.all(
-            model.prob.get_val("system_level_controller.ammonia_ammonia_set_point", units="kg/h")
+            model.prob.get_val(
+                "system_level_controller.haber_bosch_ammonia_set_point", units="kg/h"
+            )
             == model.prob.get_val("ammonia_load_demand.ammonia_demand", units="kg/h")
         )
 
@@ -456,7 +458,7 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
 
     with subtests.test("Ammonia production does not exceed demand"):
         assert (
-            model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
+            model.prob.get_val("haber_bosch.ammonia_out", units="kg/h").sum()
             <= model.prob.get_val("ammonia_load_demand.ammonia_demand", units="kg/h").sum() + 1e-6
         )
 
@@ -467,7 +469,7 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         # relaxation on the Gauss-Seidel dispatch loop.
         assert (
             pytest.approx(26332404.59092386, rel=1e-5)
-            == model.prob.get_val("ammonia.ammonia_out", units="kg/h").sum()
+            == model.prob.get_val("haber_bosch.ammonia_out", units="kg/h").sum()
         )
 
     with subtests.test("Electrolyzer hydrogen set point total"):
