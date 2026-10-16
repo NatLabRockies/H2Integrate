@@ -234,6 +234,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 self.demand_tech,
                 self.commodity,
             )
+        self._warn_undispatched_tech_commodities()
 
         # Register the converters' measured-consumption inputs. Conversion ratios are derived
         # automatically (measured first, then a capacity-based seed), enabling backward demand
@@ -267,6 +268,29 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     f"consumer of splitter {splitter.name}"
                 ),
             )
+
+    def _warn_undispatched_tech_commodities(self):
+        """Warn when a controller-managed output is outside the demand-reachable topology."""
+        dispatched_producers = {
+            (tech_name, self._dispatch_topology.buses[bus_name].commodity)
+            for bus_name in self._dispatch_topology.dispatch_order
+            for tech_name in self._dispatch_topology.buses[bus_name].producers
+        }
+        undispatched = sorted(
+            (tech_name, commodity)
+            for tech_name, commodity in self.techs_to_commodities
+            if tech_name in self.input_techs and (tech_name, commodity) not in dispatched_producers
+        )
+        if not undispatched:
+            return
+
+        details = ", ".join(f"{tech_name} ({commodity})" for tech_name, commodity in undispatched)
+        warnings.warn(
+            "Controller-managed outputs are not producers on any demand-reachable supply bus and "
+            f"will not be demand-driven: {details}.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     def _get_splitter_rate_units(self, splitter_name):
         """Return the ``commodity_rate_units`` of a splitter from the tech config, or ``None``."""

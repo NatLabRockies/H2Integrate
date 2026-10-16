@@ -2,6 +2,7 @@
 
 import os
 import sys
+import json
 import textwrap
 import warnings
 import subprocess
@@ -16,49 +17,6 @@ from h2integrate.control.control_strategies.system_level.slc_topology import (
     build_dispatch_topology,
     find_commodity_suppliers,
 )
-
-
-# Spec 05 Appendix A: wind feeds the electrolyzer, a grid feeds only the Haber-Bosch loop.
-GRID_TO_HABER_BOSCH = [
-    ["wind", "electrolyzer", "electricity", "cable"],
-    ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-    ["grid", "haber_bosch", "electricity", "cable"],
-    ["n2_feedstock", "haber_bosch", "nitrogen", "pipe"],
-    ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
-]
-GRID_TO_HABER_BOSCH_CLASSIFIERS = {
-    "wind": "flexible",
-    "grid": "dispatchable",
-    "electrolyzer": "dispatchable",
-    "haber_bosch": "dispatchable",
-    "n2_feedstock": "feedstock",
-}
-
-# examples/35_system_level_control/heterogeneous_commodity
-HETEROGENEOUS_EXAMPLE = [
-    ["wind", "gen_combiner", "electricity", "cable"],
-    ["solar", "gen_combiner", "electricity", "cable"],
-    ["gen_combiner", "battery", "electricity", "cable"],
-    ["gen_combiner", "elec_combiner", "electricity", "cable"],
-    ["battery", "elec_combiner", "electricity", "cable"],
-    ["elec_combiner", "electricity_splitter", "electricity", "cable"],
-    ["electricity_splitter", "electrolyzer", "electricity", "cable"],
-    ["electricity_splitter", "haber_bosch", "electricity", "cable"],
-    ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-    ["n2_feedstock", "haber_bosch", "nitrogen", "pipe"],
-    ["haber_bosch", "ammonia_load_demand", "ammonia", "pipe"],
-]
-HETEROGENEOUS_EXAMPLE_CLASSIFIERS = {
-    "wind": "flexible",
-    "solar": "flexible",
-    "battery": "storage",
-    "electrolyzer": "dispatchable",
-    "haber_bosch": "dispatchable",
-    "n2_feedstock": "feedstock",
-    "gen_combiner": "combiner",
-    "elec_combiner": "combiner",
-    "electricity_splitter": "splitter",
-}
 
 
 def _build_topology(connections, classifiers, demand_tech, demand_commodity):
@@ -76,7 +34,24 @@ def _build_topology(connections, classifiers, demand_tech, demand_commodity):
 
 
 @pytest.mark.unit
-def test_find_commodity_suppliers(subtests):
+def test_named_topology_fixtures_are_complete(slc_topologies, subtests):
+    for name, topology_data in slc_topologies.items():
+        nodes = {
+            tech_name
+            for source, target, _commodity, _transport in topology_data["connections"]
+            for tech_name in (source, target)
+        }
+        with subtests.test(name):
+            assert isinstance(topology_data["connections"], list)
+            assert topology_data["connections"]
+            assert isinstance(topology_data["classifiers"], dict)
+            assert nodes <= topology_data["classifiers"].keys()
+            assert topology_data["demand_tech"] in nodes
+            assert topology_data["demand_commodity"]
+
+
+@pytest.mark.unit
+def test_find_commodity_suppliers(slc_topologies, subtests):
     with subtests.test("direct chain"):
         graph = create_technology_graph([["grid", "electrolyzer", "electricity", "cable"]])
         assert find_commodity_suppliers(graph, "electrolyzer", "electricity") == ("grid",)
@@ -99,19 +74,13 @@ def test_find_commodity_suppliers(subtests):
         ) == ("solar", "wind")
 
     with subtests.test("heterogeneous bus through splitter and storage"):
-        graph = create_technology_graph(
-            [
-                ["wind", "gen_combiner", "electricity", "cable"],
-                ["solar", "gen_combiner", "electricity", "cable"],
-                ["gen_combiner", "battery", "electricity", "cable"],
-                ["gen_combiner", "elec_combiner", "electricity", "cable"],
-                ["battery", "elec_combiner", "electricity", "cable"],
-                ["elec_combiner", "electricity_splitter", "electricity", "cable"],
-                ["electricity_splitter", "electrolyzer", "electricity", "cable"],
-                ["electricity_splitter", "haber_bosch", "electricity", "cable"],
-            ]
-        )
-        suppliers = {"battery", "solar", "wind"}
+        example = slc_topologies["hetero_example"]
+        graph = create_technology_graph(example["connections"])
+        suppliers = {
+            tech_name
+            for tech_name, classifier in example["classifiers"].items()
+            if classifier in SUPPLIER_CLASSIFIERS
+        }
         assert find_commodity_suppliers(
             graph, "electrolyzer", "electricity", supplier_techs=suppliers
         ) == ("battery", "solar", "wind")
@@ -120,19 +89,18 @@ def test_find_commodity_suppliers(subtests):
         ) == ("battery", "solar", "wind")
 
     with subtests.test("distinct electricity sources do not cross a converter"):
-        graph = create_technology_graph(
-            [
-                ["grid", "haber_bosch", "electricity", "cable"],
-                ["wind", "electrolyzer", "electricity", "cable"],
-                ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-            ]
-        )
+        appendix = slc_topologies["grid_to_haber_bosch"]
+        graph = create_technology_graph(appendix["connections"])
         # The old ancestor-based lookup also returned wind for Haber-Bosch electricity.
         assert find_commodity_suppliers(
             graph,
             "haber_bosch",
             "electricity",
-            supplier_techs={"grid", "wind", "electrolyzer"},
+            supplier_techs={
+                tech_name
+                for tech_name, classifier in appendix["classifiers"].items()
+                if classifier in SUPPLIER_CLASSIFIERS
+            },
         ) == ("grid",)
 
     with subtests.test("converter terminates the path"):
@@ -151,14 +119,17 @@ def test_find_commodity_suppliers(subtests):
         ) == ("fuel_cell",)
 
     with subtests.test("multi-commodity edge"):
-        graph = create_technology_graph(
-            [
-                ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-                ["electrolyzer", "haber_bosch", "oxygen", "pipe"],
-                ["electrolyzer", "haber_bosch", "heat", "pipe"],
-            ]
-        )
-        assert find_commodity_suppliers(graph, "haber_bosch", "oxygen") == ("electrolyzer",)
+        fake_system = slc_topologies["fake_complex_system_816"]
+        graph = create_technology_graph(fake_system["connections"])
+        suppliers = {
+            tech_name
+            for tech_name, classifier in fake_system["classifiers"].items()
+            if classifier in SUPPLIER_CLASSIFIERS
+        }
+        for commodity in ("oxygen", "heat"):
+            assert find_commodity_suppliers(
+                graph, "haber_bosch", commodity, supplier_techs=suppliers
+            ) == ("electrolyzer",)
 
     with subtests.test("commodity loop terminates"):
         graph = create_technology_graph(
@@ -170,7 +141,8 @@ def test_find_commodity_suppliers(subtests):
         assert find_commodity_suppliers(graph, "a", "electricity") == ("b",)
 
     with subtests.test("feedstock can be included or filtered out"):
-        graph = create_technology_graph([["n2_feedstock", "haber_bosch", "nitrogen", "pipe"]])
+        fake_system = slc_topologies["fake_complex_system_816"]
+        graph = create_technology_graph(fake_system["connections"])
         assert find_commodity_suppliers(
             graph, "haber_bosch", "nitrogen", supplier_techs={"n2_feedstock"}
         ) == ("n2_feedstock",)
@@ -181,12 +153,13 @@ def test_find_commodity_suppliers(subtests):
 
 
 @pytest.mark.unit
-def test_dispatch_topology_heterogeneous_example(subtests):
+def test_dispatch_topology_heterogeneous_example(slc_topologies, subtests):
+    example = slc_topologies["hetero_example"]
     topology = _build_topology(
-        HETEROGENEOUS_EXAMPLE,
-        HETEROGENEOUS_EXAMPLE_CLASSIFIERS,
-        "ammonia_load_demand",
-        "ammonia",
+        example["connections"],
+        example["classifiers"],
+        example["demand_tech"],
+        example["demand_commodity"],
     )
     electricity_bus = topology.buses["electricity:electrolyzer+haber_bosch"]
 
@@ -239,10 +212,21 @@ def test_dispatch_topology_heterogeneous_example(subtests):
         assert splitter.priority_consumers == ("electrolyzer",)
 
     with subtests.test("swapping the splitter outputs swaps the priority consumer"):
-        swapped = [list(connection) for connection in HETEROGENEOUS_EXAMPLE]
-        swapped[6], swapped[7] = swapped[7], swapped[6]
+        swapped = [list(connection) for connection in example["connections"]]
+        splitter_outputs = [
+            index
+            for index, connection in enumerate(swapped)
+            if connection[0] == "electricity_splitter"
+        ]
+        swapped[splitter_outputs[0]], swapped[splitter_outputs[1]] = (
+            swapped[splitter_outputs[1]],
+            swapped[splitter_outputs[0]],
+        )
         swapped_topology = _build_topology(
-            swapped, HETEROGENEOUS_EXAMPLE_CLASSIFIERS, "ammonia_load_demand", "ammonia"
+            swapped,
+            example["classifiers"],
+            example["demand_tech"],
+            example["demand_commodity"],
         )
         assert swapped_topology.splitters[0].priority_consumers == ("haber_bosch",)
         assert swapped_topology.dispatch_order == topology.dispatch_order
@@ -251,17 +235,21 @@ def test_dispatch_topology_heterogeneous_example(subtests):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             _build_topology(
-                HETEROGENEOUS_EXAMPLE,
-                HETEROGENEOUS_EXAMPLE_CLASSIFIERS,
-                "ammonia_load_demand",
-                "ammonia",
+                example["connections"],
+                example["classifiers"],
+                example["demand_tech"],
+                example["demand_commodity"],
             )
 
 
 @pytest.mark.unit
-def test_dispatch_topology_grid_to_haber_bosch(subtests):
+def test_dispatch_topology_grid_to_haber_bosch(slc_topologies, subtests):
+    appendix = slc_topologies["grid_to_haber_bosch"]
     topology = _build_topology(
-        GRID_TO_HABER_BOSCH, GRID_TO_HABER_BOSCH_CLASSIFIERS, "ammonia_demand", "ammonia"
+        appendix["connections"],
+        appendix["classifiers"],
+        appendix["demand_tech"],
+        appendix["demand_commodity"],
     )
 
     with subtests.test("distinct electricity sources are distinct buses"):
@@ -303,21 +291,31 @@ def test_dispatch_topology_grid_to_haber_bosch(subtests):
 
 
 @pytest.mark.unit
-def test_dispatch_topology_ignores_interconnection_order():
+def test_dispatch_topology_ignores_interconnection_order(slc_topologies):
+    appendix = slc_topologies["grid_to_haber_bosch"]
+    connections = appendix["connections"]
     expected = _build_topology(
-        GRID_TO_HABER_BOSCH, GRID_TO_HABER_BOSCH_CLASSIFIERS, "ammonia_demand", "ammonia"
+        connections,
+        appendix["classifiers"],
+        appendix["demand_tech"],
+        appendix["demand_commodity"],
     )
-    for connections in permutations(GRID_TO_HABER_BOSCH):
+    for ordered_connections in permutations(connections):
         topology = _build_topology(
-            list(connections), GRID_TO_HABER_BOSCH_CLASSIFIERS, "ammonia_demand", "ammonia"
+            list(ordered_connections),
+            appendix["classifiers"],
+            appendix["demand_tech"],
+            appendix["demand_commodity"],
         )
         assert topology == expected
 
 
 @pytest.mark.regression
-def test_dispatch_order_is_independent_of_python_hash_seed():
+def test_dispatch_order_is_independent_of_python_hash_seed(slc_topologies):
     script = textwrap.dedent(
         """
+        import json
+        import os
         import sys
         from pathlib import Path
 
@@ -333,20 +331,9 @@ def test_dispatch_order_is_independent_of_python_hash_seed():
         sys.path.insert(0, str(system_level_path))
         from slc_topology import SUPPLIER_CLASSIFIERS, build_dispatch_topology
 
-        connections = [
-            ["wind", "electrolyzer", "electricity", "cable"],
-            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
-            ["grid", "haber_bosch", "electricity", "cable"],
-            ["n2_feedstock", "haber_bosch", "nitrogen", "pipe"],
-            ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
-        ]
-        classifiers = {
-            "wind": "flexible",
-            "grid": "dispatchable",
-            "electrolyzer": "dispatchable",
-            "haber_bosch": "dispatchable",
-            "n2_feedstock": "feedstock",
-        }
+        topology_data = json.loads(os.environ["SLC_TOPOLOGY_DATA"])
+        connections = topology_data["connections"]
+        classifiers = topology_data["classifiers"]
         graph = nx.DiGraph()
         for source, target, commodity, _ in connections:
             graph.add_edge(source, target, commodity=[commodity])
@@ -357,21 +344,35 @@ def test_dispatch_order_is_independent_of_python_hash_seed():
             for commodity in commodities
         }
         topology = build_dispatch_topology(
-            graph, classifiers, tech_to_commodity, "ammonia_demand", "ammonia"
+            graph,
+            classifiers,
+            tech_to_commodity,
+            topology_data["demand_tech"],
+            topology_data["demand_commodity"],
         )
         print(repr(topology.dispatch_order))
         """
     )
     dispatch_orders = []
+    appendix = slc_topologies["grid_to_haber_bosch"]
+    topology_json = json.dumps(
+        {
+            "connections": appendix["connections"],
+            "classifiers": appendix["classifiers"],
+            "demand_tech": appendix["demand_tech"],
+            "demand_commodity": appendix["demand_commodity"],
+        }
+    )
 
     for hash_seed in ("0", "1"):
         environment = os.environ.copy()
         environment["PYTHONHASHSEED"] = hash_seed
+        environment["SLC_TOPOLOGY_DATA"] = topology_json
         try:
             result = subprocess.run(
                 [sys.executable, "-c", script],
                 capture_output=True,
-                check=True,
+                check=False,
                 text=True,
                 timeout=10,
                 env=environment,
@@ -379,6 +380,7 @@ def test_dispatch_order_is_independent_of_python_hash_seed():
             )
         except subprocess.TimeoutExpired:
             pytest.skip("Dispatch-order hash-seed subprocess exceeded 10 seconds.")
+        assert result.returncode == 0, result.stderr
         dispatch_orders.append(result.stdout.strip())
 
     assert dispatch_orders[0] == dispatch_orders[1]
