@@ -2,16 +2,91 @@ from pathlib import Path
 
 import pytest
 import networkx as nx
+import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
 from h2integrate.core.connection_utils import create_technology_graph
+from h2integrate.core.h2integrate_model import _SLCPlantGroup
 from h2integrate.control.control_strategies.system_level.slc_topology import (
+    SplitterNode,
+    ConversionLink,
+    DispatchTopology,
     find_commodity_suppliers,
 )
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("has_consumption_output", [True, False])
+@pytest.mark.parametrize("as_group", [True, False])
+def test_slc_converter_consumption_interface(has_consumption_output, as_group):
+    topology = DispatchTopology(
+        demand_bus="hydrogen:demand",
+        buses={},
+        links=(
+            ConversionLink(
+                "electricity", "converter", "hydrogen", "electricity:converter", "hydrogen:demand"
+            ),
+        ),
+        dispatch_order=("hydrogen:demand", "electricity:converter"),
+    )
+    plant = _SLCPlantGroup(dispatch_topology=topology)
+    converter = om.IndepVarComp()
+    converter.add_output("hydrogen_out", 1.0)
+    if has_consumption_output:
+        converter.add_output("electricity_consumed", 5.0)
+    if as_group:
+        converter_group = om.Group()
+        converter_group.add_subsystem("performance", converter, promotes=["*"])
+        plant.add_subsystem("converter", converter_group)
+    else:
+        plant.add_subsystem("converter", converter)
+    plant.add_subsystem(
+        "system_level_controller", om.ExecComp("demand = 2 * converter_electricity_consumed")
+    )
+    problem = om.Problem(model=plant, reports=False)
+    if has_consumption_output:
+        problem.setup()
+        problem.run_model()
+        assert problem.get_val("system_level_controller.demand").item() == 10.0
+    else:
+        with pytest.raises(
+            ValueError, match=r"converter.*missing required output 'electricity_consumed'"
+        ):
+            problem.setup()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("prescribed_mode", [True, False])
+def test_slc_splitter_interface(prescribed_mode):
+    topology = DispatchTopology(
+        demand_bus="electricity:demand",
+        buses={},
+        links=(),
+        dispatch_order=("electricity:demand",),
+        splitters=(SplitterNode("junction", "electricity", "electricity:demand", ("demand",)),),
+    )
+    plant = _SLCPlantGroup(dispatch_topology=topology)
+    expression = (
+        "allocation = prescribed_commodity_to_priority_tech"
+        if prescribed_mode
+        else "allocation = fraction"
+    )
+    plant.add_subsystem("junction", om.ExecComp(expression))
+    plant.add_subsystem(
+        "system_level_controller", om.IndepVarComp("junction_electricity_set_point", 7.0)
+    )
+    problem = om.Problem(model=plant, reports=False)
+    if prescribed_mode:
+        problem.setup()
+        problem.run_model()
+        assert problem.get_val("junction.allocation").item() == 7.0
+    else:
+        with pytest.raises(ValueError, match=r"SLC splitter 'junction'.*prescribed_commodity"):
+            problem.setup()
 
 
 @fixture

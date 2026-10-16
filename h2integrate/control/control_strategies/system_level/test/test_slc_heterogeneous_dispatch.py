@@ -974,8 +974,16 @@ class TestHeterogeneousCommodityControl:
         np.testing.assert_allclose(problem.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0)
         np.testing.assert_allclose(problem.get_val("slc.grid_electricity_set_point"), 1.0)
 
-    def test_cost_min_merit_order_at_derived_level(self):
-        """Merit order applies to derived electricity demand under cost minimization."""
+    @pytest.mark.parametrize(
+        "controller,expected_dispatch",
+        [
+            (DemandFollowingControl, (2500.0, 2500.0)),
+            (CostMinimizationControl, (3000.0, 2000.0)),
+            (ProfitMaximizationControl, (3000.0, 2000.0)),
+        ],
+    )
+    def test_dispatchable_hook_at_derived_level(self, controller, expected_dispatch, subtests):
+        """Each strategy writes all dispatchables on the hydrogen and electricity buses."""
         tech_connections = [
             ["cheap", "electrolyzer", "electricity", "cable"],
             ["expensive", "electrolyzer", "electricity", "cable"],
@@ -995,7 +1003,7 @@ class TestHeterogeneousCommodityControl:
             demand_commodity_rate_units="kg/h",
         )
         problem = _build_hetero_problem(
-            CostMinimizationControl,
+            controller,
             plant_config,
             slc_topology,
             {},
@@ -1007,9 +1015,25 @@ class TestHeterogeneousCommodityControl:
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 160.0)
         problem.run_model()
 
-        np.testing.assert_allclose(problem.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0)
-        np.testing.assert_allclose(problem.get_val("slc.cheap_electricity_set_point"), 3000.0)
-        np.testing.assert_allclose(problem.get_val("slc.expensive_electricity_set_point"), 2000.0)
+        with subtests.test("both buses follow the strategy's dispatchable policy"):
+            assert len(problem.model.slc._dispatch_topology.dispatch_order) == 2
+            np.testing.assert_allclose(
+                problem.get_val("slc.electrolyzer_hydrogen_set_point"), 100.0
+            )
+            np.testing.assert_allclose(
+                problem.get_val("slc.cheap_electricity_set_point"), expected_dispatch[0]
+            )
+            np.testing.assert_allclose(
+                problem.get_val("slc.expensive_electricity_set_point"), expected_dispatch[1]
+            )
+
+        with subtests.test("zero demand overwrites every dispatchable set point"):
+            problem.set_val("slc.hydrogen_demand", 0.0)
+            problem.run_model()
+            for name in ("electrolyzer_hydrogen", "cheap_electricity", "expensive_electricity"):
+                np.testing.assert_array_equal(problem.get_val(f"slc.{name}_set_point"), np.zeros(4))
+            for residual in problem.model.slc.dispatch_trace["bus_residual"].values():
+                np.testing.assert_array_equal(residual, np.zeros(4))
 
     def test_dynamic_ratio_overrides_capacity(self):
         """Measured consumption drives the ratio, overriding the capacity seed."""

@@ -118,7 +118,7 @@ class ProFastLCO(ProFastBase):
                 f"Commodity stream for finance group has a zero {bug_desc}. "
                 "If you receive this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
-                f"{self.LCO_str} is being held at its current value ({self.price_units})"
+                f"{self.LCO_str} is set to the default value of 1e12 ({self.price_units})."
             )
             warnings.warn(msg, UserWarning)
             return

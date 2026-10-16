@@ -34,6 +34,51 @@ from h2integrate.control.control_strategies.system_level.slc_marginal_costs impo
 )
 
 
+class _SLCPlantGroup(om.Group):
+    """Validate and connect SLC interfaces after technology outputs are declared."""
+
+    def initialize(self):
+        self.options.declare("dispatch_topology", default=None, allow_none=True)
+
+    def configure(self):
+        topology = self.options["dispatch_topology"]
+        if topology is None:
+            return
+        for tech_name, commodity in topology.consumption_signals:
+            technology = self._get_subsystem(tech_name)
+            output_names = {
+                metadata["prom_name"]
+                for metadata in technology.get_io_metadata(iotypes="output").values()
+            }
+            signal = f"{commodity}_consumed"
+            if signal not in output_names:
+                raise ValueError(
+                    f"SLC converter '{tech_name}' is missing required output '{signal}'. "
+                    "Its performance model must expose measured consumption for each "
+                    "input commodity supplied by a dispatched bus."
+                )
+            self.connect(
+                f"{tech_name}.{signal}",
+                f"system_level_controller.{tech_name}_{signal}",
+            )
+        for splitter in topology.splitters:
+            technology = self._get_subsystem(splitter.name)
+            input_names = {
+                metadata["prom_name"]
+                for metadata in technology.get_io_metadata(iotypes="input").values()
+            }
+            signal = "prescribed_commodity_to_priority_tech"
+            if signal not in input_names:
+                raise ValueError(
+                    f"SLC splitter '{splitter.name}' is missing required input '{signal}'. "
+                    "Use split_mode='prescribed_commodity' for controller-managed splitters."
+                )
+            self.connect(
+                f"system_level_controller.{splitter.name}_{splitter.commodity}_set_point",
+                f"{splitter.name}.{signal}",
+            )
+
+
 class State(IntEnum):
     INITIALIZED = 0
     SETUP = 1
@@ -453,7 +498,7 @@ class H2IntegrateModel:
         control strategy, and finance parameters.
         """
 
-        plant_group = om.Group()
+        plant_group = _SLCPlantGroup() if self.slc else om.Group()
 
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
@@ -819,23 +864,7 @@ class H2IntegrateModel:
         # converter's measured ``{in_commodity}_consumed`` output to the controller
         # so it can derive a per-timestep conversion ratio (heterogeneous-commodity
         # control).
-        dispatch_topology = slc_topology["dispatch_topology"]
-        for converter_tech, in_commodity in dispatch_topology.consumption_signals:
-            self.plant.connect(
-                f"{converter_tech}.{in_commodity}_consumed",
-                f"system_level_controller.{converter_tech}_{in_commodity}_consumed",
-            )
-
-        # --- Step 3c: Connect controller-managed splitter allocations -----
-        # For each splitter on a controller-managed bus, route the SLC's
-        # per-timestep prescribed allocation for the priority consumers to the
-        # splitter's ``prescribed_commodity_to_priority_tech`` input so the
-        # split tracks the backpropagated demand of the consumers behind out1.
-        for splitter in dispatch_topology.splitters:
-            self.plant.connect(
-                f"system_level_controller.{splitter.name}_{splitter.commodity}_set_point",
-                f"{splitter.name}.prescribed_commodity_to_priority_tech",
-            )
+        self.plant.options["dispatch_topology"] = slc_topology["dispatch_topology"]
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):

@@ -66,7 +66,8 @@ H2IntegrateModel._classify_slc_technologies()
     _find_splitters()                           -> out1 priority consumers
   store slc_topology["dispatch_topology"]
 H2IntegrateModel.add_system_level_controller()
-  wire production, rated capacity, consumed signals, and splitter set points
+  wire production, rated capacity, set points, and cost inputs
+  defer measured-consumption and splitter connections until interfaces exist
   _get_tech_buy_price_input_name()              -> shared price-input identification
 
 SystemLevelControlBase.setup()
@@ -85,6 +86,10 @@ CostMinimizationControl.setup() / ProfitMaximizationControl.setup()
   _setup_marginal_costs()                       -> strategy-specific cost inputs
     _get_buy_price_default_and_shape()          -> technology-compatible price shape
     _get_tech_buy_price_input_name()            -> electricity-specific price units
+_SLCPlantGroup.configure()                      -> after all child setup methods
+  inspect actual promoted technology outputs/inputs
+  connect consumed signals (or raise a converter-specific error)
+  connect splitter allocations (or reject missing prescribed-allocation input)
 ```
 ````
 
@@ -315,9 +320,12 @@ committed after downstream dispatch.
 - **Connection order:** splitter out1 follows the first outgoing connection and receives
   priority. This is the only intentional connection-order dependence; preserve that pair's
   order when rearranging connections.
-- **Model interface:** the current model wiring requires `{input_commodity}_consumed` outputs
-  for dispatched converter inputs and `prescribed_commodity` mode for controlled splitters.
-  The standalone NaN fallback does not guard a missing output in full-model wiring.
+- **Model interface:** dispatched converter inputs must expose promoted
+  `{input_commodity}_consumed` outputs. Full-model setup checks actual OpenMDAO metadata before
+  connecting them and raises `ValueError` naming the converter and missing signal. Controlled
+  splitters must expose `prescribed_commodity_to_priority_tech`; use `prescribed_commodity`
+  mode rather than `fraction`. Missing splitter inputs receive a similarly explicit error.
+  The standalone NaN fallback does not bypass these full-model interface requirements.
 - **Scope:** one demand component is supported. Multiple-storage allocation and flow-based
   optimization of partially overlapping buses are not addressed by this backward walk.
 
@@ -366,6 +374,38 @@ arithmetic. The base class below owns OpenMDAO I/O and orchestration.
 ```
 
 ## Base Class and Methods
+
+### Dispatchable Hook Contract
+
+Custom strategies override this method while retaining both optional keyword arguments:
+
+```python
+def _dispatch_dispatchables(
+  self, commodity, remaining_demand, inputs, outputs, producers=None, is_demand_bus=False
+):
+  ...
+```
+
+The hook runs once per reached bus after fixed, flexible, and storage dispatch. Its input is
+the non-negative remaining demand for that bus's commodity, with `producers` restricting
+eligible technologies. It must overwrite `{tech}_{commodity}_set_point` for **every matching
+dispatchable**, even when the command is zero, and must leave other buses' producers alone.
+It returns the remaining non-negative unmet demand profile. `producers=None` allows all
+dispatchables producing that commodity; it does not disable commodity filtering.
+
+| Controller | Dispatchable implementation |
+|---|---|
+| `DemandFollowingControl` | Inherits the base even split. |
+| `CostMinimizationControl` | Merit order, limited by rated output. |
+| `ProfitMaximizationControl` | Merit order; sell-price gating only when `is_demand_bus=True`. |
+
+```{important}
+Single-demand examples also propagate upstream. In the hydrogen example, the hydrogen
+target is unchanged, but its derived electricity demand now dispatches natural-gas backup
+and the battery. The documented LCOH reduction reflects greater delivered hydrogen, not a
+different requested hydrogen profile. Solver convergence still needs separate verification;
+a small aggregate residual is not a physical balance guarantee.
+```
 
 ### Marginal-Cost Helpers
 

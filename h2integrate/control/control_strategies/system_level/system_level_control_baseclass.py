@@ -32,6 +32,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     Subclasses must implement ``compute()`` with their dispatch strategy.
 
+    The shared ``_run_dispatch()`` walk calls the ``_dispatch_dispatchables`` hook
+    once per reached supply bus, after fixed, flexible, and storage dispatch.
+    Overrides must accept ``producers=None`` and ``is_demand_bus=False``, write
+    ``{tech}_{commodity}_set_point`` for every matching dispatchable in the producer
+    subset (including zero commands), and return the non-negative unmet demand.
+    They must not dispatch technologies outside that subset. ``DemandFollowingControl``
+    inherits even splitting; ``CostMinimizationControl`` uses merit order;
+    ``ProfitMaximizationControl`` adds sell-price gating on the demand bus only.
+
     Each technology group is expected to contain a controller (either user-defined or an
     auto-injected ``PassthroughController``) that consumes a ``{commodity}_set_point`` input and
     produces the ``{commodity}_command_value`` actually fed to the performance/cost models. The
@@ -914,7 +923,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         This is the default (cost-agnostic) dispatchable step used by
         ``DemandFollowingControl``. Cost-aware controllers override this method
-        to apply merit-order or profit-aware dispatch.
+        to apply merit-order or profit-aware dispatch. Every implementation must
+        overwrite the set point of every matching dispatchable in ``producers``,
+        including zero set points, leave producers outside that subset untouched,
+        and return non-negative remaining unmet demand. Overrides must keep the
+        ``producers`` and ``is_demand_bus`` keyword arguments.
+
+        ``DemandFollowingControl`` inherits this even split.
+        ``CostMinimizationControl`` overrides it with merit order.
+        ``ProfitMaximizationControl`` overrides it with merit order and applies
+        sell-price gating only when ``is_demand_bus`` is true.
 
         Args:
             commodity (str): Commodity being dispatched.
@@ -923,7 +941,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
             inputs: OpenMDAO inputs.
             outputs: OpenMDAO outputs.
             producers (Iterable[str] | None, optional): Technologies on the supply bus
-                being dispatched. ``None`` allows every technology.
+                being dispatched. Only dispatchables producing ``commodity`` are
+                eligible; ``None`` allows all such dispatchables.
             is_demand_bus (bool, optional): True when the bus delivers the demand
                 technology's commodity. Defaults to False.
 

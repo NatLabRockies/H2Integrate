@@ -8,6 +8,7 @@
 - Add heterogeneous-commodity system-level control that translates demand for one commodity into upstream set-points across converters, deriving per-technology conversion ratios automatically rather than reading them from the config. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Documented heterogeneous dispatch call trees, state ownership, conversion helpers, and a worked topology and trace example. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
 - Removed obsolete converter detection and extracted shared buy-price and marginal-cost arithmetic from the system-level controller base class. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
+- Added explicit system-level converter and splitter interface checks, documented the dispatchable hook contract, and corrected the zero-production LCO warning. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
 
 
 ## 0.10.0 [October 12, 2026]

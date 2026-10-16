@@ -192,6 +192,22 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             == 9.137956305329464
         )
 
+    with subtests.test("hydrogen demand propagates to firm electricity backup"):
+        gas_set_point = model.prob.get_val(
+            "system_level_controller.natural_gas_plant_electricity_set_point", units="kW"
+        )
+        assert np.any(gas_set_point > 1.0)
+        demand = model.prob.get_val("h2_load_demand.hydrogen_demand", units="kg/h")
+        np.testing.assert_allclose(
+            model.prob.get_val(
+                "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
+            ),
+            demand,
+        )
+        np.testing.assert_allclose(
+            model.prob.get_val("h2_combiner.hydrogen_out", units="kg/h"), demand, rtol=1e-6
+        )
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize(

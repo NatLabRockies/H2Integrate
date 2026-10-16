@@ -394,6 +394,7 @@ def test_profast_lco_warnings(
 
     # Set rated capacity to 0
     prob.set_val("pf.rated_electricity_production", 0.0, units="kW")
+    prob.set_val("pf.LCOE_no1", 123.0)
 
     with subtests.test("Test zero capacity warning"):
         expected_str = "has a zero capacity."
@@ -410,6 +411,7 @@ def test_profast_lco_warnings(
     prob.set_val(
         "pf.capacity_factor", [0.0] * plant_config["plant"]["plant_life"], units="unitless"
     )
+    prob.set_val("pf.LCOE_no1", 123.0)
 
     with subtests.test("Test zero capacity factor warning"):
         expected_str = "has a zero capacity factor."
