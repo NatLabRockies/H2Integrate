@@ -38,7 +38,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     different grid connection points (for example, one for buying upstream and
     another for selling downstream).
 
-    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+    This model is compatible with arbitrary positive time steps.
 
     Inputs
         interconnection_size (float): Maximum power capacity for grid connection (kW).
@@ -51,9 +51,11 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        300,
-        3600,
+        1,
+        np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
     _control_classifier = "dispatchable"
 
     def initialize(self):
@@ -164,23 +166,32 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         # Not sold electricity if demand exceeds interconnection size
         outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
 
-        max_production = (
-            inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
-        )
         outputs["electricity_sell_headroom"] = interconnection_size - electricity_sold
         outputs["electricity_headroom"] = interconnection_size - electricity_bought
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
             self.dt / 3600
         )
-        outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
-        outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
-            1 / self.fraction_of_year_simulated
+        annual_cf, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
+            performance_timeseries=outputs["electricity_out"],
+            rated_performance=float(inputs["interconnection_size"][0]),
+            state_of_health_timeseries=None,
+            eol_soh=None,
+        )
+        outputs["capacity_factor"] = annual_cf
+        outputs["replacement_schedule"] = replacement_schedule
+        outputs["annual_electricity_produced"] = (
+            annual_cf * float(inputs["interconnection_size"][0]) * 8760
         )
 
-        total_electricity_sold = np.sum(electricity_sold) * (self.dt / 3600)
-        outputs["annual_electricity_sold"] = total_electricity_sold * (
-            1 / self.fraction_of_year_simulated
+        annual_sold_cf, _ = self.calculate_annual_cf_and_replacement_schedule(
+            performance_timeseries=electricity_sold,
+            rated_performance=float(inputs["interconnection_size"][0]),
+            state_of_health_timeseries=None,
+            eol_soh=None,
+        )
+        outputs["annual_electricity_sold"] = (
+            annual_sold_cf * float(inputs["interconnection_size"][0]) * 8760
         )
 
 
@@ -223,14 +234,16 @@ class GridCostModel(CostModelBaseClass):
     - Revenue from electricity sales (sell mode)
     - Support for time-varying electricity prices
 
-    This model is compatible with time steps ranging from 5-minutes to 1-hour.
+    This model is compatible with arbitrary positive time steps.
 
     """
 
     _time_step_bounds = (
-        300,
-        3600,
+        1,
+        np.inf,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = GridCostModelConfig.from_dict(
@@ -347,8 +360,8 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_out is already in kW*h/yr (shape=plant_life)
                 varopex += inputs["annual_electricity_out"] * buy_price
             else:
-                # Scalar or per-timestep: same cost each year
-                varopex += np.sum((self.dt / 3600) * inputs["electricity_out"] * buy_price)
+                buy_cost_timeseries = (self.dt / 3600) * inputs["electricity_out"] * buy_price
+                varopex += self.calculate_annual_varopex(buy_cost_timeseries)
 
         # Add selling revenue if sell price is configured
         if self.config.electricity_sell_price is not None:
@@ -357,6 +370,7 @@ class GridCostModel(CostModelBaseClass):
                 # annual_electricity_sold is already in kW*h/yr (shape=plant_life)
                 varopex -= inputs["annual_electricity_sold"] * sell_price
             else:
-                varopex -= np.sum((self.dt / 3600) * inputs["electricity_sold"] * sell_price)
+                sell_revenue_timeseries = (self.dt / 3600) * inputs["electricity_sold"] * sell_price
+                varopex -= self.calculate_annual_varopex(sell_revenue_timeseries)
 
         outputs["VarOpEx"] = varopex

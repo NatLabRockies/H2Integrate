@@ -28,9 +28,11 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
 @register
 class ATBUtilityPVCostModel(CostModelBaseClass):
     _time_step_bounds = (
-        3600,
-        3600,
+        900,
+        14400,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = ATBUtilityPVCostModelConfig.from_dict(

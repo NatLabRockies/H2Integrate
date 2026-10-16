@@ -388,6 +388,8 @@ def test_resample_unknown_downsample_method_raises():
 
 @pytest.mark.unit
 def test_resample_upsampling_without_method_raises():
+    # A finer sim dt than the native timestep needs upsampling; without an explicit method
+    # resampling must raise an error.
     data = _make_timeseries(5, 3600)
     with pytest.raises(ValueError, match="requires upsampling"):
         resample_resource_data_to_dt(data, 1800)
@@ -395,6 +397,8 @@ def test_resample_upsampling_without_method_raises():
 
 @pytest.mark.unit
 def test_resample_downsampling_without_method_raises():
+    # A coarser sim dt than the native timestep needs downsampling; without an explicit
+    # method resampling must raise an error.
     data = _make_timeseries(10, 1800)
     with pytest.raises(ValueError, match="requires downsampling"):
         resample_resource_data_to_dt(data, 3600)
@@ -402,6 +406,7 @@ def test_resample_downsampling_without_method_raises():
 
 @pytest.mark.unit
 def test_resample_warns_when_resampling(subtests):
+    # Resampling notifies the user (but does not block) so the timestep change is visible.
     with subtests.test("upsampling warns"):
         with pytest.warns(UserWarning, match="upsampling"):
             resample_resource_data_to_dt(_make_timeseries(5, 3600), 1800, upsample_method="time")

@@ -20,6 +20,9 @@ class GenericDemandComponent(DemandComponentBase):
     ``performance_parameters``.
     """
 
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
+
     def setup(self):
         self.config = DemandComponentBaseConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),

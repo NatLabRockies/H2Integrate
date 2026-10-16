@@ -6,6 +6,7 @@
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. Leap-day-inclusive resources are rejected in full H2I runs until framework-wide calendar alignment is supported. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
+- Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR 936](https://github.com/NatLabRockies/H2Integrate/pull/936)
 
 ## 0.10.0 [October 12, 2026]
 

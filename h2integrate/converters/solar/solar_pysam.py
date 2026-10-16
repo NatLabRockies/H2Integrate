@@ -120,12 +120,10 @@ class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
             warnings.warn(msg, UserWarning, stacklevel=3)
 
     def check_pysam_options(self):
-        """Checks that top-level keys of pysam_options dictionary are valid and that
-        system capacity is not given in pysam_options.
+        """Check PySAM option groups and reject user-supplied system capacity.
 
         Raises:
-           ValueError: if top-level keys of pysam_options are not valid.
-           ValueError: if system_capacity is provided in pysam_options["SystemDesign"]
+            ValueError: If option groups are invalid or system capacity is provided.
         """
 
         valid_groups = [
@@ -175,9 +173,11 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
+        900,
+        14400,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         super().setup()
@@ -490,7 +490,6 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         dc_ac_ratio = system_model.value("dc_ac_ratio")
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
-
         if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
             # using lifetime results
             # split the generation profile to have results per-year
@@ -512,16 +511,35 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             )
 
         else:
-            # not using lifetime output, use results as-is
+            # When not using lifetime output, and only annual simulation, use results as-is.
+            # For a full-year (annual) simulation, use PySAM's ac_annual and the simple scalar
+            # capacity factor. Pvwattsv8 does not assign ac_annual for non-annual horizons
+            # (sub-annual or multi-year), so use the base-class projection to compute per-year
+            # capacity factors and annual production across the plant life.
+            seconds_per_year = 31_536_000  # 8760 h/year * 3600 s/h
+
+            rated_production = outputs["rated_electricity_production"][0]
             outputs["electricity_out"] = system_model.Outputs.gen  # kW-AC
-            max_production = (
-                outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
-            )
-            outputs["annual_electricity_produced"] = system_model.value("ac_annual")
             outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
                 self.dt / 3600
             )
-            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+            if abs(self.fraction_of_year_simulated - 1.0) < (self.dt / 2) / seconds_per_year:
+                max_production = rated_production * self.n_timesteps * (self.dt / 3600)
+                outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+                outputs["annual_electricity_produced"] = system_model.value("ac_annual")
+            else:
+                capacity_factor, replacement_schedule = (
+                    self.calculate_annual_cf_and_replacement_schedule(
+                        performance_timeseries=outputs["electricity_out"],
+                        rated_performance=rated_production,
+                        state_of_health_timeseries=None,
+                        eol_soh=None,
+                    )
+                )
+                outputs["capacity_factor"] = capacity_factor
+                outputs["replacement_schedule"] = replacement_schedule
+                # per-year annual production is the per-year capacity factor at full-year output
+                outputs["annual_electricity_produced"] = capacity_factor * rated_production * 8760
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)
