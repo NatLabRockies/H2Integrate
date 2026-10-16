@@ -12,7 +12,8 @@ from attrs import field, define, validators
 from geopy import distance
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -64,7 +65,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        self.config = IronTransportPerformanceComponentConfig.from_dict(
+        self.config = IronTransportPerformanceConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -357,7 +358,7 @@ class IronTransportCostComponent(CostModelBaseClass):
         )
         config_dict.update({"cost_year": target_dollar_year})
 
-        self.config = IronTransportCostComponentConfig.from_dict(
+        self.config = IronTransportCostConfig.from_dict(
             config_dict,
             strict=True,
             additional_cls_name=self.__class__.__name__,

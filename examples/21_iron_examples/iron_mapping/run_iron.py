@@ -112,6 +112,8 @@ fig, ax, _, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
 # Add a layer for example waterway shipping cost from select mines to select ports
 fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=transport_results_filepath,
+    latitude_var_name="iron_transport.destination_latitude (deg)",
+    longitude_var_name="iron_transport.destination_longitude (deg)",
     metric_to_plot="iron_transport.iron_transport_cost (USD/t)",
     metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={
@@ -136,6 +138,8 @@ fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
 # NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, _, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=iron_plant_results_filepath,
+    latitude_var_name="iron_transport.destination_latitude (deg)",
+    longitude_var_name="iron_transport.destination_longitude (deg)",
     metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
     metric_multiplier=1 / 1000,  # Convert from $/t to $/kg
     map_preferences={

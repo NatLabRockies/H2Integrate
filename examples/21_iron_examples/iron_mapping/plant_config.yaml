@@ -22,6 +22,9 @@ technology_interconnections:
   - [natural_gas_feedstock, iron_plant, natural_gas, pipe]
   # Use the iron ore consumed by the iron plant to calculate transport costs
   - [iron_plant, iron_transport, [iron_ore_consumed, iron_ore_in]]
+site_to_tech_connections: [[ore_site, iron_transport, [latitude, origin_latitude]], [ore_site, iron_transport, [longitude,
+          origin_longitude]], [dri_site, iron_transport, [latitude, destination_latitude]], [dri_site, iron_transport, [longitude,
+          destination_longitude]]]
 plant:
   plant_life: 30
   simulation:
