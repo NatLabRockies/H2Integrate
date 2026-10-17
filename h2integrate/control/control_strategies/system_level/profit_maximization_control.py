@@ -11,6 +11,7 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 class ProfitMaximizationControlConfig(BaseConfig):
     commodity_sell_price: float = field(default=0.0)
     cost_per_tech: dict = field(default={})
+    conversion_ratio_method: str = field(default="timestep")
 
 
 @register

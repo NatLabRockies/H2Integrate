@@ -61,6 +61,10 @@ system_level_control:
   # cost, so the whole chain runs whenever ammonia production is profitable.
   control_parameters:
     commodity_sell_price: 0.60  # USD/kg ammonia sell price (above the marginal cost so demand is served)
+    # Use one production-weighted ratio per converter instead of hourly ratios. Hourly ratios
+    # feed each hour's part-load, start-up, and degradation effects back into that hour's
+    # demand, which keeps the coupled solver from settling.
+    conversion_ratio_method: aggregate
     cost_per_tech:
       # Ammonia marginal cost is taken from its upstream nitrogen feedstock; wind, solar, and
       # the battery are not feedstocks and are not summed here. The Haber-Bosch loop's direct
@@ -74,7 +78,7 @@ system_level_control:
     rtol: 1.0e-8
     scale_control_variables: true
     solver_option_kwargs:
-      use_aitken: true
+      use_aitken: false
       err_on_non_converge: true
 finance_parameters:
   finance_groups:

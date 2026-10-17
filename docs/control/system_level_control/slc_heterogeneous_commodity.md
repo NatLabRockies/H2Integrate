@@ -61,9 +61,11 @@ model.run()
 
 ## Conversion Ratios
 
-`dispatch_trace["ratios"]` contains the ratio used at each converter link. For a representative
-operating period where both converters are producing, the measured ratios show how one kilogram
-per hour of ammonia demand translates into upstream flows:
+`dispatch_trace["ratios"]` contains the ratio used at each converter link. This example sets
+`conversion_ratio_method: aggregate`, so the SLC uses one production-weighted ratio per link
+(total consumption divided by total production). The hourly measured ratios vary with part load,
+start-up, and degradation; the aggregate summarizes them without feeding each hour's operating
+point back into that hour's demand:
 
 ```{code-cell} ipython3
 trace = model.prob.model.plant.system_level_controller.dispatch_trace
@@ -77,10 +79,22 @@ ratio_descriptions = [
     (("electricity", "haber_bosch", "ammonia"), "Haber-Bosch direct electricity / ammonia", "kWh/kg NH3"),
 ]
 
+
+def hourly_ratio(key):
+    in_commodity, tech, out_commodity = key
+    consumed = np.asarray(model.prob.get_val(f"{tech}.{in_commodity}_consumed")).reshape(-1)
+    produced = np.asarray(model.prob.get_val(f"{tech}.{out_commodity}_out")).reshape(-1)
+    return np.divide(consumed, produced, out=np.full(produced.shape, np.nan), where=produced > 1e-6)
+
+
 for key, label, units in ratio_descriptions:
-    ratio = trace["ratios"][key]
-    valid = fully_measured & (ratio["source"] == "measured")
-    print(f"{label}: {np.mean(ratio['value'][valid]):.3f} {units}")
+    used = trace["ratios"][key]["value"][0]
+    hourly = hourly_ratio(key)[fully_measured]
+    print(
+        f"{label}: {used:.3f} {units} used by the SLC; "
+        f"hourly measured 5th to 95th percentile {np.percentile(hourly, 5):.3f} "
+        f"to {np.percentile(hourly, 95):.3f}"
+    )
 
 plant_ratios = trace["demand_ratios"]
 print(
@@ -94,9 +108,8 @@ The plant-wide electricity ratio includes both the electrolyzer load and the Hab
 direct electricity use. The trace is overwritten on each model compute and is intended for
 inspection; it is not an OpenMDAO output or a public API.
 
-The plot below shows how the ratios used by the SLC change over the year. Zero-output hours use
-the mean of valid measured ratios once measurements exist; the capacity-based ratio seeds the
-first iteration and is used throughout only when no valid measurements are available.
+The plot below compares the hourly measured ratios with the aggregate ratio the SLC used. With
+the default `conversion_ratio_method: timestep`, the SLC would use the hourly values directly.
 
 ```{code-cell} ipython3
 hours = np.arange(ammonia_out.size)
@@ -108,11 +121,12 @@ ratio_plot_data = [
 
 fig, axes = plt.subplots(3, 1, figsize=(10, 7), sharex=True)
 for axis, (key, units) in zip(axes, ratio_plot_data, strict=True):
-    ratio = trace["ratios"][key]
-    axis.plot(hours, ratio["value"], linewidth=0.8)
+    axis.plot(hours, hourly_ratio(key), linewidth=0.6, color="0.6", label="Hourly measured")
+    axis.plot(hours, trace["ratios"][key]["value"], linewidth=1.2, label="Used by SLC")
     axis.set_ylabel(units)
     axis.grid(alpha=0.25)
     axis.set_title(f"{key[1]}: {key[0]} per {key[2]}")
+axes[0].legend(loc="upper right", fontsize=8)
 axes[-1].set_xlabel("Hour of year")
 fig.tight_layout()
 display(fig)

@@ -654,6 +654,48 @@ def test_fuel_cell_does_not_create_a_commodity_cycle(subtests):
         np.testing.assert_allclose(prob.get_val("slc.wind_electricity_set_point"), 137.5)
 
 
+@pytest.mark.unit
+def test_conversion_ratio_method_selects_timestep_or_aggregate_ratios(subtests):
+    """Grid -> electrolyzer -> 100 kg/h hydrogen demand with part-load measurements."""
+    classifiers = _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"])
+
+    def grid_set_point(method):
+        plant_config = _build_plant_config(GRID_ELECTROLYZER)
+        if method is not None:
+            plant_config["system_level_control"]["control_parameters"][
+                "conversion_ratio_method"
+            ] = method
+        prob = _build_hetero_problem(
+            DemandFollowingControl,
+            plant_config,
+            _build_slc_topology(
+                create_technology_graph(GRID_ELECTROLYZER),
+                classifiers,
+                demand_commodity="hydrogen",
+                demand_commodity_rate_units="kg/h",
+            ),
+            {},
+            demand=100.0,
+            commodity_units={"electricity": "kW"},
+        )
+        prob.set_val("slc.grid_rated_electricity_production", 1e4)
+        prob.set_val("slc.electrolyzer_rated_hydrogen_production", 200.0)
+        prob.set_val("slc.electrolyzer_hydrogen_out", [100.0, 100.0, 50.0, 0.0])
+        prob.set_val("slc.electrolyzer_electricity_consumed", [5000.0, 6000.0, 2000.0, 0.0])
+        prob.run_model()
+        return prob.get_val("slc.grid_electricity_set_point")
+
+    with subtests.test("timestep ratios 50, 60, 40, and their mean at zero output"):
+        np.testing.assert_allclose(grid_set_point(None), [5000.0, 6000.0, 4000.0, 5000.0])
+
+    with subtests.test("aggregate ratio 13000 / 250 = 52 at every timestep"):
+        np.testing.assert_allclose(grid_set_point("aggregate"), np.full(4, 5200.0))
+
+    with subtests.test("unknown method raises at setup"):
+        with pytest.raises(ValueError, match="Unknown conversion_ratio_method 'hourly'"):
+            grid_set_point("hourly")
+
+
 def _splitter_problem(splitter_outputs, connections=None):
     """Wind through a splitter to an electrolyzer and a Haber-Bosch loop (Appendix A numbers)."""
     if connections is None:

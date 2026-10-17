@@ -514,20 +514,20 @@ def test_slc_heterogeneous_commodity(subtests, temp_copy_of_example):
         # of the full-year ceiling. Use a 1% physical tolerance because the coupled solver's
         # final iterate varies slightly with technology names and floating-point reduction order.
         assert (
-            pytest.approx(26802115.47349183, rel=1e-2)
+            pytest.approx(26813645.34541499, rel=1e-2)
             == model.prob.get_val("haber_bosch.ammonia_out", units="kg/h").sum()
         )
 
     with subtests.test("Electrolyzer hydrogen set point total"):
         assert (
-            pytest.approx(7030467.077681873, rel=1e-2)
+            pytest.approx(7030269.306222371, rel=1e-2)
             == model.prob.get_val(
                 "system_level_controller.electrolyzer_hydrogen_set_point", units="kg/h"
             ).sum()
         )
 
     with subtests.test("LCOA"):
-        assert pytest.approx(3.33520637, rel=1e-2) == model.prob.get_val(
+        assert pytest.approx(3.33401949, rel=1e-2) == model.prob.get_val(
             "finance_subgroup_ammonia.LCOA", units="USD/kg"
         )
 

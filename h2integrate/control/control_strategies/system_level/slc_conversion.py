@@ -78,34 +78,63 @@ def measured_ratio(
     return ratio
 
 
+CONVERSION_RATIO_METHODS = ("timestep", "aggregate")
+
+
 def conversion_ratio(
     consumed: ArrayLike,
     produced: ArrayLike,
     fallback: float | None,
+    method: str = "timestep",
 ) -> tuple[NDArray[np.float64], NDArray[np.str_]]:
     """Return per-timestep ratios and identify measured versus fallback values.
 
-    When any measurements are valid, invalid timesteps use the mean of the
-    valid measured ratios. The capacity fallback is used only when no measured
-    ratio is available.
+    With ``method="timestep"``, each valid timestep uses its own measured
+    ratio, and invalid timesteps use the mean of the valid measured ratios.
+    With ``method="aggregate"``, every timestep uses one production-weighted
+    ratio, total valid consumption divided by total valid production. The
+    capacity fallback is used only when no measured ratio is available.
+
+    The aggregate ratio acts as a low-pass filter on the measurement feedback.
+    A per-timestep ratio reflects the operating point the converter reached in
+    the previous solver iteration (part load, start-up, degradation), so it
+    feeds hourly plant events back into hourly demand and can keep a
+    Gauss-Seidel iteration from settling. The aggregate ratio responds only to
+    the converter's overall efficiency, at the cost of part-load detail.
 
     Args:
         consumed: Measured input consumption by timestep; NaN marks an
             unconnected signal.
         produced: Measured output production by timestep.
         fallback: Capacity-based sizing ratio, or ``None`` when unavailable.
+        method: ``"timestep"`` or ``"aggregate"``. Defaults to ``"timestep"``.
 
     Returns:
         A pair containing the ratio array and a same-shaped source array whose
-        entries are ``"measured"`` or ``"capacity"``.
+        entries are ``"measured"``, ``"aggregate"``, or ``"capacity"``.
 
     Raises:
-        ValueError: If no valid measured ratio or fallback is available.
+        ValueError: If ``method`` is unknown, or if no valid measured ratio or
+            fallback is available.
+
+    Examples:
+        >>> ratio, source = conversion_ratio([50.0, 70.0, 0.0], [1.0, 1.0, 0.0], None, "aggregate")
+        >>> ratio.tolist(), source.tolist()
+        ([60.0, 60.0, 60.0], ['aggregate', 'aggregate', 'aggregate'])
     """
+    if method not in CONVERSION_RATIO_METHODS:
+        raise ValueError(
+            f"Unknown conversion ratio method '{method}'. "
+            f"Expected one of {CONVERSION_RATIO_METHODS}."
+        )
     consumed_array, produced_array = np.broadcast_arrays(
         np.asarray(consumed, dtype=float), np.asarray(produced, dtype=float)
     )
     valid = np.isfinite(consumed_array) & np.isfinite(produced_array) & (produced_array != 0.0)
+
+    if method == "aggregate" and np.any(valid):
+        aggregate = float(np.sum(consumed_array[valid]) / np.sum(produced_array[valid]))
+        return np.full(consumed_array.shape, aggregate), np.full(consumed_array.shape, "aggregate")
 
     if np.any(valid):
         fallback = float(np.mean(consumed_array[valid] / produced_array[valid]))

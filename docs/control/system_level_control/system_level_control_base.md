@@ -320,10 +320,34 @@ the seed throughout.
 When `system_level_control.solver_options.scale_control_variables` is true, common rate outputs
 use `ref` and `res_ref` (`kW`: `1e5`, `kg/h`: `1e3`); passthrough command outputs use the same
 scales, and the ProFAST LCO output uses `1e12` to match its zero-capacity sentinel. The
-heterogeneous example enables this option with Aitken, allows 150 iterations, sets `rtol` to
-`1e-8`, and raises on nonconvergence. The solver norm still measures changes across the full
-model, so the integration regression also checks hourly physical constraints and rename/order
-invariance.
+heterogeneous example enables this option, uses plain Gauss-Seidel (no Aitken), allows 150
+iterations, sets `rtol` to `1e-8`, and raises on nonconvergence. The solver norm still measures
+changes across the full model, so the integration regression also checks hourly physical
+constraints and rename/order invariance.
+
+#### Conversion ratio method and solver convergence
+
+The SLC and the plant models form a fixed-point iteration over the whole simulated period: the
+controller computes set points from the previous iterate's measured outputs, and the solver
+repeats until nothing changes. With the default
+`system_level_control.control_parameters.conversion_ratio_method: timestep`, each timestep's
+demand uses that timestep's measured `consumed / produced` ratio. That ratio depends on the
+operating point the converter reached in the previous iterate (part load, start-up losses,
+cluster switching, degradation), and storage carries any change in one timestep's demand into
+every later timestep. The resulting feedback is not guaranteed to contract and can settle into
+small limit cycles. In the heterogeneous example, `timestep` takes 76 Gauss-Seidel iterations
+with Aitken and does not converge in 150 iterations when electrolyzer degradation is disabled.
+
+`conversion_ratio_method: aggregate` uses one production-weighted ratio per conversion link (total
+valid consumption divided by total valid production) at every timestep. This is a low-pass
+filter on the measurement feedback, analogous to the Q-filter used for robustness in iterative
+learning control: it keeps the converter's overall efficiency but ignores hour-to-hour
+operating-point effects. In the heterogeneous example it converges in 24 plain Gauss-Seidel
+iterations (34 with Aitken), and annual ammonia and LCOA change by less than 0.05% relative to
+the `timestep` result. The trade-off is part-load fidelity: at hours far from the average
+operating point, the propagated demand is biased toward the average efficiency. Ratios averaged
+over shorter blocks (for example 24 hours) did not converge in 150 iterations in the same
+example, so only the two methods above are offered.
 
 For this example, the capacity-only estimates are `500 / 1000 = 0.5` for Haber-Bosch
 electricity, `40 / 1000 = 0.04` for hydrogen, and `1500 / 40 = 37.5` for electrolyzer

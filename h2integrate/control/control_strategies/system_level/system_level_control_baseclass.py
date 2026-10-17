@@ -13,6 +13,7 @@ from h2integrate.control.control_strategies.openloop_control_baseclass import (
     get_control_rate_reference,
 )
 from h2integrate.control.control_strategies.system_level.slc_conversion import (
+    CONVERSION_RATIO_METHODS,
     demand_ratios,
     capacity_ratio as calculate_capacity_ratio,
     conversion_ratio as calculate_conversion_ratio,
@@ -80,7 +81,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
     component builds the topology itself from the keys above.
 
     Controller-specific configuration parameters may be read from
-    ``plant_config["system_level_control"]["control_parameters"]``.
+    ``plant_config["system_level_control"]["control_parameters"]``. All controllers
+    accept ``conversion_ratio_method`` (``"timestep"`` by default, or ``"aggregate"``),
+    which selects how measured converter ratios are formed (see ``_conversion_ratio``).
 
     Cost-aware subclasses (e.g. ``CostMinimizationControl``,
     ``ProfitMaximizationControl``) call ``_setup_marginal_costs()`` to register
@@ -113,6 +116,16 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+        self.conversion_ratio_method = (
+            plant_config.get("system_level_control", {})
+            .get("control_parameters", {})
+            .get("conversion_ratio_method", "timestep")
+        )
+        if self.conversion_ratio_method not in CONVERSION_RATIO_METHODS:
+            raise ValueError(
+                f"Unknown conversion_ratio_method '{self.conversion_ratio_method}'. "
+                f"Expected one of {CONVERSION_RATIO_METHODS}."
+            )
 
         # Read pre-computed classification from plant_config
         self.commodity = slc_topology["demand_commodity"]
@@ -1215,28 +1228,31 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         1. Dynamic (measured): where the converter reports its consumption via a
            connected ``{tech}_{in_commodity}_consumed`` input, the ratio is
-           ``consumed / produced`` at every timestep with nonzero production.
-           This is the general, nonlinear-aware path; the plant solver resolves
-           the resulting feedback without an analytic Jacobian.
+           derived from ``consumed / produced``. With the default
+           ``conversion_ratio_method`` of ``"timestep"``, each timestep with
+           nonzero production uses its own ratio and the others use the mean
+           measured ratio. With ``"aggregate"``, every timestep uses total
+           consumption divided by total production, which damps the
+           iteration-to-iteration feedback from hourly operating-point changes.
         2. Capacity (seed / fallback): the scalar ratio of the upstream rated
            input capacity to the converter's rated output capacity (see
-           ``_capacity_ratio``), used at zero-output timesteps and on the first
-           iteration before any consumption has been measured. When no
-           consumption is measured at all, the capacity ratio is used at every
-           timestep.
+           ``_capacity_ratio``), used on the first iteration before any
+           consumption has been measured, and at every timestep when no
+           consumption is measured at all.
 
         Returns ``None`` when neither a capacity ratio nor a connected
         consumption signal is available, signalling the caller to skip
         propagation. Otherwise returns ``(ratio, source)`` arrays, where source
-        is ``"measured"`` for valid measurements and ``"capacity"`` for the
-        capacity-based seed or fallback.
+        is ``"measured"``, ``"aggregate"``, or ``"capacity"``.
         """
         capacity = self._capacity_ratio(link, inputs)
         produced = inputs[f"{link.tech}_{link.out_commodity}_out"]
         # An unconnected consumed input keeps its NaN sentinel, so it never counts as measured
         consumed = inputs[f"{link.tech}_{link.in_commodity}_consumed"]
         try:
-            return calculate_conversion_ratio(consumed, produced, capacity)
+            return calculate_conversion_ratio(
+                consumed, produced, capacity, method=self.conversion_ratio_method
+            )
         except ValueError:
             return None
 

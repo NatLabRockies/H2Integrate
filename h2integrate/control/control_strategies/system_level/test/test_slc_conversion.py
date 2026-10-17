@@ -72,6 +72,31 @@ def test_conversion_ratio_uses_capacity_when_all_outputs_are_zero():
 
 
 @pytest.mark.unit
+def test_aggregate_conversion_ratio(subtests):
+    with subtests.test("production-weighted ratio fills every timestep"):
+        # (5000 + 12000) kW / (100 + 200) kg/h = 56.67; the zero-output hour is excluded.
+        ratios, sources = conversion_ratio(
+            consumed=[5000.0, 12000.0, 9999.0],
+            produced=[100.0, 200.0, 0.0],
+            fallback=1.0,
+            method="aggregate",
+        )
+        np.testing.assert_allclose(ratios, np.full(3, 17000.0 / 300.0))
+        np.testing.assert_array_equal(sources, np.full(3, "aggregate"))
+
+    with subtests.test("capacity seed is used before any measurement"):
+        ratios, sources = conversion_ratio(
+            consumed=np.full(2, np.nan), produced=[100.0, 100.0], fallback=0.5, method="aggregate"
+        )
+        np.testing.assert_array_equal(ratios, [0.5, 0.5])
+        np.testing.assert_array_equal(sources, ["capacity", "capacity"])
+
+    with subtests.test("unknown methods raise"):
+        with pytest.raises(ValueError, match="Unknown conversion ratio method"):
+            conversion_ratio([1.0], [1.0], 1.0, method="hourly")
+
+
+@pytest.mark.unit
 def test_conversion_ratio_chain_matches_recipe_product():
     hydrogen_per_ammonia = measured_ratio([18.0], [100.0], fallback=1.0)[0]
     electricity_per_hydrogen = measured_ratio([990.0], [18.0], fallback=1.0)[0]

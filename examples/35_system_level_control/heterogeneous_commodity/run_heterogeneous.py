@@ -95,15 +95,14 @@ h2i.post_process()
 
 # Plant-wide conversion read-out: upstream commodity required per kg/h of ammonia demand,
 # summed across the electrolyzer and the Haber-Bosch loop's direct electricity draw.
-# Hours where a converter produced nothing use the rated-capacity seed instead of a measured
-# ratio, so the summary averages only hours where every ratio was measured.
+# Hours where a converter produced nothing are excluded so the summary reflects operating hours.
 trace = h2i.prob.model.plant.system_level_controller.dispatch_trace
-measured_hours = np.logical_and.reduce(
-    [ratio["source"] == "measured" for ratio in trace["ratios"].values()]
+measured_hours = (np.asarray(h2i.prob.get_val("haber_bosch.ammonia_out")).flatten() > 0.0) & (
+    np.asarray(h2i.prob.get_val("electrolyzer.hydrogen_out")).flatten() > 0.0
 )
 demand_ratios = trace["demand_ratios"]
 print(
-    f"Over {measured_hours.sum()} hours with measured ratios: "
+    f"Over {measured_hours.sum()} operating hours: "
     f"{demand_ratios['electricity'][measured_hours].mean():.3f} kWh electricity and "
     f"{demand_ratios['hydrogen'][measured_hours].mean():.4f} kg hydrogen per kg ammonia"
 )
@@ -160,7 +159,7 @@ def make_plots(figure_dir):
     hydrogen_set_point = _get("system_level_controller.electrolyzer_hydrogen_set_point", "kg/h")
     total_electricity_load_mw = electrolyzer_load_mw + haber_bosch_load_mw
 
-    # Measured (dynamic) conversion ratios the controller derives per timestep.
+    # Hourly measured conversion ratios; the controller uses their production-weighted aggregate.
     electrolyzer_load_kw = _get("electrolyzer.electricity_consumed", "kW")
     haber_bosch_load_kw = _get("haber_bosch.electricity_consumed", "kW")
     with np.errstate(divide="ignore", invalid="ignore"):
