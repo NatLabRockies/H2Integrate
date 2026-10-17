@@ -70,6 +70,7 @@ def _chain_problem(
     upstream_out=None,
     cost_per_tech=None,
     scale_control_variables=False,
+    conversion_ratio_method=None,
 ):
     """Build a 4-timestep problem with a demand of 100 kg/h of ``demand_commodity``."""
     slc_topology = _build_slc_topology(
@@ -82,6 +83,10 @@ def _chain_problem(
     plant_config["system_level_control"].setdefault("solver_options", {})[
         "scale_control_variables"
     ] = scale_control_variables
+    if conversion_ratio_method is not None:
+        plant_config["system_level_control"]["control_parameters"]["conversion_ratio_method"] = (
+            conversion_ratio_method
+        )
     return _build_hetero_problem(
         controller,
         plant_config,
@@ -500,7 +505,7 @@ def test_appendix_a_dispatch_trace(slc_topologies, subtests):
         assert set(trace["ratios"]) == set(expected_ratios)
         for key, expected in expected_ratios.items():
             np.testing.assert_array_equal(trace["ratios"][key]["value"], np.full(4, expected))
-            np.testing.assert_array_equal(trace["ratios"][key]["source"], np.full(4, "measured"))
+            np.testing.assert_array_equal(trace["ratios"][key]["source"], np.full(4, "aggregate"))
 
     with subtests.test("converter contributions by input bus"):
         expected_contributions = {
@@ -686,10 +691,10 @@ def test_conversion_ratio_method_selects_timestep_or_aggregate_ratios(subtests):
         return prob.get_val("slc.grid_electricity_set_point")
 
     with subtests.test("timestep ratios 50, 60, 40, and their mean at zero output"):
-        np.testing.assert_allclose(grid_set_point(None), [5000.0, 6000.0, 4000.0, 5000.0])
+        np.testing.assert_allclose(grid_set_point("timestep"), [5000.0, 6000.0, 4000.0, 5000.0])
 
-    with subtests.test("aggregate ratio 13000 / 250 = 52 at every timestep"):
-        np.testing.assert_allclose(grid_set_point("aggregate"), np.full(4, 5200.0))
+    with subtests.test("aggregate ratio 13000 / 250 = 52 at every timestep by default"):
+        np.testing.assert_allclose(grid_set_point(None), np.full(4, 5200.0))
 
     with subtests.test("unknown method raises at setup"):
         with pytest.raises(ValueError, match="Unknown conversion_ratio_method 'hourly'"):
@@ -1060,6 +1065,7 @@ class TestHeterogeneousCommodityControl:
             _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
             "hydrogen",
             {"electricity": "kW"},
+            conversion_ratio_method="timestep",
         )
         problem.set_val("slc.grid_rated_electricity_production", 50e6)
         problem.set_val("slc.electrolyzer_rated_hydrogen_production", 1e6)

@@ -7,7 +7,7 @@
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Added heterogeneous-commodity system-level control, which propagates demand backward across converters such as electrolyzers and Haber-Bosch loops to set upstream set points for every commodity. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
   - Demand propagates only along physical supply buses in a deterministic, setup-time dispatch order, so producers wired to one consumer never serve another.
-  - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand. The new `conversion_ratio_method: aggregate` control parameter uses one production-weighted ratio per converter instead of hourly ratios, which damps solver feedback and roughly halves the iterations needed in the heterogeneous example.
+  - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand. Conversion ratios default to one production-weighted ratio per converter (`conversion_ratio_method: aggregate`), which damps solver feedback and roughly halves the iterations needed in the heterogeneous example; `timestep` keeps hourly ratios.
   - Added the `35_system_level_control/heterogeneous_commodity` example, a worked dispatch guide, and explicit converter and splitter interface checks; the example opts into coupled-solver rate scaling, aggregate conversion ratios with plain Gauss-Seidel, strict convergence, and hourly rename/order regression checks.
 
 

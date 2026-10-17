@@ -82,7 +82,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
     Controller-specific configuration parameters may be read from
     ``plant_config["system_level_control"]["control_parameters"]``. All controllers
-    accept ``conversion_ratio_method`` (``"timestep"`` by default, or ``"aggregate"``),
+    accept ``conversion_ratio_method`` (``"aggregate"`` by default, or ``"timestep"``),
     which selects how measured converter ratios are formed (see ``_conversion_ratio``).
 
     Cost-aware subclasses (e.g. ``CostMinimizationControl``,
@@ -119,7 +119,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         self.conversion_ratio_method = (
             plant_config.get("system_level_control", {})
             .get("control_parameters", {})
-            .get("conversion_ratio_method", "timestep")
+            .get("conversion_ratio_method", "aggregate")
         )
         if self.conversion_ratio_method not in CONVERSION_RATIO_METHODS:
             raise ValueError(
@@ -1229,11 +1229,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         1. Dynamic (measured): where the converter reports its consumption via a
            connected ``{tech}_{in_commodity}_consumed`` input, the ratio is
            derived from ``consumed / produced``. With the default
-           ``conversion_ratio_method`` of ``"timestep"``, each timestep with
-           nonzero production uses its own ratio and the others use the mean
-           measured ratio. With ``"aggregate"``, every timestep uses total
-           consumption divided by total production, which damps the
+           ``conversion_ratio_method`` of ``"aggregate"``, every timestep uses
+           total consumption divided by total production, which damps the
            iteration-to-iteration feedback from hourly operating-point changes.
+           With ``"timestep"``, each timestep with nonzero production uses its
+           own ratio and the others use the mean measured ratio.
         2. Capacity (seed / fallback): the scalar ratio of the upstream rated
            input capacity to the converter's rated output capacity (see
            ``_capacity_ratio``), used on the first iteration before any

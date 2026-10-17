@@ -189,7 +189,7 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
             )
-            == 9.137956305329464
+            == 9.136316946618148
         )
 
     with subtests.test("hydrogen demand propagates to firm electricity backup"):

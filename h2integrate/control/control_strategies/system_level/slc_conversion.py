@@ -85,15 +85,16 @@ def conversion_ratio(
     consumed: ArrayLike,
     produced: ArrayLike,
     fallback: float | None,
-    method: str = "timestep",
+    method: str = "aggregate",
 ) -> tuple[NDArray[np.float64], NDArray[np.str_]]:
     """Return per-timestep ratios and identify measured versus fallback values.
 
-    With ``method="timestep"``, each valid timestep uses its own measured
-    ratio, and invalid timesteps use the mean of the valid measured ratios.
-    With ``method="aggregate"``, every timestep uses one production-weighted
-    ratio, total valid consumption divided by total valid production. The
-    capacity fallback is used only when no measured ratio is available.
+    With ``method="aggregate"`` (the default), every timestep uses one
+    production-weighted ratio, total valid consumption divided by total valid
+    production. With ``method="timestep"``, each valid timestep uses its own
+    measured ratio, and invalid timesteps use the mean of the valid measured
+    ratios. The capacity fallback is used only when no measured ratio is
+    available.
 
     The aggregate ratio acts as a low-pass filter on the measurement feedback.
     A per-timestep ratio reflects the operating point the converter reached in
@@ -107,7 +108,7 @@ def conversion_ratio(
             unconnected signal.
         produced: Measured output production by timestep.
         fallback: Capacity-based sizing ratio, or ``None`` when unavailable.
-        method: ``"timestep"`` or ``"aggregate"``. Defaults to ``"timestep"``.
+        method: ``"aggregate"`` or ``"timestep"``. Defaults to ``"aggregate"``.
 
     Returns:
         A pair containing the ratio array and a same-shaped source array whose
@@ -118,7 +119,7 @@ def conversion_ratio(
             fallback is available.
 
     Examples:
-        >>> ratio, source = conversion_ratio([50.0, 70.0, 0.0], [1.0, 1.0, 0.0], None, "aggregate")
+        >>> ratio, source = conversion_ratio([50.0, 70.0, 0.0], [1.0, 1.0, 0.0], None)
         >>> ratio.tolist(), source.tolist()
         ([60.0, 60.0, 60.0], ['aggregate', 'aggregate', 'aggregate'])
     """

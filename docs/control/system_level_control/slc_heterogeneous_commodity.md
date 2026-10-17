@@ -61,8 +61,8 @@ model.run()
 
 ## Conversion Ratios
 
-`dispatch_trace["ratios"]` contains the ratio used at each converter link. This example sets
-`conversion_ratio_method: aggregate`, so the SLC uses one production-weighted ratio per link
+`dispatch_trace["ratios"]` contains the ratio used at each converter link. By default
+(`conversion_ratio_method: aggregate`), the SLC uses one production-weighted ratio per link
 (total consumption divided by total production). The hourly measured ratios vary with part load,
 start-up, and degradation; the aggregate summarizes them without feeding each hour's operating
 point back into that hour's demand:
@@ -109,7 +109,7 @@ direct electricity use. The trace is overwritten on each model compute and is in
 inspection; it is not an OpenMDAO output or a public API.
 
 The plot below compares the hourly measured ratios with the aggregate ratio the SLC used. With
-the default `conversion_ratio_method: timestep`, the SLC would use the hourly values directly.
+`conversion_ratio_method: timestep`, the SLC would use the hourly values directly.
 
 ```{code-cell} ipython3
 hours = np.arange(ammonia_out.size)

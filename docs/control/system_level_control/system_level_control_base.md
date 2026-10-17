@@ -270,13 +270,13 @@ complete trace below. For readability, each array is shown as a four-element lis
     },
     "ratios": {
         ("electricity", "haber_bosch", "ammonia"): {
-            "value": [0.5] * 4, "source": ["measured"] * 4,
+            "value": [0.5] * 4, "source": ["aggregate"] * 4,
         },
         ("hydrogen", "haber_bosch", "ammonia"): {
-            "value": [0.18] * 4, "source": ["measured"] * 4,
+            "value": [0.18] * 4, "source": ["aggregate"] * 4,
         },
         ("electricity", "electrolyzer", "hydrogen"): {
-            "value": [55.0] * 4, "source": ["measured"] * 4,
+            "value": [55.0] * 4, "source": ["aggregate"] * 4,
         },
     },
     "contributions": {
@@ -310,11 +310,10 @@ not -210 kW. A zero residual does not guarantee the physical models delivered th
 ```{important} The capacity seed is a sizing estimate, not an efficiency
 The seed divides the summed rated capacities of the converter's physical input suppliers
 by its rated output. Feedstocks contribute their mean supply instead of a rated capacity.
-Valid, finite consumption/output measurements with nonzero output take precedence per
-timestep. Before measurements exist, the capacity ratio seeds propagation. Once any valid
-measurement exists, its mean fills invalid or zero-output points; if no valid measurements
-exist, the capacity seed fills every point. An unconnected standalone consumption input uses
-the seed throughout.
+Valid, finite consumption/output measurements with nonzero output take precedence. Before
+measurements exist, the capacity ratio seeds propagation. If no valid measurements exist, the
+capacity seed fills every point. An unconnected standalone consumption input uses the seed
+throughout.
 ```
 
 When `system_level_control.solver_options.scale_control_variables` is true, common rate outputs
@@ -329,25 +328,29 @@ constraints and rename/order invariance.
 
 The SLC and the plant models form a fixed-point iteration over the whole simulated period: the
 controller computes set points from the previous iterate's measured outputs, and the solver
-repeats until nothing changes. With the default
-`system_level_control.control_parameters.conversion_ratio_method: timestep`, each timestep's
-demand uses that timestep's measured `consumed / produced` ratio. That ratio depends on the
+repeats until nothing changes. `system_level_control.control_parameters.conversion_ratio_method`
+selects how measured converter ratios enter that loop.
+
+The default, `aggregate`, uses one production-weighted ratio per conversion link (total valid
+consumption divided by total valid production) at every timestep. This is a low-pass filter on
+the measurement feedback, analogous to the Q-filter used for robustness in iterative learning
+control: it keeps the converter's overall efficiency but ignores hour-to-hour operating-point
+effects.
+
+With `timestep`, each timestep's demand uses that timestep's measured `consumed / produced`
+ratio, and timesteps without output use the mean measured ratio. That ratio depends on the
 operating point the converter reached in the previous iterate (part load, start-up losses,
 cluster switching, degradation), and storage carries any change in one timestep's demand into
 every later timestep. The resulting feedback is not guaranteed to contract and can settle into
-small limit cycles. In the heterogeneous example, `timestep` takes 76 Gauss-Seidel iterations
-with Aitken and does not converge in 150 iterations when electrolyzer degradation is disabled.
+small limit cycles.
 
-`conversion_ratio_method: aggregate` uses one production-weighted ratio per conversion link (total
-valid consumption divided by total valid production) at every timestep. This is a low-pass
-filter on the measurement feedback, analogous to the Q-filter used for robustness in iterative
-learning control: it keeps the converter's overall efficiency but ignores hour-to-hour
-operating-point effects. In the heterogeneous example it converges in 24 plain Gauss-Seidel
-iterations (34 with Aitken), and annual ammonia and LCOA change by less than 0.05% relative to
-the `timestep` result. The trade-off is part-load fidelity: at hours far from the average
-operating point, the propagated demand is biased toward the average efficiency. Ratios averaged
-over shorter blocks (for example 24 hours) did not converge in 150 iterations in the same
-example, so only the two methods above are offered.
+In the heterogeneous example, `timestep` takes 76 Gauss-Seidel iterations with Aitken and does
+not converge in 150 iterations when electrolyzer degradation is disabled. `aggregate` converges in
+24 plain Gauss-Seidel iterations (34 with Aitken), and annual ammonia and LCOA change by less than
+0.05%. The trade-off is part-load fidelity: at hours far from the average operating point, the
+propagated demand is biased toward the average efficiency. Ratios averaged over shorter blocks
+(for example 24 hours) did not converge in 150 iterations in the same example, so only the two
+methods above are offered.
 
 For this example, the capacity-only estimates are `500 / 1000 = 0.5` for Haber-Bosch
 electricity, `40 / 1000 = 0.04` for hydrogen, and `1500 / 40 = 37.5` for electrolyzer
@@ -356,9 +359,9 @@ The measured chain instead requires `100 * 0.18 * 55 = 990` kW. The backward wal
 the same ratio product as a conversion recipe, while accounting for the set points
 committed after downstream dispatch.
 
-- **No capacity seed:** if some measurements are valid, their mean fills invalid points
-  and the source label remains `measured`. If neither a seed nor valid measurements exists,
-  the wrapper warns once per conversion triple and skips propagation along that link.
+- **No capacity seed:** if some measurements are valid, the measured ratio fills every point
+  (labeled `aggregate`, or `measured` with `timestep`). If neither a seed nor valid measurements
+  exists, the wrapper warns once per conversion triple and skips propagation along that link.
 - **Partial overlap:** a bus is dispatched as one pool. Setup warns when a controlled producer
   cannot reach every consumer on that bus; physical flow allocation is not solved here.
 - **Cycles:** a conversion cycle reachable from the demand bus raises `ValueError` at setup,
