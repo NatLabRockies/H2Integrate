@@ -89,8 +89,14 @@ The inputs for technologies classified as `feedstock` are:
 
 ## Systems with Heterogeneous Commodities
 
-The `DemandFollowingControl` controller can be used in hybrid systems where technologies produce different commodities.
-For example, in a system where an electrolyzer produces hydrogen and the demand commodity is hydrogen, the controller can set the electricity-generating *curtailable* technologies' set-points to meet the hydrogen demand.
+For an executable walkthrough of the heterogeneous-commodity example, including measured
+conversion ratios and time histories of electricity, hydrogen, ammonia, and battery dispatch, see
+{ref}`Heterogeneous-Commodity SLC Example <slc-heterogeneous-commodity>`.
+
+```{seealso}
+{ref}`slc-base` documents the setup and compute call trees, state ownership, topology inspection,
+and the separate case where a grid supplies **only** Haber-Bosch.
+```
 
 This framework provides a starting point for hybrid energy system control but is intended to be extended with more sophisticated strategies for complex multi-commodity systems.
 

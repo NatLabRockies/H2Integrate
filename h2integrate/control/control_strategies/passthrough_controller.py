@@ -1,5 +1,9 @@
 import openmdao.api as om
 
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
+    get_control_rate_reference,
+)
+
 
 class PassthroughController(om.ExplicitComponent):
     """Simple controller that passes a set-point signal directly through as a command value.
@@ -22,6 +26,7 @@ class PassthroughController(om.ExplicitComponent):
     def initialize(self):
         self.options.declare("commodity", types=str)
         self.options.declare("n_timesteps", types=int)
+        self.options.declare("scale_output", types=bool, default=False)
         self.options.declare(
             "commodity_rate_units",
             types=str,
@@ -37,6 +42,15 @@ class PassthroughController(om.ExplicitComponent):
         commodity = self.options["commodity"]
         n_timesteps = self.options["n_timesteps"]
         commodity_rate_units = self.options["commodity_rate_units"]
+        default_val = 1.0e9
+        scale_output = self.options["scale_output"]
+        command_reference = (
+            get_control_rate_reference(commodity, commodity_rate_units) if scale_output else 1.0
+        )
+        command_initial = 1.0 if scale_output else default_val
+        output_scale_kwargs = (
+            {"ref": command_reference, "res_ref": command_reference} if scale_output else {}
+        )
 
         # Use explicit units on the input when available so that the
         # variable remains valid even when no SLC is connected
@@ -47,8 +61,6 @@ class PassthroughController(om.ExplicitComponent):
         # We avoid extreme values (e.g. 1e30) here because they pollute the
         # solver relative-residual check and cause premature false convergence
         # in cyclic system-level control configurations.
-        default_val = 1.0e9
-
         if commodity_rate_units is not None:
             self.add_input(
                 f"{commodity}_set_point",
@@ -69,18 +81,20 @@ class PassthroughController(om.ExplicitComponent):
         if commodity_rate_units is not None:
             self.add_output(
                 f"{commodity}_command_value",
-                val=default_val,
+                val=command_initial,
                 shape=n_timesteps,
                 desc=f"Command value for {commodity} (passthrough of set-point)",
                 units=commodity_rate_units,
+                **output_scale_kwargs,
             )
         else:
             self.add_output(
                 f"{commodity}_command_value",
-                val=default_val,
+                val=command_initial,
                 shape=n_timesteps,
                 desc=f"Command value for {commodity} (passthrough of set-point)",
                 units_by_conn=True,
+                **output_scale_kwargs,
             )
 
     def compute(self, inputs, outputs):

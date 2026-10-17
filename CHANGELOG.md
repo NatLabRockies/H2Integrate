@@ -5,6 +5,10 @@
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
+- Added heterogeneous-commodity system-level control, which propagates demand backward across converters such as electrolyzers and Haber-Bosch loops to set upstream set points for every commodity. [PR 844](https://github.com/NatLabRockies/H2Integrate/pull/844)
+  - Demand propagates only along physical supply buses in a deterministic, setup-time dispatch order, so producers wired to one consumer never serve another.
+  - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand. Conversion ratios default to one production-weighted ratio per converter (`conversion_ratio_method: aggregate`), which damps solver feedback and roughly halves the iterations needed in the heterogeneous example; `timestep` keeps hourly ratios.
+  - Added the `35_system_level_control/heterogeneous_commodity` example, a worked dispatch guide, and explicit converter and splitter interface checks; the example opts into coupled-solver rate scaling, aggregate conversion ratios with plain Gauss-Seidel, strict convergence, and hourly rename/order regression checks.
 
 
 ## 0.10.0 [October 12, 2026]

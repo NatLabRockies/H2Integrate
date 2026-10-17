@@ -25,12 +25,58 @@ from h2integrate.postprocess.reporting import (
 )
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
+from h2integrate.control.control_strategies.system_level.slc_topology import build_dispatch_topology
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
+from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
     _get_tech_buy_price_input_name,
 )
+
+
+class _SLCPlantGroup(om.Group):
+    """Validate and connect SLC interfaces after technology outputs are declared."""
+
+    def initialize(self):
+        self.options.declare("dispatch_topology", default=None, allow_none=True)
+
+    def configure(self):
+        topology = self.options["dispatch_topology"]
+        if topology is None:
+            return
+        for tech_name, commodity in topology.consumption_signals:
+            technology = self._get_subsystem(tech_name)
+            output_names = {
+                metadata["prom_name"]
+                for metadata in technology.get_io_metadata(iotypes="output").values()
+            }
+            signal = f"{commodity}_consumed"
+            if signal not in output_names:
+                raise ValueError(
+                    f"SLC converter '{tech_name}' is missing required output '{signal}'. "
+                    "Its performance model must expose measured consumption for each "
+                    "input commodity supplied by a dispatched bus."
+                )
+            self.connect(
+                f"{tech_name}.{signal}",
+                f"system_level_controller.{tech_name}_{signal}",
+            )
+        for splitter in topology.splitters:
+            technology = self._get_subsystem(splitter.name)
+            input_names = {
+                metadata["prom_name"]
+                for metadata in technology.get_io_metadata(iotypes="input").values()
+            }
+            signal = "prescribed_commodity_to_priority_tech"
+            if signal not in input_names:
+                raise ValueError(
+                    f"SLC splitter '{splitter.name}' is missing required input '{signal}'. "
+                    "Use split_mode='prescribed_commodity' for controller-managed splitters."
+                )
+            self.connect(
+                f"system_level_controller.{splitter.name}_{splitter.commodity}_set_point",
+                f"{splitter.name}.{signal}",
+            )
 
 
 class State(IntEnum):
@@ -452,7 +498,7 @@ class H2IntegrateModel:
         control strategy, and finance parameters.
         """
 
-        plant_group = om.Group()
+        plant_group = _SLCPlantGroup() if self.slc else om.Group()
 
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
@@ -493,6 +539,9 @@ class H2IntegrateModel:
                   to its ``_control_classifier`` (one of ``"fixed"``, ``"flexible"``,
                   ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
                   the SLC interacts with each tech.
+                - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
+                  links, dispatch order, and controller-managed splitters, built once
+                  from the technology graph by ``build_dispatch_topology``.
         """
         slc_topology = {}
         technologies = self.technology_config.get("technologies", {})
@@ -620,6 +669,18 @@ class H2IntegrateModel:
 
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
+        # Build the supply buses, conversion links (e.g. electrolyzer: electricity ->
+        # hydrogen), dispatch order, and controller-managed splitters once, so the
+        # controller and the consumption-signal and splitter connections made below
+        # all use the same topology
+        slc_topology["dispatch_topology"] = build_dispatch_topology(
+            upstream_tech_graph,
+            upstream_tech_control_classifiers,
+            tech_to_commodity,
+            demand_tech,
+            slc_topology["demand_commodity"],
+        )
+
         return slc_topology
 
     def add_system_level_controller(self, slc_topology):
@@ -704,6 +765,10 @@ class H2IntegrateModel:
                   has its own sub-controller.
                 - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
                   interconnections.
+                - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
+                  links, and controller-managed splitters. Its converter inputs are
+                  connected to the controller's measured-consumption inputs and its
+                  splitters to the controller's splitter set points.
 
         Raises:
             ValueError: If ``control_strategy`` is not found in ``self.supported_models``.
@@ -793,6 +858,12 @@ class H2IntegrateModel:
                 f"system_level_controller.{tech_name}_{commodity}_set_point",
                 f"{tech_name}.{commodity}_set_point",
             )
+
+        # --- Step 3b: Hand the topology to the plant group -----------------
+        # _SLCPlantGroup.configure() validates and connects each converter's
+        # ``{in_commodity}_consumed`` output and each splitter's prescribed allocation
+        # once all technology outputs are declared.
+        self.plant.options["dispatch_topology"] = slc_topology["dispatch_topology"]
 
         # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
@@ -1153,10 +1224,16 @@ class H2IntegrateModel:
         # Build the controller sized to the plant's simulation horizon so its
         # vector I/O matches the performance model's time-series I/O.
         n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+        scale_control_variables = (
+            self.plant_config.get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
         controller = PassthroughController(
             commodity=commodity,
             n_timesteps=n_timesteps,
             commodity_rate_units=commodity_rate_units,
+            scale_output=scale_control_variables,
         )
 
         # Promote all controller variables so:

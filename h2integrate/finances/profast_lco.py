@@ -69,8 +69,20 @@ class ProFastLCO(ProFastBase):
         desc = self.options["description"].strip().strip("_()-")
         base = f"LCO{self.options['commodity_type'][0].upper()}"
         self.LCO_str = f"{base}_{desc}" if desc else base
+        scale_control_variables = (
+            self.options["plant_config"]
+            .get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
+        output_scale_kwargs = {"ref": 1e12, "res_ref": 1e12} if scale_control_variables else {}
 
-        self.add_output(self.LCO_str, val=0.0, compute_units=_compute_price_units)
+        self.add_output(
+            self.LCO_str,
+            val=0.0,
+            compute_units=_compute_price_units,
+            **output_scale_kwargs,
+        )
         self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=_compute_price_units)
 
         self.outputs_to_units = {
@@ -118,7 +130,7 @@ class ProFastLCO(ProFastBase):
                 f"Commodity stream for finance group has a zero {bug_desc}. "
                 "If you receive this warning multiple times, there may be a problem "
                 "with your setup. ProFAST is not being run on this iteration and the "
-                f"{self.LCO_str} is being set to default value of 1e12 ({self.price_units})"
+                f"{self.LCO_str} is set to the default value of 1e12 ({self.price_units})."
             )
             warnings.warn(msg, UserWarning)
             return
