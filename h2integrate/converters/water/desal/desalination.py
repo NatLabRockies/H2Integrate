@@ -81,7 +81,7 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
+        1,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "dispatchable"
@@ -164,7 +164,7 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
         outputs["electricity_consumed"] = water_out * specific_energy
         outputs["feedwater_consumed"] = water_out / recovery_ratio
 
-        hours_per_timestep = self.dt / 3600
+        hours_per_timestep = self.dt / 3600  # rates are per hour, so scale by timestep length
         outputs["total_water_produced"] = water_out.sum() * hours_per_timestep
         outputs["rated_water_production"] = capacity
         outputs["capacity_factor"] = outputs["total_water_produced"] / (
@@ -205,7 +205,7 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
+        1,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 

@@ -4,6 +4,7 @@ import openmdao.api as om
 from pytest import approx, fixture
 
 from h2integrate.converters.water.desal.desalination import (
+    SALINITY_PROPERTIES,
     ReverseOsmosisCostModel,
     ReverseOsmosisPerformanceModel,
     ReverseOsmosisPerformanceModelConfig,
@@ -192,23 +193,73 @@ def test_config_values_are_inputs(plant_config, subtests):
         assert prob.get_val("water_out", units="m**3/h")[0] == approx(base_water / 2)
 
 
+@pytest.mark.regression
+@pytest.mark.parametrize("salinity", ["seawater", "brackish"])
+def test_timestep_independence(salinity, subtests):
+    """Uniform inputs over half a year give the same answers at 5 minute and 1 hour steps."""
+    results = {}
+    for dt, n_timesteps in [(300, 52560), (3600, 4380)]:
+        config = {"plant": {"plant_life": 30, "simulation": {"dt": dt, "n_timesteps": n_timesteps}}}
+        # Electricity limits production at 5 m^3/h, below the 10.03 m^3/h capacity
+        electricity = 5.0 * (4.0 if salinity == "seawater" else 1.5)
+        prob = make_problem(config, salinity=salinity, electricity=electricity, feedwater=1e4)
+        results[dt] = {
+            name: prob.get_val(name, units=units)
+            for name, units in [
+                ("water_out", "m**3/h"),
+                ("electricity_consumed", "kW"),
+                ("feedwater_consumed", "m**3/h"),
+                ("total_water_produced", "m**3"),
+                ("annual_water_produced", "m**3/year"),
+                ("capacity_factor", "unitless"),
+                ("rated_water_production", "m**3/h"),
+            ]
+        }
+
+    fast, slow = results[300], results[3600]
+
+    for name in ("electricity_consumed", "feedwater_consumed", "rated_water_production"):
+        with subtests.test(f"{name} rate"):
+            assert fast[name][0] == approx(slow[name][0])
+
+    with subtests.test("water_out rate"):
+        assert fast["water_out"][0] == approx(5.0)
+        assert slow["water_out"][0] == approx(5.0)
+
+    with subtests.test("total_water_produced"):
+        assert fast["total_water_produced"] == approx(slow["total_water_produced"])
+        assert slow["total_water_produced"] == approx(5.0 * 4380)
+
+    with subtests.test("annual_water_produced"):
+        assert fast["annual_water_produced"] == approx(slow["annual_water_produced"])
+        assert slow["annual_water_produced"][0] == approx(5.0 * 8760)
+
+    with subtests.test("capacity_factor"):
+        assert fast["capacity_factor"] == approx(slow["capacity_factor"])
+
+
+@pytest.mark.regression
+def test_one_second_timestep(subtests):
+    config = {"plant": {"plant_life": 30, "simulation": {"dt": 1, "n_timesteps": 3600}}}
+    prob = make_problem(config, salinity="brackish", electricity=7.5, feedwater=1e4)
+
+    with subtests.test("water_out rate"):
+        assert prob.get_val("water_out", units="m**3/h")[0] == approx(5.0)
+    with subtests.test("one hour of production"):
+        assert prob.get_val("total_water_produced", units="m**3") == approx(5.0)
+    with subtests.test("annual production"):
+        assert prob.get_val("annual_water_produced", units="m**3/year")[0] == approx(5.0 * 8760)
+
+
 @pytest.mark.unit
 def test_config_salinity_values(subtests):
     with subtests.test("seawater values"):
-        config = ReverseOsmosisPerformanceModelConfig(freshwater_capacity=1, salinity="seawater")
-        assert config.recovery_ratio == 0.5
-        assert config.specific_energy_consumption == 4.0
+        assert SALINITY_PROPERTIES["seawater"]["recovery_ratio"] == 0.5
+        assert SALINITY_PROPERTIES["seawater"]["specific_energy_consumption"] == 4.0
 
     with subtests.test("brackish values"):
-        config = ReverseOsmosisPerformanceModelConfig(freshwater_capacity=1, salinity="brackish")
-        assert config.recovery_ratio == 0.75
-        assert config.specific_energy_consumption == 1.5
-
-    with subtests.test("recovery ratio and specific energy cannot be set"):
-        with pytest.raises(TypeError):
-            ReverseOsmosisPerformanceModelConfig(
-                freshwater_capacity=1, salinity="brackish", recovery_ratio=0.6
-            )
+        assert SALINITY_PROPERTIES["brackish"]["recovery_ratio"] == 0.75
+        assert SALINITY_PROPERTIES["brackish"]["specific_energy_consumption"] == 1.5
 
     with subtests.test("invalid salinity"):
         with pytest.raises(ValueError):

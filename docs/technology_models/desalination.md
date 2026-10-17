@@ -25,7 +25,9 @@ experiments or optimization.
 
 `ReverseOsmosisCostModel` estimates capital and operating costs from `freshwater_capacity` (an
 OpenMDAO input) using the model's reference costs. Its cost configuration is fixed to 2013 USD.
-Both models require hourly time steps.
+Both models support time steps from 1 second to 1 hour. Rates (`water_out`, `electricity_in`,
+`feedwater_in`, and the consumed quantities) are per hour regardless of time step, while
+`total_water_produced` and `annual_water_produced` account for the time step length.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModelConfig
