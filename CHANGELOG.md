@@ -5,6 +5,7 @@
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
+- Updated the reverse osmosis desalination models to remove the base class, take time-varying `electricity_in` and `feedwater_in` inputs that limit `water_out`, and expose capacity and related config values as OpenMDAO inputs. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 
 ## 0.10.0 [October 12, 2026]

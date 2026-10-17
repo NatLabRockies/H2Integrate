@@ -1,14 +1,31 @@
 # Reverse Osmosis Desalination
 
-`ReverseOsmosisPerformanceModel` represents a fixed-capacity reverse osmosis plant. Configure its
-freshwater capacity in kg/h and choose `salinity: seawater` or `salinity: brackish`. The model
-reports freshwater as `water_out` in m^3/h, along with `feedwater` and electricity demand. Its
-current simplified assumptions use 50% recovery and 4 kWh/m^3 for seawater, and 75% recovery and
-1.5 kWh/m^3 for brackish water.
+`ReverseOsmosisPerformanceModel` represents a reverse osmosis plant that converts feedwater and
+electricity into freshwater. At each timestep, freshwater production (`water_out`, m^3/h) is the
+minimum of three limits:
 
-`ReverseOsmosisCostModel` estimates capital and operating costs from the freshwater capacity using
-the model's reference costs. Its cost configuration is fixed to 2013 USD. Both models require
-hourly time steps.
+- the plant capacity, `freshwater_capacity` (kg/h) divided by `freshwater_density` (kg/m^3)
+- the available electricity, `electricity_in` (kW) divided by `specific_energy_consumption` (kWh/m^3)
+- the available feedwater, `feedwater_in` (m^3/h) multiplied by `recovery_ratio`
+
+`electricity_in` and `feedwater_in` are inputs with one value per timestep, so they may vary over
+the simulation. The model reports the resources actually used as `electricity_consumed` and
+`feedwater_consumed`, along with the system `mass` and `footprint`.
+
+Choose `salinity: seawater` or `salinity: brackish` in the configuration. This sets the recovery
+ratio and specific energy consumption:
+
+| Salinity   | Recovery ratio | Specific energy consumption |
+| ---------- | -------------- | --------------------------- |
+| `seawater` | 0.5            | 4.0 kWh/m^3                 |
+| `brackish` | 0.75           | 1.5 kWh/m^3                 |
+
+The capacity and freshwater density are also OpenMDAO inputs, so they can be varied by a design of
+experiments or optimization.
+
+`ReverseOsmosisCostModel` estimates capital and operating costs from `freshwater_capacity` (an
+OpenMDAO input) using the model's reference costs. Its cost configuration is fixed to 2013 USD.
+Both models require hourly time steps.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModelConfig
