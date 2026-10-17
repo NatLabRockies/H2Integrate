@@ -69,8 +69,20 @@ class ProFastLCO(ProFastBase):
         desc = self.options["description"].strip().strip("_()-")
         base = f"LCO{self.options['commodity_type'][0].upper()}"
         self.LCO_str = f"{base}_{desc}" if desc else base
+        scale_control_variables = (
+            self.options["plant_config"]
+            .get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
+        output_scale_kwargs = {"ref": 1e12, "res_ref": 1e12} if scale_control_variables else {}
 
-        self.add_output(self.LCO_str, val=0.0, compute_units=_compute_price_units)
+        self.add_output(
+            self.LCO_str,
+            val=0.0,
+            compute_units=_compute_price_units,
+            **output_scale_kwargs,
+        )
         self.add_output(f"price_{self.output_txt}", val=0.0, compute_units=_compute_price_units)
 
         self.outputs_to_units = {

@@ -40,15 +40,15 @@ def test_measured_ratio_round_numbers(subtests):
 
 
 @pytest.mark.unit
-def test_conversion_ratio_uses_capacity_only_at_zero_output():
+def test_conversion_ratio_uses_measured_mean_at_zero_output():
     ratios, sources = conversion_ratio(
         consumed=[5000.0, 5500.0, 9999.0],
         produced=[100.0, 100.0, 0.0],
         fallback=55.0,
     )
 
-    np.testing.assert_array_equal(ratios, [50.0, 55.0, 55.0])
-    np.testing.assert_array_equal(sources, ["measured", "measured", "capacity"])
+    np.testing.assert_array_equal(ratios, [50.0, 55.0, 52.5])
+    np.testing.assert_array_equal(sources, ["measured", "measured", "measured"])
 
 
 @pytest.mark.unit
@@ -59,6 +59,16 @@ def test_conversion_ratio_uses_capacity_for_nan_sentinel():
 
     np.testing.assert_array_equal(ratios, np.full(4, 0.5))
     np.testing.assert_array_equal(sources, np.full(4, "capacity"))
+
+
+@pytest.mark.unit
+def test_conversion_ratio_uses_capacity_when_all_outputs_are_zero():
+    ratios, sources = conversion_ratio(
+        consumed=[5000.0, 5500.0], produced=[0.0, 0.0], fallback=55.0
+    )
+
+    np.testing.assert_array_equal(ratios, [55.0, 55.0])
+    np.testing.assert_array_equal(sources, ["capacity", "capacity"])
 
 
 @pytest.mark.unit

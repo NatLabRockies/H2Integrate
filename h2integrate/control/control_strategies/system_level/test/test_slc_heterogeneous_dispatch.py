@@ -18,6 +18,7 @@ from test_slc_controllers import (
 )
 
 from h2integrate.core.connection_utils import create_technology_graph
+from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.slc_topology import (
     SUPPLIER_CLASSIFIERS,
     build_dispatch_topology,
@@ -68,6 +69,7 @@ def _chain_problem(
     controller=DemandFollowingControl,
     upstream_out=None,
     cost_per_tech=None,
+    scale_control_variables=False,
 ):
     """Build a 4-timestep problem with a demand of 100 kg/h of ``demand_commodity``."""
     slc_topology = _build_slc_topology(
@@ -76,9 +78,13 @@ def _chain_problem(
         demand_commodity=demand_commodity,
         demand_commodity_rate_units="kg/h",
     )
+    plant_config = _build_plant_config(connections, cost_per_tech=cost_per_tech)
+    plant_config["system_level_control"].setdefault("solver_options", {})[
+        "scale_control_variables"
+    ] = scale_control_variables
     return _build_hetero_problem(
         controller,
-        _build_plant_config(connections, cost_per_tech=cost_per_tech),
+        plant_config,
         slc_topology,
         {},
         demand=100.0,
@@ -973,8 +979,40 @@ class TestHeterogeneousCommodityControl:
 
         np.testing.assert_allclose(problem.get_val("slc.grid_electricity_set_point"), 5100.0)
 
+    def test_set_point_outputs_use_rate_references(self):
+        problem = _chain_problem(
+            GRID_ELECTROLYZER,
+            _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
+            "hydrogen",
+            {"electricity": "kW"},
+            scale_control_variables=True,
+        )
+        metadata = problem.model.slc._var_rel2meta
+
+        assert metadata["grid_electricity_set_point"]["ref"] == 1e5
+        assert metadata["grid_electricity_set_point"]["res_ref"] == 1e5
+        assert metadata["electrolyzer_hydrogen_set_point"]["ref"] == 1e3
+        assert metadata["electrolyzer_hydrogen_set_point"]["res_ref"] == 1e3
+
+    def test_passthrough_command_uses_rate_references(self):
+        problem = om.Problem()
+        problem.model.add_subsystem(
+            "controller",
+            PassthroughController(
+                commodity="electricity",
+                n_timesteps=4,
+                commodity_rate_units="kW",
+                scale_output=True,
+            ),
+        )
+        problem.setup()
+
+        metadata = problem.model.controller._var_rel2meta["electricity_command_value"]
+        assert metadata["ref"] == 1e5
+        assert metadata["res_ref"] == 1e5
+
     def test_dynamic_ratio_time_varying_with_zero_output_fallback(self):
-        """Per-timestep measured ratios apply; a zero-output timestep falls back to capacity."""
+        """Per-timestep measurements fill zero output with their measured mean."""
         problem = _chain_problem(
             GRID_ELECTROLYZER,
             _build_tech_control_classifiers(dispatchable=["grid", "electrolyzer"]),
@@ -988,7 +1026,8 @@ class TestHeterogeneousCommodityControl:
         problem.run_model()
 
         np.testing.assert_allclose(
-            problem.get_val("slc.grid_electricity_set_point"), [5100.0, 4000.0, 5000.0, 6000.0]
+            problem.get_val("slc.grid_electricity_set_point"),
+            [5100.0, 4000.0, 5033.333333333333, 6000.0],
         )
 
     def test_dynamic_ratio_without_capacity_does_not_warn(self):

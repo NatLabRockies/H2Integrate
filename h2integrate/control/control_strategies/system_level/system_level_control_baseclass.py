@@ -9,6 +9,9 @@ from h2integrate.control.control_strategies.system_level.slc_topology import (
     build_dispatch_topology,
     find_commodity_suppliers,
 )
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
+    get_control_rate_reference,
+)
 from h2integrate.control.control_strategies.system_level.slc_conversion import (
     demand_ratios,
     capacity_ratio as calculate_capacity_ratio,
@@ -103,6 +106,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def setup(self):
         plant_config = self.options["plant_config"]
         slc_topology = self.options["slc_topology"]
+        self.scale_control_variables = (
+            plant_config.get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
 
@@ -191,14 +199,25 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # the controller can drive its per-timestep priority allocation from the
         # backpropagated demand of the consumers behind its first output.
         for splitter in self._dispatch_topology.splitters:
+            splitter_units = self._get_splitter_rate_units(splitter.name)
+            splitter_reference = (
+                get_control_rate_reference(splitter.commodity, splitter_units)
+                if self.scale_control_variables
+                else 1.0
+            )
             self.add_output(
                 f"{splitter.name}_{splitter.commodity}_set_point",
                 val=0.0,
                 shape=self.n_timesteps,
-                units=self._get_splitter_rate_units(splitter.name),
+                units=splitter_units,
                 desc=(
                     f"Prescribed {splitter.commodity} allocation to the priority "
                     f"consumer of splitter {splitter.name}"
+                ),
+                **(
+                    {"ref": splitter_reference, "res_ref": splitter_reference}
+                    if self.scale_control_variables
+                    else {}
                 ),
             )
 
@@ -284,13 +303,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Either explicit units or copy_units from a reference variable.
         if commodity_rate_units is not None:
             unit_kwargs = {"units": commodity_rate_units}
+            reference_units = commodity_rate_units
         else:
             unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
+            reference_units = self._var_rel2meta.get(commodity_reference_var, {}).get("units")
 
         # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
         set_point_name = f"{tech_name}_{commodity}_set_point"
+        set_point_reference = (
+            get_control_rate_reference(commodity, reference_units)
+            if self.scale_control_variables
+            else 1.0
+        )
 
         # --- Register inputs and output -------------------------------
         if add_in_name:
@@ -313,6 +339,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
             shape=self.n_timesteps,
             desc=f"Set-point sent to {tech_name} for {commodity}",
             **unit_kwargs,
+            **(
+                {"ref": set_point_reference, "res_ref": set_point_reference}
+                if self.scale_control_variables
+                else {}
+            ),
         )
 
         return in_name, set_point_name, rated_name
@@ -1149,8 +1180,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         ``{tech}_rated_{in_commodity}_production`` input; feedstock sources, which
         have no rated-production input, contribute the mean of their
         ``{tech}_{in_commodity}_out`` supply. This capacity-based ratio seeds the
-        conversion ratio on the first solver iteration and at zero-output
-        timesteps, so conversion ratios never have to be authored by hand.
+        conversion ratio before measured ratios are available. When no measured ratio
+        exists, it supplies every timestep; otherwise, zero-output timesteps use the
+        mean of valid measured ratios.
 
         Returns ``None`` when the converter's rated output input is absent or
         zero, or when the total upstream input capacity is zero (no meaningful

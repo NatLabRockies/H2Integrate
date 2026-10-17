@@ -7,6 +7,14 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig
 
 
+def get_control_rate_reference(commodity: str, units: str | None) -> float:
+    """Return a representative OpenMDAO scale for a control-rate variable."""
+    unit_references = {"kW": 1e5, "kg/h": 1e3}
+    if units in unit_references:
+        return unit_references[units]
+    return {"electricity": 1e5, "hydrogen": 1e3, "ammonia": 4e3}.get(commodity, 1.0)
+
+
 @define(kw_only=True)
 class OpenLoopControlBaseConfig(BaseConfig):
     """

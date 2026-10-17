@@ -89,33 +89,13 @@ The inputs for technologies classified as `feedstock` are:
 
 ## Systems with Heterogeneous Commodities
 
-The `DemandFollowingControl` controller can be used in hybrid systems where technologies produce different commodities.
-For example, in a system where an electrolyzer produces hydrogen and the demand commodity is hydrogen, the controller can set the electricity-generating *curtailable* technologies' set-points to meet the hydrogen demand.
-
-The controller can also propagate demand backward across converters, which are technologies whose output commodity differs from an input commodity they consume.
-When a converter has a controllable producer for one of its input commodities, the demand for the converter's output commodity is translated into a demand for that input commodity using a conversion ratio.
-Demand is tracked per supply bus rather than per commodity: producers of one commodity that are wired to different consumers (for example, a grid wired only to a Haber-Bosch loop and wind wired only to an electrolyzer) are on different buses, so a surplus on one never offsets a deficit on the other.
-The controller prefers a measured conversion ratio, computed per timestep from the converter's consumed and produced streams, and falls back to a capacity-based ratio (the summed rated input capacity of the converter's upstream producers divided by the converter's rated output capacity) that seeds propagation on the first solver iteration and at zero-output timesteps. Conversion ratios are derived automatically; they are not authored in the plant config.
-This propagation can chain across multiple converters. For example, an ammonia demand is translated into a hydrogen demand across an ammonia synthesis loop, and that hydrogen demand is then translated into an electricity demand across an electrolyzer, which the curtailable and dispatchable electricity technologies serve.
-The heterogeneous-commodity example combines wind and solar generation with a battery on a
-shared electricity bus. A prescribed splitter gives the electrolyzer out1 priority and supplies
-the Haber-Bosch loop from out2; the electrolyzer supplies hydrogen and a feedstock supplies
-nitrogen. There is **no grid backup or hydrogen storage**, so ammonia demand need not be met
-every hour. The example uses `ProfitMaximizationControl`: wind and solar are commanded at rated
-production, storage responds to surplus or deficit, and sell-price gating applies on the ammonia
-demand bus. The runner writes dispatch and conversion-ratio figures to an `outputs` folder.
-
-```{literalinclude} ../../../examples/35_system_level_control/heterogeneous_commodity/plant_config.yaml
-:language: yaml
-:start-at: technology_interconnections:
-:end-before: site_to_tech_connections:
-:caption: Shared-bus example connections; splitter connection order defines priority.
-```
+For an executable walkthrough of the heterogeneous-commodity example, including measured
+conversion ratios and time histories of electricity, hydrogen, ammonia, and battery dispatch, see
+{ref}`Heterogeneous-Commodity SLC Example <slc-heterogeneous-commodity>`.
 
 ```{seealso}
-{ref}`slc-base` explains the setup and compute call trees, state ownership, and a separate
-worked example where the grid supplies **only** Haber-Bosch. It also shows how to inspect the
-dispatch topology and per-compute trace.
+{ref}`slc-base` documents the setup and compute call trees, state ownership, topology inspection,
+and the separate case where a grid supplies **only** Haber-Bosch.
 ```
 
 This framework provides a starting point for hybrid energy system control but is intended to be extended with more sophisticated strategies for complex multi-commodity systems.

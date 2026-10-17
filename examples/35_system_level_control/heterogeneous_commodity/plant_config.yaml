@@ -69,11 +69,13 @@ system_level_control:
       haber_bosch: feedstock
   solver_options:
     solver_name: gauss_seidel
-    max_iter: 50
+    max_iter: 150
     convergence_tolerance: 1.0e-6
-    rtol: 1.0e-5  # relative residual tolerance; loosened from 1e-6 to match the dispatch floor
+    rtol: 1.0e-8
+    scale_control_variables: true
     solver_option_kwargs:
-      use_aitken: true  # Aitken relaxation damps the Gauss-Seidel dispatch limit cycle
+      use_aitken: true
+      err_on_non_converge: true
 finance_parameters:
   finance_groups:
     profast_lco:

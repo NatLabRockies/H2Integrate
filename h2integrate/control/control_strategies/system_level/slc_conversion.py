@@ -85,8 +85,9 @@ def conversion_ratio(
 ) -> tuple[NDArray[np.float64], NDArray[np.str_]]:
     """Return per-timestep ratios and identify measured versus fallback values.
 
-    When no capacity fallback is available but some measurements are valid,
-    invalid timesteps use the mean of the valid measured ratios.
+    When any measurements are valid, invalid timesteps use the mean of the
+    valid measured ratios. The capacity fallback is used only when no measured
+    ratio is available.
 
     Args:
         consumed: Measured input consumption by timestep; NaN marks an
@@ -106,12 +107,12 @@ def conversion_ratio(
     )
     valid = np.isfinite(consumed_array) & np.isfinite(produced_array) & (produced_array != 0.0)
 
-    if fallback is None or not np.isfinite(fallback):
-        if not np.any(valid):
-            raise ValueError("A fallback or at least one valid measured ratio is required.")
+    if np.any(valid):
         fallback = float(np.mean(consumed_array[valid] / produced_array[valid]))
         fallback_source = "measured"
     else:
+        if fallback is None or not np.isfinite(fallback):
+            raise ValueError("A fallback or at least one valid measured ratio is required.")
         fallback_source = "capacity"
 
     ratios = measured_ratio(consumed_array, produced_array, float(fallback))

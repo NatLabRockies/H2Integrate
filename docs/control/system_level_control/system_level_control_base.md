@@ -311,9 +311,19 @@ not -210 kW. A zero residual does not guarantee the physical models delivered th
 The seed divides the summed rated capacities of the converter's physical input suppliers
 by its rated output. Feedstocks contribute their mean supply instead of a rated capacity.
 Valid, finite consumption/output measurements with nonzero output take precedence per
-timestep. The seed is used before measurements exist and at invalid or zero-output points;
-an unconnected standalone consumption input uses it throughout.
+timestep. Before measurements exist, the capacity ratio seeds propagation. Once any valid
+measurement exists, its mean fills invalid or zero-output points; if no valid measurements
+exist, the capacity seed fills every point. An unconnected standalone consumption input uses
+the seed throughout.
 ```
+
+When `system_level_control.solver_options.scale_control_variables` is true, common rate outputs
+use `ref` and `res_ref` (`kW`: `1e5`, `kg/h`: `1e3`); passthrough command outputs use the same
+scales, and the ProFAST LCO output uses `1e12` to match its zero-capacity sentinel. The
+heterogeneous example enables this option with Aitken, allows 150 iterations, sets `rtol` to
+`1e-8`, and raises on nonconvergence. The solver norm still measures changes across the full
+model, so the integration regression also checks hourly physical constraints and rename/order
+invariance.
 
 For this example, the capacity-only estimates are `500 / 1000 = 0.5` for Haber-Bosch
 electricity, `40 / 1000 = 0.04` for hydrogen, and `1500 / 40 = 37.5` for electrolyzer
