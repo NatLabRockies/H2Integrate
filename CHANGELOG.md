@@ -82,6 +82,7 @@
 - Fixed some units in the resource models (`C` converted to `degC`, etc) and refactored inheritance of baseclasses for existing resource models [PR 858](https://github.com/NatLabRockies/H2Integrate/pull/858)
 - Bugfix in LCO breakdown function to include sales tax and typo-fix in commodity units extraction in ProFAST finance models [PR 867](https://github.com/NatLabRockies/H2Integrate/pull/867)
 - Fix bug where initial price in ProFAST NPV list was zero in the first year when installation time finished part way through a year. The key indicator of this bug was a non-zero NPV when run with a pre-determined LCOE. [PR 880](https://github.com/NatLabRockies/H2Integrate/pull/880)
+- Aligned ammonia feed consumption with startup and ramp operation, added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 ## 0.9 [August 10, 2026]
 

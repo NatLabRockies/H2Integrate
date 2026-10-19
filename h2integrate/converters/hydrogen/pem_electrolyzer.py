@@ -175,7 +175,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["electricity_consumed"] = h2_ts.loc["Power Consumed [kWh]"]
         # 1 gal H2O = 3.79 kg H2O
         outputs["water_consumed"] = 3.79 * H2_Results["Water Hourly Consumption [kg/hr]"]
-        outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()
+        unclipped_hydrogen_production = np.asarray(outputs["hydrogen_out"])
 
         if not np.isfinite(H2_Results["Sim: Average Efficiency [%-HHV]"]).all():
             # if no hydrogen is produced, then set efficiency to 0 rather than a NaN
@@ -223,8 +223,32 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "Annual O2 Production [kg/year]"
         ]
 
-        # Apply command_value from system-level controller if present
+        # Apply the SLC command to reported production; the PEM calculation still uses full input.
         if "system_level_control" in self.options["plant_config"]:
             command_value = inputs[f"{self.commodity}_command_value"]
-            commodity_out_key = f"{self.commodity}_out"
-            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], command_value)
+            clipped_hydrogen_production = np.minimum(unclipped_hydrogen_production, command_value)
+            # Keep hourly consumption and coproducts proportional to the hydrogen delivered.
+            scale = np.ones_like(unclipped_hydrogen_production, dtype=float)
+            np.divide(
+                clipped_hydrogen_production,
+                unclipped_hydrogen_production,
+                out=scale,
+                where=unclipped_hydrogen_production > 0.0,
+            )
+            unclipped_total = np.sum(unclipped_hydrogen_production)
+            # Annual schedules summarize total production, so use the production-weighted clip.
+            annual_scale = (
+                np.sum(clipped_hydrogen_production) / unclipped_total
+                if unclipped_total > 0.0
+                else 1.0
+            )
+
+            outputs["hydrogen_out"] = clipped_hydrogen_production
+            outputs["electricity_consumed"] = outputs["electricity_consumed"] * scale
+            outputs["oxygen_out"] = outputs["oxygen_out"] * scale
+            outputs["water_consumed"] = outputs["water_consumed"] * scale
+            outputs["annual_hydrogen_produced"] = outputs["annual_hydrogen_produced"] * annual_scale
+            outputs["annual_oxygen_produced"] = outputs["annual_oxygen_produced"] * annual_scale
+            outputs["capacity_factor"] = outputs["capacity_factor"] * annual_scale
+
+        outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()
