@@ -3262,9 +3262,9 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("37_concurrent_simulation", None)]
+    "example_folder,resource_example_folder", [("38_time_marching_simulation", None)]
 )
-def test_concurrent_simulation_example(subtests, temp_copy_of_example):
+def test_time_marching_simulation_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     # Load config files into dict
@@ -3276,7 +3276,7 @@ def test_concurrent_simulation_example(subtests, temp_copy_of_example):
     config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 
     # Run simulation sequentially, one subsystem at a time
-    config["plant_config"]["plant"]["simulation"].pop("n_steps_per_compute")
+    config["plant_config"]["plant"]["simulation"].pop("time_marching_window")
 
     h2i_seq = H2IntegrateModel(config)
     h2i_seq.run()
@@ -3285,11 +3285,11 @@ def test_concurrent_simulation_example(subtests, temp_copy_of_example):
     inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
     outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
 
-    # Run simulation concurrently for all subsystems, one step at a time
+    # Run time-marching simulation for all subsystems, one window of timesteps at a time
     config["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
-    config["plant_config"]["plant"]["simulation"]["n_steps_per_compute"] = 24
+    config["plant_config"]["plant"]["simulation"]["time_marching_window"] = 24
 
-    # Create an H2I model for steppable simulation
+    # Create an H2I model for time-marching simulation
     h2i_con = H2IntegrateModel(config)
     h2i_con.run()
     h2i_con.post_process(print_results=False)
@@ -3306,18 +3306,18 @@ def test_concurrent_simulation_example(subtests, temp_copy_of_example):
         assert h2i_seq.plant.battery.StoragePerformanceModel.iter_count == 1
         assert h2i_con.plant.battery.StoragePerformanceModel.iter_count == 365
 
-    with subtests.test("Sequential and concurrent H2I inputs are consistent"):
+    with subtests.test("Sequential and time-marching H2I inputs are consistent"):
         for k, v in inputs_pd_dict.items():
             if k.endswith(".timestep_index"):
                 continue
             assert v <= 1e-8, (
-                f"H2I input: {k}, is not consistent between sequential and concurrent simulations"
+                f"H2I input: {k}, is not consistent between sequential and time-marching runs"
             )
 
-    with subtests.test("Sequential and concurrent H2I outputs are consistent"):
+    with subtests.test("Sequential and time-marching H2I outputs are consistent"):
         for k, v in outputs_pd_dict.items():
             assert v <= 1e-8, (
-                f"H2I output: {k}, is not consistent between sequential and concurrent simulations"
+                f"H2I output: {k}, is not consistent between sequential and time-marching runs"
             )
 
 

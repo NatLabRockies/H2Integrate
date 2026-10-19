@@ -16,8 +16,8 @@ class SkippableComputeMixin:
 
     Any subclass's ``compute()`` is automatically wrapped so it is skipped
     whenever ``self.options["skip_compute"]`` is True. This lets the
-    concurrent/steppable simulation solver
-    (:class:`~h2integrate.core.concurrent_nl_solver.ConcurrentPlantNLSolver`)
+    time-marching simulation solver
+    (:class:`~h2integrate.core.time_marching_solver.TimeMarchingPlantSolver`)
     avoid recomputing timestep-independent quantities (e.g. cost and finance
     models) on every intermediate simulation step, without requiring each
     model to check the flag itself.
@@ -31,7 +31,7 @@ class SkippableComputeMixin:
             types=bool,
             default=False,
             desc=(
-                "When True, compute() is skipped entirely. Set by the concurrent "
+                "When True, compute() is skipped entirely. Set by the time-marching "
                 "simulation solver to avoid recomputing timestep-independent "
                 "quantities during intermediate simulation steps."
             ),
@@ -93,9 +93,11 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # n_steps_per_compute is the number of timesteps simulated per compute call
-        self.n_steps_per_compute = self.options["plant_config"]["plant"]["simulation"].get(
-            "n_steps_per_compute", self.n_timesteps
+        # time_marching_window is the number of timesteps simulated per compute call
+        self.time_marching_window = int(
+            self.options["plant_config"]["plant"]["simulation"].get(
+                "time_marching_window", self.n_timesteps
+            )
         )
 
         # dt is seconds per timestep
@@ -188,7 +190,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
     def _get_compute_time_range(self, time_index):
         """
         This method gets the range of timestep indices that are simulated in a
-        single call to compute call.
+        single call to compute.
 
         Args:
             time_index (numpy array): Starting time index of the simulation range.
@@ -197,7 +199,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             range: range of time indices
         """
         ti = int(time_index[0])
-        return range(ti, ti + self.n_steps_per_compute)
+        return range(ti, ti + self.time_marching_window)
 
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.

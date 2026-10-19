@@ -46,6 +46,60 @@ def check_model_control_classifier(model_name, model_object, system_level_contro
         raise ValueError(f"Model {model_name} is missing a control classifier")
 
 
+def check_time_marching_config(
+    n_timesteps, time_marching_window, system_level_control_enabled, has_cycles
+):
+    """Check that the time-marching simulation options are valid and supported.
+
+    Args:
+        n_timesteps (int): Number of timesteps in the simulation.
+        time_marching_window (int): Number of timesteps simulated per window.
+        system_level_control_enabled (bool): Whether system-level control is enabled.
+        has_cycles (bool): Whether the technology graph contains cycles.
+
+    Returns:
+        bool: True if the plant is to be simulated window by window, False if all timesteps are
+            simulated at once.
+
+    Raises:
+        ValueError: If ``time_marching_window`` is not positive, is greater than ``n_timesteps``,
+            or does not evenly divide ``n_timesteps``.
+        NotImplementedError: If time-marching is combined with system-level control or a
+            technology graph with cycles.
+    """
+    if time_marching_window < 1:
+        raise ValueError(f"time_marching_window ({time_marching_window}) must be positive.")
+
+    if time_marching_window > n_timesteps:
+        raise ValueError(
+            f"time_marching_window ({time_marching_window}) "
+            f"cannot be greater than n_timesteps ({n_timesteps})."
+        )
+
+    if time_marching_window == n_timesteps:
+        return False
+
+    if n_timesteps % time_marching_window != 0:
+        raise ValueError(
+            f"n_timesteps ({n_timesteps}) "
+            f"must be divisible by time_marching_window ({time_marching_window})."
+        )
+
+    if system_level_control_enabled:
+        raise NotImplementedError(
+            "Time-marching simulation (time_marching_window < n_timesteps) is not supported "
+            "with system-level control."
+        )
+
+    if has_cycles:
+        raise NotImplementedError(
+            "Time-marching simulation (time_marching_window < n_timesteps) is not supported "
+            "when the technology interconnections contain a cycle."
+        )
+
+    return True
+
+
 def check_model_is_steppable(control_strategies, performance_models):
     """Check that all technology control strategies and performance models have the attribute
     _is_steppable == True. If _is_steppable attribute is missing or evaluates to False, then the

@@ -3,7 +3,7 @@ from openmdao.recorders.recording_iteration_stack import Recording
 from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
 
 
-class ConcurrentPlantNLSolver(NonlinearRunOnce):
+class TimeMarchingPlantSolver(NonlinearRunOnce):
     """
     Custom nonlinear solver to manage running the plant group in a loop.
 
@@ -22,10 +22,10 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
         timestep_keys = [k for k in system._inputs.keys() if k.endswith("timestep_index")]
 
         n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
-        n_steps_per_compute = self.plant_config["plant"]["simulation"]["n_steps_per_compute"]
+        time_marching_window = self.plant_config["plant"]["simulation"]["time_marching_window"]
 
         # Make time stepping loop
-        sim_starts = np.arange(0, n_timesteps, n_steps_per_compute)
+        sim_starts = np.arange(0, n_timesteps, time_marching_window)
 
         final_timestep_index = sim_starts[-1]
 
@@ -43,20 +43,25 @@ class ConcurrentPlantNLSolver(NonlinearRunOnce):
         for s in skippable_subsystems:
             s.options["skip_compute"] = True
 
-        with Recording("NLRunOnce", 0, self) as rec:
-            for ss in sim_starts:
-                # Update timestep_index in all subsystems
-                for tk in timestep_keys:
-                    system._inputs[tk] = ss
+        try:
+            with Recording("NLRunOnce", 0, self) as rec:
+                for ss in sim_starts:
+                    # Update timestep_index in all subsystems
+                    for tk in timestep_keys:
+                        system._inputs[tk] = ss
 
-                if ss == final_timestep_index:
-                    # Allow skippable subsystems to compute once, on the final
-                    # simulation period.
-                    for s in skippable_subsystems:
-                        s.options["skip_compute"] = False
+                    if ss == final_timestep_index:
+                        # Allow skippable subsystems to compute once, on the final
+                        # simulation period.
+                        for s in skippable_subsystems:
+                            s.options["skip_compute"] = False
 
-                # Run one GS iteration on the plant group
-                self._gs_iter()
+                    # Run one GS iteration on the plant group
+                    self._gs_iter()
 
-            rec.abs = 0.0
-            rec.rel = 0.0
+                rec.abs = 0.0
+                rec.rel = 0.0
+        finally:
+            # A failed step must not leave cost and finance models skipped on the next run.
+            for s in skippable_subsystems:
+                s.options["skip_compute"] = False

@@ -1,7 +1,24 @@
 import numpy as np
 import pytest
 
+from h2integrate import load_yaml, load_tech_yaml, load_plant_yaml, load_driver_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/no_battery", None)]
+)
+def test_slc_rejects_time_marching(temp_copy_of_example):
+    config_root = temp_copy_of_example
+    config = load_yaml(config_root / "wind_ng_demand.yaml")
+    config["driver_config"] = load_driver_yaml(config_root / config["driver_config"])
+    config["technology_config"] = load_tech_yaml(config_root / config["technology_config"])
+    config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
+    config["plant_config"]["plant"]["simulation"]["time_marching_window"] = 24
+
+    with pytest.raises(NotImplementedError, match="system-level control"):
+        H2IntegrateModel(config)
 
 
 @pytest.mark.unit

@@ -270,7 +270,7 @@ class FlexibleDemandComponent(DemandComponentBase):
 
             # Calculate missed load and curtailed production
             outputs = self.calculate_outputs(
-                inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
+                inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], inputs, outputs
             )
 
         else:

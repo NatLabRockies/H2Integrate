@@ -9,6 +9,7 @@ from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_com
 from h2integrate.core.model_checks import (
     check_model_time_step,
     check_model_is_steppable,
+    check_time_marching_config,
     check_model_control_classifier,
 )
 from h2integrate.core.connection_utils import (
@@ -27,7 +28,7 @@ from h2integrate.postprocess.reporting import (
     create_xdsm as create_xdsm_utility,
     print_results as print_model_results,
 )
-from h2integrate.core.concurrent_nl_solver import ConcurrentPlantNLSolver
+from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
@@ -1939,9 +1940,24 @@ class H2IntegrateModel:
         """Configures solvers on the plant group according to the needs of the run case.
 
         The plant group nonlinear solver is explicitly defined and attributed to the plant group if
-        a system level controller is defined, the technology graph has a cycle, or the steppable
-        simulation framework is utilized.
+        a system level controller is defined, the technology graph has a cycle, or the
+        time-marching simulation framework is utilized.
         """
+
+        simulation_config = self.plant_config["plant"]["simulation"]
+        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+
+        # Validate the time-marching options before choosing any solver so unsupported
+        # combinations fail loudly instead of silently simulating only the first window.
+        time_marching = False
+        time_marching_window = simulation_config.get("time_marching_window")
+        if time_marching_window is not None:
+            time_marching = check_time_marching_config(
+                simulation_config["n_timesteps"],
+                time_marching_window,
+                bool(self.slc),
+                has_cycles,
+            )
 
         if self.slc:
             # Because the controller creates a feedback loop (controller outputs become technology
@@ -1966,43 +1982,16 @@ class H2IntegrateModel:
             self.plant.linear_solver = om.DirectSolver()
             return
 
-        # Check if there are any loops in the technology interconnections
-        # If loops are present, add solvers to resolve the coupling
-        # Check if there are any cycles (loops) in the technology graph
-        if list(nx.simple_cycles(self.technology_graph)):
-            # If cycles are found, set solvers for the plant to resolve the coupling
+        # If loops are present in the technology graph, add solvers to resolve the coupling
+        if has_cycles:
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
 
-        # Identify whether concurrent simulation framework is required
-        if n_steps_per_compute := self.plant_config["plant"]["simulation"].get(
-            "n_steps_per_compute", False
-        ):
-            assert n_steps_per_compute > 0, (
-                f"n_steps_per_compute ({n_steps_per_compute}) must be positive."
-            )
+        if time_marching:
+            # Assign custom nonlinear solver to plant group to manage time-marching simulation
+            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
 
-            n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
-
-            if n_steps_per_compute != n_timesteps:
-                if n_steps_per_compute > n_timesteps:
-                    raise AssertionError(
-                        f"n_steps_per_compute ({n_steps_per_compute})"
-                        + "cannot be greater than n_timesteps ({n_timesteps})"
-                    )
-
-                if n_timesteps % n_steps_per_compute != 0:
-                    raise AssertionError(
-                        f"n_timesteps ({n_timesteps}) "
-                        + "must be divisible by n_steps_per_compute ({n_steps_per_compute})"
-                    )
-
-                # Assign custom nonlinear solver to plant group to manage concurrent simulation
-                self.plant.nonlinear_solver = ConcurrentPlantNLSolver(
-                    plant_config=self.plant_config
-                )
-
-                check_model_is_steppable(self.control_strategies, self.performance_models)
+            check_model_is_steppable(self.control_strategies, self.performance_models)
 
     def create_driver_model(self):
         """
