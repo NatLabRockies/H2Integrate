@@ -86,7 +86,7 @@ class FakeResource(ResourceBaseAPIModel):
             "month": dates.month.to_numpy().astype(float),
             "day": dates.day.to_numpy().astype(float),
             "hour": dates.hour.to_numpy().astype(float),
-            "minute": dates.hour.to_numpy().astype(float),
+            "minute": dates.minute.to_numpy().astype(float),
             "ws": np.arange(len(dates), dtype=float),
             "latitude": latitude,
             "longitude": longitude,
@@ -275,15 +275,18 @@ def test_check_resource_year_tmy(input_config):
         )
     ],
 )
-def test_get_data_infers_tmy_years_from_filenames(input_config):
+def test_get_data_infers_tmy_years_from_filenames(subtests, input_config):
     _, comp = _setup_resource_component(FakeTMYResource, input_config)
 
-    assert comp.inferred_resource_years == ["tmy-2020", "tmy-2021"]
+    with subtests.test("resource years are inferred from filenames"):
+        assert comp.inferred_resource_years == ["tmy-2020", "tmy-2021"]
 
     data = comp.get_data(35.0, -100.0, first_call=False)
 
-    assert comp.requested_resource_years[-2:] == [("tmy-2020", ""), ("tmy-2021", "")]
-    assert len(data["year"]) == 17520
+    with subtests.test("site change uses inferred years without original filenames"):
+        assert comp.requested_resource_years[-2:] == [("tmy-2020", ""), ("tmy-2021", "")]
+    with subtests.test("resource data covers both years"):
+        assert len(data["year"]) == 17520
 
 
 @pytest.mark.unit
@@ -304,6 +307,8 @@ def test_get_data_tmy_filenames_require_years_for_site_change(input_config):
     [(2013, 2, False, "", None)],
 )
 def test_process_final_resource_data(subtests, input_config):
+    input_config["plant"]["simulation"]["dt"] = 172800
+    input_config["site"]["downsample_method"] = "mean"
     _, comp = _setup_resource_component(FakeResource, input_config)
     dates = pd.to_datetime(["2012-02-28", "2012-02-29", "2012-03-01"])
     data = {
@@ -339,7 +344,7 @@ def test_process_final_resource_data(subtests, input_config):
     "resource_year,n_timesteps,include_leap,resource_fname,yr_order",
     [(2012, 8760, False, "", None)],
 )
-def test_get_data_for_year_loads_and_forces_download(input_config, monkeypatch, tmp_path):
+def test_get_data_for_year_loads_and_forces_download(subtests, input_config, monkeypatch, tmp_path):
     _, comp = _setup_resource_component(FakeResource, input_config)
     resource_file = tmp_path / "existing.csv"
     resource_file.touch()
@@ -362,16 +367,22 @@ def test_get_data_for_year_loads_and_forces_download(input_config, monkeypatch, 
     result = ResourceBaseAPIModel.get_data_for_year(
         comp, 40.0, -95.0, 2012, resource_filename="existing.csv"
     )
-    assert result is loaded_data
-    assert loaded_files == [resource_file]
-    assert download_calls == []
+    with subtests.test("existing file returns loaded data"):
+        assert result is loaded_data
+    with subtests.test("existing file is loaded once"):
+        assert loaded_files == [resource_file]
+    with subtests.test("existing file does not trigger a download"):
+        assert download_calls == []
 
     result = ResourceBaseAPIModel.get_data_for_year(
         comp, 40.0, -95.0, 2012, resource_filename="existing.csv", forced_download=True
     )
-    assert result is loaded_data
-    assert download_calls == [("fake-url", resource_file)]
-    assert loaded_files == [resource_file, resource_file]
+    with subtests.test("forced download returns loaded data"):
+        assert result is loaded_data
+    with subtests.test("forced download uses the requested resource file"):
+        assert download_calls == [("fake-url", resource_file)]
+    with subtests.test("resource file is reloaded after forced download"):
+        assert loaded_files == [resource_file, resource_file]
 
 
 @pytest.mark.unit
