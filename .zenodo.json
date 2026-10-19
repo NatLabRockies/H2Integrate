@@ -1,0 +1,6 @@
+{
+  "description": "H2Integrate is an open-source Python package for modeling and designing hybrid energy systems producing electricity, hydrogen, ammonia, steel, and other products.",
+  "license": "BSD 3-Clause \"New\" or \"Revised\" License",
+  "title": "H2Integrate: Holistic Hybrids Optimization and Design Tool",
+  "upload_type": "software"
+}
