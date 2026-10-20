@@ -104,9 +104,17 @@ class H2IntegrateModel:
         # technologies are connected within the `technology_interconnections` section of the
         # plant config
         self.connect_technologies()
+        # sites and resources are connected to technologies within the
+        # `site_to_tech_connections` section of the plant config
         self.connect_sites_to_techs()
+        # connect technology costs and performance specifications to the system-level
+        # finance models based on info in the `finance_parameters['finance_subgroups']`
+        # section of the plant config
         self.connect_techs_to_finance()
+        # connect dispatch rules for Pyomo-based storage dispatch models based on
+        # `tech_to_dispatch_connections` section of the plant config
         self.connect_dispatch_rules()
+        # auto-order the connections and check for any feedback loops in the connections
         self.finalize_connections()
 
         # create driver model
