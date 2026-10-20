@@ -9,10 +9,10 @@ from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_
 from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent_diffs
 
 
-# Run one of both simulation paradigms by changing the flags in this dict
+# Run one or both simulation paradigms by changing the flags in this dict
 run_dict = {
     "run_sequential": True,
-    "run_concurrent": True,
+    "run_time_marching": True,
 }
 
 # Load config files into dict
@@ -30,7 +30,7 @@ config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 # Run simulation sequentially one subsystem at a time
 if run_dict.get("run_sequential", False):
     config_seq = deepcopy(config)
-    config_seq["plant_config"]["plant"]["simulation"].pop("n_steps_per_compute")
+    config_seq["plant_config"]["plant"]["simulation"].pop("time_marching_window")
 
     # Create an H2I model for standard year-long simulation
     h2i_seq = H2IntegrateModel(config_seq)
@@ -53,37 +53,35 @@ if run_dict.get("run_sequential", False):
     ]
 
 
-# Run the simulation concurrently for all subsystems one step at a time
-if run_dict.get("run_concurrent", False):
-    config_con = deepcopy(config)
+# Run the time-marching simulation, advancing all subsystems one window of timesteps at a time
+if run_dict.get("run_time_marching", False):
+    config_tm = deepcopy(config)
 
-    config_con["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
-    config_con["plant_config"]["plant"]["simulation"]["n_steps_per_compute"] = 24
+    config_tm["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
+    config_tm["plant_config"]["plant"]["simulation"]["time_marching_window"] = 24
 
-    # Create an H2I model for steppable simulation
-    h2i_con = H2IntegrateModel(config_con)
+    # Create an H2I model for time-marching simulation
+    h2i_tm = H2IntegrateModel(config_tm)
 
     t0 = time.time()
     # Run the model
-    h2i_con.run()
+    h2i_tm.run()
     t1 = time.time()
 
-    print(f"Concurrent took {t1 - t0:.3f} seconds")
+    print(f"Time-marching took {t1 - t0:.3f} seconds")
 
     # Post-process the results
-    h2i_con.post_process(print_results=False)
+    h2i_tm.post_process(print_results=False)
 
-    inputs_con = dict(h2i_con.model.list_inputs(out_stream=None))
-    outputs_con = dict(h2i_con.model.list_outputs(out_stream=None))
+    inputs_tm = dict(h2i_tm.model.list_inputs(out_stream=None))
+    outputs_tm = dict(h2i_tm.model.list_outputs(out_stream=None))
 
-    lcoe_con = outputs_con[
-        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"
-    ]
+    lcoe_tm = outputs_tm["plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"]
 
 # Compare results
-if run_dict.get("run_sequential", False) and run_dict.get("run_concurrent", False):
-    inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
-    outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
+if run_dict.get("run_sequential", False) and run_dict.get("run_time_marching", False):
+    inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_tm)
+    outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_tm)
 
     in_abs, in_rel = find_nonzero_percent_diffs(inputs_pd_dict, dict(inputs_seq))
     out_abs, out_rel = find_nonzero_percent_diffs(outputs_pd_dict, dict(outputs_seq))

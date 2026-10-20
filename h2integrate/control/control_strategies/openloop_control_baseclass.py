@@ -176,10 +176,10 @@ class OpenLoopControlBase(om.ExplicitComponent):
 
     def setup(self):
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        # n_steps_per_compute is the number of timesteps simulated per compute call
-        self.n_steps_per_compute = int(
+        # time_marching_window is the number of timesteps simulated per compute call
+        self.time_marching_window = int(
             self.options["plant_config"]["plant"]["simulation"].get(
-                "n_steps_per_compute", self.n_timesteps
+                "time_marching_window", self.n_timesteps
             )
         )
 
@@ -217,7 +217,7 @@ class OpenLoopControlBase(om.ExplicitComponent):
     def _get_compute_time_range(self, time_index):
         """
         This method gets the range of timestep indices that are simulated in a
-        single call to compute call.
+        single call to compute.
 
         Args:
             time_index (numpy array): Starting time index of the simulation range.
@@ -226,7 +226,7 @@ class OpenLoopControlBase(om.ExplicitComponent):
             range: range of time indices
         """
         ti = int(time_index[0])
-        return range(ti, ti + self.n_steps_per_compute)
+        return range(ti, ti + self.time_marching_window)
 
     def compute():
         """This method must be implemented by subclasses to define the

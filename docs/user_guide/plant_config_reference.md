@@ -65,6 +65,9 @@ default `n_timesteps` is 8760. `start_time` and `timezone` are optional; timezon
 for the start time. Every performance model in the system must support the selected `dt`, and the
 requested simulation period must be compatible with the connected resource data.
 
+`time_marching_window` is optional and enables a time-marching simulation that advances the plant
+a window of timesteps at a time; see [Time-Marching Simulation](time_marching_simulation.md).
+
 ## Technology and site connections
 
 `technology_interconnections` lists source, destination, commodity or stream, and optionally a
