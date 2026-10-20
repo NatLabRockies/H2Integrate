@@ -73,7 +73,7 @@ properties:
             description: number of timesteps to simulate
             default: 8760
             minimum: 1
-          time_marching_window:
+          n_timesteps_window:
             type: integer
             description: number of timesteps per window in a time-marching simulation
             minimum: 1

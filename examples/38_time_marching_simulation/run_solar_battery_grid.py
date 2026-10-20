@@ -30,7 +30,7 @@ config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 # Run simulation sequentially one subsystem at a time
 if run_dict.get("run_sequential", False):
     config_seq = deepcopy(config)
-    config_seq["plant_config"]["plant"]["simulation"].pop("time_marching_window")
+    config_seq["plant_config"]["plant"]["simulation"].pop("n_timesteps_window")
 
     # Create an H2I model for standard year-long simulation
     h2i_seq = H2IntegrateModel(config_seq)
@@ -58,7 +58,7 @@ if run_dict.get("run_time_marching", False):
     config_tm = deepcopy(config)
 
     config_tm["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
-    config_tm["plant_config"]["plant"]["simulation"]["time_marching_window"] = 24
+    config_tm["plant_config"]["plant"]["simulation"]["n_timesteps_window"] = 24
 
     # Create an H2I model for time-marching simulation
     h2i_tm = H2IntegrateModel(config_tm)

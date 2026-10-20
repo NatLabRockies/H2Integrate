@@ -176,10 +176,10 @@ class OpenLoopControlBase(om.ExplicitComponent):
 
     def setup(self):
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        # time_marching_window is the number of timesteps simulated per compute call
-        self.time_marching_window = int(
+        # n_timesteps_window is the number of timesteps simulated per compute call
+        self.n_timesteps_window = int(
             self.options["plant_config"]["plant"]["simulation"].get(
-                "time_marching_window", self.n_timesteps
+                "n_timesteps_window", self.n_timesteps
             )
         )
 
@@ -226,7 +226,7 @@ class OpenLoopControlBase(om.ExplicitComponent):
             range: range of time indices
         """
         ti = int(time_index[0])
-        return range(ti, ti + self.time_marching_window)
+        return range(ti, ti + self.n_timesteps_window)
 
     def compute():
         """This method must be implemented by subclasses to define the

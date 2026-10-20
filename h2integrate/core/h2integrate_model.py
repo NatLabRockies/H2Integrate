@@ -1950,11 +1950,11 @@ class H2IntegrateModel:
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
         time_marching = False
-        time_marching_window = simulation_config.get("time_marching_window")
-        if time_marching_window is not None:
+        n_timesteps_window = simulation_config.get("n_timesteps_window")
+        if n_timesteps_window is not None:
             time_marching = check_time_marching_config(
                 simulation_config["n_timesteps"],
-                time_marching_window,
+                n_timesteps_window,
                 bool(self.slc),
                 has_cycles,
             )

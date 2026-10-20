@@ -10,18 +10,18 @@ Models must be flagged as steppable (see below) before they can be used in a tim
 
 ## Configuring a time-marching simulation
 
-Set `time_marching_window`, the number of timesteps in each window, in the `plant.simulation` section of the plant config:
+Set `n_timesteps_window`, the number of timesteps in each window, in the `plant.simulation` section of the plant config:
 
 ```yaml
 plant:
   simulation:
     dt: 3600
     n_timesteps: 8760
-    time_marching_window: 24
+    n_timesteps_window: 24
 ```
 
-- Omit `time_marching_window`, or set it equal to `n_timesteps`, to simulate all timesteps at once (the default behavior).
-- `time_marching_window` must be a positive integer that evenly divides `n_timesteps`.
+- Omit `n_timesteps_window`, or set it equal to `n_timesteps`, to simulate all timesteps at once (the default behavior).
+- `n_timesteps_window` must be a positive integer that evenly divides `n_timesteps`.
 - Cost and finance models are computed once, after the final window.
 
 ## Current limitations

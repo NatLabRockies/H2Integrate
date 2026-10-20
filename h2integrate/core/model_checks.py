@@ -47,13 +47,13 @@ def check_model_control_classifier(model_name, model_object, system_level_contro
 
 
 def check_time_marching_config(
-    n_timesteps, time_marching_window, system_level_control_enabled, has_cycles
+    n_timesteps, n_timesteps_window, system_level_control_enabled, has_cycles
 ):
     """Check that the time-marching simulation options are valid and supported.
 
     Args:
         n_timesteps (int): Number of timesteps in the simulation.
-        time_marching_window (int): Number of timesteps simulated per window.
+        n_timesteps_window (int): Number of timesteps simulated per window.
         system_level_control_enabled (bool): Whether system-level control is enabled.
         has_cycles (bool): Whether the technology graph contains cycles.
 
@@ -62,38 +62,38 @@ def check_time_marching_config(
             simulated at once.
 
     Raises:
-        ValueError: If ``time_marching_window`` is not positive, is greater than ``n_timesteps``,
+        ValueError: If ``n_timesteps_window`` is not positive, is greater than ``n_timesteps``,
             or does not evenly divide ``n_timesteps``.
         NotImplementedError: If time-marching is combined with system-level control or a
             technology graph with cycles.
     """
-    if time_marching_window < 1:
-        raise ValueError(f"time_marching_window ({time_marching_window}) must be positive.")
+    if n_timesteps_window < 1:
+        raise ValueError(f"n_timesteps_window ({n_timesteps_window}) must be positive.")
 
-    if time_marching_window > n_timesteps:
+    if n_timesteps_window > n_timesteps:
         raise ValueError(
-            f"time_marching_window ({time_marching_window}) "
+            f"n_timesteps_window ({n_timesteps_window}) "
             f"cannot be greater than n_timesteps ({n_timesteps})."
         )
 
-    if time_marching_window == n_timesteps:
+    if n_timesteps_window == n_timesteps:
         return False
 
-    if n_timesteps % time_marching_window != 0:
+    if n_timesteps % n_timesteps_window != 0:
         raise ValueError(
             f"n_timesteps ({n_timesteps}) "
-            f"must be divisible by time_marching_window ({time_marching_window})."
+            f"must be divisible by n_timesteps_window ({n_timesteps_window})."
         )
 
     if system_level_control_enabled:
         raise NotImplementedError(
-            "Time-marching simulation (time_marching_window < n_timesteps) is not supported "
+            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
             "with system-level control."
         )
 
     if has_cycles:
         raise NotImplementedError(
-            "Time-marching simulation (time_marching_window < n_timesteps) is not supported "
+            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
             "when the technology interconnections contain a cycle."
         )
 

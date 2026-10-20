@@ -43,7 +43,7 @@ plant:
   simulation:
     n_timesteps: 8760
     # Simulate 24 timesteps at a time. Omit this key to simulate all timesteps at once.
-    time_marching_window: 24
+    n_timesteps_window: 24
 finance_parameters:
   finance_groups:
     profast_model:

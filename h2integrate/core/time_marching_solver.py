@@ -22,10 +22,10 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
         timestep_keys = [k for k in system._inputs.keys() if k.endswith("timestep_index")]
 
         n_timesteps = self.plant_config["plant"]["simulation"]["n_timesteps"]
-        time_marching_window = self.plant_config["plant"]["simulation"]["time_marching_window"]
+        n_timesteps_window = self.plant_config["plant"]["simulation"]["n_timesteps_window"]
 
         # Make time stepping loop
-        sim_starts = np.arange(0, n_timesteps, time_marching_window)
+        sim_starts = np.arange(0, n_timesteps, n_timesteps_window)
 
         final_timestep_index = sim_starts[-1]
 

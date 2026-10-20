@@ -1017,7 +1017,7 @@ def test_check_time_marching_config(subtests):
             check_time_marching_config(8760, 9000, False, False)
 
     with subtests.test("Window size does not divide n_timesteps"):
-        with pytest.raises(ValueError, match=r"divisible by time_marching_window \(7\)"):
+        with pytest.raises(ValueError, match=r"divisible by n_timesteps_window \(7\)"):
             check_time_marching_config(8760, 7, False, False)
 
     with subtests.test("System-level control is not supported"):

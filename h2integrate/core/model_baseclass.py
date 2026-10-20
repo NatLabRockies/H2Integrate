@@ -93,10 +93,10 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # n_timesteps is number of timesteps in a simulation
         self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
 
-        # time_marching_window is the number of timesteps simulated per compute call
-        self.time_marching_window = int(
+        # n_timesteps_window is the number of timesteps simulated per compute call
+        self.n_timesteps_window = int(
             self.options["plant_config"]["plant"]["simulation"].get(
-                "time_marching_window", self.n_timesteps
+                "n_timesteps_window", self.n_timesteps
             )
         )
 
@@ -199,7 +199,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             range: range of time indices
         """
         ti = int(time_index[0])
-        return range(ti, ti + self.time_marching_window)
+        return range(ti, ti + self.n_timesteps_window)
 
     def apply_curtailment(self, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.

@@ -3276,7 +3276,7 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
     config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 
     # Run simulation sequentially, one subsystem at a time
-    config["plant_config"]["plant"]["simulation"].pop("time_marching_window")
+    config["plant_config"]["plant"]["simulation"].pop("n_timesteps_window")
 
     h2i_seq = H2IntegrateModel(config)
     h2i_seq.run()
@@ -3287,7 +3287,7 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
 
     # Run time-marching simulation for all subsystems, one window of timesteps at a time
     config["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
-    config["plant_config"]["plant"]["simulation"]["time_marching_window"] = 24
+    config["plant_config"]["plant"]["simulation"]["n_timesteps_window"] = 24
 
     # Create an H2I model for time-marching simulation
     h2i_con = H2IntegrateModel(config)
