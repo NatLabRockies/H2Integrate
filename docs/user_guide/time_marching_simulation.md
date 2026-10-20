@@ -1,6 +1,6 @@
 # Time-Marching Simulation
 
-By default, H2Integrate simulates all timesteps of a technology at once: each model computes its full timeseries before the next model in the plant runs.
+By default, H2Integrate simulates each technology in a linear fashion: each model computes its full time series before the next model in the plant runs.
 In a time-marching simulation, the plant advances through the simulation one window of timesteps at a time.
 Every model computes only its current window, then the next window is simulated, and so on until the end of the simulation.
 Models that carry state between timesteps, such as storage, keep that state from one window to the next.
