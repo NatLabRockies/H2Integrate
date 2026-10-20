@@ -7,6 +7,7 @@
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
+- Refactored `H2IntegrateModel.create_finance_model()` and moved finance parsing, custom model loading, SLC technology classification, and technology name checks out of `H2IntegrateModel` into `finance_utils.py`, `custom_model_utils.py`, `slc_utils.py`, and `model_checks.py`. [PR 947](https://github.com/NatLabRockies/H2Integrate/pull/947)
 
 
 ## 0.10.0 [October 12, 2026]

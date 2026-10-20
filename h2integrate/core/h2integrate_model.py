@@ -1,12 +1,25 @@
-import importlib.util
 from enum import IntEnum
 
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.slc_utils import classify_slc_technologies
 from h2integrate.core.dict_utils import check_inputs
-from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.file_utils import get_path, load_yaml, load_component_config
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_technology_names,
+    check_model_control_classifier,
+    check_technologies_are_connected,
+)
+from h2integrate.core.finance_utils import (
+    parse_finance_subgroup,
+    get_finance_group_names,
+    get_finance_output_description,
+    build_default_finance_subgroups,
+    filter_plant_config_for_finance_group,
+    wrap_single_finance_model_as_default_group,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -23,6 +36,7 @@ from h2integrate.postprocess.reporting import (
     create_xdsm as create_xdsm_utility,
     print_results as print_model_results,
 )
+from h2integrate.core.custom_model_utils import collect_custom_models
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
@@ -223,157 +237,17 @@ class H2IntegrateModel:
                         else:
                             model_inputs["control_parameters"]["tech_name"] = name
 
-    def create_custom_models(self, model_config, config_parent_path, model_types, prefix=""):
-        """This method loads custom models from the specified directory and adds them to the
-        supported models dictionary.
-
-        Args:
-            model_config (dict): dictionary containing models, such as
-                ``technology_config["technologies"]``.
-            config_parent_path (Path): parent path of the input file that ``model_config`` comes
-                from. Should either be ``plant_config_path.parent`` or
-                ``tech_config_path.parent``.
-            model_types (list[str]): list of key names to search for in
-                ``model_config.values()``. Should be
-                ``["performance_model", "cost_model", "financial_model"]`` if ``model_config``
-                is ``technology_config["technologies"]``.
-            prefix (str, optional): Prefix of ``model_class_name``, ``model_location`` and
-                ``model``. Defaults to "". Should be ``"finance_"`` if looking for custom
-                system finance models.
-        """
-
-        included_custom_models = {}
-
-        for name, config in model_config.items():
-            for model_type in model_types:
-                if model_type in config:
-                    model_name = config[model_type].get(f"{prefix}model")
-
-                    # Don't create new custom model or raise an error if the current custom model
-                    # has already been processed. This can happen if there are 2 or more instances
-                    # of the same custom model. Also check that all instances of the same custom
-                    # model tech name use the same class definition.
-                    if model_name in included_custom_models:
-                        model_class_name = config[model_type].get(f"{prefix}model")
-                        if (
-                            model_class_name
-                            != included_custom_models[model_name]["model_class_name"]
-                        ):
-                            raise (
-                                ValueError(
-                                    "User has specified two custom models using the same model"
-                                    f"name ({model_name}), but with different model classes. "
-                                    "Technologies defined with different classes must have "
-                                    "different technology names."
-                                )
-                            )
-                        else:
-                            continue
-
-                    if (model_name not in self.supported_models) and (model_name is not None):
-                        model_class_name = config[model_type].get(f"{prefix}model")
-                        model_location = config[model_type].get(f"{prefix}model_location")
-
-                        if not model_class_name or not model_location:
-                            raise ValueError(
-                                f"Custom {model_type} for {name} must specify "
-                                f"'{prefix}model_class_name' and '{prefix}model_location'."
-                            )
-
-                        # Resolve the full path of the model location
-                        if config_parent_path is not None:
-                            model_path = find_file(model_location, config_parent_path)
-                        else:
-                            model_path = find_file(model_location)
-
-                        if not model_path.exists():
-                            raise FileNotFoundError(
-                                f"Custom model location {model_path} does not exist."
-                            )
-
-                        # Dynamically import the custom model class
-                        spec = importlib.util.spec_from_file_location(model_class_name, model_path)
-                        module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(module)
-                        custom_model_class = getattr(module, model_class_name)
-
-                        # Add the custom model to the supported models dictionary
-                        self.supported_models[model_name] = custom_model_class
-
-                        # Add the custom model to custom models dictionary
-                        included_custom_models[model_name] = {
-                            "model_class_name": model_class_name,
-                        }
-
-                    else:
-                        if (
-                            config[model_type].get(f"{prefix}model_class_name") is not None
-                            or config[model_type].get(f"{prefix}model_location") is not None
-                        ):
-                            msg = (
-                                f"Custom {prefix}model or {prefix}model_location "
-                                f"specified for '{model_name}', "
-                                f"but '{model_name}' is a built-in H2Integrate "
-                                "model. Using built-in model instead is not allowed. "
-                                f"If you want to use a custom model, please rename it "
-                                "in your configuration."
-                            )
-                            raise ValueError(msg)
-
     def collect_custom_models(self):
         """Collect custom models from the technology configuration and
         system finance models found in the plant configuration.
         """
-        # check for custom technology models
-        self.create_custom_models(
-            self.technology_config["technologies"],
+        collect_custom_models(
+            self.supported_models,
+            self.technology_config,
             self.tech_parent_path,
-            ["performance_model", "cost_model", "finance_model"],
+            self.plant_config,
+            self.plant_parent_path,
         )
-
-        # check for custom finance models
-        if "finance_parameters" in self.plant_config:
-            finance_groups = self.plant_config["finance_parameters"]["finance_groups"]
-
-            # check for single custom finance models
-            if "model_inputs" in finance_groups:
-                self.create_custom_models(
-                    self.plant_config,
-                    self.plant_parent_path,
-                    ["finance_groups"],
-                    prefix="finance_",
-                )
-
-            # check for named finance models
-            if any("model_inputs" in v for k, v in finance_groups.items()):
-                finance_model_names = [k for k, v in finance_groups.items() if "model_inputs" in v]
-                finance_groups_config = {"finance_groups": finance_groups}
-                self.create_custom_models(
-                    finance_groups_config,
-                    self.plant_parent_path,
-                    finance_model_names,
-                    prefix="finance_",
-                )
-
-        # check for custom resource models
-        if "sites" in self.plant_config:
-            for site_name, site_params in self.plant_config["sites"].items():
-                if "resources" in site_params:
-                    resource_models_config = {
-                        k: v
-                        for k, v in site_params["resources"].items()
-                        if "resource_parameters" in v
-                    }
-
-                    resource_model_names = [
-                        k for k, v in site_params["resources"].items() if "resource_parameters" in v
-                    ]
-                    self.create_custom_models(
-                        {site_name: resource_models_config},
-                        self.plant_parent_path,
-                        resource_model_names,
-                        prefix="resource_",
-                    )
 
     def create_site_model(self):
         """
@@ -464,167 +338,18 @@ class H2IntegrateModel:
     def _classify_slc_technologies(self):
         """Classify technologies for system-level control.
 
-        Uses ``self.tech_control_classifiers`` (populated by ``create_technology_models()``)
-        to partition technologies into fixed, flexible, dispatchable, and storage lists.
-        Also identifies the single demand technology and its commodity.
-
-        SLC demand is supplied by a demand component (for example,
-        ``GenericDemandComponent``). When SLC is enabled, only one demand
-        component is currently supported.
+        Thin wrapper around ``classify_slc_technologies()`` using the model attributes
+        populated by ``create_technology_models()``.
 
         Returns:
-            dict: Classification dictionary (``slc_topology``) with keys:
-
-                - ``"demand_tech"`` (str): Name of the demand technology (the tech whose
-                  performance model is a ``DemandComponent``).
-                - ``"demand_commodity"`` (str): Commodity the demand technology consumes
-                  (e.g. ``"electricity"``, ``"hydrogen"``).
-                - ``"demand_commodity_rate_units"`` (str | None): Units string for the
-                  demand commodity rate (e.g. ``"kW"``, ``"kg/h"``), or ``None`` if not
-                  specified in the demand tech config.
-                - ``"demand_profile"`` (int | float | list): Default demand profile from
-                    the demand technology configuration.
-                - ``"tech_to_commodity"`` (set[tuple[str, str]]): Set of
-                  ``(tech_name, commodity)`` pairs for every technology that the SLC
-                  controls or reads from. Built from outgoing edges of the technology
-                  graph and filtered to fixed, flexible, dispatchable, storage, and
-                  feedstock classifiers.
-                - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
-                  interconnections, with edge attribute ``commodity`` indicating the
-                  commodity carried on each edge. Used by cost-aware controllers to
-                  trace upstream feedstocks.
-                - ``"tech_control_classifiers"`` (dict[str, str]): Mapping of tech name
-                  to its ``_control_classifier`` (one of ``"fixed"``, ``"flexible"``,
-                  ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
-                  the SLC interacts with each tech.
+            dict: The ``slc_topology`` dictionary; see ``classify_slc_technologies()``.
         """
-        slc_topology = {}
-        technologies = self.technology_config.get("technologies", {})
-
-        if not (
-            demand_tech := self.plant_config["system_level_control"].get("demand_component", False)
-        ):
-            msg = (
-                "Please specify the technology name for the demand component in "
-                "the plant configuration file under ``system_level_control['demand_component']``"
-            )
-            raise ValueError(msg)
-        if demand_tech not in technologies:
-            msg = (
-                f"Demand technology specified for system level controller, ``{demand_tech}``,"
-                "not defined in the tech configuration file."
-            )
-            raise ValueError(msg)
-        model_name = technologies[demand_tech].get("performance_model", {}).get("model", "")
-        if "DemandComponent" not in model_name:
-            msg = (
-                f"Demand component ``{model_name}`` is not a supported model for the system level "
-                "control demand technology. Supported demand component performance models include "
-                "``DemandComponent`` in the class name."
-            )
-            raise ValueError(msg)
-
-        model_inputs = technologies[demand_tech].get("model_inputs", {})
-        perf_params = model_inputs.get("performance_parameters", {})
-        shared_params = model_inputs.get("shared_parameters", {})
-        all_params = {**shared_params, **perf_params}
-
-        # Check that the demand tech is in the technology_interconnections
-        tech_interconnections = self.plant_config["technology_interconnections"]
-        demand_is_source_connection = [
-            tech_connection
-            for tech_connection in tech_interconnections
-            if tech_connection[0] == demand_tech
-        ]
-        demand_is_destination_connection = [
-            tech_connection
-            for tech_connection in tech_interconnections
-            if tech_connection[1] == demand_tech
-        ]
-        if len(demand_is_source_connection) == 0 and len(demand_is_destination_connection) == 0:
-            # Raise error if demand technology is not connected
-            msg = (
-                "No demand commodity was found in the technology interconnections. "
-                f"Please ensure that the demand technology ``{demand_tech}`` "
-                "is connected in the technology_interconnections"
-            )
-            raise ValueError(msg)
-
-        # Classify technologies based on their output commodity (or commodities)
-        # Use a set to remove duplicates (in case one tech produces multiple commodities)
-        # get list of technologies upstream of the demand technology
-        upstream_techs = nx.ancestors(self.technology_graph, demand_tech)
-        # only connect the technologies that are connected to the demand tech
-        upstream_controllable_techs = {
-            tech for tech in upstream_techs if nx.has_path(self.technology_graph, tech, demand_tech)
-        }
-
-        sources_to_commodities = set()
-        for source, _, commodities in self.technology_graph.edges(data="commodity"):
-            if source not in upstream_controllable_techs or commodities is None:
-                continue
-
-            sources_to_commodities.update((source, commodity) for commodity in commodities)
-
-        # re-make technology interconnections using only technologies
-        # upstream of the demand component
-        upstream_interconnections = [
-            connection
-            for connection in tech_interconnections
-            if connection[0] in upstream_controllable_techs
-        ]
-
-        upstream_tech_graph = create_technology_graph(upstream_interconnections)
-        slc_topology["technology_graph"] = upstream_tech_graph
-
-        # downselect the technology control classifiers to only include those upstream
-        # of the demand
-        upstream_tech_control_classifiers = {
-            k: v
-            for k, v in self.tech_control_classifiers.items()
-            if k in upstream_controllable_techs
-        }
-
-        # Check if storage models have a controller
-        storage_tech_to_control = {}
-        for tech, classifier in upstream_tech_control_classifiers.items():
-            if classifier == "storage":
-                control_model = (
-                    self.technology_config["technologies"][tech]
-                    .get("control_strategy", {})
-                    .get("model", None)
-                )
-                if control_model is None:
-                    storage_tech_to_control[tech] = False
-                else:
-                    # storage model does use a controller
-                    storage_tech_to_control[tech] = True
-        slc_topology["storage_techs_to_control"] = storage_tech_to_control
-
-        # Remove feedstocks, combiners, and splitters
-        control_classifiers_to_connect = [
-            "fixed",
-            "flexible",
-            "dispatchable",
-            "storage",
-            "feedstock",
-        ]
-        tech_to_commodity = {
-            (e[0], e[-1])
-            for e in sources_to_commodities
-            if upstream_tech_control_classifiers.get(e[0]) in control_classifiers_to_connect
-        }
-        slc_topology["tech_to_commodity"] = tech_to_commodity
-
-        # Store classification results in plant_config for SLC component
-        slc_topology["demand_tech"] = demand_tech
-        slc_topology["demand_commodity"] = all_params["commodity"]
-        slc_topology["demand_commodity_rate_units"] = all_params.get("commodity_rate_units", None)
-        slc_topology["demand_profile"] = all_params.get("demand_profile", 10.0)
-
-        slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
-
-        return slc_topology
+        return classify_slc_technologies(
+            self.technology_config,
+            self.plant_config,
+            self.technology_graph,
+            self.tech_control_classifiers,
+        )
 
     def add_system_level_controller(self, slc_topology):
         """Add a system-level controller component and connect it within the plant.
@@ -878,31 +603,7 @@ class H2IntegrateModel:
             "ArdWindPlantModel",
         ]
 
-        if any(tech == "site" for tech in self.technology_config["technologies"]):
-            msg = (
-                "'site' is an invalid technology name and is reserved for top-level "
-                "variables. Please change the technology name to something else."
-            )
-            raise NameError(msg)
-
-        reserved_techs = {"pipe", "cable"}
-        # Use set intersection to find any reserved names present in the config
-        invalid_techs = sorted(
-            set(self.technology_config["technologies"]).intersection(reserved_techs)
-        )
-
-        if invalid_techs:
-            if len(invalid_techs) == 1:
-                invalid_tech_msg = f"'{invalid_techs[0]}' is an invalid technology name and is"
-            else:
-                names_str = ", ".join(f"'{tech}'" for tech in invalid_techs)
-                invalid_tech_msg = f"{names_str} are invalid technology names and are"
-
-            msg = (
-                f"{invalid_tech_msg} reserved for internal H2I transport models. "
-                "Please change the technology name to something else."
-            )
-            raise NameError(msg)
+        check_technology_names(self.technology_config["technologies"])
 
         # Create a technology group for each technology
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
@@ -1055,20 +756,10 @@ class H2IntegrateModel:
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
                 self.plant.add_subsystem(tech_name, comp)
-        n_non_transport_techs = sum(
-            1 for v in self.tech_control_classifiers.values() if v != "transport"
+
+        check_technologies_are_connected(
+            self.technology_config, self.plant_config, self.tech_control_classifiers
         )
-        if (
-            len(self.technology_config["technologies"]) > 1
-            and len(self.plant_config.get("technology_interconnections", [])) == 0
-            and n_non_transport_techs > 1
-        ):
-            msg = (
-                f"{len(self.technology_config['technologies'])} technologies have been defined "
-                "in the technology config but are not connected. Please add or populate "
-                "`technology_interconnections` in the plant configuration."
-            )
-            raise ValueError(msg)
 
     def _process_model(self, model_type, individual_tech_config, tech_group):
         # Generalized function to process model definitions
@@ -1196,6 +887,11 @@ class H2IntegrateModel:
         system, finance subgroups may reference multiple finance_groups and may overlap
         partially or fully with the technologies included in other finance subgroups.
 
+        The parsing and validation of the finance config lives in
+        ``h2integrate/core/finance_utils.py``; this method wraps single finance models into a
+        default group, parses each subgroup, and builds its OpenMDAO group with
+        ``_create_finance_subgroup()``.
+
         Behavior:
             * If ``finance_parameters`` is not defined in the plant configuration,
               no finance model is created.
@@ -1205,41 +901,48 @@ class H2IntegrateModel:
             * If subgroups are provided, each subgroup defines its own set of
               technologies, associated commodity, and finance model(s).
               Each subgroup is nested under a unique name of your choice under
-              ["finance_parameters"]["subgroups"] in the plant configuration.
+              ["finance_parameters"]["finance_subgroups"] in the plant configuration.
             * Subsystems such as ``AdjustedCapexOpexComp`` and
-              ``GenericProductionSummerPerformanceModel``, and the selected finance
+              ``AdjustedCapacityFactorComp``, and the selected finance
               models are added to each subgroup's finance group.
-            * If `commodity_stream` is provided for a subgroup, the output of the
-              technology specified as the `commodity_stream` must be the same as the
-              specified commodity for that subgroup.
+            * Each subgroup must define a ``commodity_stream``. If the technology specified as
+              the ``commodity_stream`` has a cost model, it must be included in the subgroup's
+              technologies.
             * Supports both global finance models and technology-specific finance
               models. Technology-specific finance models are defined in the technology
               configuration.
 
         Raises:
             ValueError:
-                If ["finance_parameters"]["finance_group"] is incomplete (e.g., missing
+                If ``finance_groups`` is missing, or is incomplete (e.g., missing
                 ``commodity`` or ``finance_model``) when no subgroups are defined.
             ValueError:
-                If a subgroup has an invalid technology.
+                If a subgroup is missing ``commodity`` or ``commodity_stream``.
+            KeyError:
+                If a subgroup lists a technology that is not in the technology config.
+            UserWarning:
+                If the ``commodity_stream`` technology has a cost model but is not included
+                in the subgroup's technologies.
             ValueError:
                 If a specified finance model is not found in
                 ``self.supported_models``.
 
         Side Effects:
-            * Updates ``self.plant_config["finance_parameters"]["finance_group"]`` if only a
-              single finance model is provided (wraps it in a default finance subgroup).
+            * Wraps a lone ``finance_model``/``model_inputs`` pair in
+              ``self.plant_config["finance_parameters"]["finance_groups"]`` into a finance
+              group named ``default``.
             * Constructs and attaches OpenMDAO finance subsystem groups to the
               plant model under names ``finance_subgroup_<subgroup_name>``.
             * Stores processed subgroup configurations in
               ``self.finance_subgroups``.
 
         Example:
-            Suppose ``plant_config["finance_parameters"]["finance_group"]`` defines a single finance
-            model without subgroups:
+            Suppose ``plant_config["finance_parameters"]["finance_groups"]`` defines a single
+            finance model without subgroups:
 
-            >>> self.plant_config["finance_parameters"]["finance_group"] = {
+            >>> self.plant_config["finance_parameters"]["finance_groups"] = {
             ...     "commodity": "hydrogen",
+            ...     "commodity_stream": "electrolyzer",
             ...     "finance_model": "ProFastLCO",
             ...     "model_inputs": {"discount_rate": 0.08},
             ... }
@@ -1249,293 +952,147 @@ class H2IntegrateModel:
 
         """
 
-        from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
-
         # if there aren't any finance parameters don't setup a finance model
         if "finance_parameters" not in self.plant_config:
             return
 
-        subgroups = self.plant_config["finance_parameters"].get("finance_subgroups", None)
+        finance_parameters = self.plant_config["finance_parameters"]
 
-        if "finance_groups" not in self.plant_config["finance_parameters"]:
+        if "finance_groups" not in finance_parameters:
             raise ValueError("plant_config['finance_parameters'] must define 'finance_groups'.")
 
-        finance_subgroups = {}
+        wrap_single_finance_model_as_default_group(finance_parameters["finance_groups"])
 
-        default_finance_group_name = "default"
-        # only one finance model is being used with subgroups
-        if (
-            "finance_model" in self.plant_config["finance_parameters"]["finance_groups"]
-            and "model_inputs" in self.plant_config["finance_parameters"]["finance_groups"]
-        ):
-            if (
-                default_finance_group_name
-                in self.plant_config["finance_parameters"]["finance_groups"]
-            ):
-                # throw an error if the user has an unused finance group named "default".
-                msg = (
-                    "Invalid key `default` in "
-                    "plant_config['finance_parameters']['finance_groups']. "
-                    "Please rename the `default` key to something else or remove it. "
-                    "The name `default` will be used to reference the finance model group."
-                )
-                raise ValueError(msg)
-            default_model_name = self.plant_config["finance_parameters"]["finance_groups"].pop(
-                "finance_model"
-            )
-            default_model_inputs = self.plant_config["finance_parameters"]["finance_groups"].pop(
-                "model_inputs"
-            )
-            default_model_dict = {
-                default_finance_group_name: {
-                    "finance_model": default_model_name,
-                    "model_inputs": default_model_inputs,
-                }
-            }
-            self.plant_config["finance_parameters"]["finance_groups"].update(default_model_dict)
-
+        subgroups = finance_parameters.get("finance_subgroups", None)
         if subgroups is None:
-            # --- Default behavior ---
-            commodity = self.plant_config["finance_parameters"]["finance_groups"].get("commodity")
-            finance_model_name = (
-                self.plant_config["finance_parameters"]["finance_groups"]
-                .get(default_finance_group_name, {})
-                .get("finance_model")
-            )
-            commodity_stream = self.plant_config["finance_parameters"]["finance_groups"].get(
-                "commodity_stream"
+            subgroups = build_default_finance_subgroups(
+                finance_parameters["finance_groups"],
+                list(self.technology_config["technologies"].keys()),
             )
 
-            if not commodity or not finance_model_name:
-                raise ValueError(
-                    "plant_config['finance_parameters']['finance_groups'] "
-                    "must define 'commodity' and 'finance_model' "
-                    "if no finance_subgroups are provided."
-                )
-
-            # Collect all technologies into one subgroup
-            all_techs = list(self.technology_config["technologies"].keys())
-            subgroup = {
-                "commodity": commodity,
-                "finance_groups": [default_finance_group_name],
-                "technologies": all_techs,
-            }
-            if commodity_stream is not None:
-                subgroup["commodity_stream"] = commodity_stream
-            subgroups = {default_finance_group_name: subgroup}
-
-        # --- Normal subgroup handling ---
+        finance_subgroups = {}
         for subgroup_name, subgroup_params in subgroups.items():
-            commodity = subgroup_params.get("commodity", None)
-            commodity_desc = subgroup_params.get("commodity_desc", "")
-            finance_group_names = subgroup_params.get(
-                "finance_groups", [default_finance_group_name]
+            subgroup_config = parse_finance_subgroup(
+                subgroup_name, subgroup_params, self.technology_config["technologies"]
             )
-            tech_names = subgroup_params.get("technologies")
-            commodity_stream = subgroup_params.get("commodity_stream", None)
-            if isinstance(finance_group_names, str):
-                finance_group_names = [finance_group_names]
+            finance_subgroups[subgroup_name] = subgroup_config
 
-            # check commodity type
-            if commodity is None:
-                raise ValueError(
-                    f"Required parameter ``commodity`` not provided in subgroup {subgroup_name}."
-                )
-
-            tech_configs = {}
-            for tech in tech_names:
-                if tech in self.technology_config["technologies"]:
-                    tech_configs[tech] = self.technology_config["technologies"][tech]
-                else:
-                    raise KeyError(
-                        f"Technology '{tech}' not found in the technology configuration, "
-                        f"but is listed in subgroup '{subgroup_name}', "
-                        "Available "
-                        f"technologies: {list(self.technology_config['technologies'].keys())}"
-                    )
-            if commodity_stream is not None:
-                commodity_stream_has_cost = (
-                    self.technology_config["technologies"]
-                    .get(commodity_stream, {})
-                    .get("cost_model", False)
-                )
-                if commodity_stream_has_cost and commodity_stream not in tech_names:
-                    raise UserWarning(
-                        f"The technology specific for the commodity_stream '{commodity_stream}' "
-                        f"is not included in subgroup '{subgroup_name}' technologies list."
-                        f" Subgroup '{subgroup_name}' includes technologies: {tech_names}."
-                    )
-
-            finance_subgroups.update(
-                {
-                    subgroup_name: {
-                        "tech_configs": tech_configs,
-                        "commodity": commodity,
-                        "commodity_stream": commodity_stream,
-                        "is_system_finance_model": True,
-                        "use_commodity_stream_timeseries": subgroup_params.get(
-                            "use_commodity_stream_timeseries", False
-                        ),
-                        "commodity_stream_output": subgroup_params.get(
-                            "commodity_stream_output", None
-                        ),
-                    }
-                }
+            finance_subgroup = self._create_finance_subgroup(
+                subgroup_name, subgroup_params, subgroup_config
             )
-
-            finance_subgroup = om.Group()
-
-            # ``commodity_stream`` identifies the technology whose output is used as
-            # the commodity-production signal for this subgroup's finance model. It
-            # must be supplied explicitly by the user — there is no default mapping
-            # from commodity to tech name.
-            if commodity_stream is None:
-                msg = (
-                    f"Finance subgroup '{subgroup_name}' (commodity '{commodity}') is "
-                    "missing the required `commodity_stream` field. Please specify "
-                    "which technology's output should be used as the commodity stream "
-                    "for this subgroup."
-                )
-                raise ValueError(msg)
-
-            # Add adjusted capex/opex
-            adjusted_capex_opex_comp = AdjustedCapexOpexComp(
-                driver_config=self.driver_config,
-                tech_configs=tech_configs,
-                plant_config=self.plant_config,
-            )
-
-            finance_subgroup.add_subsystem(
-                "adjusted_capex_opex_comp", adjusted_capex_opex_comp, promotes=["*"]
-            )
-
-            # Initialize counter to check if invalid combination of finance
-            # groups exist within a finance subgroup
-            n_tech_finances_in_group = 0
-            for finance_group_name in finance_group_names:
-                # check if using tech-specific finance model
-                if any(
-                    tech_name == finance_group_name
-                    for tech_name, tech_params in tech_configs.items()
-                ):
-                    tech_finance_group_name = (
-                        tech_configs.get(finance_group_name).get("finance_model", {}).get("model")
-                    )
-
-                    # this is created in create_technology_models()
-                    if tech_finance_group_name is not None:
-                        n_tech_finances_in_group += 1
-                        # tech specific finance models are created in create_technology_models()
-                        # and do not need to be included in the system finance models.
-                        # set commodity_stream to None so that inputs needed for system-level
-                        # finance models are not connected to tech-specific finance models.
-                        # finance_subgroups[subgroup_name].update({"commodity_stream": None})
-                        finance_subgroups[subgroup_name].update({"is_system_finance_model": False})
-                        continue
-
-                # if not using a tech-specific finance group, get the finance model and inputs for
-                # the finance model group specified by finance_group_name
-                finance_group_config = self.plant_config["finance_parameters"][
-                    "finance_groups"
-                ].get(finance_group_name)
-                model_name = finance_group_config.get("finance_model")  # finance model
-                fin_model_inputs = finance_group_config.get(
-                    "model_inputs"
-                )  # inputs to finance model
-
-                # get finance model component definition
-                fin_model = self.supported_models.get(model_name)
-
-                if fin_model is None:
-                    raise ValueError(f"finance model '{model_name}' not found.")
-
-                # filter the plant_config so the finance_parameters only includes data for
-                # this finance model group
-
-                # first, grab information from the plant config, except the finance parameters
-                filtered_plant_config = {
-                    k: v for k, v in self.plant_config.items() if k != "finance_parameters"
-                }
-
-                # then, reformat the finance_parameters to only include inputs for the
-                # finance group specified by finance_group_name
-                filtered_plant_config.update(
-                    {
-                        "finance_parameters": {
-                            "finance_model": model_name,  # unused by the finance model
-                            "model_inputs": fin_model_inputs,  # inputs for finance model
-                        }
-                    }
-                )
-
-                commodity_desc = subgroup_params.get("commodity_desc", "")
-                commodity_output_desc = subgroup_params.get("commodity_desc", "")
-
-                # check if multiple finance models are specified for the subgroup
-                if len(finance_group_names) > 1:
-                    # check that the finance model groups do not include tech-specific finances
-                    finance_groups = self.plant_config["finance_parameters"]["finance_groups"]
-                    non_tech_finances = [k for k in finance_group_names if k in finance_groups]
-                    tech_finances = [k for k in finance_group_names if k not in finance_groups]
-
-                    if n_tech_finances_in_group > 0 and non_tech_finances:
-                        msg = (
-                            f"Cannot run a tech-specific finance model ({tech_finances}) in the "
-                            f"same finance subgroup as a system-level finance model "
-                            f"({non_tech_finances}). Please modify the finance_groups in finance "
-                            f"subgroup {subgroup_name}."
-                        )
-                        raise ValueError(msg)
-                    # if multiple non-tech specific finance model groups are specified for the
-                    # subgroup, the outputs of the finance model must have unique names to
-                    # avoid errors.
-                    if len(non_tech_finances) > 1:
-                        # finance models name their outputs based on the description and commodity
-                        # update the description to include the finance model name to ensure
-                        # uniquely named outputs
-                        commodity_output_desc = commodity_output_desc + f"_{finance_group_name}"
-
-                if finance_subgroups[subgroup_name]["use_commodity_stream_timeseries"]:
-                    if (
-                        finance_subgroups[subgroup_name].get("commodity_stream_output", None)
-                        is None
-                    ):
-                        msg = (
-                            "`commodity_stream_output` is a required input if "
-                            f"`use_commodity_stream_timeseries` is True. Please add the "
-                            f"`commodity_stream_output` for finance subgroup `{subgroup_name}`"
-                        )
-                        raise ValueError(msg)
-
-                    adj_cf_comp = AdjustedCapacityFactorComp(
-                        plant_config=filtered_plant_config,
-                        commodity_type=commodity,
-                    )
-                    finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
-
-                # create the finance component
-                fin_comp = fin_model(
-                    driver_config=self.driver_config,
-                    tech_config=tech_configs,
-                    plant_config=filtered_plant_config,
-                    commodity_type=commodity,
-                    description=commodity_output_desc,
-                )
-
-                # name the finance component based on the commodity and description
-                finance_subsystem_name = (
-                    f"{commodity}_finance_{finance_group_name}"
-                    if commodity_desc == ""
-                    else f"{commodity}_{commodity_desc}_finance_{finance_group_name}"
-                )
-
-                # add the finance component to the finance group
-                finance_subgroup.add_subsystem(finance_subsystem_name, fin_comp, promotes=["*"])
-
-            # add the finance group to the subgroup
             self.plant.add_subsystem(f"finance_subgroup_{subgroup_name}", finance_subgroup)
 
         self.finance_subgroups = finance_subgroups
+
+    def _create_finance_subgroup(self, subgroup_name, subgroup_params, subgroup_config):
+        """Create the OpenMDAO group holding the finance models of one finance subgroup.
+
+        Args:
+            subgroup_name (str): Name of the finance subgroup.
+            subgroup_params (dict): User-provided definition of the subgroup.
+            subgroup_config (dict): Output of ``parse_finance_subgroup()``. Its
+                ``is_system_finance_model`` entry is set to False in place if the subgroup
+                uses a tech-specific finance model.
+
+        Returns:
+            om.Group: Group with the adjusted capex/opex component and the finance models.
+        """
+        from h2integrate.finances.finances import AdjustedCapexOpexComp, AdjustedCapacityFactorComp
+
+        commodity = subgroup_config["commodity"]
+        tech_configs = subgroup_config["tech_configs"]
+        commodity_desc = subgroup_params.get("commodity_desc", "")
+        finance_group_names = get_finance_group_names(subgroup_params)
+        finance_groups = self.plant_config["finance_parameters"]["finance_groups"]
+
+        finance_subgroup = om.Group()
+
+        # Add adjusted capex/opex
+        adjusted_capex_opex_comp = AdjustedCapexOpexComp(
+            driver_config=self.driver_config,
+            tech_configs=tech_configs,
+            plant_config=self.plant_config,
+        )
+
+        finance_subgroup.add_subsystem(
+            "adjusted_capex_opex_comp", adjusted_capex_opex_comp, promotes=["*"]
+        )
+
+        # Initialize counter to check if invalid combination of finance
+        # groups exist within a finance subgroup
+        n_tech_finances_in_group = 0
+        for finance_group_name in finance_group_names:
+            # tech-specific finance models are created in create_technology_models()
+            # and do not need to be included in the system finance models.
+            if (
+                finance_group_name in tech_configs
+                and tech_configs[finance_group_name].get("finance_model", {}).get("model")
+                is not None
+            ):
+                n_tech_finances_in_group += 1
+                subgroup_config["is_system_finance_model"] = False
+                continue
+
+            # if not using a tech-specific finance group, get the finance model and inputs for
+            # the finance model group specified by finance_group_name
+            finance_group_config = finance_groups.get(finance_group_name)
+            model_name = finance_group_config.get("finance_model")  # finance model
+
+            # get finance model component definition
+            fin_model = self.supported_models.get(model_name)
+
+            if fin_model is None:
+                raise ValueError(f"finance model '{model_name}' not found.")
+
+            # only include data for this finance model group in the finance_parameters
+            filtered_plant_config = filter_plant_config_for_finance_group(
+                self.plant_config, model_name, finance_group_config.get("model_inputs")
+            )
+
+            commodity_output_desc = get_finance_output_description(
+                subgroup_name,
+                subgroup_params,
+                finance_group_name,
+                finance_group_names,
+                finance_groups,
+                n_tech_finances_in_group,
+            )
+
+            if subgroup_config["use_commodity_stream_timeseries"]:
+                if subgroup_config.get("commodity_stream_output", None) is None:
+                    msg = (
+                        "`commodity_stream_output` is a required input if "
+                        f"`use_commodity_stream_timeseries` is True. Please add the "
+                        f"`commodity_stream_output` for finance subgroup `{subgroup_name}`"
+                    )
+                    raise ValueError(msg)
+
+                adj_cf_comp = AdjustedCapacityFactorComp(
+                    plant_config=filtered_plant_config,
+                    commodity_type=commodity,
+                )
+                finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
+
+            # create the finance component
+            fin_comp = fin_model(
+                driver_config=self.driver_config,
+                tech_config=tech_configs,
+                plant_config=filtered_plant_config,
+                commodity_type=commodity,
+                description=commodity_output_desc,
+            )
+
+            # name the finance component based on the commodity and description
+            finance_subsystem_name = (
+                f"{commodity}_finance_{finance_group_name}"
+                if commodity_desc == ""
+                else f"{commodity}_{commodity_desc}_finance_{finance_group_name}"
+            )
+
+            # add the finance component to the finance group
+            finance_subgroup.add_subsystem(finance_subsystem_name, fin_comp, promotes=["*"])
+
+        return finance_subgroup
 
     @staticmethod
     def _next_connection_index(counts, tech_name):
