@@ -11,6 +11,7 @@ from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
     check_technology_connections,
+    check_resource_models_are_connected,
     validate_technology_interconnections,
     split_indices_from_connected_parameter_definition,
 )
@@ -1754,109 +1755,62 @@ class H2IntegrateModel:
 
         site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
-        self._check_resource_models_are_connected(site_to_tech_connections)
+        check_resource_models_are_connected(self.plant_config["sites"], site_to_tech_connections)
 
         for connection in site_to_tech_connections:
             if len(connection) != 3:
                 err_msg = f"Invalid resource to tech connection: {connection}"
                 raise ValueError(err_msg)
 
-            self._connect_site_parameter(connection, site_to_tech_connections)
+            resource_name, tech_name, variable = connection
 
-    def _check_resource_models_are_connected(self, site_to_tech_connections):
-        """Raise if a resource model is unconnected or a connected resource is undefined."""
-        resource_models = {}
-        for site_grp, site_grp_inputs in self.plant_config["sites"].items():
-            for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
-                resource_models[f"{site_grp}.{resource_key}"] = resource_params
+            # Normalize both forms (paired [site_param, tech_param] vs a single shared
+            # name) into a common site_parameter/tech_parameter pair so the connection
+            # and latitude/longitude checks below only need to be written once.
+            is_pair = isinstance(variable, list | tuple)
+            if is_pair:
+                site_parameter, tech_parameter = variable
+            else:
+                site_parameter = tech_parameter = variable
 
-        resource_source_connections = [c[0] for c in site_to_tech_connections]
-        # Check if there is a missing resource to tech connection or missing resource model
-        if len(resource_models) != len(resource_source_connections):
-            if len(resource_models) > len(resource_source_connections):
-                # more resource models than resources connected to technologies
-                non_connected_resource = [
-                    k for k in resource_models if k not in resource_source_connections
-                ]
-                # check if theres a resource model that isn't connected to a technology
-                if len(non_connected_resource) > 0:
+            self.model.connect(f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}")
+
+            if site_parameter not in ["latitude", "longitude"]:
+                continue
+
+            # If site_parameter is latitude, make sure destination is not longitude
+            # (and vice versa)
+            other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
+            if is_pair:
+                # NOTE: this assumes that technologies with location inputs use full
+                # names, rather than shorthand versions like 'lat' and 'lon'
+                if other_loc_var in tech_parameter:
+                    # connecting site latitude to tech longitude or
+                    # site longitude to tech latitude
                     msg = (
-                        "Some resources are not connected to a technology. Resource models "
-                        f"{non_connected_resource} are not included in "
-                        "`site_to_tech_connections`. Please connect these resources "
-                        "to their technologies under `site_to_tech_connections` in "
-                        "the plant config file."
+                        f"Invalid connection of {site_parameter} to {other_loc_var} "
+                        f"(from {resource_name} to {tech_name}). Please update the "
+                        f"connection so that {site_parameter} is connected to "
+                        f"{tech_parameter.replace(other_loc_var, site_parameter)}."
                     )
                     raise ValueError(msg)
-            if len(resource_source_connections) > len(resource_models):
-                # more resources connected than resource models
-                missing_resource = [
-                    k for k in resource_source_connections if k not in resource_models
+                other_variable = [
+                    other_loc_var,
+                    tech_parameter.replace(site_parameter, other_loc_var),
                 ]
+            else:
+                other_variable = other_loc_var
 
-                missing_resource = list(set(missing_resource) - set(self.plant_config["sites"]))
-                # check if theres a resource model that isn't connected to a technology
-                if len(missing_resource) > 0:
-                    msg = (
-                        "Missing resource(s) are not defined but are connected to a"
-                        f" technology. Missing resource(s) are {missing_resource}. "
-                        "Please check ``site_to_tech_connections`` in the plant"
-                        " config file or add the missing resources"
-                        " to plant_config['site']['resources']."
-                    )
-                    raise ValueError(msg)
-
-    def _connect_site_parameter(self, connection, site_to_tech_connections):
-        """Connect one site parameter to a technology and check latitude/longitude pairing."""
-        resource_name, tech_name, variable = connection
-
-        # Normalize both forms (paired [site_param, tech_param] vs a single shared
-        # name) into a common site_parameter/tech_parameter pair so the connection
-        # and latitude/longitude checks below only need to be written once.
-        is_pair = isinstance(variable, list | tuple)
-        if is_pair:
-            site_parameter, tech_parameter = variable
-        else:
-            site_parameter = tech_parameter = variable
-
-        self.model.connect(f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}")
-
-        if site_parameter not in ["latitude", "longitude"]:
-            return
-
-        # If site_parameter is latitude, make sure destination is not longitude
-        # (and vice versa)
-        other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
-        if is_pair:
-            # NOTE: this assumes that technologies with location inputs use full
-            # names, rather than shorthand versions like 'lat' and 'lon'
-            if other_loc_var in tech_parameter:
-                # connecting site latitude to tech longitude or
-                # site longitude to tech latitude
+            # If latitude is connected, make sure longitude is also connected
+            other_connection = [resource_name, tech_name, other_variable]
+            if other_connection not in site_to_tech_connections:
                 msg = (
-                    f"Invalid connection of {site_parameter} to {other_loc_var} "
-                    f"(from {resource_name} to {tech_name}). Please update the "
-                    f"connection so that {site_parameter} is connected to "
-                    f"{tech_parameter.replace(other_loc_var, site_parameter)}."
+                    f"{site_parameter} is connected between {resource_name} and "
+                    f"{tech_name}, but {other_loc_var} is not. Please ensure that "
+                    f"both latitude and longitude are connected from "
+                    f"'{resource_name}' to technology '{tech_name}'"
                 )
                 raise ValueError(msg)
-            other_variable = [
-                other_loc_var,
-                tech_parameter.replace(site_parameter, other_loc_var),
-            ]
-        else:
-            other_variable = other_loc_var
-
-        # If latitude is connected, make sure longitude is also connected
-        other_connection = [resource_name, tech_name, other_variable]
-        if other_connection not in site_to_tech_connections:
-            msg = (
-                f"{site_parameter} is connected between {resource_name} and "
-                f"{tech_name}, but {other_loc_var} is not. Please ensure that "
-                f"both latitude and longitude are connected from "
-                f"'{resource_name}' to technology '{tech_name}'"
-            )
-            raise ValueError(msg)
 
     def connect_techs_to_finance(self):
         """Connect technology cost outputs to their finance subgroups."""
