@@ -3,8 +3,10 @@
 ## Unreleased [TBD]
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
+- Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Added summary and threshold statistics models in `h2integrate/statistical`, and made 3-element `technology_interconnections` connect at the top-level model so input-to-input connections work, with the demand profile as the shared default for demand inputs. [PR 859](https://github.com/NatLabRockies/H2Integrate/pull/859)
+- Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 
 
 ## 0.10.0 [October 12, 2026]
