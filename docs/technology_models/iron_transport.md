@@ -1,10 +1,5 @@
 # Iron Transport Models
 
-
-
-Both models require hourly time steps. See the iron DRI and mine documentation for their use in
-complete flowsheets.
-
 The U.S. has developed an infrastructure for transporting iron ore from the northern Minnesota and Michigan iron ranges to ironmaking/steelmaking facilities that takes advantage of barge shipping in the Great Lakes region.
 No other significant practical waterway shipping routes exist for the massive amounts of iron ore required for industrial applications in the inland USA, and rail is the only practicable means of transport over long distances otherwise.
 Therefore, our transport model was developed to model shipping cost via domestic water transportation through the Great Lakes between selected port cities, and via class 1 rail between all other points.
@@ -43,11 +38,11 @@ inputs are configured in the technology's cost parameters; the cost year is set 
 
 
 ```{eval-rst}
-.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponentConfig
+.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportPerformanceConfig
    :members:
    :no-index:
 
-.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportCostComponentConfig
+.. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportCostConfig
    :members:
    :no-index:
 ```

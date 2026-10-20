@@ -156,6 +156,7 @@ class GeospatialMapConfig(BaseConfig):
         label_format_string (str, optional): A string used to format the label text for each point.
         legend_label (str, optional): A string used to set the legend label text when plotting
             non-numeric data. Defaults to 'UPDATE LEGEND LABEL'.
+
     """
 
     lat_long_crs: str = field(default="EPSG:4326")
