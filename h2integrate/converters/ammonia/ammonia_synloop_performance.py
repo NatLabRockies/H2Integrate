@@ -365,6 +365,8 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         # Capture feed use before startup losses: feed is consumed during delays, and positive
         # ramp-down output below turndown still consumes feed.
+        # TODO: develop function to allow for varied consumption based on behavior in that
+        # time step (e.g., ramping down uses less n2 and h2 but more power)
         consumption_multiplier = np.where(nh3_production > 0.0, nh3_production, 0.0)
 
         # 3. Apply start-up delays. When both warm and cold passes are configured we
@@ -466,10 +468,11 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
 
         nh3_from_elec = elec_in / energy_demand  # kg nh3 / hr
 
-        # The command joins the feed limits as the fourth candidate under SLC.
+        # Limiting NH3 production per hour by each input
         production_limits = [nh3_from_n2, nh3_from_h2, nh3_from_elec]
         system_level_control_enabled = "system_level_control" in self.options["plant_config"]
         if system_level_control_enabled:
+            # The command joins the feed limits as the fourth candidate under SLC.
             production_limits.append(inputs["ammonia_command_value"])
 
         nh3_prod = np.minimum.reduce(production_limits)
