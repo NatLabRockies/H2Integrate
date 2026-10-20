@@ -310,10 +310,10 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             tuple:
                 - nh3_production (np.ndarray): production profile after ramping and
                   start-up losses have been applied.
-                - consumption_multiplier (np.ndarray): on/off-gated production profile
-                  used to scale input-commodity consumption. Feedstocks are consumed during
-                  start-up delays (when ammonia output is zeroed) so the consumption
-                  multiplier is taken *before* start-up losses are applied.
+                - consumption_multiplier (np.ndarray): final production profile used to
+                  scale input-commodity consumption. Feedstocks are consumed only in
+                  proportion to the ammonia produced, so start-up delay hours consume
+                  nothing and positive ramp-down output below turndown still consumes feed.
         """
         rated_capacity = float(inputs["ammonia_production_capacity"][0])
 
@@ -363,12 +363,6 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             commodity_amount_units=self.commodity_amount_units,
         )
 
-        # Capture feed use before startup losses: feed is consumed during delays, and positive
-        # ramp-down output below turndown still consumes feed.
-        # TODO: develop function to allow for varied consumption based on behavior in that
-        # time step (e.g., ramping down uses less n2 and h2 but more power)
-        consumption_multiplier = np.where(nh3_production > 0.0, nh3_production, 0.0)
-
         # 3. Apply start-up delays. When both warm and cold passes are configured we
         # derive each pass's multiplier from the same post-ramping reference profile
         # so that one pass's zeros are not interpreted by the other as new off-events.
@@ -413,6 +407,13 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             commodity_rate_units=self.commodity_rate_units,
             commodity_amount_units=self.commodity_amount_units,
         )
+
+        # 5. Compute the consumption multiplier from the post-dynamic profile. Consumption
+        # follows the ammonia produced in that timestep, including positive output below
+        # turndown during ramp-down.
+        # TODO: develop function to allow for varied consumption based on behavior in that
+        # time step (e.g., ramping down uses less n2 and h2 but more power)
+        consumption_multiplier = np.maximum(nh3_production, 0.0)
 
         return nh3_production, consumption_multiplier
 

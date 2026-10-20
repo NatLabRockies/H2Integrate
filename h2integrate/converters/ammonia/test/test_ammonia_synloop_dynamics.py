@@ -100,12 +100,6 @@ def stoichiometric_feedstock_rates(performance):
     return hydrogen_rate, nitrogen_rate
 
 
-def prestartup_consumption_profile(production_profile, minimum_production, energy_demand):
-    return (
-        np.where(production_profile >= minimum_production, production_profile, 0.0) * energy_demand
-    )
-
-
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
 def test_ammonia_subdt_offtime_subdt_delay(
@@ -157,14 +151,6 @@ def test_ammonia_subdt_offtime_subdt_delay(
     prob.run_model()
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(
-        synloop_config["model_inputs"]["performance_parameters"]
-    )
-    expected_consumption = prestartup_consumption_profile(
-        nh3_no_dynamics,
-        min_nh3,
-        synloop_config["model_inputs"]["performance_parameters"]["energy_demand"],
-    )
 
     # 2 hours with losses from delay per on/off sequence
     # 3 hours of off-time per on/off sequence
@@ -183,18 +169,13 @@ def test_ammonia_subdt_offtime_subdt_delay(
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
-    with subtests.test("Feed is consumed during a partial startup delay"):
-        assert elec_consumed[2] > nh3_out[2]
-        assert prob.get_val("comp.hydrogen_consumed", units="kg/h")[2] == pytest.approx(
-            nh3_no_dynamics[2] * hydrogen_rate
-        )
-        assert prob.get_val("comp.nitrogen_consumed", units="kg/h")[2] == pytest.approx(
-            nh3_no_dynamics[2] * nitrogen_rate
-        )
+    with subtests.test("Consumption follows partial ammonia output during a startup delay"):
+        assert elec_consumed[2] == pytest.approx(nh3_out[2])
+        assert nh3_out[2] > 0.0
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -258,13 +239,6 @@ def test_ammonia_subdt_offtime_multidt_delay(
     prob.run_model()
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    performance = synloop_config["model_inputs"]["performance_parameters"]
-    hydrogen_rate, _ = stoichiometric_feedstock_rates(performance)
-    expected_consumption = prestartup_consumption_profile(
-        nh3_no_dynamics,
-        min_nh3,
-        performance["energy_demand"],
-    )
     # 6 hours with no production (from delay) per on/off sequence
     expected_delay_losses_per_sequence = rated_capacity * 6
     # 3 hours of off-time per on/off sequence
@@ -286,18 +260,15 @@ def test_ammonia_subdt_offtime_multidt_delay(
     hydrogen_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
 
     with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
-    with subtests.test("Feed is consumed during zero-output startup delay hours"):
-        expected_startup_production = expected_consumption / performance["energy_demand"]
-        startup_delay_hours = (nh3_out == 0.0) & (expected_startup_production > 0.0)
+    with subtests.test("No feed is consumed during zero-output startup delay hours"):
+        startup_delay_hours = (nh3_out == 0.0) & (nh3_no_dynamics >= min_nh3)
         assert np.any(startup_delay_hours)
-        np.testing.assert_allclose(
-            hydrogen_consumed[startup_delay_hours],
-            expected_startup_production[startup_delay_hours] * hydrogen_rate,
-        )
+        assert np.all(hydrogen_consumed[startup_delay_hours] == 0.0)
+        assert np.all(elec_consumed[startup_delay_hours] == 0.0)
         assert np.all(hydrogen_consumed[nh3_out > 0.0] > 0.0)
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
@@ -364,11 +335,6 @@ def test_ammonia_multidt_offtime_multidt_delay(
     prob.run_model()
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    expected_consumption = prestartup_consumption_profile(
-        nh3_no_dynamics,
-        min_nh3,
-        synloop_config["model_inputs"]["performance_parameters"]["energy_demand"],
-    )
     # 4 hours with no production (from delay) per on/off sequence
     # 12 hours of off-time per on/off sequence
     expected_delay_losses_per_sequence = rated_capacity * 4
@@ -385,9 +351,9 @@ def test_ammonia_multidt_offtime_multidt_delay(
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -453,11 +419,6 @@ def test_ammonia_multidt_offtime_subdt_startup(
     prob.run_model()
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    expected_consumption = prestartup_consumption_profile(
-        nh3_no_dynamics,
-        min_nh3,
-        synloop_config["model_inputs"]["performance_parameters"]["energy_demand"],
-    )
     # 2 hours with partial production (from delay) per on/off sequence
     # 12 hours of off-time per on/off sequence
     expected_delay_losses_per_sequence = rated_capacity * 2 * 0.25
@@ -475,9 +436,9 @@ def test_ammonia_multidt_offtime_subdt_startup(
 
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -651,11 +612,6 @@ def test_ammonia_multidt_delay_fraction(
     expected_partial_delay_losses_per_sequence = rated_capacity * 2 * 0.25
 
     nh3_out = prob.get_val("comp.ammonia_out", units="kg/h")
-    expected_consumption = prestartup_consumption_profile(
-        nh3_no_dynamics,
-        min_nh3,
-        synloop_config["model_inputs"]["performance_parameters"]["energy_demand"],
-    )
 
     # checking the first sequence
     n_timesteps_test = int(len(on_off_sequence) + 1)
@@ -674,9 +630,9 @@ def test_ammonia_multidt_delay_fraction(
     with subtests.test(
         f"Electricity consumption for first {n_timesteps_test} timesteps  (multidt offtime)"
     ):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across full sequence repeats in the multidt-offtime sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -714,9 +670,9 @@ def test_ammonia_multidt_delay_fraction(
     with subtests.test(
         f"Electricity consumption for first {n_timesteps_test} timesteps (subdt offtime)"
     ):
-        np.testing.assert_allclose(
-            elec_consumed[:n_timesteps_test], expected_consumption[:n_timesteps_test]
-        )
+        total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
+        nh3_produced = nh3_out[:n_timesteps_test].sum()
+        assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
 
     # Confirm losses repeat consistently across full sequence repeats in the sub-dt-offtime sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
