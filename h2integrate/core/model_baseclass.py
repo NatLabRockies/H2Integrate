@@ -49,7 +49,7 @@ class SkippableComputeMixin:
         if user_compute is None or getattr(user_compute, "_skips_when_flagged", False):
             return
 
-        # Create a new compute method that wrap's the child's compute method.
+        # Create a new compute method that wraps the child's compute method.
         @functools.wraps(user_compute)
         def compute(self, *args):
             # Steppable simulation is managed by a custom openmdao nonlinear solver, which sets
