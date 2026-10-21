@@ -1092,6 +1092,7 @@ def test_technology_finance_checks_simulation_duration(
         assert model.finance_models == []
 
 
+@pytest.mark.unit
 def test_check_model_is_steppable(subtests):
 
     class TechControllerSteppable:
