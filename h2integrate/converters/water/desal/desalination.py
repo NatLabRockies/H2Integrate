@@ -28,8 +28,8 @@ class ReverseOsmosisPerformanceModelConfig(BaseConfig):
     """Configuration class for the ReverseOsmosisPerformanceModel.
 
     Args:
-        freshwater_capacity (float): Desalination plant capacity, represented as the
-            maximum freshwater production rate [kg/h].
+        freshwater_capacity_kg_per_hr (float): Desalination plant capacity, represented as
+            the maximum freshwater production rate [kg/h].
         salinity (str): "seawater" (>18,000 ppm) or "brackish" (<18,000 ppm). Sets the
             recovery ratio (0.5 for seawater, 0.75 for brackish) and specific energy
             consumption (4.0 kW*h/m**3 for seawater, 1.5 kW*h/m**3 for brackish).
@@ -41,7 +41,7 @@ class ReverseOsmosisPerformanceModelConfig(BaseConfig):
             of freshwater capacity [m**2/(m**3/h)]. Defaults to 0.467.
     """
 
-    freshwater_capacity: float = field(validator=validators.gt(0))
+    freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
     salinity: str = field(validator=validators.in_(list(SALINITY_PROPERTIES)))
     freshwater_density: float = field(validator=validators.gt(0), default=997)
 
@@ -115,7 +115,7 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
         )
         self.add_input(
             "freshwater_capacity",
-            val=self.config.freshwater_capacity,
+            val=self.config.freshwater_capacity_kg_per_hr,
             units="kg/h",
             desc="Maximum freshwater production rate",
         )
@@ -144,10 +144,8 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
         self.add_output("footprint", val=0.0, units="m**2", desc="Footprint of desalination system")
 
     def compute(self, inputs, outputs):
+        # Calculate the rated freshwater production capacity as a rate of volume.
         capacity = inputs["freshwater_capacity"] / inputs["freshwater_density"]  # m**3/h
-
-        if self.config.salinity not in SALINITY_PROPERTIES:
-            raise ValueError(f"Unsupported salinity: {self.config.salinity}")
 
         recovery_ratio = SALINITY_PROPERTIES[self.config.salinity]["recovery_ratio"]
         specific_energy = SALINITY_PROPERTIES[self.config.salinity]["specific_energy_consumption"]
@@ -156,8 +154,8 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
         water_from_electricity = inputs["electricity_in"] / specific_energy
         water_from_feedwater = inputs["feedwater_in"] * recovery_ratio
 
-        water_out = np.minimum(
-            capacity, np.minimum(water_from_electricity, water_from_feedwater)
+        water_out = np.minimum.reduce(
+            np.broadcast_arrays(capacity, water_from_electricity, water_from_feedwater)
         ).clip(min=0.0)
 
         outputs["water_out"] = water_out
@@ -183,12 +181,12 @@ class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ReverseOsmosisCostModel.
 
     Args:
-        freshwater_capacity (float): Desalination plant capacity, represented as the
-            maximum freshwater production rate [kg/h].
+        freshwater_capacity_kg_per_hr (float): Desalination plant capacity, represented as
+            the maximum freshwater production rate [kg/h].
         cost_year (int): Dollar year of the costs. Only 2013 is supported.
     """
 
-    freshwater_capacity: float = field(validator=validators.gt(0))
+    freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
     cost_year: int = field(default=2013, converter=int, validator=validators.in_([2013]))
 
 
@@ -197,7 +195,7 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
     """Reverse osmosis desalination cost model.
 
     Inputs:
-        freshwater_capacity (float): Maximum freshwater production rate [kg/h].
+        rated_freshwater_production_capacity (float): Maximum freshwater production rate [kg/s].
 
     Outputs:
         CapEx (float): Capital expenditure [USD].
@@ -216,9 +214,9 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
         )
         super().setup()
         self.add_input(
-            "freshwater_capacity",
-            val=self.config.freshwater_capacity,
-            units="kg/h",
+            "rated_freshwater_production_capacity",
+            val=self.config.freshwater_capacity_kg_per_hr / 3600,
+            units="kg/s",
             desc="Maximum freshwater production rate",
         )
 
@@ -229,7 +227,7 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
         https://www-pub.iaea.org/MTCD/Publications/PDF/te_1561_web.pdf
         (Table 6 says 2006 is the currency reference year)
         """
-        capacity = inputs["freshwater_capacity"] / 3600
+        capacity = inputs["rated_freshwater_production_capacity"]
 
         outputs["CapEx"] = 32894 * capacity  # USD
         outputs["OpEx"] = 4841 * capacity  # USD/year

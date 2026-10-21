@@ -30,7 +30,7 @@ def plant_config():
 def make_problem(plant_config, salinity="brackish", electricity=1e4, feedwater=1e4, **params):
     """Set up a performance model with ample (or user-specified) electricity and feedwater."""
     performance_parameters = {
-        "freshwater_capacity": 10000,
+        "freshwater_capacity_kg_per_hr": 10000,
         "salinity": salinity,
         "freshwater_density": 997,
         **params,
@@ -263,7 +263,7 @@ def test_config_salinity_values(subtests):
 
     with subtests.test("invalid salinity"):
         with pytest.raises(ValueError):
-            ReverseOsmosisPerformanceModelConfig(freshwater_capacity=1, salinity="fresh")
+            ReverseOsmosisPerformanceModelConfig(freshwater_capacity_kg_per_hr=1, salinity="fresh")
 
 
 @pytest.mark.regression
@@ -271,7 +271,7 @@ def test_ro_desalination_cost(subtests):
     tech_config = {
         "model_inputs": {
             "cost_parameters": {
-                "freshwater_capacity": 10000,
+                "freshwater_capacity_kg_per_hr": 10000,
             },
         }
     }
@@ -299,6 +299,6 @@ def test_ro_desalination_cost(subtests):
         assert prob.get_val("OpEx", units="USD/year") == approx(13447, rel=1e-2)
 
     with subtests.test("capacity is an input"):
-        prob.set_val("freshwater_capacity", 20000, units="kg/h")
+        prob.set_val("rated_freshwater_production_capacity", 20000 / 3600, units="kg/s")
         prob.run_model()
         assert prob.get_val("CapEx", units="USD") == approx(2 * 91372, rel=1e-2)

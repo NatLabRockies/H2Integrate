@@ -4,7 +4,8 @@
 electricity into freshwater. At each timestep, freshwater production (`water_out`, m^3/h) is the
 minimum of three limits:
 
-- the plant capacity, `freshwater_capacity` (kg/h) divided by `freshwater_density` (kg/m^3)
+- the plant capacity, `freshwater_capacity_kg_per_hr` (kg/h) divided by `freshwater_density`
+   (kg/m^3)
 - the available electricity, `electricity_in` (kW) divided by `specific_energy_consumption` (kWh/m^3)
 - the available feedwater, `feedwater_in` (m^3/h) multiplied by `recovery_ratio`
 
@@ -23,8 +24,9 @@ ratio and specific energy consumption:
 The capacity and freshwater density are also OpenMDAO inputs, so they can be varied by a design of
 experiments or optimization.
 
-`ReverseOsmosisCostModel` estimates capital and operating costs from `freshwater_capacity` (an
-OpenMDAO input) using the model's reference costs. Its cost configuration is fixed to 2013 USD.
+`ReverseOsmosisCostModel` estimates capital and operating costs from
+`freshwater_capacity_kg_per_hr` using the model's reference costs. Its cost configuration is fixed
+to 2013 USD.
 Both models support time steps from 1 second to 1 hour. Rates (`water_out`, `electricity_in`,
 `feedwater_in`, and the consumed quantities) are per hour regardless of time step, while
 `total_water_produced` and `annual_water_produced` account for the time step length.

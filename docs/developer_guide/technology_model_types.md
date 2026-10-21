@@ -122,7 +122,7 @@ from h2integrate.core.model_baseclass import CostModelBaseClass
 class ReverseOsmosisCostModelConfig(BaseConfig):
     # Config values come from tech_config['model_inputs']['cost_parameters']
     # or tech_config['model_inputs']['shared_parameters'].
-    freshwater_capacity: float = field(validator=validators.gt(0))
+    freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
     # cost_year is fixed because this model always reports 2013 USD.
     cost_year: int = field(default=2013, converter=int, validator=validators.in_([2013]))
 
@@ -136,15 +136,15 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input(
-            "freshwater_capacity",
-            val=self.config.freshwater_capacity,
-            units="kg/h",
+            "rated_freshwater_production_capacity",
+            val=self.config.freshwater_capacity_kg_per_hr / 3600,
+            units="kg/s",
             desc="Maximum freshwater production rate",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capex = 32894 * (inputs["freshwater_capacity"] / 3600)  # USD
-        opex = 4841 * (inputs["freshwater_capacity"] / 3600)    # USD/yr
+        capex = 32894 * inputs["rated_freshwater_production_capacity"]  # USD
+        opex = 4841 * inputs["rated_freshwater_production_capacity"]    # USD/yr
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex
 ```
