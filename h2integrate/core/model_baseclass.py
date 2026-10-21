@@ -139,7 +139,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         Should be called at the end of each flexible model's ``compute()`` method
         after the raw production has been written to ``outputs[f"{commodity}_out"]``.
         """
-
         if "system_level_control" in self.options["plant_config"]:
             if getattr(self, "_control_classifier", None) != "flexible":
                 return

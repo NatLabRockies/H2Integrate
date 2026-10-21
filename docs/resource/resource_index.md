@@ -41,6 +41,7 @@ If running a simulation that is longer than 1 year, then there are a few options
 3. Use a specified order of resource years. This option is enabled when `resource_year_order` is a list of resource years and `resource_filename` is an empty string (or not provided). The list must be the same length as the number of years needed for the simulation. The `resource_year_order` is used instead of `resource_year`. As mentioned above, this can be used with the `resource_filename` option.
 
 ## Resampling resource data
+
 API resource data may have a different native timestep from the simulation you would like to run. H2I does not resample resource data by default, but you can set explicit parameters in the input file to either upsample the data, downsample the data, or perform both upsampling and downsampling if you have nonuniform data time steps to obtain data for your desired timestep.
 The options available are those enabled in the pandas interpolation method for upsampling ([`pandas.DataFrame.interpolate`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html)) or a pandas aggregation method for downsampling ([`pandas.DataFrame.agg`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html)) in the resource's `resource_parameters`.
 

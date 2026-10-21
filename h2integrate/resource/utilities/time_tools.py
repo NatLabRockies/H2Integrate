@@ -308,7 +308,6 @@ def _regenerate_time_columns_at_dt(
             calendar index. Defaults to True.
 
     Returns:
-    
         dict[str, numpy.ndarray]: generated time columns keyed by ``present_time_keys``.
     """
     freq = pd.Timedelta(seconds=dt_seconds)
@@ -399,6 +398,7 @@ def _count_target_timesteps_per_block(
         block_duration_ns = pd.to_timedelta(step_durations[start:end], unit="s").sum().value
         counts.append((block_duration_ns + target_dt_ns - 1) // target_dt_ns)
     return counts
+
 
 def resample_resource_data_to_dt(
     data: dict,
@@ -509,7 +509,6 @@ def resample_resource_data_to_dt(
         raise ValueError(msg)
 
     target_offsets = np.arange(target_n) * target_dt
-
     # Pandas 3 may infer second resolution, which cannot represent fractional resampling bins.
     native_index = pd.to_timedelta(elapsed, unit="s").as_unit("ns")
     target_index = pd.to_timedelta(target_offsets, unit="s").as_unit("ns")
