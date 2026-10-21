@@ -350,10 +350,14 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Clamp pre-constraint production into the physically allowed range.
         nh3_production = np.clip(nh3_production, a_min=0.0, a_max=rated_capacity)
 
-        # 1. Set production to zero when producing less than the min operating point
+        # 1. Set production to zero when producing less than the min operating point.
+        # Turndown is the steady-state minimum only. It is not re-applied after ramping, so
+        # production can be below turndown while ramping up or down (ramp rates take precedence).
         nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
 
         # 2. Apply ramping limits on the per-timestep change in production.
+        # Ramping can leave positive output below turndown (ramping down toward zero, or
+        # ramping up from zero when the ramp-up rate is below turndown).
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
