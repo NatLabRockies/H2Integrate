@@ -920,32 +920,21 @@ def test_h2i_config_rejects_leap_day_resources(include_leap_day):
 
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
-def test_unsupported_simulation_parameters(temp_dir):
+def test_unsupported_simulation_parameters():
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
-    temp_plant_config_ntimesteps = temp_dir / "temp_plant_config_ntimesteps.yaml"
-    temp_plant_config_dt = temp_dir / "temp_plant_config_dt.yaml"
-
-    shutil.copy(orig_plant_config, temp_plant_config_ntimesteps)
-    shutil.copy(orig_plant_config, temp_plant_config_dt)
-
-    # Load the plant_config YAML content
-    plant_config_data_ntimesteps = load_plant_yaml(temp_plant_config_ntimesteps)
-    plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
+    plant_config_data_ntimesteps = load_plant_yaml(orig_plant_config)
+    plant_config_data_dt = deepcopy(plant_config_data_ntimesteps)
     # docs fencepost end: DO NOT REMOVE
 
     plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
     # Sub-year and multi-year horizons are supported when positive and within plant life.
     plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
-    with temp_plant_config_ntimesteps.open("w") as f:
-        yaml.safe_dump(plant_config_data_ntimesteps, f)
-    load_plant_yaml(temp_plant_config_ntimesteps)
+    load_plant_yaml(plant_config_data_ntimesteps)
 
     # A two-year hourly horizon should also load without error.
     plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
-    with temp_plant_config_dt.open("w") as f:
-        yaml.safe_dump(plant_config_data_dt, f)
-    load_plant_yaml(temp_plant_config_dt)
+    load_plant_yaml(plant_config_data_dt)
 
     # A horizon longer than the plant life is not supported and must raise.
     over_life = deepcopy(plant_config_data_dt)
