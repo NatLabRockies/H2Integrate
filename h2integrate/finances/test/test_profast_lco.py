@@ -213,42 +213,6 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
 
 
 @pytest.mark.regression
-def test_profast_lco_equivalent_rate_units(
-    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict
-):
-    lcoe_values = []
-    for production, production_units in ((500000.0, "kW"), (500.0, "MW")):
-        problem = om.Problem()
-        plant_config = {
-            "plant": {"plant_life": 30},
-            "finance_parameters": {"model_inputs": profast_inputs_no1},
-        }
-        finance_model = ProFastLCO(
-            driver_config={},
-            plant_config=plant_config,
-            tech_config=fake_filtered_tech_config,
-            commodity_type="electricity",
-        )
-        independent = om.IndepVarComp()
-        independent.add_output("rated_electricity_production", production, units=production_units)
-        independent.add_output("capacity_factor", val=1.0, shape=30, units="unitless")
-        problem.model.add_subsystem("ivc", independent, promotes=["*"])
-        problem.model.add_subsystem(
-            "finance",
-            finance_model,
-            promotes_inputs=["rated_electricity_production", "capacity_factor"],
-        )
-        problem.setup()
-        for variable, cost in fake_cost_dict.items():
-            units = "USD" if "capex" in variable else "USD/year"
-            problem.set_val(f"finance.{variable}", cost, units=units)
-        problem.run_model()
-        lcoe_values.append(float(problem.get_val("finance.LCOE", units="USD/(kW*h)")[0]))
-
-    assert lcoe_values[0] == pytest.approx(lcoe_values[1], rel=1e-9)
-
-
-@pytest.mark.regression
 def test_profast_comp_coproduct(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):

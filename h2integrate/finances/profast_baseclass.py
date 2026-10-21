@@ -2,10 +2,9 @@ import attrs
 import numpy as np
 import openmdao.api as om
 from attrs import field, define, validators
-from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
-from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
+from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
 from h2integrate.core.model_baseclass import SkippableComputeMixin
@@ -524,8 +523,7 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
 
-        plant_cfg = self.options["plant_config"]["plant"]
-        plant_life = int(plant_cfg["plant_life"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Add rated capacity and capacity factor inputs
         self.add_input(
@@ -631,28 +629,13 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         profast_params["commodity"].update({"unit": self.commodity_amount_units})
 
         # calculate capacity and total production based on commodity type
-        io_meta_data = self.get_io_metadata()
-        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
-            "units"
-        ]
-        # compute rate_units from the price
-        rate_units_from_price = _compute_rate_units(self.price_units, check_conversion=False)
-        conversion_ratio = convert_units(1, rate_units_from_price, rate_units_capacity)
-        production_inputs = inputs
-        # ensure that sell price units are compatible with the rate units
-        if float(conversion_ratio) != 1.0:
-            # convert rate units to units compatible with the price_units
-            production_inputs = dict(inputs.items())
-            production_inputs[f"rated_{self.options['commodity_type']}_production"] = convert_units(
-                inputs[f"rated_{self.options['commodity_type']}_production"],
-                rate_units_capacity,
-                rate_units_from_price,
-            )
-
-        rated_production = production_inputs[f"rated_{self.options['commodity_type']}_production"]
-        capacity = rated_production[0] * 24
+        capacity = inputs[f"rated_{self.options['commodity_type']}_production"][0] * 24
         utilization = dict(zip(years_of_operation, inputs["capacity_factor"]))
-        total_production = inputs["capacity_factor"] * rated_production * 8760
+        total_production = (
+            inputs["capacity_factor"]
+            * inputs[f"rated_{self.options['commodity_type']}_production"]
+            * 8760
+        )
 
         # define profast parameters for capacity and utilization
         profast_params["capacity"] = capacity
