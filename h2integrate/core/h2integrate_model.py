@@ -6,7 +6,12 @@ import openmdao.api as om
 
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
-from h2integrate.core.model_checks import check_model_time_step, check_model_control_classifier
+from h2integrate.core.model_checks import (
+    check_model_time_step,
+    check_model_is_steppable,
+    check_time_marching_config,
+    check_model_control_classifier,
+)
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -23,6 +28,7 @@ from h2integrate.postprocess.reporting import (
     create_xdsm as create_xdsm_utility,
     print_results as print_model_results,
 )
+from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
 from h2integrate.control.control_strategies.system_level.solver_options import (
@@ -104,6 +110,11 @@ class H2IntegrateModel:
         # technologies are connected within the `technology_interconnections` section of the
         # plant config
         self.connect_technologies()
+
+        # Ensure the plant group has the correct openmdao nonlinear solver
+        # considering system level control config options, system graph cycles,
+        # and steppable simulation framework options.
+        self.set_plant_solver()
 
         # create driver model
         # might be an analysis or optimization
@@ -626,8 +637,7 @@ class H2IntegrateModel:
         """Add a system-level controller component and connect it within the plant.
 
         Instantiates the controller specified by ``control_strategy`` in the plant configuration,
-        adds it as an OpenMDAO subsystem named ``"system_level_controller"``, configures
-        solvers on the plant group to resolve the feedback loop, and creates all
+        adds it as an OpenMDAO subsystem named ``"system_level_controller"``, and creates all
         necessary OpenMDAO connections between the controller and the technology models it
         dispatches.
 
@@ -639,14 +649,7 @@ class H2IntegrateModel:
            if the strategy name is not found. The instantiated component is added to
            ``self.plant`` as ``"system_level_controller"``.
 
-        2. **Configure the plant-level nonlinear solver** - Because the controller creates a
-           feedback loop (controller outputs become technology inputs, whose outputs feed back to
-           the controller), a nonlinear solver is required. Solver type and options are read from
-           ``plant_config["system_level_control"]["solver_options"]`` via
-           ``SLCSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and
-           is largely inconsequential as we're not propagating derivatives at this time.
-
-        3. **Connect technology outputs to controller inputs** - For each ``(tech_name,
+        2. **Connect technology outputs to controller inputs** - For each ``(tech_name,
            commodity)`` pair in ``slc_topology["tech_to_commodity"]``:
 
            - **Feedstock techs**: Only the commodity output
@@ -664,7 +667,7 @@ class H2IntegrateModel:
              ``control_strategy`` or via the auto-injected ``PassthroughController`` — which
              converts the set-point signal into the appropriate performance-model command value.
 
-        4. **Connect marginal-cost inputs for cost-aware strategies** - Only executed when
+        3. **Connect marginal-cost inputs for cost-aware strategies** - Only executed when
            ``control_strategy`` is ``"CostMinimizationControl"`` or
            ``"ProfitMaximizationControl"``. Additional cost-aware control strategies
            would need to be added here. For each dispatchable tech, the ``cost_per_tech``
@@ -684,7 +687,7 @@ class H2IntegrateModel:
            - Numeric scalar: no connection needed; the value is used directly as a constant
              marginal cost.
 
-        5. **Connect the demand profile** - Connects the demand technology's output
+        4. **Connect the demand profile** - Connects the demand technology's output
            (``{demand_tech}.{demand_commodity}_demand_out``) to the controller's demand input
            (``system_level_controller.{demand_commodity}_demand``). This relies on the
            current SLC constraint that exactly one demand component is defined.
@@ -710,7 +713,6 @@ class H2IntegrateModel:
 
         Side Effects:
             - Adds ``"system_level_controller"`` subsystem to ``self.plant``.
-            - Sets ``self.plant.nonlinear_solver`` and ``self.plant.linear_solver``.
             - Creates OpenMDAO connections within ``self.plant``.
         """
         plant_slc_config = self.plant_config["system_level_control"]
@@ -732,19 +734,7 @@ class H2IntegrateModel:
         )
         self.plant.add_subsystem("system_level_controller", slc_comp)
 
-        # --- Step 2: Configure the nonlinear solver on the plant group ----
-        # The feedback loop (controller <-> technologies) requires an
-        # iterative nonlinear solver to converge.
-        solver_config = SLCSolverOptionsConfig.from_dict(plant_slc_config.get("solver_options", {}))
-        solver_cls = solver_config.return_nonlinear_solver()
-        solver = solver_cls()
-        solver_options = solver_config.get_solver_options()
-        for k, v in solver_options.items():
-            solver.options[k] = v
-        self.plant.nonlinear_solver = solver
-        self.plant.linear_solver = om.DirectSolver()
-
-        # --- Step 3: Connect technology outputs/inputs to the controller --
+        # --- Step 2: Connect technology outputs/inputs to the controller --
         for tech_to_commodity in slc_topology["tech_to_commodity"]:
             tech_name, commodity = tech_to_commodity
 
@@ -794,7 +784,7 @@ class H2IntegrateModel:
                 f"{tech_name}.{commodity}_set_point",
             )
 
-        # --- Step 4: Connect marginal-cost inputs (cost-aware strategies) -
+        # --- Step 3: Connect marginal-cost inputs (cost-aware strategies) -
         if strategy_name in ("CostMinimizationControl", "ProfitMaximizationControl"):
             cost_per_tech = plant_slc_config.get("control_parameters", {}).get("cost_per_tech", {})
             technology_graph = slc_topology["technology_graph"]
@@ -842,7 +832,7 @@ class H2IntegrateModel:
                             )
                     # numeric scalar: used directly, no connection needed
 
-        # --- Step 5: Connect the demand profile to the controller ---------
+        # --- Step 4: Connect the demand profile to the controller ---------
         # Input-to-input connection (OpenMDAO 3.44+): as with the buy_price
         # connection above, this must be made on the top-level model rather
         # than a subgroup. Connecting via ``self.plant`` (a subgroup) leaves
@@ -1920,14 +1910,6 @@ class H2IntegrateModel:
 
         self.plant.options["auto_order"] = True
 
-        # Check if there are any loops in the technology interconnections
-        # If loops are present, add solvers to resolve the coupling
-        # Check if there are any cycles (loops) in the technology graph
-        if list(nx.simple_cycles(self.technology_graph)):
-            # If cycles are found, set solvers for the plant to resolve the coupling
-            self.plant.nonlinear_solver = om.NonlinearBlockGS()
-            self.plant.linear_solver = om.DirectSolver()
-
         # initialize dispatch rules connection list
         tech_to_dispatch_connections = self.plant_config.get("tech_to_dispatch_connections", [])
 
@@ -1953,6 +1935,63 @@ class H2IntegrateModel:
                         f"{tech_name}.dispatch_block_rule_function",
                         f"{dispatching_tech_name}.dispatch_block_rule_function_{tech_name}",
                     )
+
+    def set_plant_solver(self):
+        """Configures solvers on the plant group according to the needs of the run case.
+
+        The plant group nonlinear solver is explicitly defined and attributed to the plant group if
+        a system level controller is defined, the technology graph has a cycle, or the
+        time-marching simulation framework is utilized.
+        """
+
+        simulation_config = self.plant_config["plant"]["simulation"]
+        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+
+        # Validate the time-marching options before choosing any solver so unsupported
+        # combinations fail loudly instead of silently simulating only the first window.
+        time_marching = False
+        n_timesteps_window = simulation_config.get("n_timesteps_window")
+        if n_timesteps_window is not None:
+            time_marching = check_time_marching_config(
+                simulation_config["n_timesteps"],
+                n_timesteps_window,
+                bool(self.slc),
+                has_cycles,
+            )
+
+        if self.slc:
+            # Because the controller creates a feedback loop (controller outputs become technology
+            # inputs, whose outputs feed back to the controller), a nonlinear solver is required.
+            # Solver type and options are read from
+            # ``plant_config["system_level_control"]["solver_options"]`` via
+            # ``SLCSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and is
+            # largely inconsequential as we're not propagating derivatives at this time.
+
+            plant_slc_config = self.plant_config["system_level_control"]
+
+            # The feedback loop (controller <-> technologies) requires an
+            # iterative nonlinear solver to converge.
+            solver_options = plant_slc_config.get("solver_options", {})
+            solver_config = SLCSolverOptionsConfig.from_dict(solver_options)
+            solver_cls = solver_config.return_nonlinear_solver()
+            solver = solver_cls()
+            solver_options = solver_config.get_solver_options()
+            for k, v in solver_options.items():
+                solver.options[k] = v
+            self.plant.nonlinear_solver = solver
+            self.plant.linear_solver = om.DirectSolver()
+            return
+
+        # If loops are present in the technology graph, add solvers to resolve the coupling
+        if has_cycles:
+            self.plant.nonlinear_solver = om.NonlinearBlockGS()
+            self.plant.linear_solver = om.DirectSolver()
+
+        if time_marching:
+            # Assign custom nonlinear solver to plant group to manage time-marching simulation
+            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
+
+            check_model_is_steppable(self.control_strategies, self.performance_models)
 
     def create_driver_model(self):
         """
