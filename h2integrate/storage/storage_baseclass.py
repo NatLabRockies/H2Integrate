@@ -322,7 +322,8 @@ class StoragePerformanceBase(PerformanceModelBaseClass):
             outputs[f"annual_{self.commodity}_produced"] = (
                 annualized_discharge_only_cf
                 * float(outputs[f"rated_{self.commodity}_production"][0])
-                * 8760
+                * self.dt_amount
+                * (31_536_000 / self.dt)
             )
             outputs["replacement_schedule"] = replacement_schedule
             # Capacity factor should reflect the net storage contribution so it can
