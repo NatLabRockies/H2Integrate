@@ -7,6 +7,7 @@ from unittest.mock import patch
 import yaml
 import numpy as np
 import pytest
+import openmdao.api as om
 
 import h2integrate.postprocess.reporting as reporting_module
 import h2integrate.core.h2integrate_model as h2i_model_module
@@ -1037,6 +1038,67 @@ def test_check_simulation_duration_respects_model_bounds():
         match=r"compatible with simulation durations between 0.0 and 5.0 years",
     ):
         check_model_simulation_duration("MultiYearModel", MultiYearModel, 6 * 8760, 3600)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "duration_bounds,n_timesteps,is_supported",
+    [
+        (None, 4380, False),
+        ((1.0, 1.0), 4380, False),
+        ((0.0, 5.0), 4380, True),
+        ((1.0, 1.0), 8760, True),
+    ],
+)
+def test_technology_finance_checks_simulation_duration(
+    monkeypatch: pytest.MonkeyPatch,
+    duration_bounds: tuple[float, float] | None,
+    n_timesteps: int,
+    is_supported: bool,
+) -> None:
+    """Enforce technology-finance duration bounds before creating its component."""
+
+    class FinanceModel(om.ExplicitComponent):
+        """Minimal finance component for checking framework duration validation."""
+
+        def initialize(self) -> None:
+            """Declare the configuration options passed by the framework."""
+            self.options.declare("driver_config", types=dict)
+            self.options.declare("plant_config", types=dict)
+            self.options.declare("tech_config", types=dict)
+
+    if duration_bounds is not None:
+        monkeypatch.setattr(
+            FinanceModel, "_simulation_duration_bounds", duration_bounds, raising=False
+        )
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant = om.Group()
+    model.driver_config = {}
+    model.plant_config = {
+        "plant": {
+            "plant_life": 3,
+            "simulation": {"n_timesteps": n_timesteps, "dt": 3600},
+        }
+    }
+    model.technology_config = {
+        "technologies": {
+            "test_technology": {
+                "finance_model": {"model": "FinanceModel"},
+                "model_inputs": {},
+            }
+        }
+    }
+    model.supported_models = {"FinanceModel": FinanceModel}
+    model.slc = False
+
+    if is_supported:
+        model.create_technology_models()
+        assert model.finance_models == [FinanceModel]
+    else:
+        with pytest.raises(ValueError, match=r"Model FinanceModel.*simulation durations"):
+            model.create_technology_models()
+        assert model.finance_models == []
 
 
 @pytest.mark.unit

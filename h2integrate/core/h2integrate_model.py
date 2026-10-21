@@ -1051,6 +1051,12 @@ class H2IntegrateModel:
                             "model", ""
                         ):
                             finance_object = self.supported_models[finance_name]
+                            check_model_simulation_duration(
+                                finance_name,
+                                finance_object,
+                                self.plant_config["plant"]["simulation"]["n_timesteps"],
+                                self.plant_config["plant"]["simulation"]["dt"],
+                            )
                             tech_group.add_subsystem(
                                 f"{tech_name}_finance",
                                 finance_object(

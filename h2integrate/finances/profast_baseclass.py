@@ -522,8 +522,6 @@ class ProFastBase(om.ExplicitComponent):
 
         plant_cfg = self.options["plant_config"]["plant"]
         plant_life = int(plant_cfg["plant_life"])
-        self.dt = int(plant_cfg["simulation"]["dt"])
-        self.n_timesteps = int(plant_cfg["simulation"]["n_timesteps"])
 
         # Add rated capacity and capacity factor inputs
         self.add_input(
