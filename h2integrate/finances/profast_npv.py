@@ -118,8 +118,6 @@ class ProFastNPV(ProFastBase):
             warnings.warn(msg, UserWarning)
             return
 
-        # populate_profast converts the rated production (in its native rate units) into the
-        # commodity amount units implied by the price, so no extra rate-unit adjustment is needed.
         pf = self.populate_profast(inputs)
 
         non_op_Nyears = int(np.ceil(self.params.installation_time / 12) + 1)
