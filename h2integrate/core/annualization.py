@@ -10,22 +10,47 @@ _VALID_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "average_sim_value")
 
 
 def _annualization_steps_per_year(dt):
-    """Number of timesteps that make up one year for a timestep length ``dt`` (seconds)."""
+    """Estimate the number of equal timesteps in a fixed 365-day year.
+
+    Args:
+        dt (float): Positive timestep duration in seconds.
+
+    Returns:
+        int: Timesteps per year, rounded to the nearest integer and clamped to
+        at least one. This is an estimate when ``dt`` does not divide a year evenly.
+    """
     return max(1, round(31_536_000 / dt))
 
 
-def _extrapolate_annual_values(simulated_values, plant_life, method):
-    """Extend per-simulated-year values across the full plant life.
+def _extrapolate_annual_values(
+    simulated_values: np.ndarray,
+    plant_life: int,
+    method: str,
+    simulated_durations_years: np.ndarray | None = None,
+) -> np.ndarray:
+    """Extend or truncate simulated annual values to the plant lifetime.
+
+    Preserve the simulated values first, then fill any remaining plant years
+    using the selected method. The average method weights each supplied value
+    by the duration it represents, so a partial year contributes proportionally.
 
     Args:
-        simulated_values (np.ndarray): one value per simulated year.
-        plant_life (int): number of years to project across.
-        method (str): one of ``"tile"`` (repeat simulated years cyclically),
-            ``"final_sim_value"`` (hold the last simulated year), or
-            ``"average_sim_value"`` (hold the simulated average).
+        simulated_values (np.ndarray): Nonempty, one-dimensional array with one
+            value per full or partial simulated year.
+        plant_life (int): Positive integer number of plant years to return.
+        method (str): ``"tile"`` to repeat the values cyclically,
+            ``"final_sim_value"`` to hold the last value, or
+            ``"average_sim_value"`` to hold their time-weighted mean.
+        simulated_durations_years (np.ndarray | None): Positive elapsed duration
+            in years for each supplied value. Used only by the average method.
+            Defaults to ``None``, treating all values as equal-duration years.
 
     Returns:
-        np.ndarray: ``plant_life`` annual values.
+        np.ndarray: One value for each of the ``plant_life`` years, in the
+        same units as the supplied values.
+
+    Raises:
+        ValueError: If ``method`` is not a supported extrapolation method.
     """
     if method not in _VALID_EXTRAPOLATION_METHODS:
         raise ValueError(
@@ -38,7 +63,9 @@ def _extrapolate_annual_values(simulated_values, plant_life, method):
         return np.tile(simulated_values, n_tiles)[:plant_life]
 
     fill_value = (
-        simulated_values[-1] if method == "final_sim_value" else float(np.mean(simulated_values))
+        simulated_values[-1]
+        if method == "final_sim_value"
+        else float(np.average(simulated_values, weights=simulated_durations_years))
     )
     projected = np.full(plant_life, fill_value, dtype=float)
     projected[:n_sim_years] = simulated_values[:plant_life]
@@ -53,11 +80,36 @@ def _validate_annualization_inputs(
     no_degradation_extrapolation,
     soh_cycle_repetition,
 ):
-    """Validate and coerce the inputs to ``calculate_annual_cf_and_replacement_schedule``.
+    """Validate and normalize performance, SOH, and annualization options.
+
+    Validate both extrapolation options regardless of whether SOH is supplied.
+    When SOH is absent, leave it as ``None`` and do not validate ``eol_soh``.
+    Timestep duration and plant lifetime are validated by the calling model.
+
+    Args:
+        performance_timeseries (array-like): Nonempty, finite, one-dimensional
+            performance rates at equal timesteps.
+        rated_performance (float): Finite, positive rated performance in the
+            same units as the performance rates.
+        state_of_health_timeseries (array-like | None): Finite SOH fractions in
+            [0, 1], matching the performance array's shape, or ``None`` to
+            disable degradation and replacement projection.
+        eol_soh (float | None): EOL threshold in [0, 1]. Required only when SOH
+            is supplied.
+        no_degradation_extrapolation (str): ``"tile"``, ``"final_sim_value"``,
+            or ``"average_sim_value"`` for extrapolating without SOH.
+        soh_cycle_repetition (str): ``"all_soh_cycles"`` to repeat all cycles
+            or ``"final_soh_cycle"`` to repeat the final cycle.
 
     Returns:
-        tuple: the coerced ``performance_timeseries`` array, ``rated_performance`` float,
-        ``state_of_health_timeseries`` (array or None), and a ``use_degradation`` flag.
+        tuple[np.ndarray, float, np.ndarray | None, bool]: Float performance
+        array, scalar rated performance, float SOH array or ``None``, and a flag
+        indicating whether SOH was supplied, in that order.
+
+    Raises:
+        ValueError: If an array is empty, nonfinite, or has an invalid shape;
+            rated performance is not finite and positive; supplied SOH or its
+            threshold is invalid; or either extrapolation option is unsupported.
     """
     performance_timeseries = np.asarray(performance_timeseries, dtype=float)
     if performance_timeseries.size == 0:
@@ -113,15 +165,22 @@ def _annual_cf_segments(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Average timestep CF into fixed 365-day plant-year segments.
 
+    Split the series at integer elapsed plant years, preserving its actual
+    start and end. A timestep crossing a boundary contributes to both segments
+    according to its duration in each. Partial-year means use their actual
+    durations rather than treating the unobserved part of a year as zero CF.
+
     Args:
-        capacity_factors (np.ndarray): One-dimensional CF values, each constant
-            over its timestep.
-        dt (float): Duration of each timestep in seconds.
-        start_year (float): Elapsed plant years at the start of the series.
+        capacity_factors (np.ndarray): Nonempty, one-dimensional, dimensionless
+            CF values, each constant over its timestep.
+        dt (float): Positive duration of each timestep in seconds.
+        start_year (float): Elapsed 365-day plant years at the start of the
+            series, not a calendar year. Defaults to zero.
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: Time-weighted mean CF and duration in
-        years for each segment, including partial first and final years.
+        tuple[np.ndarray, np.ndarray]: Equally sized arrays of time-weighted
+        mean CF and duration in years for each segment, in chronological order.
+        The first and final segments can be shorter than one year.
     """
     # Keep the series' actual start and end, splitting at intervening plant-year boundaries.
     sample_duration = dt / 31_536_000
@@ -151,41 +210,46 @@ def _degraded_replacement_cycles(
 ) -> tuple[list[np.ndarray], list[bool], list[np.ndarray]]:
     """Complete timestep-level cycles before aggregating their annual CF segments.
 
-    An upward state-of-health (SOH) jump greater than 1e-9 marks a replacement
-    and closes the preceding cycle. The final cycle is also complete if its last
-    observed SOH is at or below the end-of-life (EOL) threshold.
+    An upward state-of-health (SOH) jump greater than 1e-9 marks an observed
+    replacement at the first sample with reset SOH, closing the preceding cycle.
+    Reaching the end-of-life (EOL) threshold in observed data is not itself a
+    replacement; the trailing observed cycle always remains open initially.
 
-    If the final cycle is incomplete, extrapolate SOH using the loss between its
-    last two samples. Extend at the simulation timestep until EOL is reached or
-    the remaining plant life is covered. Projected CF scales the last timestep's
-    CF by projected SOH divided by the last observed SOH, clipping negative SOH
-    to zero. No extension is made with fewer than two samples or no SOH loss.
+    Extend that trailing cycle using the nonnegative SOH loss between its last
+    two samples. Project at timestep resolution until EOL is reached, within a
+    tolerance of 1e-12, or the remaining plant life is covered. A projected
+    replacement requires at least one future timestep, even if the last observed
+    SOH is already at or below EOL. Without measurable loss, extend by one step
+    only when the last observed SOH is already at or below EOL; otherwise leave
+    the cycle incomplete. No extension is made if no plant life remains.
+
+    Projected CF scales the last observed timestep's CF by projected SOH divided
+    by the last observed SOH. Negative projected SOH and CF projected from zero
+    observed SOH give zero CF. The extension uses whole timesteps, so its final
+    timestep may extend past retirement; downstream projection clips that excess.
 
     Aggregate each cycle's CF into time-weighted means, splitting at fixed
     365-day plant-year boundaries and retaining partial-year segment durations.
     This helper does not repeat cycles or build the annual replacement schedule.
 
     Args:
-            timestep_capacity_factors (np.ndarray): One-dimensional, dimensionless CF
-                    values, each constant over its simulation timestep.
-            state_of_health_timeseries (np.ndarray): One-dimensional SOH fractions in
-                    [0, 1], aligned with and the same length as the timestep CF array.
-            eol_soh (float): SOH fraction in [0, 1] at or below which a cycle ends.
-            dt (float): Duration of each simulation timestep in seconds.
-            plant_life (int): Plant lifetime in 365-day years, limiting how far the
-                    final cycle is extended beyond the simulation.
+        timestep_capacity_factors (np.ndarray): Nonempty, one-dimensional,
+            dimensionless CF values, each constant over its simulation timestep.
+        state_of_health_timeseries (np.ndarray): One-dimensional SOH fractions
+            in [0, 1], aligned with and the same length as the timestep CF array.
+        eol_soh (float): SOH threshold in [0, 1] used to predict replacement in
+            projected data, not to detect replacement in observed data.
+        dt (float): Positive duration of each simulation timestep in seconds.
+        plant_life (int): Positive plant lifetime in 365-day years, limiting
+            extension of the final cycle beyond the simulation.
 
     Returns:
-            tuple[list[np.ndarray], list[bool], list[np.ndarray]]: Three parallel
-            lists in observed cycle order:
-
-                    - Cycle CF arrays containing the mean CF for each annual or
-                        partial-year segment of that cycle.
-                    - Completion flags indicating whether each cycle ends in an
-                        observed replacement or reaches EOL. A completed cycle represents
-                        one replacement event at its end; the final cycle may be incomplete.
-                    - Segment-duration arrays in years, matching the corresponding CF
-                        arrays element by element. Their sums give the cycle durations.
+        tuple[list[np.ndarray], list[bool], list[np.ndarray]]: Three parallel
+        lists in cycle order: arrays of segment mean CF, flags indicating an
+        observed or projected replacement at each cycle's end, and arrays of
+        segment durations in years. Each duration array matches its CF array
+        element by element; its sum is the cycle duration. The final replacement
+        flag can remain false when the cycle cannot be completed.
     """
     sample_duration = dt / 31_536_000
     simulation_duration = state_of_health_timeseries.size * sample_duration
@@ -250,7 +314,27 @@ def _degraded_replacement_cycles(
 
 
 def _cycle_timeline(cycle_cf_segments, cycle_segment_durations, soh_cycle_repetition, plant_life):
-    """Yield cycle indices and offsets on the shared CF/replacement clock."""
+    """Yield observed and repeated cycle placements on one elapsed-year clock.
+
+    Place every supplied cycle once in order, then repeat either the full set
+    or the final cycle until plant life is covered. Cycle durations must be
+    positive. The final placement can extend beyond retirement; callers clip
+    CF contributions or exclude replacement events outside the plant lifetime.
+
+    Args:
+        cycle_cf_segments (list[np.ndarray]): CF segment arrays, one per cycle.
+            Their order determines the initial cycle sequence.
+        cycle_segment_durations (list[np.ndarray]): Segment durations in 365-day
+            years, matching each cycle's CF segments element by element.
+        soh_cycle_repetition (str): ``"all_soh_cycles"`` to repeat all cycles
+            or ``"final_soh_cycle"`` to repeat only the final cycle.
+        plant_life (int): Positive integer number of plant years to cover.
+
+    Yields:
+        tuple[int, float, np.ndarray]: Cycle index, start offset in elapsed
+        plant years, and that cycle's segment-duration array. Only cycles
+        starting before retirement are yielded.
+    """
     start = 0.0
     indices = range(len(cycle_cf_segments))
     while start < plant_life:
@@ -270,7 +354,26 @@ def _cycle_timeline(cycle_cf_segments, cycle_segment_durations, soh_cycle_repeti
 def _project_capacity_factors(
     cycle_cf_segments, soh_cycle_repetition, plant_life, cycle_segment_durations=None
 ):
-    """Duration-weight annual CF segments into fixed plant-year bins."""
+    """Project cycle CF segments into annual means across plant life.
+
+    Place all supplied cycles before repeating the selected cycle sequence.
+    Weight each segment's contribution by its overlap with each fixed 365-day
+    plant year, clipping the final contribution at retirement. This projects
+    segment means, not the original timestep-level CF pattern.
+
+    Args:
+        cycle_cf_segments (list[np.ndarray]): Nonempty list of dimensionless CF
+            segment arrays, in initial cycle order.
+        soh_cycle_repetition (str): ``"all_soh_cycles"`` to repeat all cycles
+            or ``"final_soh_cycle"`` to repeat only the final cycle.
+        plant_life (int): Positive integer number of plant years to return.
+        cycle_segment_durations (list[np.ndarray] | None): Segment durations in
+            years, matching each cycle's CF array. Defaults to ``None``, which
+            treats each segment as one full year. Cycle durations must be positive.
+
+    Returns:
+        np.ndarray: Dimensionless mean CF for each of the ``plant_life`` years.
+    """
     if cycle_segment_durations is None:
         cycle_segment_durations = [np.ones(segment.size) for segment in cycle_cf_segments]
     annual_cf = np.zeros(plant_life)
@@ -294,7 +397,32 @@ def _build_replacement_schedule(
     plant_life,
     cycle_segment_durations=None,
 ):
-    """Count discrete cycle-end events in [year, year + 1), excluding retirement."""
+    """Count observed and projected replacements in each plant year.
+
+    Each flagged cycle contributes one event at its end, including when that
+    cycle is repeated. Bin events into intervals ``[year, year + 1)``; a year
+    boundary event belongs to the following year. Exclude initial installation
+    and events at or after retirement. Times within 1e-10 years of an integer
+    year are treated as exactly on that boundary to absorb floating-point error.
+
+    Args:
+        cycle_cf_segments (list[np.ndarray]): Nonempty list of CF segment arrays.
+            Used to determine the number of cycles and, when durations are
+            omitted, the number of one-year segments in each cycle.
+        cycle_has_replacement (list[bool]): One flag per cycle indicating an
+            observed or projected replacement at its end.
+        soh_cycle_repetition (str): ``"all_soh_cycles"`` to repeat all cycles
+            or ``"final_soh_cycle"`` to repeat only the final cycle, after the
+            initial sequence has been placed.
+        plant_life (int): Positive integer number of plant years to return.
+        cycle_segment_durations (list[np.ndarray] | None): Segment durations in
+            years, matching each cycle's CF array. Defaults to ``None``, which
+            treats each segment as one full year. Cycle durations must be positive.
+
+    Returns:
+        np.ndarray: Integer replacement counts for each plant year. Counts can
+        exceed one; they are neither annualized rates nor fractions of a replacement.
+    """
     if cycle_segment_durations is None:
         cycle_segment_durations = [np.ones(segment.size) for segment in cycle_cf_segments]
     replacement_schedule = np.zeros(plant_life, dtype=int)

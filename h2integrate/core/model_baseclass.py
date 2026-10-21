@@ -241,11 +241,14 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # Without degradation, no replacements occur and capacity factors are simply
         # extrapolated across the plant life.
         if not use_degradation:
-            simulated_annual_capacity_factors, _ = _annual_cf_segments(
+            simulated_annual_capacity_factors, simulated_durations_years = _annual_cf_segments(
                 performance_timeseries / rated_performance, self.dt
             )
             annual_capacity_factors = _extrapolate_annual_values(
-                simulated_annual_capacity_factors, plant_life, no_degradation_extrapolation
+                simulated_annual_capacity_factors,
+                plant_life,
+                no_degradation_extrapolation,
+                simulated_durations_years=simulated_durations_years,
             )
             return annual_capacity_factors, np.zeros(plant_life, dtype=int)
 
@@ -386,11 +389,13 @@ class CostModelBaseClass(om.ExplicitComponent):
         steps_per_year = _annualization_steps_per_year(self.dt)
         n_sim_years = math.ceil(varopex_timeseries.size / steps_per_year)
         simulated_annual_varopex = np.zeros(n_sim_years)
+        simulated_durations_years = np.zeros(n_sim_years)
 
         for year in range(n_sim_years):
             start = year * steps_per_year
             end = min(start + steps_per_year, varopex_timeseries.size)
             segment_seconds = (end - start) * self.dt
+            simulated_durations_years[year] = segment_seconds / 31_536_000
             simulated_annual_varopex[year] = (
                 varopex_timeseries[start:end].sum() * (31_536_000 / segment_seconds)
                 if segment_seconds > 0.0
@@ -398,7 +403,10 @@ class CostModelBaseClass(om.ExplicitComponent):
             )
 
         return _extrapolate_annual_values(
-            simulated_annual_varopex, self.plant_life, extrapolation_method
+            simulated_annual_varopex,
+            self.plant_life,
+            extrapolation_method,
+            simulated_durations_years=simulated_durations_years,
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

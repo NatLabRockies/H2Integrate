@@ -101,6 +101,28 @@ def test_extrapolate_annual_values_modes():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "method,expected_values",
+    [
+        ("tile", np.array([1.0, 0.0, 1.0, 0.0])),
+        ("final_sim_value", np.array([1.0, 0.0, 0.0, 0.0])),
+        ("average_sim_value", np.array([1.0, 0.0, 0.8, 0.8])),
+    ],
+)
+def test_extrapolate_annual_values_with_partial_year(
+    method: str, expected_values: np.ndarray
+) -> None:
+    """Use interval durations only when averaging beyond the simulated horizon."""
+    projected_values = _extrapolate_annual_values(
+        simulated_values=np.array([1.0, 0.0]),
+        plant_life=4,
+        method=method,
+        simulated_durations_years=np.array([1.0, 0.25]),
+    )
+    np.testing.assert_allclose(projected_values, expected_values)
+
+
+@pytest.mark.unit
 def test_project_capacity_factors_repetition_modes():
     # Two completed cycles of lengths 2 and 1.
     cycle_cf_segments = [np.array([1.0, 0.9]), np.array([0.8])]

@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pytest
 
-from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
 
 
 class _DummyPerformanceModel:
@@ -84,6 +84,34 @@ def test_without_degradation_average_sim_value():
 
     np.testing.assert_allclose(cf_values, [0.6, 0.5, 0.4, 0.5, 0.5, 0.5])
     np.testing.assert_allclose(replacement_schedule, np.zeros(6))
+
+
+@pytest.mark.unit
+def test_average_capacity_factor_weights_partial_year() -> None:
+    """Weight a full year and a partial year by their elapsed durations."""
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=31_536_000 / 4),
+        performance_timeseries=np.array([1.0, 1.0, 1.0, 1.0, 0.0]),
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="average_sim_value",
+    )
+    np.testing.assert_allclose(capacity_factors, [1.0, 0.0, 0.8, 0.8])
+    np.testing.assert_array_equal(replacement_schedule, np.zeros(4, dtype=int))
+
+
+@pytest.mark.unit
+def test_average_varopex_weights_partial_year() -> None:
+    """Weight annualized variable costs by the duration of each observed interval."""
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000 / 4
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        np.array([10.0, 10.0, 10.0, 10.0, 0.0]),
+        extrapolation_method="average_sim_value",
+    )
+    np.testing.assert_allclose(annual_varopex, [40.0, 0.0, 32.0, 32.0])
 
 
 @pytest.mark.unit
