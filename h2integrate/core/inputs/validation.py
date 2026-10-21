@@ -149,7 +149,7 @@ def load_tech_yaml(finput):
     """Validate and return a technology configuration.
 
     Args:
-        finput (dict | str): Technology configuration or path to its YAML file.
+        finput (dict | str | Path): Technology configuration or path to its YAML file.
 
     Returns:
         dict: Validated technology configuration.
@@ -161,7 +161,7 @@ def load_plant_yaml(finput):
     """Validate a plant configuration and ensure its simulation horizon fits the plant life.
 
     Args:
-        finput (dict | str): Plant configuration dictionary or path to its YAML file.
+        finput (dict | str | Path): Plant configuration or path to its YAML file.
 
     Returns:
         dict: Validated plant configuration.
@@ -208,7 +208,7 @@ def load_driver_yaml(finput):
     """Validate and return a driver configuration.
 
     Args:
-        finput (dict | str): Driver configuration or path to its YAML file.
+        finput (dict | str | Path): Driver configuration or path to its YAML file.
 
     Returns:
         dict: Validated driver configuration.
