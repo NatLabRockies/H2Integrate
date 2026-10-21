@@ -21,6 +21,8 @@ from h2integrate import (
 )
 from h2integrate.core.model_checks import (
     check_model_time_step,
+    check_model_is_steppable,
+    check_time_marching_config,
     check_model_control_classifier,
     check_model_simulation_duration,
 )
@@ -1088,6 +1090,71 @@ def test_technology_finance_checks_simulation_duration(
         with pytest.raises(ValueError, match=r"Model FinanceModel.*simulation durations"):
             model.create_technology_models()
         assert model.finance_models == []
+
+
+def test_check_model_is_steppable(subtests):
+
+    class TechControllerSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "TechControllerSteppable"
+
+    class TechControllerNonSteppable:
+        def __str__(self):
+            return "TechControllerNonSteppable"
+
+    class PerformanceModelSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "PerformanceModelSteppable"
+
+    class PerformanceModelNonSteppable:
+        def __str__(self):
+            return "PerformanceModelNonSteppable"
+
+    with subtests.test("Steppable classes"):
+        check_model_is_steppable(
+            control_strategies=[TechControllerSteppable()],
+            performance_models=[PerformanceModelSteppable()],
+        )
+
+    with subtests.test("Nonsteppable classes"):
+        with pytest.raises(AttributeError):
+            check_model_is_steppable(
+                control_strategies=[TechControllerNonSteppable()],
+                performance_models=[PerformanceModelSteppable(), PerformanceModelNonSteppable()],
+            )
+
+
+@pytest.mark.unit
+def test_check_time_marching_config(subtests):
+    with subtests.test("Valid window size enables time-marching"):
+        assert check_time_marching_config(8760, 24, False, False) is True
+
+    with subtests.test("Window size equal to n_timesteps is a normal simulation"):
+        assert check_time_marching_config(8760, 8760, True, True) is False
+
+    with subtests.test("Non-positive window size"):
+        with pytest.raises(ValueError, match=r"must be positive"):
+            check_time_marching_config(8760, 0, False, False)
+
+    with subtests.test("Window size greater than n_timesteps"):
+        with pytest.raises(ValueError, match=r"cannot be greater than n_timesteps \(8760\)"):
+            check_time_marching_config(8760, 9000, False, False)
+
+    with subtests.test("Window size does not divide n_timesteps"):
+        with pytest.raises(ValueError, match=r"divisible by n_timesteps_window \(7\)"):
+            check_time_marching_config(8760, 7, False, False)
+
+    with subtests.test("System-level control is not supported"):
+        with pytest.raises(NotImplementedError, match="system-level control"):
+            check_time_marching_config(8760, 24, True, False)
+
+    with subtests.test("Technology cycles are not supported"):
+        with pytest.raises(NotImplementedError, match="cycle"):
+            check_time_marching_config(8760, 24, False, True)
 
 
 @pytest.mark.unit

@@ -78,6 +78,9 @@ timesteps represent half a year.
 See the {ref}`model duration requirements <required-class-attributes>` and
 {ref}`annualization guidance <annualization-methods>` for developer details.
 
+`n_timesteps_window` is optional and enables a time-marching simulation that advances the plant
+a window of timesteps at a time; see [Time-Marching Simulation](time_marching_simulation.md).
+
 ## Technology and site connections
 
 `technology_interconnections` lists source, destination, commodity or stream, and optionally a
