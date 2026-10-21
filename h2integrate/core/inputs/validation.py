@@ -146,25 +146,28 @@ def _validate(finput, fschema, defaults=True):
 
 # ---------------------
 def load_tech_yaml(finput):
+    """Validate and return a technology configuration.
+
+    Args:
+        finput (dict | str): Technology configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated technology configuration.
+    """
     return _validate(finput, fschema_tech)
 
 
 def load_plant_yaml(finput):
-    """Validate a plant configuration and check its simulation duration.
-
-    The simulation may cover any positive duration (a fraction of a year, a single year, or
-    multiple years); performance, cost, and finance models annualize their results across the
-    plant life. The duration (``n_timesteps * dt``) must be positive and must not exceed the
-    configured ``plant_life``.
+    """Validate a plant configuration and ensure its simulation horizon fits the plant life.
 
     Args:
-        finput (dict | str): plant configuration dictionary or path to the plant config YAML.
+        finput (dict | str): Plant configuration dictionary or path to its YAML file.
 
     Returns:
-        dict: the validated plant configuration.
+        dict: Validated plant configuration.
 
     Raises:
-        ValueError: if the simulation horizon is non-positive or longer than the plant life.
+        ValueError: If the simulation horizon is non-positive or longer than the plant life.
     """
     plant_config = _validate(finput, fschema_plant)
 
@@ -202,6 +205,14 @@ def load_plant_yaml(finput):
 
 
 def load_driver_yaml(finput):
+    """Validate and return a driver configuration.
+
+    Args:
+        finput (dict | str): Driver configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated driver configuration.
+    """
     return _validate(finput, fschema_driver)
 
 

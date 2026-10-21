@@ -6,7 +6,6 @@
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
-
 - Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. Leap-day-inclusive resources are rejected in full H2I simulations. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 
 ## 0.10.0 [October 12, 2026]
