@@ -74,6 +74,8 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
 
     _control_classifier = "splitter"
 
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})
         self.options.declare("plant_config", types=dict, default={})
