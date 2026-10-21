@@ -160,44 +160,45 @@ def _validate_annualization_inputs(
     return performance_timeseries, rated_performance, state_of_health_timeseries, use_degradation
 
 
-def _annual_cf_segments(
-    capacity_factors: np.ndarray, dt: float, start_year: float = 0.0
+def _time_weighted_annual_means(
+    timestep_values: np.ndarray, dt: float, start_year: float = 0.0
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Average timestep CF into fixed 365-day plant-year segments.
+    """Calculate time-weighted means over fixed 365-day plant-year segments.
 
     Split the series at integer elapsed plant years, preserving its actual
     start and end. A timestep crossing a boundary contributes to both segments
     according to its duration in each. Partial-year means use their actual
-    durations rather than treating the unobserved part of a year as zero CF.
+    durations rather than treating the unobserved part of a year as zero.
 
     Args:
-        capacity_factors (np.ndarray): Nonempty, one-dimensional, dimensionless
-            CF values, each constant over its timestep.
+        timestep_values (np.ndarray): Nonempty, one-dimensional values, each
+            constant over its timestep, such as CF or cost per timestep.
         dt (float): Positive duration of each timestep in seconds.
         start_year (float): Elapsed 365-day plant years at the start of the
             series, not a calendar year. Defaults to zero.
 
     Returns:
         tuple[np.ndarray, np.ndarray]: Equally sized arrays of time-weighted
-        mean CF and duration in years for each segment, in chronological order.
-        The first and final segments can be shorter than one year.
+        means and durations in years for each segment, in chronological order.
+        Means retain the input values' units. The first and final segments can
+        be shorter than one year.
     """
     # Keep the series' actual start and end, splitting at intervening plant-year boundaries.
     sample_duration = dt / 31_536_000
-    sample_edges = start_year + np.arange(capacity_factors.size + 1) * sample_duration
+    sample_edges = start_year + np.arange(timestep_values.size + 1) * sample_duration
     annual_edges = np.arange(math.floor(start_year) + 1, math.ceil(sample_edges[-1]), dtype=float)
     segment_edges = np.concatenate(([start_year], annual_edges, [sample_edges[-1]]))
     durations = np.diff(segment_edges)
 
-    # Accumulate CF multiplied by elapsed time, starting with zero before the first sample.
-    cumulative_cf = np.concatenate(([0.0], np.cumsum(capacity_factors))) * sample_duration
+    # Accumulate values multiplied by elapsed time, starting with zero before the first sample.
+    cumulative_values = np.concatenate(([0.0], np.cumsum(timestep_values))) * sample_duration
 
     # Find running totals at segment boundaries and subtract adjacent totals.
     # If 4 hours of a 10-hour timestep fall in one year, that year receives 40%
     # of its contribution and the next year receives 60%.
-    segment_totals = np.diff(np.interp(segment_edges, sample_edges, cumulative_cf))
+    segment_totals = np.diff(np.interp(segment_edges, sample_edges, cumulative_values))
 
-    # Divide by each segment's actual duration to get its mean CF, including for partial years.
+    # Divide by each segment's actual duration to get its mean, including for partial years.
     return segment_totals / durations, durations
 
 
@@ -302,7 +303,7 @@ def _degraded_replacement_cycles(
     cycle_cf_segments = []
     cycle_segment_durations = []
     for start_index, end_index in pairwise(cycle_boundaries):
-        capacity_factors, durations = _annual_cf_segments(
+        capacity_factors, durations = _time_weighted_annual_means(
             timestep_capacity_factors[start_index:end_index],
             dt,
             start_year=start_index * sample_duration,

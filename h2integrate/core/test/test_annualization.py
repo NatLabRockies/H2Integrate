@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from h2integrate.core.annualization import (
-    _annual_cf_segments,
     _project_capacity_factors,
     _extrapolate_annual_values,
     _build_replacement_schedule,
+    _time_weighted_annual_means,
     _degraded_replacement_cycles,
     _annualization_steps_per_year,
 )
@@ -68,12 +68,12 @@ def test_annualization_steps_per_year():
 
 
 @pytest.mark.unit
-def test_annual_cf_segments() -> None:
-    """Return CF means and durations for two complete plant years."""
-    capacity_factors, durations = _annual_cf_segments(
-        capacity_factors=np.array([0.5, 0.25]), dt=31_536_000
+def test_time_weighted_annual_means() -> None:
+    """Return time-weighted means and durations for two complete plant years."""
+    annual_means, durations = _time_weighted_annual_means(
+        timestep_values=np.array([0.5, 0.25]), dt=31_536_000
     )
-    np.testing.assert_allclose(capacity_factors, [0.5, 0.25])
+    np.testing.assert_allclose(annual_means, [0.5, 0.25])
     np.testing.assert_allclose(durations, [1.0, 1.0])
 
 

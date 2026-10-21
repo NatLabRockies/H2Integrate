@@ -1,5 +1,4 @@
 import copy
-import math
 import hashlib
 from pathlib import Path
 
@@ -11,12 +10,11 @@ from attrs import field, define
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.annualization import (
     _VALID_EXTRAPOLATION_METHODS,
-    _annual_cf_segments,
     _project_capacity_factors,
     _extrapolate_annual_values,
     _build_replacement_schedule,
+    _time_weighted_annual_means,
     _degraded_replacement_cycles,
-    _annualization_steps_per_year,
     _validate_annualization_inputs,
 )
 
@@ -31,13 +29,13 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        # Below should be done in subclass that produces hydrogen
+        # Below should be done in a subclass that produces hydrogen
         # self.commodity = "hydrogen"
         # self.commodity_rate_units = "kg/h"
         # self.commodity_amount_units = "kg"
         # super().setup()
 
-        # Below should be done in subclass that produces electricity
+        # Below should be done in a subclass that produces electricity
         # self.commodity = "electricity"
         # self.commodity_rate_units = "kW"
         # self.commodity_amount_units = "kW*h"
@@ -166,6 +164,21 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         soh_cycle_repetition="all_soh_cycles",
     ):
         """Project annual capacity factors and replacement schedule across plant life.
+            Inputs must be finite one-dimensional arrays of identical length. SOH and
+            its EOL threshold use fractions in [0, 1]. Resets are upward SOH jumps greater
+            than 1e-9 at sample offsets; SOH alone cannot identify a first-sample reset or
+            resets without an upward jump. Each reset closes the outgoing unit's cycle.
+            Trailing degradation uses the SOH loss between the last two post-reset
+            samples to complete the cycle at the simulation timestep. Projected CF scales
+            the last timestep CF by projected SOH relative to the last observed SOH.
+            EOL is checked at timestep boundaries, without interpolating. With fewer than
+            two post-reset samples or stalled degradation, no EOL is inferred.
+            Each cycle's CF is then aggregated into annual segments, retaining partial-year
+            durations. Segments are duration-weighted into fixed 365-day plant years
+            when completed cycles repeat.
+            Cycle-end events are discrete counts in [year, year + 1); initial installation
+            and retirement at the end of the plant life are excluded. CF and replacement
+            events use the same cycle durations.
 
         Args:
             performance_timeseries (array-like): timestep-level performance values used
@@ -193,23 +206,6 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
                 - ``"all_soh_cycles"``: repeat the full ordered set of simulated cycles.
                 - ``"final_soh_cycle"``: repeat only the final completed cycle.
-
-        Notes:
-            Inputs must be finite one-dimensional arrays of identical length. SOH and
-            its EOL threshold use fractions in [0, 1]. Resets are upward SOH jumps greater
-            than 1e-9 at sample offsets; SOH alone cannot identify a first-sample reset or
-            resets without an upward jump. Each reset closes the outgoing unit's cycle.
-            Trailing degradation uses the SOH loss between the last two post-reset
-            samples to complete the cycle at the simulation timestep. Projected CF scales
-            the last timestep CF by projected SOH relative to the last observed SOH.
-            EOL is checked at timestep boundaries, without interpolating. With fewer than
-            two post-reset samples or stalled degradation, no EOL is inferred.
-            Each cycle's CF is then aggregated into annual segments, retaining partial-year
-            durations. Segments are duration-weighted into fixed365-day plant years
-            when completed cycles repeat.
-            Cycle-end events are discrete counts in [year, year + 1); initial installation
-            and retirement at the end of the plant life are excluded. CF and replacement
-            events use the same cycle durations.
 
         Returns:
             tuple[np.ndarray, np.ndarray]: projected annual capacity factors and
@@ -241,9 +237,10 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         # Without degradation, no replacements occur and capacity factors are simply
         # extrapolated across the plant life.
         if not use_degradation:
-            simulated_annual_capacity_factors, simulated_durations_years = _annual_cf_segments(
-                performance_timeseries / rated_performance, self.dt
-            )
+            (
+                simulated_annual_capacity_factors,
+                simulated_durations_years,
+            ) = _time_weighted_annual_means(performance_timeseries / rated_performance, self.dt)
             annual_capacity_factors = _extrapolate_annual_values(
                 simulated_annual_capacity_factors,
                 plant_life,
@@ -386,21 +383,10 @@ class CostModelBaseClass(om.ExplicitComponent):
                 f"{_VALID_EXTRAPOLATION_METHODS}; got {extrapolation_method!r}."
             )
 
-        steps_per_year = _annualization_steps_per_year(self.dt)
-        n_sim_years = math.ceil(varopex_timeseries.size / steps_per_year)
-        simulated_annual_varopex = np.zeros(n_sim_years)
-        simulated_durations_years = np.zeros(n_sim_years)
-
-        for year in range(n_sim_years):
-            start = year * steps_per_year
-            end = min(start + steps_per_year, varopex_timeseries.size)
-            segment_seconds = (end - start) * self.dt
-            simulated_durations_years[year] = segment_seconds / 31_536_000
-            simulated_annual_varopex[year] = (
-                varopex_timeseries[start:end].sum() * (31_536_000 / segment_seconds)
-                if segment_seconds > 0.0
-                else 0.0
-            )
+        mean_timestep_costs, simulated_durations_years = _time_weighted_annual_means(
+            varopex_timeseries, self.dt
+        )
+        simulated_annual_varopex = mean_timestep_costs * (31_536_000 / self.dt)
 
         return _extrapolate_annual_values(
             simulated_annual_varopex,

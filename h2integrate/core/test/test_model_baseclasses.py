@@ -115,6 +115,32 @@ def test_average_varopex_weights_partial_year() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("method", ["tile", "final_sim_value", "average_sim_value"])
+def test_varopex_splits_timestep_at_year_boundary(subtests, method: str) -> None:
+    """Allocate a crossing timestep's cost by elapsed time before annualizing."""
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 10_000
+    cost_model.plant_life = 3
+    timestep_costs = np.zeros(4000)
+    timestep_costs[3153] = 100.0
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timestep_costs, extrapolation_method=method
+    )
+    partial_year_duration = (timestep_costs.size * cost_model.dt - 31_536_000) / 31_536_000
+    partial_year_annual_cost = 40.0 / partial_year_duration
+    expected_fill = {
+        "tile": 60.0,
+        "final_sim_value": partial_year_annual_cost,
+        "average_sim_value": 100.0 / (1.0 + partial_year_duration),
+    }[method]
+
+    with subtests.test("the crossing timestep contributes 60 dollars and 40 dollars"):
+        np.testing.assert_allclose(annual_varopex[:2], [60.0, partial_year_annual_cost])
+    with subtests.test("future costs follow the selected extrapolation mode"):
+        assert annual_varopex[2] == pytest.approx(expected_fill)
+
+
+@pytest.mark.unit
 def test_extrapolates_incomplete_trailing_cycle_then_tiles():
     # SOH never reaches EOL during simulation, so the trailing cycle is completed by
     # extrapolation before the completed cycle is tiled across plant life.
