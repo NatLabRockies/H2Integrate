@@ -104,10 +104,6 @@ def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cos
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -156,10 +152,6 @@ def test_profast_npv_no1_change_sell_price(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -250,10 +242,6 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -305,10 +293,6 @@ def test_profast_npv_nonstandard_price_units(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -363,10 +347,6 @@ def test_profast_npv_multi_year_sell_price(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -413,10 +393,6 @@ def test_profast_npv_multi_year_error(profast_inputs_no2, fake_filtered_tech_con
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -450,10 +426,6 @@ def test_profast_npv_missing_sell_price(profast_inputs_no2, fake_filtered_tech_c
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -500,10 +472,6 @@ def test_profast_npv_with_inflation(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -577,10 +545,6 @@ def test_profast_npv_uses_first_year_price_for_construction_padding(
     plant_config = {
         "plant": {
             "plant_life": plant_life,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no2},
     }
@@ -635,10 +599,6 @@ def test_profast_npv_warnings(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }

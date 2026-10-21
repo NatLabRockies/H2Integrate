@@ -126,10 +126,6 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -229,10 +225,6 @@ def test_profast_comp_coproduct(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -299,10 +291,6 @@ def test_profast_comp_heat(profast_inputs_no1, fake_filtered_tech_config, fake_c
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -363,10 +351,6 @@ def test_profast_comp_sales_tax(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -415,10 +399,6 @@ def test_profast_lco_warnings(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }

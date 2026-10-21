@@ -510,7 +510,6 @@ def resample_resource_data_to_dt(
         raise ValueError(msg)
 
     target_offsets = np.arange(target_n) * target_dt
-
     # Pandas 3 may infer second resolution, which cannot represent fractional resampling bins.
     native_index = pd.to_timedelta(elapsed, unit="s").as_unit("ns")
     target_index = pd.to_timedelta(target_offsets, unit="s").as_unit("ns")

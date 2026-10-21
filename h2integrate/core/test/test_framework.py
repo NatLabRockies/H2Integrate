@@ -21,6 +21,8 @@ from h2integrate import (
 )
 from h2integrate.core.model_checks import (
     check_model_time_step,
+    check_model_is_steppable,
+    check_time_marching_config,
     check_model_control_classifier,
     check_model_simulation_duration,
 )
@@ -920,32 +922,21 @@ def test_h2i_config_rejects_leap_day_resources(include_leap_day):
 
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
-def test_unsupported_simulation_parameters(temp_dir):
+def test_unsupported_simulation_parameters():
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
-    temp_plant_config_ntimesteps = temp_dir / "temp_plant_config_ntimesteps.yaml"
-    temp_plant_config_dt = temp_dir / "temp_plant_config_dt.yaml"
-
-    shutil.copy(orig_plant_config, temp_plant_config_ntimesteps)
-    shutil.copy(orig_plant_config, temp_plant_config_dt)
-
-    # Load the plant_config YAML content
-    plant_config_data_ntimesteps = load_plant_yaml(temp_plant_config_ntimesteps)
-    plant_config_data_dt = load_plant_yaml(temp_plant_config_dt)
+    plant_config_data_ntimesteps = load_plant_yaml(orig_plant_config)
+    plant_config_data_dt = deepcopy(plant_config_data_ntimesteps)
     # docs fencepost end: DO NOT REMOVE
 
     plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
     # Sub-year and multi-year horizons are supported when positive and within plant life.
     plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
-    with temp_plant_config_ntimesteps.open("w") as f:
-        yaml.safe_dump(plant_config_data_ntimesteps, f)
-    load_plant_yaml(temp_plant_config_ntimesteps)
+    load_plant_yaml(plant_config_data_ntimesteps)
 
     # A two-year hourly horizon should also load without error.
     plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
-    with temp_plant_config_dt.open("w") as f:
-        yaml.safe_dump(plant_config_data_dt, f)
-    load_plant_yaml(temp_plant_config_dt)
+    load_plant_yaml(plant_config_data_dt)
 
     # A horizon longer than the plant life is not supported and must raise.
     over_life = deepcopy(plant_config_data_dt)
@@ -1099,6 +1090,71 @@ def test_technology_finance_checks_simulation_duration(
         with pytest.raises(ValueError, match=r"Model FinanceModel.*simulation durations"):
             model.create_technology_models()
         assert model.finance_models == []
+
+
+def test_check_model_is_steppable(subtests):
+
+    class TechControllerSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "TechControllerSteppable"
+
+    class TechControllerNonSteppable:
+        def __str__(self):
+            return "TechControllerNonSteppable"
+
+    class PerformanceModelSteppable:
+        _is_steppable = True
+
+        def __str__(self):
+            return "PerformanceModelSteppable"
+
+    class PerformanceModelNonSteppable:
+        def __str__(self):
+            return "PerformanceModelNonSteppable"
+
+    with subtests.test("Steppable classes"):
+        check_model_is_steppable(
+            control_strategies=[TechControllerSteppable()],
+            performance_models=[PerformanceModelSteppable()],
+        )
+
+    with subtests.test("Nonsteppable classes"):
+        with pytest.raises(AttributeError):
+            check_model_is_steppable(
+                control_strategies=[TechControllerNonSteppable()],
+                performance_models=[PerformanceModelSteppable(), PerformanceModelNonSteppable()],
+            )
+
+
+@pytest.mark.unit
+def test_check_time_marching_config(subtests):
+    with subtests.test("Valid window size enables time-marching"):
+        assert check_time_marching_config(8760, 24, False, False) is True
+
+    with subtests.test("Window size equal to n_timesteps is a normal simulation"):
+        assert check_time_marching_config(8760, 8760, True, True) is False
+
+    with subtests.test("Non-positive window size"):
+        with pytest.raises(ValueError, match=r"must be positive"):
+            check_time_marching_config(8760, 0, False, False)
+
+    with subtests.test("Window size greater than n_timesteps"):
+        with pytest.raises(ValueError, match=r"cannot be greater than n_timesteps \(8760\)"):
+            check_time_marching_config(8760, 9000, False, False)
+
+    with subtests.test("Window size does not divide n_timesteps"):
+        with pytest.raises(ValueError, match=r"divisible by n_timesteps_window \(7\)"):
+            check_time_marching_config(8760, 7, False, False)
+
+    with subtests.test("System-level control is not supported"):
+        with pytest.raises(NotImplementedError, match="system-level control"):
+            check_time_marching_config(8760, 24, True, False)
+
+    with subtests.test("Technology cycles are not supported"):
+        with pytest.raises(NotImplementedError, match="cycle"):
+            check_time_marching_config(8760, 24, False, True)
 
 
 @pytest.mark.unit
