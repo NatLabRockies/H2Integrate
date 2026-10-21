@@ -184,6 +184,7 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         hydrogen_in (array): Hourly hydrogen feed to the synthesis loop [kg/h].
         nitrogen_in (array): Hourly nitrogen feed to the synthesis loop [kg/h].
         electricity_in (array): Hourly electricity supplied to the synthesis loop [MW].
+        ammonia_command_value (array): Hourly SLC ammonia production set point [kg/h].
 
     Outputs:
         ammonia_out (array): Hourly ammonia produced by the synthesis loop [kg/h].
@@ -208,9 +209,9 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         total_nitrogen_consumed (float): Total nitrogen consumed over the modeled period [kg/year].
         total_electricity_consumed (float): Total electricity consumed over the modeled
             period [kWh/year].
-        limiting_output (array of int): Limiting factor indicator per timestep [-],
+        limiting_input (array of int): Limiting factor indicator per timestep [-],
             where 0 = nitrogen-limited, 1 = hydrogen-limited, 2 = electricity-limited,
-            and 3 = capacity-limited.
+            3 = capacity-limited, and 4 = ammonia-command-limited.
         max_hydrogen_capacity (float): Maximum rate of hydrogen consumption  [kg/h].
         ammonia_capacity_factor (float): Ratio of ammonia produced to the maximum production
             capacity [-].
@@ -249,6 +250,15 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         self.add_input("turndown_ratio", val=self.config.turndown_ratio, units="unitless")
         self.add_input("ramp_up_rate", val=self.config.ramp_up_rate_fraction, units="unitless")
         self.add_input("ramp_down_rate", val=self.config.ramp_down_rate_fraction, units="unitless")
+
+        if "system_level_control" in self.options["plant_config"]:
+            self.add_input(
+                "ammonia_command_value",
+                val=0.0,
+                shape=self.n_timesteps,
+                units=self.commodity_rate_units,
+                desc="Command value for ammonia production from SLC",
+            )
 
         if self.config.include_warm_start:
             self.add_input("off_time_warm_start", val=self.config.off_hours_warm_start, units="h")
@@ -300,10 +310,10 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             tuple:
                 - nh3_production (np.ndarray): production profile after ramping and
                   start-up losses have been applied.
-                - consumption_multiplier (np.ndarray): on/off-gated production profile
-                  used to scale input-commodity consumption. Feedstocks are consumed during
-                  start-up delays (when ammonia output is zeroed) so the consumption
-                  multiplier is taken *before* start-up losses are applied.
+                - consumption_multiplier (np.ndarray): final production profile used to
+                  scale input-commodity consumption. Feedstocks are consumed only in
+                  proportion to the ammonia produced, so start-up delay hours consume
+                  nothing and positive ramp-down output below turndown still consumes feed.
         """
         rated_capacity = float(inputs["ammonia_production_capacity"][0])
 
@@ -340,10 +350,14 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         # Clamp pre-constraint production into the physically allowed range.
         nh3_production = np.clip(nh3_production, a_min=0.0, a_max=rated_capacity)
 
-        # 1. Set production to zero when producing less than the min operating point
+        # 1. Set production to zero when producing less than the min operating point.
+        # Turndown is the steady-state minimum only. It is not re-applied after ramping, so
+        # production can be below turndown while ramping up or down (ramp rates take precedence).
         nh3_production = np.where(nh3_production < minimum_production, 0.0, nh3_production)
 
         # 2. Apply ramping limits on the per-timestep change in production.
+        # Ramping can leave positive output below turndown (ramping down toward zero, or
+        # ramping up from zero when the ramp-up rate is below turndown).
         nh3_production = apply_ramping_limits(
             nh3_production,
             dt_seconds=self.dt,
@@ -398,11 +412,12 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
             commodity_amount_units=self.commodity_amount_units,
         )
 
-        # 5. Compute the consumption multiplier from the post-dynamic profile.
-        # in current behavior the consumption is based on the nh3 produced during
-        # that timestep. TODO: develop function to allow for varied consumption based
-        # on behavior in that time step (e.g., ramping down uses less n2 and h2 but more power)
-        consumption_multiplier = np.where(nh3_production >= minimum_production, nh3_production, 0)
+        # 5. Compute the consumption multiplier from the post-dynamic profile. Consumption
+        # follows the ammonia produced in that timestep, including positive output below
+        # turndown during ramp-down.
+        # TODO: develop function to allow for varied consumption based on behavior in that
+        # time step (e.g., ramping down uses less n2 and h2 but more power)
+        consumption_multiplier = np.maximum(nh3_production, 0.0)
 
         return nh3_production, consumption_multiplier
 
@@ -459,15 +474,23 @@ class AmmoniaSynLoopPerformanceModel(ResizeablePerformanceModelBaseClass):
         nh3_from_elec = elec_in / energy_demand  # kg nh3 / hr
 
         # Limiting NH3 production per hour by each input
-        nh3_prod = np.minimum.reduce([nh3_from_n2, nh3_from_h2, nh3_from_elec])
-        limiters = np.argmin([nh3_from_n2, nh3_from_h2, nh3_from_elec], axis=0)
+        production_limits = [nh3_from_n2, nh3_from_h2, nh3_from_elec]
+        system_level_control_enabled = "system_level_control" in self.options["plant_config"]
+        if system_level_control_enabled:
+            # The command joins the feed limits as the fourth candidate under SLC.
+            production_limits.append(inputs["ammonia_command_value"])
+
+        nh3_prod = np.minimum.reduce(production_limits)
+        limiters = np.argmin(production_limits, axis=0)
+        if system_level_control_enabled:
+            limiters = np.where(limiters == 3, 4, limiters)
 
         # Limiting NH3 production per hour by capacity
         nh3_prod = np.minimum.reduce([nh3_prod, np.full(len(nh3_prod), nh3_cap)])
         cap_lim = 1 - np.argmax([nh3_prod, list(np.full(len(nh3_prod), nh3_cap))], axis=0)
 
-        # Determine what the limiting factor is for each hour
-        limiters = np.maximum.reduce([cap_lim * 3, limiters])
+        # Capacity takes precedence over a command at or above rated production.
+        limiters = np.where(cap_lim == 1, 3, limiters)
         outputs["limiting_input"] = limiters
 
         # Apply dynamic operation

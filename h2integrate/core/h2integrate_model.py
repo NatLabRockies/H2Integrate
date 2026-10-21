@@ -17,6 +17,7 @@ from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
     check_technology_connections,
+    check_resource_models_are_connected,
     validate_technology_interconnections,
     split_indices_from_connected_parameter_definition,
 )
@@ -111,6 +112,18 @@ class H2IntegrateModel:
         # technologies are connected within the `technology_interconnections` section of the
         # plant config
         self.connect_technologies()
+        # sites and resources are connected to technologies within the
+        # `site_to_tech_connections` section of the plant config
+        self.connect_sites_to_techs()
+        # connect technology costs and performance specifications to the system-level
+        # finance models based on info in the `finance_parameters['finance_subgroups']`
+        # section of the plant config
+        self.connect_techs_to_finance()
+        # connect dispatch rules for Pyomo-based storage dispatch models based on
+        # `tech_to_dispatch_connections` section of the plant config
+        self.connect_dispatch_rules()
+        # auto-order the connections and check for any feedback loops in the connections
+        self.finalize_connections()
 
         # Ensure the plant group has the correct openmdao nonlinear solver
         # considering system level control config options, system graph cycles,
@@ -1564,6 +1577,12 @@ class H2IntegrateModel:
 
         self.finance_subgroups = finance_subgroups
 
+    @staticmethod
+    def _next_connection_index(counts, tech_name):
+        """Increment and return the 1-based connection index tracked for `tech_name`."""
+        counts[tech_name] = counts.get(tech_name, 0) + 1
+        return counts[tech_name]
+
     def _connect_multivariable_stream(
         self, source_tech, dest_tech, stream_name, combiner_counts, splitter_counts
     ):
@@ -1580,22 +1599,14 @@ class H2IntegrateModel:
             splitter_counts (dict): Tracks the next output index per splitter technology.
         """
         if self.tech_control_classifiers.get(dest_tech) == "combiner":
-            if dest_tech not in combiner_counts:
-                combiner_counts[dest_tech] = 1
-            else:
-                combiner_counts[dest_tech] += 1
-            stream_index = combiner_counts[dest_tech]
+            stream_index = self._next_connection_index(combiner_counts, dest_tech)
             for var_name in multivariable_streams[stream_name]:
                 self.plant.connect(
                     f"{source_tech}.{stream_name}:{var_name}_out",
                     f"{dest_tech}.{stream_name}:{var_name}_in{stream_index}",
                 )
         elif self.tech_control_classifiers.get(source_tech) == "splitter":
-            if source_tech not in splitter_counts:
-                splitter_counts[source_tech] = 1
-            else:
-                splitter_counts[source_tech] += 1
-            stream_index = splitter_counts[source_tech]
+            stream_index = self._next_connection_index(splitter_counts, source_tech)
             for var_name in multivariable_streams[stream_name]:
                 self.plant.connect(
                     f"{source_tech}.{stream_name}:{var_name}_out{stream_index}",
@@ -1609,6 +1620,12 @@ class H2IntegrateModel:
                 )
 
     def connect_technologies(self):
+        """Connect technologies to each other via `technology_interconnections`.
+
+        Each connection is either 4 elements (source, dest, item, transport type), which creates
+        a transport component, or 3 elements (source, dest, parameter), which connects
+        variables directly.
+        """
         technology_interconnections = self.plant_config.get("technology_interconnections", [])
 
         combiner_counts = {}
@@ -1618,344 +1635,292 @@ class H2IntegrateModel:
         # the connection type (e.g. cable, pipeline, etc)
         for connection in technology_interconnections:
             if len(connection) == 4:
-                source_tech, dest_tech, transport_item, transport_type = connection
-
-                # Check if this is a multivariable stream connection
-                # Format: [source, dest, stream_name, transport_type]
-                if transport_item in multivariable_streams:
-                    self._connect_multivariable_stream(
-                        source_tech,
-                        dest_tech,
-                        transport_item,
-                        combiner_counts,
-                        splitter_counts,
-                    )
-                    continue  # Skip the rest of the 4-element handling
-
-                if transport_type in self.tech_names:
-                    # if the transport type is already a technology, skip creating a new component
-                    connection_name = f"{transport_type}"
-                else:
-                    # make the connection_name based on source, dest, item, type
-                    connection_name = (
-                        f"{transport_item}_{source_tech}_to_{dest_tech}_{transport_type}"
-                    )
-
-                # Get the performance model of the source_tech
-                source_tech_config = self.technology_config["technologies"].get(source_tech, {})
-                perf_model_name = source_tech_config.get("performance_model", {}).get("model")
-                cost_model_name = source_tech_config.get("cost_model", {}).get("model", "")
-
-                # If the source is a feedstock, make sure to connect the amount of
-                # feedstock consumed from the technology back to the feedstock cost model
-                if "FeedstockCostModel" in cost_model_name:
-                    self.plant.connect(
-                        f"{dest_tech}.{transport_item}_consumed",
-                        f"{source_tech}.{transport_item}_consumed",
-                    )
-                    # Connect the feedstock performance model output to the cost model input
-                    self.plant.connect(
-                        f"{source_tech}_source.{transport_item}_out",
-                        f"{source_tech}.{transport_item}_out",
-                    )
-
-                if perf_model_name == "FeedstockPerformanceModel":
-                    source_tech = f"{source_tech}_source"
-
-                # Create the transport object
-                # allow transport_type to be from self.tech_name
-                if transport_type in self.tech_names:
-                    # Connect the connection component to the destination technology
-                    pass
-                else:
-                    connection_component = self.supported_models[transport_type](
-                        transport_item=transport_item, plant_config=self.plant_config
-                    )
-
-                    # Add the connection component to the model
-                    check_model_time_step(
-                        transport_type,
-                        connection_component,
-                        self.plant_config["plant"]["simulation"]["dt"],
-                    )
-                    check_model_simulation_duration(
-                        transport_type,
-                        connection_component,
-                        self.plant_config["plant"]["simulation"]["n_timesteps"],
-                        self.plant_config["plant"]["simulation"]["dt"],
-                    )
-                    self.plant.add_subsystem(connection_name, connection_component)
-
-                    # Reorder the subsystems so transporters comes after their source technology
-                    # NOTE: the private method must be used because setup() has not been called
-                    subsystem_names = list(self.plant._static_subsystems_allprocs)
-                    subsystem_names.remove(connection_name)
-                    insert_idx = subsystem_names.index(source_tech) + 1
-                    subsystem_names.insert(insert_idx, connection_name)
-                    self.plant.set_order(subsystem_names)
-
-                # Check if the source technology is a splitter
-                if self.tech_control_classifiers.get(source_tech) == "splitter":
-                    # Connect the source technology to the connection component
-                    # with specific output names
-                    if source_tech not in splitter_counts:
-                        splitter_counts[source_tech] = 1
-                    else:
-                        splitter_counts[source_tech] += 1
-
-                    # Connect the splitter output to the connection component
-                    self.plant.connect(
-                        f"{source_tech}.{transport_item}_out{splitter_counts[source_tech]}",
-                        f"{connection_name}.{transport_item}_in",
-                    )
-
-                else:
-                    # Connect the source technology to the connection component
-                    self.plant.connect(
-                        f"{source_tech}.{transport_item}_out",
-                        f"{connection_name}.{transport_item}_in",
-                    )
-
-                # Check if the transport type is a combiner
-                if self.tech_control_classifiers.get(dest_tech) == "combiner":
-                    # Connect the source technology to the connection component
-                    # with specific input names
-                    if dest_tech not in combiner_counts:
-                        combiner_counts[dest_tech] = 1
-                    else:
-                        combiner_counts[dest_tech] += 1
-
-                    # Connect the connection component to the destination technology
-                    self.plant.connect(
-                        f"{connection_name}.{transport_item}_out",
-                        f"{dest_tech}.{transport_item}_in{combiner_counts[dest_tech]}",
-                    )
-                    # Connect the source tech design and performance info to the combiner
-                    self.plant.connect(
-                        f"{source_tech}.rated_{transport_item}_production",
-                        f"{dest_tech}.rated_{transport_item}_production{combiner_counts[dest_tech]}",
-                    )
-                    self.plant.connect(
-                        f"{source_tech}.capacity_factor",
-                        f"{dest_tech}.{transport_item}_capacity_factor{combiner_counts[dest_tech]}",
-                    )
-
-                else:
-                    # Connect the connection component to the destination technology
-                    self.plant.connect(
-                        f"{connection_name}.{transport_item}_out",
-                        f"{dest_tech}.{transport_item}_in",
-                    )
-
+                self._connect_technologies_with_transport(
+                    connection, combiner_counts, splitter_counts
+                )
             elif len(connection) == 3:
-                source_tech, dest_tech, connected_parameter = connection
-                src_indices = None
-
-                # initialize src_indices to allow connections between different shaped variables
-                if isinstance(connected_parameter, list):
-                    connected_parameter, src_indices = (
-                        split_indices_from_connected_parameter_definition(connected_parameter)
-                    )
-
-                # connect directly from source to dest
-                if isinstance(connected_parameter, tuple | list):
-                    source_parameter, dest_parameter = connected_parameter
-                    # Check if this is a multivariable stream connection
-                    if source_parameter in multivariable_streams:
-                        self._connect_multivariable_stream(
-                            source_tech,
-                            dest_tech,
-                            source_parameter,
-                            combiner_counts,
-                            splitter_counts,
-                        )
-                    else:
-                        self.plant.connect(
-                            f"{source_tech}.{source_parameter}",
-                            f"{dest_tech}.{dest_parameter}",
-                            src_indices=src_indices,
-                        )
-                else:
-                    # Check if the connected_parameter is a multivariable stream
-                    if connected_parameter in multivariable_streams:
-                        self._connect_multivariable_stream(
-                            source_tech,
-                            dest_tech,
-                            connected_parameter,
-                            combiner_counts,
-                            splitter_counts,
-                        )
-                    else:
-                        self.plant.connect(
-                            f"{source_tech}.{connected_parameter}",
-                            f"{dest_tech}.{connected_parameter}",
-                            src_indices=src_indices,
-                        )
-
+                self._connect_technologies_directly(connection, combiner_counts, splitter_counts)
             else:
                 err_msg = f"Invalid connection: {connection}"
                 raise ValueError(err_msg)
 
+    def _connect_technologies_with_transport(self, connection, combiner_counts, splitter_counts):
+        """Connect two technologies through a transport component.
+
+        Args:
+            connection (list): `[source_tech, dest_tech, transport_item, transport_type]`.
+            combiner_counts (dict): Tracks the next input index per combiner technology.
+            splitter_counts (dict): Tracks the next output index per splitter technology.
+        """
+        source_tech, dest_tech, transport_item, transport_type = connection
+
+        # Check if this is a multivariable stream connection
+        # Format: [source, dest, stream_name, transport_type]
+        if transport_item in multivariable_streams:
+            self._connect_multivariable_stream(
+                source_tech,
+                dest_tech,
+                transport_item,
+                combiner_counts,
+                splitter_counts,
+            )
+            return
+
+        if transport_type in self.tech_names:
+            # if the transport type is already a technology, skip creating a new component
+            connection_name = f"{transport_type}"
+        else:
+            # make the connection_name based on source, dest, item, type
+            connection_name = f"{transport_item}_{source_tech}_to_{dest_tech}_{transport_type}"
+
+        # Get the performance model of the source_tech
+        source_tech_config = self.technology_config["technologies"].get(source_tech, {})
+        perf_model_name = source_tech_config.get("performance_model", {}).get("model")
+        cost_model_name = source_tech_config.get("cost_model", {}).get("model", "")
+
+        # If the source is a feedstock, make sure to connect the amount of
+        # feedstock consumed from the technology back to the feedstock cost model
+        if "FeedstockCostModel" in cost_model_name:
+            self.plant.connect(
+                f"{dest_tech}.{transport_item}_consumed",
+                f"{source_tech}.{transport_item}_consumed",
+            )
+            # Connect the feedstock performance model output to the cost model input
+            self.plant.connect(
+                f"{source_tech}_source.{transport_item}_out",
+                f"{source_tech}.{transport_item}_out",
+            )
+
+        if perf_model_name == "FeedstockPerformanceModel":
+            source_tech = f"{source_tech}_source"
+
+        # Create the transport object, unless the transport type is already a technology
+        if transport_type not in self.tech_names:
+            connection_component = self.supported_models[transport_type](
+                transport_item=transport_item, plant_config=self.plant_config
+            )
+
+            # Add the connection component to the model
+            check_model_time_step(
+                transport_type,
+                connection_component,
+                self.plant_config["plant"]["simulation"]["dt"],
+            )
+            check_model_simulation_duration(
+                transport_type,
+                connection_component,
+                self.plant_config["plant"]["simulation"]["n_timesteps"],
+                self.plant_config["plant"]["simulation"]["dt"],
+            )
+            self.plant.add_subsystem(connection_name, connection_component)
+
+            # Reorder the subsystems so transporters comes after their source technology
+            # NOTE: the private method must be used because setup() has not been called
+            subsystem_names = list(self.plant._static_subsystems_allprocs)
+            subsystem_names.remove(connection_name)
+            insert_idx = subsystem_names.index(source_tech) + 1
+            subsystem_names.insert(insert_idx, connection_name)
+            self.plant.set_order(subsystem_names)
+
+        # Connect the source technology to the connection component, using the numbered
+        # output if the source is a splitter
+        if self.tech_control_classifiers.get(source_tech) == "splitter":
+            source_index = self._next_connection_index(splitter_counts, source_tech)
+            source_variable = f"{source_tech}.{transport_item}_out{source_index}"
+        else:
+            source_variable = f"{source_tech}.{transport_item}_out"
+        self.plant.connect(source_variable, f"{connection_name}.{transport_item}_in")
+
+        # Connect the connection component to the destination technology, using the numbered
+        # input (and extra design info) if the destination is a combiner
+        if self.tech_control_classifiers.get(dest_tech) == "combiner":
+            dest_index = self._next_connection_index(combiner_counts, dest_tech)
+            self.plant.connect(
+                f"{connection_name}.{transport_item}_out",
+                f"{dest_tech}.{transport_item}_in{dest_index}",
+            )
+            # Connect the source tech design and performance info to the combiner
+            self.plant.connect(
+                f"{source_tech}.rated_{transport_item}_production",
+                f"{dest_tech}.rated_{transport_item}_production{dest_index}",
+            )
+            self.plant.connect(
+                f"{source_tech}.capacity_factor",
+                f"{dest_tech}.{transport_item}_capacity_factor{dest_index}",
+            )
+        else:
+            self.plant.connect(
+                f"{connection_name}.{transport_item}_out",
+                f"{dest_tech}.{transport_item}_in",
+            )
+
+    def _connect_technologies_directly(self, connection, combiner_counts, splitter_counts):
+        """Connect variables directly between two technologies.
+
+        Args:
+            connection (list): `[source_tech, dest_tech, connected_parameter]`, where
+                `connected_parameter` is a shared name or a `[source_name, dest_name]` pair,
+                optionally with `src_indices` slicing.
+            combiner_counts (dict): Tracks the next input index per combiner technology.
+            splitter_counts (dict): Tracks the next output index per splitter technology.
+        """
+        source_tech, dest_tech, connected_parameter = connection
+        src_indices = None
+
+        # initialize src_indices to allow connections between different shaped variables
+        if isinstance(connected_parameter, list):
+            connected_parameter, src_indices = split_indices_from_connected_parameter_definition(
+                connected_parameter
+            )
+
+        if isinstance(connected_parameter, tuple | list):
+            source_parameter, dest_parameter = connected_parameter
+        else:
+            source_parameter = dest_parameter = connected_parameter
+
+        if source_parameter in multivariable_streams:
+            self._connect_multivariable_stream(
+                source_tech,
+                dest_tech,
+                source_parameter,
+                combiner_counts,
+                splitter_counts,
+            )
+        else:
+            self.plant.connect(
+                f"{source_tech}.{source_parameter}",
+                f"{dest_tech}.{dest_parameter}",
+                src_indices=src_indices,
+            )
+
+    def connect_sites_to_techs(self):
+        """Connect site resource models to technologies via `site_to_tech_connections`."""
+        if "sites" not in self.plant_config:
+            return
+
         site_to_tech_connections = self.plant_config.get("site_to_tech_connections", [])
 
-        if "sites" in self.plant_config:
-            resource_models = {}
-            for site_grp, site_grp_inputs in self.plant_config["sites"].items():
-                for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
-                    resource_models[f"{site_grp}.{resource_key}"] = resource_params
+        check_resource_models_are_connected(self.plant_config["sites"], site_to_tech_connections)
 
-            resource_source_connections = [c[0] for c in site_to_tech_connections]
-            # Check if there is a missing resource to tech connection or missing resource model
-            if len(resource_models) != len(resource_source_connections):
-                if len(resource_models) > len(resource_source_connections):
-                    # more resource models than resources connected to technologies
-                    non_connected_resource = [
-                        k for k in resource_models if k not in resource_source_connections
-                    ]
-                    # check if theres a resource model that isn't connected to a technology
-                    if len(non_connected_resource) > 0:
-                        msg = (
-                            "Some resources are not connected to a technology. Resource models "
-                            f"{non_connected_resource} are not included in "
-                            "`site_to_tech_connections`. Please connect these resources "
-                            "to their technologies under `site_to_tech_connections` in "
-                            "the plant config file."
-                        )
-                        raise ValueError(msg)
-                if len(resource_source_connections) > len(resource_models):
-                    # more resources connected than resource models
-                    missing_resource = [
-                        k for k in resource_source_connections if k not in resource_models
-                    ]
+        for connection in site_to_tech_connections:
+            if len(connection) != 3:
+                err_msg = f"Invalid resource to tech connection: {connection}"
+                raise ValueError(err_msg)
 
-                    missing_resource = list(set(missing_resource) - set(self.plant_config["sites"]))
-                    # check if theres a resource model that isn't connected to a technology
-                    if len(missing_resource) > 0:
-                        msg = (
-                            "Missing resource(s) are not defined but are connected to a"
-                            f" technology. Missing resource(s) are {missing_resource}. "
-                            "Please check ``site_to_tech_connections`` in the plant"
-                            " config file or add the missing resources"
-                            " to plant_config['site']['resources']."
-                        )
-                        raise ValueError(msg)
+            resource_name, tech_name, variable = connection
 
-            for connection in site_to_tech_connections:
-                if len(connection) != 3:
-                    err_msg = f"Invalid resource to tech connection: {connection}"
-                    raise ValueError(err_msg)
+            # Normalize both forms (paired [site_param, tech_param] vs a single shared
+            # name) into a common site_parameter/tech_parameter pair so the connection
+            # and latitude/longitude checks below only need to be written once.
+            is_pair = isinstance(variable, list | tuple)
+            if is_pair:
+                site_parameter, tech_parameter = variable
+            else:
+                site_parameter = tech_parameter = variable
 
-                resource_name, tech_name, variable = connection
+            self.model.connect(f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}")
 
-                # Normalize both forms (paired [site_param, tech_param] vs a single shared
-                # name) into a common site_parameter/tech_parameter pair so the connection
-                # and latitude/longitude checks below only need to be written once.
-                is_pair = isinstance(variable, list | tuple)
-                if is_pair:
-                    site_parameter, tech_parameter = variable
+            if site_parameter not in ["latitude", "longitude"]:
+                continue
+
+            # If site_parameter is latitude, make sure destination is not longitude
+            # (and vice versa)
+            other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
+            if is_pair:
+                # NOTE: this assumes that technologies with location inputs use full
+                # names, rather than shorthand versions like 'lat' and 'lon'
+                if other_loc_var in tech_parameter:
+                    # connecting site latitude to tech longitude or
+                    # site longitude to tech latitude
+                    msg = (
+                        f"Invalid connection of {site_parameter} to {other_loc_var} "
+                        f"(from {resource_name} to {tech_name}). Please update the "
+                        f"connection so that {site_parameter} is connected to "
+                        f"{tech_parameter.replace(other_loc_var, site_parameter)}."
+                    )
+                    raise ValueError(msg)
+                other_variable = [
+                    other_loc_var,
+                    tech_parameter.replace(site_parameter, other_loc_var),
+                ]
+            else:
+                other_variable = other_loc_var
+
+            # If latitude is connected, make sure longitude is also connected
+            other_connection = [resource_name, tech_name, other_variable]
+            if other_connection not in site_to_tech_connections:
+                msg = (
+                    f"{site_parameter} is connected between {resource_name} and "
+                    f"{tech_name}, but {other_loc_var} is not. Please ensure that "
+                    f"both latitude and longitude are connected from "
+                    f"'{resource_name}' to technology '{tech_name}'"
+                )
+                raise ValueError(msg)
+
+    def connect_techs_to_finance(self):
+        """Connect technology cost outputs to their finance subgroups."""
+        if "finance_parameters" not in self.plant_config:
+            return
+
+        # Connect the outputs of the technology models to the appropriate finance groups
+        for group_id, group_configs in self.finance_subgroups.items():
+            tech_configs = group_configs.get("tech_configs")
+            primary_commodity_type = group_configs.get("commodity")
+            commodity_stream = group_configs.get("commodity_stream")
+            is_system_finance_model = group_configs.get("is_system_finance_model")
+
+            if is_system_finance_model:
+                if group_configs.get("use_commodity_stream_timeseries", False):
+                    # TODO: finish this logic
+                    self.plant.connect(
+                        f"{commodity_stream}.{group_configs.get('commodity_stream_output')}",
+                        f"finance_subgroup_{group_id}.{primary_commodity_type}_produced",
+                    )
                 else:
-                    site_parameter = tech_parameter = variable
+                    # Connect the rated commodity production and capacity factor
+                    # for system-level finance models
+                    self.plant.connect(
+                        f"{commodity_stream}.rated_{primary_commodity_type}_production",
+                        f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
+                    )
 
-                self.model.connect(
-                    f"{resource_name}.{site_parameter}", f"{tech_name}.{tech_parameter}"
+                    self.plant.connect(
+                        f"{commodity_stream}.capacity_factor",
+                        f"finance_subgroup_{group_id}.capacity_factor",
+                    )
+
+            # Only connect technologies that are included in the finance stackup
+            for tech_name in tech_configs.keys():
+                # Skip technologies whose models doesn't add costs
+                perf_model = tech_configs[tech_name].get("performance_model").get("model")
+                cost_model = tech_configs[tech_name].get("cost_model", {}).get("model")
+                if perf_model in no_cost_models and cost_model is None:
+                    continue
+
+                self.plant.connect(
+                    f"{tech_name}.CapEx",
+                    f"finance_subgroup_{group_id}.capex_{tech_name}",
+                )
+                self.plant.connect(
+                    f"{tech_name}.OpEx", f"finance_subgroup_{group_id}.opex_{tech_name}"
+                )
+                self.plant.connect(
+                    f"{tech_name}.VarOpEx", f"finance_subgroup_{group_id}.varopex_{tech_name}"
+                )
+                self.plant.connect(
+                    f"{tech_name}.cost_year",
+                    f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                 )
 
-                if site_parameter in ["latitude", "longitude"]:
-                    # If site_parameter is latitude, make sure destination is not longitude
-                    # (and vice versa)
-                    other_loc_var = "longitude" if site_parameter == "latitude" else "latitude"
-                    if is_pair:
-                        # NOTE: this assumes that technologies with location inputs use full
-                        # names, rather than shorthand versions like 'lat' and 'lon'
-                        if other_loc_var in tech_parameter:
-                            # connecting site latitude to tech longitude or
-                            # site longitude to tech latitude
-                            msg = (
-                                f"Invalid connection of {site_parameter} to {other_loc_var} "
-                                f"(from {resource_name} to {tech_name}). Please update the "
-                                f"connection so that {site_parameter} is connected to "
-                                f"{tech_parameter.replace(other_loc_var, site_parameter)}."
-                            )
-                            raise ValueError(msg)
-                        other_variable = [
-                            other_loc_var,
-                            tech_parameter.replace(site_parameter, other_loc_var),
-                        ]
-                    else:
-                        other_variable = other_loc_var
-
-                    # If latitude is connected, make sure longitude is also connected
-                    other_connection = [resource_name, tech_name, other_variable]
-                    if other_connection not in site_to_tech_connections:
-                        msg = (
-                            f"{site_parameter} is connected between {resource_name} and "
-                            f"{tech_name}, but {other_loc_var} is not. Please ensure that "
-                            f"both latitude and longitude are connected from "
-                            f"'{resource_name}' to technology '{tech_name}'"
-                        )
-                        raise ValueError(msg)
-
-        # connect outputs of the technology models to the cost and finance models of the
-        # same name if the cost and finance models are not None
-        if "finance_parameters" in self.plant_config:
-            # Connect the outputs of the technology models to the appropriate finance groups
-            for group_id, group_configs in self.finance_subgroups.items():
-                tech_configs = group_configs.get("tech_configs")
-                primary_commodity_type = group_configs.get("commodity")
-                commodity_stream = group_configs.get("commodity_stream")
-                is_system_finance_model = group_configs.get("is_system_finance_model")
-
-                if is_system_finance_model:
-                    if group_configs.get("use_commodity_stream_timeseries", False):
-                        # TODO: finish this logic
-                        self.plant.connect(
-                            f"{commodity_stream}.{group_configs.get('commodity_stream_output')}",
-                            f"finance_subgroup_{group_id}.{primary_commodity_type}_produced",
-                        )
-                    else:
-                        # Connect the rated commodity production and capacity factor
-                        # for system-level finance models
-                        self.plant.connect(
-                            f"{commodity_stream}.rated_{primary_commodity_type}_production",
-                            f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
-                        )
-
-                        self.plant.connect(
-                            f"{commodity_stream}.capacity_factor",
-                            f"finance_subgroup_{group_id}.capacity_factor",
-                        )
-
-                # Only connect technologies that are included in the finance stackup
-                for tech_name in tech_configs.keys():
-                    # Skip technologies whose models doesn't add costs
-                    perf_model = tech_configs[tech_name].get("performance_model").get("model")
-                    cost_model = tech_configs[tech_name].get("cost_model", {}).get("model")
-                    if perf_model in no_cost_models and cost_model is None:
-                        continue
-
+                if is_system_finance_model and perf_model not in no_replacement_schedule_models:
+                    # connect replacement schedule to system-level finance models
                     self.plant.connect(
-                        f"{tech_name}.CapEx",
-                        f"finance_subgroup_{group_id}.capex_{tech_name}",
-                    )
-                    self.plant.connect(
-                        f"{tech_name}.OpEx", f"finance_subgroup_{group_id}.opex_{tech_name}"
-                    )
-                    self.plant.connect(
-                        f"{tech_name}.VarOpEx", f"finance_subgroup_{group_id}.varopex_{tech_name}"
-                    )
-                    self.plant.connect(
-                        f"{tech_name}.cost_year",
-                        f"finance_subgroup_{group_id}.cost_year_{tech_name}",
+                        f"{tech_name}.replacement_schedule",
+                        f"finance_subgroup_{group_id}.replacement_schedule_{tech_name}",
                     )
 
-                    if is_system_finance_model and perf_model not in no_replacement_schedule_models:
-                        # connect replacement schedule to system-level finance models
-                        self.plant.connect(
-                            f"{tech_name}.replacement_schedule",
-                            f"finance_subgroup_{group_id}.replacement_schedule_{tech_name}",
-                        )
-
-        self.plant.options["auto_order"] = True
+    def connect_dispatch_rules(self):
+        """Connect dispatch rule functions via `tech_to_dispatch_connections`."""
 
         # initialize dispatch rules connection list
         tech_to_dispatch_connections = self.plant_config.get("tech_to_dispatch_connections", [])
@@ -1982,6 +1947,15 @@ class H2IntegrateModel:
                         f"{tech_name}.dispatch_block_rule_function",
                         f"{dispatching_tech_name}.dispatch_block_rule_function_{tech_name}",
                     )
+
+    def finalize_connections(self):
+        """Let OpenMDAO order the plant and add solvers if the technology graph has loops."""
+        self.plant.options["auto_order"] = True
+
+        # If cycles are found, set solvers for the plant to resolve the coupling
+        if list(nx.simple_cycles(self.technology_graph)):
+            self.plant.nonlinear_solver = om.NonlinearBlockGS()
+            self.plant.linear_solver = om.DirectSolver()
 
     def set_plant_solver(self):
         """Configures solvers on the plant group according to the needs of the run case.
