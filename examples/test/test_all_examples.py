@@ -2331,25 +2331,27 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_out_dir = ex_dir / "ex_out"
     ore_prices_filepath = ex_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
-    shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
-    cases_csv_fpath = ex_out_dir / "cases.csv"
+    shipping_prices_filepath = ex_out_dir / "cases_transport.csv"
+    cases_csv_fpath = ex_out_dir / "cases_iron_plant.csv"
     ex_png_fpath = ex_out_dir / "example_iron_map.png"
     ex_png_fpath.unlink(missing_ok=True)
 
     # Plot LCOI results from cases.sql file, save sql data to csv
-    fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, lcoi_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=cases_csv_fpath,
-        metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/kg)",
+        latitude_var_name="iron_transport.destination_latitude (deg)",
+        longitude_var_name="iron_transport.destination_longitude (deg)",
+        metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
         map_preferences={
             "figsize": (10, 8),
-            "colorbar_label": "Levelized Cost of\nIron [$/kg]",
+            "colorbar_label": "Levelized Cost of\nIron [$/t]",
             "colorbar_limits": (0.6, 1.0),
         },
     )
     # Add a layer for example ore cost prices from select mines
-    fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=ore_prices_filepath,
-        metric_to_plot="ore_cost_per_kg",
+        metric_to_plot="ore_cost_per_tonne",
         map_preferences={
             "colormap": "Greens",
             "marker": "o",
@@ -2362,9 +2364,11 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
         base_layer_gdf=lcoi_layer_gdf,
     )
     # Add a layer for example waterway shipping cost from select mines to select ports
-    fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=shipping_prices_filepath,
-        metric_to_plot="shipping_cost_per_kg",
+        latitude_var_name="iron_transport.destination_latitude (deg)",
+        longitude_var_name="iron_transport.destination_longitude (deg)",
+        metric_to_plot="iron_transport.iron_transport_cost (USD/t)",
         map_preferences={
             "colormap": "Greys",
             "marker": "d",
@@ -2612,11 +2616,11 @@ def test_iron_dri_eaf_example(subtests, temp_copy_of_example):
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 359.670379351
+        assert pytest.approx(lcos, rel=1e-4) == 350.75112
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
+        assert pytest.approx(lcos, rel=1e-4) == 520.9524
 
 
 @pytest.mark.integration
@@ -2636,11 +2640,11 @@ def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 350.302
+        assert pytest.approx(lcos, rel=1e-4) == 341.3828
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 520.417
+        assert pytest.approx(lcos, rel=1e-4) == 509.785
 
 
 @pytest.mark.integration
@@ -2659,7 +2663,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.174385150880128
+        assert pytest.approx(lcoi, rel=1e-4) == 1.0336601
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2675,7 +2679,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 3.3036489452968594
+        assert pytest.approx(lcoi, rel=1e-4) == 2.1629239
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2687,7 +2691,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.266210286641621
+        assert pytest.approx(lcoi, rel=1e-4) == 1.1254852
 
 
 @pytest.mark.integration
