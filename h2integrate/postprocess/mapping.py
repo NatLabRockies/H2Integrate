@@ -290,9 +290,9 @@ def plot_geospatial_point_heat_map(
             Defaults to False.
 
     Returns:
-        tuple: The current plot's figure and axes, legend labels, and GeoDataFrame created from the
-            parsed results, in that order. These objects can be passed back into the function to add
-            additional layers.
+        tuple: (plt.Figure, plt.Axes, list[str], gpd.GeoDataFrame) The current plot's figure and
+            axes, legend labels, and GeoDataFrame created from the parsed results, in that order.
+            These objects can be passed back into the function to add additional layers.
 
     Raises:
         TypeError: If the provided case_results_fpath is of the wrong type (not .csv or .sql)

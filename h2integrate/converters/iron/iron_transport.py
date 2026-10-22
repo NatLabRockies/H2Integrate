@@ -320,10 +320,10 @@ class IronTransportCostConfig(BaseConfig):
     Args:
         transport_year (int): The year for which transportation costs are calculated.
         cost_year (int): The year for which cost data is relevant.
-        land_shipping_cost (float): Cost of land shipping in $/ton-mi. Default is 0.0522 $/ton-mi.
-            See :doc:`/technology_models/iron_transport` for more info on the default cost.
-        water_shipping_cost (float): Cost of water shipping in $/ton-mi. Default is 0.0235 $/ton-mi.
-            See :doc:`/technology_models/iron_transport` for more info on the default cost.
+        land_shipping_cost (float): Cost of land shipping in $/tonne-mi. Default is 0.0522
+            $/tonne-mi. See :doc:`/technology_models/iron_transport` for more info on default cost.
+        water_shipping_cost (float): Cost of water shipping in $/tonne-mi. Default is 0.0235
+            $/tonne-mi. See :doc:`/technology_models/iron_transport` for more info on default cost.
         marginal_cost (float): Marginal cost of transportation. Default is 0.0.
     """
 
@@ -377,24 +377,24 @@ class IronTransportCostComponent(CostModelBaseClass):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         # Calculate cost with barge shipping through Great Lakes
         water_ship_cost_dol_tonne_mi = self.config.water_shipping_cost
-        water_ship_cost_dol_per_ton = (
+        water_ship_cost_dol_per_tonne = (
             water_ship_cost_dol_tonne_mi * inputs["water_transport_distance_great_lakes"]
         )
-        water_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * water_ship_cost_dol_per_ton
+        water_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * water_ship_cost_dol_per_tonne
 
         land_ship_cost_dol_tonne_mi = self.config.land_shipping_cost
-        land_ship_cost_dol_per_ton = (
+        land_ship_cost_dol_per_tonne = (
             land_ship_cost_dol_tonne_mi * inputs["land_transport_distance_great_lakes"]
         )
-        land_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * land_ship_cost_dol_per_ton
+        land_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * land_ship_cost_dol_per_tonne
 
         total_shipment_cost_GL = water_ship_cost_USD + land_ship_cost_USD
 
         # Calculate cost with just overland shipping
-        overland_ship_cost_dol_per_ton = (
+        overland_ship_cost_dol_per_tonne = (
             land_ship_cost_dol_tonne_mi * inputs["land_transport_distance_overland"]
         )
-        overland_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * overland_ship_cost_dol_per_ton
+        overland_ship_cost_USD = np.sum(inputs["iron_ore_in"]) * overland_ship_cost_dol_per_tonne
 
         # Find minimum shipping cost
         total_shipment_cost = min(total_shipment_cost_GL, overland_ship_cost_USD)
