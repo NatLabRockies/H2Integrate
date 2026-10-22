@@ -9,6 +9,15 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.annualization import (
+    _VALID_ANNUAL_EXTRAPOLATION_METHODS,
+    _project_capacity_factors,
+    _extrapolate_annual_values,
+    _build_replacement_schedule,
+    _time_weighted_annual_means,
+    _degraded_replacement_cycles,
+    _validate_annualization_inputs,
+)
 
 
 class SkippableComputeMixin:
@@ -68,6 +77,8 @@ class SkippableComputeMixin:
 
 
 class PerformanceModelBaseClass(om.ExplicitComponent):
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
     # Flag to indicate steppability. This flag should be overwritten by a subclass when that
     # subclass performance model is capable of steppable simulation.
     _is_steppable = False
@@ -78,13 +89,13 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        # Below should be done in subclass that produces hydrogen
+        # Below should be done in a subclass that produces hydrogen
         # self.commodity = "hydrogen"
         # self.commodity_rate_units = "kg/h"
         # self.commodity_amount_units = "kg"
         # super().setup()
 
-        # Below should be done in subclass that produces electricity
+        # Below should be done in a subclass that produces electricity
         # self.commodity = "electricity"
         # self.commodity_rate_units = "kW"
         # self.commodity_amount_units = "kW*h"
@@ -102,6 +113,9 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        self.annual_extrapolation_method = self.options["plant_config"]["plant"]["simulation"].get(
+            "annual_extrapolation_method"
+        )
 
         # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
@@ -202,7 +216,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         return range(ti, ti + self.n_timesteps_window)
 
     def apply_curtailment(self, outputs):
-        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+        """
+        Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
         then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
@@ -224,6 +239,131 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
             command_value = self._inputs[command_value_key]
             outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
+
+    def calculate_annual_cf_and_replacement_schedule(
+        self,
+        performance_timeseries,
+        rated_performance,
+        state_of_health_timeseries,
+        eol_soh,
+        no_degradation_extrapolation=None,
+        soh_cycle_repetition="all_soh_cycles",
+    ):
+        """Project annual capacity factors and replacement schedule across plant life.
+            Inputs must be finite one-dimensional arrays of identical length. SOH and
+            its EOL threshold use fractions in [0, 1]. Resets are upward SOH jumps greater
+            than 1e-9 at sample offsets; SOH alone cannot identify a first-sample reset or
+            resets without an upward jump. Each reset closes the outgoing unit's cycle.
+            Trailing degradation uses the SOH loss between the last two post-reset
+            samples to complete the cycle at the simulation timestep. Projected CF scales
+            the last timestep CF by projected SOH relative to the last observed SOH.
+            EOL is checked at timestep boundaries, without interpolating. With fewer than
+            two post-reset samples or stalled degradation, no EOL is inferred.
+            Each cycle's CF is then aggregated into annual segments, retaining partial-year
+            durations. Segments are duration-weighted into fixed 365-day plant years
+            when completed cycles repeat.
+            Cycle-end events are discrete counts in [year, year + 1); initial installation
+            and retirement at the end of the plant life are excluded. CF and replacement
+            events use the same cycle durations.
+
+        Args:
+            performance_timeseries (array-like): timestep-level performance values used
+                to compute annual capacity factors over the simulated horizon.
+            rated_performance (float): rated performance value used in capacity-factor
+                calculation.
+            state_of_health_timeseries (array-like | None): timestep-level state-of-health
+                values. If None, no degradation/replacement projection is applied.
+                When provided, SOH is used to determine replacement timing.
+            eol_soh (float | None): State-of-health threshold at or below which the
+                technology is considered replaced. Only required when
+                ``state_of_health_timeseries`` is provided.
+            no_degradation_extrapolation (str | None): Extrapolation strategy when
+                ``state_of_health_timeseries`` is None. If None, use the plant simulation's
+                ``annual_extrapolation_method``. Required only when multiple simulated annual values
+                must be extended to cover the remaining plant life. Options:
+
+                - ``"tile"``: repeat simulated annual values cyclically.
+                - ``"final_sim_value"``: hold the last simulated annual value constant for
+                  the rest of the plant life beyond simulated years.
+                - ``"time_averaged_sim_value"``: hold simulated average annual value constant for
+                  the rest of the plant life beyond simulated years.
+            soh_cycle_repetition (str): When ``state_of_health_timeseries`` is provided,
+                controls what repeats after the simulated (and completed) cycle history.
+                All simulated data is always preserved at the front of the timeline.
+                Options:
+
+                - ``"all_soh_cycles"``: repeat the full ordered set of simulated cycles.
+                - ``"final_soh_cycle"``: repeat only the final completed cycle.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: projected annual capacity factors and
+            replacement schedule.
+        """
+        if no_degradation_extrapolation is None:
+            no_degradation_extrapolation = getattr(self, "annual_extrapolation_method", None)
+
+        (
+            performance_timeseries,
+            rated_performance,
+            state_of_health_timeseries,
+            use_degradation,
+        ) = _validate_annualization_inputs(
+            performance_timeseries,
+            rated_performance,
+            state_of_health_timeseries,
+            eol_soh,
+            no_degradation_extrapolation,
+            soh_cycle_repetition,
+        )
+        if not np.isfinite(self.dt) or self.dt <= 0.0:
+            raise ValueError("dt must be finite and greater than zero.")
+        if (
+            not np.isfinite(self.plant_life)
+            or self.plant_life < 1
+            or int(self.plant_life) != self.plant_life
+        ):
+            raise ValueError("plant_life must be a positive integer number of years.")
+        plant_life = int(self.plant_life)
+
+        # Without degradation, no replacements occur and capacity factors are simply
+        # extrapolated across the plant life.
+        if not use_degradation:
+            (
+                simulated_annual_capacity_factors,
+                simulated_durations_years,
+            ) = _time_weighted_annual_means(performance_timeseries / rated_performance, self.dt)
+            annual_capacity_factors = _extrapolate_annual_values(
+                simulated_annual_capacity_factors,
+                plant_life,
+                no_degradation_extrapolation,
+                simulated_durations_years=simulated_durations_years,
+            )
+            return annual_capacity_factors, np.zeros(plant_life, dtype=int)
+
+        # With degradation, both outputs derive from the same decomposition of the simulated
+        # years into replacement cycles.
+        (
+            cycle_cf_segments,
+            cycle_has_replacement,
+            cycle_segment_durations,
+        ) = _degraded_replacement_cycles(
+            performance_timeseries / rated_performance,
+            state_of_health_timeseries,
+            eol_soh,
+            self.dt,
+            plant_life,
+        )
+        annual_capacity_factors = _project_capacity_factors(
+            cycle_cf_segments, soh_cycle_repetition, plant_life, cycle_segment_durations
+        )
+        replacement_schedule = _build_replacement_schedule(
+            cycle_cf_segments,
+            cycle_has_replacement,
+            soh_cycle_repetition,
+            plant_life,
+            cycle_segment_durations=cycle_segment_durations,
+        )
+        return annual_capacity_factors, replacement_schedule
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
@@ -259,6 +399,8 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
         - skip_compute (bool): see :class:`SkippableComputeMixin`.
     """
 
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
     # Flag to indicate steppability. This flag should be overwritten by a subclass when that
     # subclass cost model is capable of steppable simulation.
     _is_steppable = False
@@ -274,6 +416,9 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
         self.n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        self.annual_extrapolation_method = self.options["plant_config"]["plant"]["simulation"].get(
+            "annual_extrapolation_method"
+        )
         # plant_life is number of years the plant is expected to operate for
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
@@ -307,6 +452,55 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
             val=getattr(self.config, "marginal_cost", 0.0),
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
+        )
+
+    def calculate_annual_varopex(
+        self,
+        varopex_timeseries,
+        annual_extrapolation_method=None,
+        **kwargs,
+    ):
+        """Project annual variable OpEx across plant life from timestep-level costs.
+
+        Args:
+            varopex_timeseries (array-like): timestep-level variable cost values in
+                annual cost numerator units (for example USD per timestep after any
+                flow * price multiplication).
+            annual_extrapolation_method (str | None): Extrapolation strategy after the simulated
+                horizon. If None, use the plant simulation's ``annual_extrapolation_method``.
+                Required only when multiple simulated annual values must be extended to cover
+                the remaining plant life. Options are ``"tile"``, ``"final_sim_value``, and
+                ``"time_averaged_sim_value``.
+
+        Returns:
+            np.ndarray: annualized variable OpEx for each year of plant life.
+        """
+        varopex_timeseries = np.asarray(varopex_timeseries, dtype=float)
+        if varopex_timeseries.size == 0:
+            raise ValueError("varopex_timeseries must contain at least one value.")
+
+        if annual_extrapolation_method is None:
+            annual_extrapolation_method = getattr(self, "annual_extrapolation_method", None)
+
+        if (
+            annual_extrapolation_method is not None
+            and annual_extrapolation_method not in _VALID_ANNUAL_EXTRAPOLATION_METHODS
+        ):
+            raise ValueError(
+                "annual_extrapolation_method must be one of "
+                f"{_VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {annual_extrapolation_method!r}."
+            )
+
+        mean_timestep_costs, simulated_durations_years = _time_weighted_annual_means(
+            varopex_timeseries, self.dt
+        )
+        simulated_annual_varopex = mean_timestep_costs * (31_536_000 / self.dt)
+
+        return _extrapolate_annual_values(
+            simulated_annual_varopex,
+            self.plant_life,
+            annual_extrapolation_method,
+            simulated_durations_years=simulated_durations_years,
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):

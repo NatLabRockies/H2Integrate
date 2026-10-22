@@ -45,6 +45,7 @@ Resource models have model-specific data ranges and time-step requirements. Some
 and solar resources support multiple years; see the [resource index](../resource/resource_index.md)
 and the wind and solar resource pages.
 
+(plant-simulation-settings)=
 ## Plant lifetime and simulation
 
 `plant.plant_life` is the project lifetime in years. `plant.simulation` controls the simulated
@@ -62,8 +63,30 @@ plant:
 
 `dt` and `n_timesteps` are required by the schema. The default `dt` is 3600 seconds and the
 default `n_timesteps` is 8760. `start_time` and `timezone` are optional; timezone is the UTC offset
-for the start time. Every performance model in the system must support the selected `dt`, and the
-requested simulation period must be compatible with the connected resource data.
+for the start time. Every selected model in the system must support the configured timestep and simulation
+duration, and the requested period must be compatible with the connected resource data.
+
+**One simulation year is exactly 8,760 hours (365 days, or 31,536,000 seconds); leap years
+of 8,784 hours are not supported.** Set resource `include_leap_day: false` or omit it;
+`true` is rejected. Calendar leap-year resource data must exclude February 29.
+
+Simulation duration is `n_timesteps * dt / 31_536_000` years and must be positive and no
+longer than `plant_life`. Partial-year and multi-year runs require support from every selected
+model; otherwise models default to annual-only support. At `dt: 3600`, for example, `4380`
+timesteps represent half a year.
+
+`plant.simulation.annual_extrapolation_method` controls how annualized profiles are extended
+beyond the simulated horizon. Choose `tile`, `final_sim_value`, or `time_averaged_sim_value`.
+Set it when multiple simulated year segments must be extended beyond the simulation horizon to
+cover plant life. It can be omitted for a single simulated year segment, where the methods
+produce the same result, or when the simulation covers the plant life. The setting applies to
+capacity factors and variable operating costs. A finance subgroup using a custom timeseries may
+override it with its own `annual_extrapolation_method`; otherwise the plant-level value applies.
+Technology implementations may also pass an explicit method to an annualization call to
+override the plant-level value.
+
+See the {ref}`model duration requirements <required-class-attributes>` and
+{ref}`annualization guidance <annualization-methods>` for developer details.
 
 `n_timesteps_window` is optional and enables a time-marching simulation that advances the plant
 a window of timesteps at a time; see [Time-Marching Simulation](time_marching_simulation.md).

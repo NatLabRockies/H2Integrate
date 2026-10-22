@@ -57,6 +57,39 @@ directly) means the baseclass:
     - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
     - Validates that `commodity`, `commodity_rate_units`, and `commodity_amount_units` are set on the subclass and registers all of the standard production outputs from those attributes.
     - Adds the command-value input and uncurtailed output for `flexible` models, and provides the `apply_curtailment()` helper.
+    - Provides `calculate_annual_cf_and_replacement_schedule()` to project annual capacity factors and a replacement schedule across the plant life from a simulated horizon of any length (optionally accounting for degradation).
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
+
+Similarly, inheriting from `CostModelBaseClass` (rather than `om.ExplicitComponent`
+directly) means the baseclass:
+    - Declares the standard `driver_config` / `plant_config` / `tech_config` options.
+    - Reads `n_timesteps`, `dt`, `plant_life`, and `fraction_of_year_simulated` from `plant_config`.
+    - Registers the standard cost outputs `CapEx`, `OpEx`, and `VarOpEx` consumed by the finance models, along with the discrete `cost_year` output and a `marginal_cost` output used for dispatch decisions.
+    - Provides `calculate_annual_varopex()` to annualize timestep-level variable operating costs across the plant life.
+    - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
+    - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
+
+(annualization-methods)=
+### Annualization
+
+For models supporting nonannual simulations, use the inherited annualization methods
+to project annual outputs across plant life. Their pure calculation functions live in
+`h2integrate/core/annualization.py`; model implementations should normally call the base-class
+methods rather than assemble the private helpers themselves.
+
+CF and variable costs use duration-weighted annual means. Optional SOH supports timestep-level
+completion of the trailing cycle and integer replacement counts per year. For arguments,
+extrapolation options, and boundary behavior, see
+{py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
+and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.
+The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
+or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
+remaining plant life. Technology implementations can override it per call using
+`no_degradation_extrapolation` for capacity-factor projection or `annual_extrapolation_method`
+for variable OpEx projection. A finance subgroup using a custom timeseries may also override the
+plant setting; otherwise, it inherits the plant-level value. See
+{ref}`Plant lifetime and simulation <plant-simulation-settings>`.
 
 ### Multiple layers of inheritance
 
