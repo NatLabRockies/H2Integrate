@@ -71,6 +71,32 @@ def test_demo_case(subtests):
                         "variable_opex_per_mwh": 2.5,  # $/MWh; stolen from ex. 16
                         "cost_year": 2023,  # stolen from ex. 16
                     },
+                    "reliability": {
+                        "use_reliability": True,
+                        "availability_type": "minimum",
+                        "burn_in": 6.5,
+                        "failure_model": "WeibullReliability",
+                        "maintenance_model": "FixedIntervalReliability",
+                        "failure_parameters": {
+                            "scale": 0.5,
+                            "shape": 1,
+                            "n_components": 3,
+                            "downtime": {
+                                "model": "FixedDowntime",
+                                "hours": 5,
+                                "n_components": 3,
+                            },
+                        },
+                        "maintenance_parameters": {
+                            "frequency": [0.25, 1, 4],
+                            "downtime": {
+                                "model": "UniformDowntime",
+                                "min_hours": 2,
+                                "max_hours": 5,
+                                "n_components": 3,
+                            },
+                        },
+                    },
                 },
             },
         },
@@ -135,8 +161,8 @@ def test_demo_case(subtests):
         "generator_efficiency": 1.0,
         "electricity_set_point": 1.0e9,  # MW, default value
         "natural_gas_in": 3000.0,  # MMBtu/h
-        "natural_gas_consumed": 1928.089814235099,  # MMBtu/h
-        "electricity_out": 216.2495760842288,  # MW
+        "natural_gas_consumed": 1915.626506141986,  # MMBtu/h
+        "electricity_out": 214.84743476692168,  # MW
     }
 
     simple_turbine = h2i.model.plant.ng.SimpleCycleTurbinePerformanceModel
