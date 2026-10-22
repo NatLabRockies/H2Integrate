@@ -3,7 +3,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from pyomo.environ import *  # FIXME: no * imports, delete whole comment when fixed # noqa: F403
 
 from h2integrate.converters.hydrogen.pem_model.PEM_H2_LT_electrolyzer_Clusters import (
     PEM_H2_Clusters as PEMClusters,

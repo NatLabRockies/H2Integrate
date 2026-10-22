@@ -1,7 +1,14 @@
-from h2integrate.converters.water_power.hydro_plant_run_of_river import (
-    RunOfRiverHydroCostModel,
-    RunOfRiverHydroPerformanceModel,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__,
+    globals(),
+    {
+        "RunOfRiverHydroCostModel": "hydro_plant_run_of_river",
+        "RunOfRiverHydroPerformanceModel": "hydro_plant_run_of_river",
+        "PySAMMarineCostModel": "pysam_marine_cost",
+        "PySAMTidalPerformanceModel": "tidal_pysam",
+        "PySAMWavePerformanceModel": "wave_pysam",
+    },
 )
-from h2integrate.converters.water_power.pysam_marine_cost import PySAMMarineCostModel
-from h2integrate.converters.water_power.tidal_pysam import PySAMTidalPerformanceModel
-from h2integrate.converters.water_power.wave_pysam import PySAMWavePerformanceModel

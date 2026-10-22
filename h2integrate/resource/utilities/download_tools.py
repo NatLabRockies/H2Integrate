@@ -6,13 +6,13 @@ from zoneinfo import ZoneInfo
 from functools import cache
 
 import pandas as pd
-import requests
-from timezonefinder import TimezoneFinder
 
 
 @cache
-def _get_timezone_finder() -> TimezoneFinder:
-    """Return a shared TimezoneFinder, which is slow to initialize."""
+def _get_timezone_finder():
+    """Return a shared TimezoneFinder, which is slow to import and initialize."""
+    from timezonefinder import TimezoneFinder
+
     return TimezoneFinder()
 
 
@@ -27,6 +27,8 @@ def download_from_api(url, filename):
         bool: True if data was downloaded file successfully, False if encountered error.
 
     """
+    import requests
+
     n_tries = 0
     success = False
     while n_tries < 5:

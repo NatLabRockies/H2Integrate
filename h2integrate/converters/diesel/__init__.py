@@ -1,4 +1,11 @@
-from h2integrate.converters.diesel.diesel_generator import (
-    DieselGeneratorCostModel,
-    DieselGeneratorPerformanceModel,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__,
+    globals(),
+    {
+        "DieselGeneratorCostModel": "diesel_generator",
+        "DieselGeneratorPerformanceModel": "diesel_generator",
+    },
 )

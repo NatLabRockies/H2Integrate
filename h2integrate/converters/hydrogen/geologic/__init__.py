@@ -1,11 +1,14 @@
-from h2integrate.converters.hydrogen.geologic.aspen_surface_processing import (
-    AspenGeoH2SurfaceCostModel,
-    AspenGeoH2SurfacePerformanceModel,
-)
-from h2integrate.converters.hydrogen.geologic.mathur_modified import GeoH2SubsurfaceCostModel
-from h2integrate.converters.hydrogen.geologic.simple_natural_geoh2 import (
-    NaturalGeoH2PerformanceModel,
-)
-from h2integrate.converters.hydrogen.geologic.templeton_serpentinization import (
-    StimulatedGeoH2PerformanceModel,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__,
+    globals(),
+    {
+        "AspenGeoH2SurfaceCostModel": "aspen_surface_processing",
+        "AspenGeoH2SurfacePerformanceModel": "aspen_surface_processing",
+        "GeoH2SubsurfaceCostModel": "mathur_modified",
+        "NaturalGeoH2PerformanceModel": "simple_natural_geoh2",
+        "StimulatedGeoH2PerformanceModel": "templeton_serpentinization",
+    },
 )

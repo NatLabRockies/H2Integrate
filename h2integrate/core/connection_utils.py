@@ -182,10 +182,6 @@ def check_dispatch_connections(
     Raises:
         ValueError: If a connection is malformed, extraneous, missing, or incorrect.
     """
-    from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
-        PyomoStorageControllerBaseClass,
-    )
-
     technologies = technology_config.get("technologies", {})
     dispatch_connections = dispatch_connections or []
     invalid_connections = [c for c in dispatch_connections if len(c) != 2]
@@ -198,7 +194,15 @@ def check_dispatch_connections(
     def has_pyomo_controller(tech_name):
         model_name = technologies.get(tech_name, {}).get("control_strategy", {}).get("model")
         model_class = supported_models.get(model_name)
-        return model_class is not None and issubclass(model_class, PyomoStorageControllerBaseClass)
+        if model_class is None:
+            return False
+
+        # Importing the base class pulls in Pyomo, so only do it when a controller exists
+        from h2integrate.control.control_strategies.pyomo_storage_controller_baseclass import (
+            PyomoStorageControllerBaseClass,
+        )
+
+        return issubclass(model_class, PyomoStorageControllerBaseClass)
 
     def is_dispatch_controlled(tech_name):
         return "dispatch_rule_set" in technologies.get(tech_name, {}) or has_pyomo_controller(
