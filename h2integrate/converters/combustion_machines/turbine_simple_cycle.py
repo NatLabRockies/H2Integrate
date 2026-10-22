@@ -245,8 +245,6 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
 
         if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
-            # TODO: enforce "minimum" for availability_type since we're composing this
-            # as a single, repeated system
             plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
             simulation_config = {
                 "simulation": {
