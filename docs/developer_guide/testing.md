@@ -50,7 +50,7 @@ def test_BaseConfig(subtests):
     ... # rest of the test
 ```
 
-Tests must be marked with at least one of `unit`, `regression`, `integration`, or `hpc`. The test configuration rejects unknown markers, and `test/conftest.py` fails collection for unmarked tests.
+Tests must be marked with at least one of `unit`, `regression`, `integration`, `hpc`, or `examples`. The test configuration rejects unknown markers, and `test/conftest.py` fails collection for unmarked tests.
 
 ## Unit Tests
 
@@ -100,9 +100,33 @@ systems.
 Run `pytest -m integration` to run only the integration test suite or `pytest -m "not integration"`
 to skip the integration tests.
 
-For examples of integration tests, please see the `examples/test/test_all_examples.py` module
-where multiple components are combined to test the models outputs for stability when using tools
-in conjunction with each other.
+For examples of integration tests, please see the
+`h2integrate/control/control_strategies/storage/test/test_openloop_storage_integration.py` module,
+where storage performance models and their controllers are connected and run together over a short
+simulation.
+
+## Example Tests
+
+Tests that run a full example from the `examples/` folder are marked with `@pytest.mark.examples`.
+These tests are the most expensive part of the test suite, so they do not run with the unit,
+regression, and integration tests on every pull request. Instead, the
+[Examples workflow](https://github.com/NatLabRockies/H2Integrate/actions/workflows/examples.yml)
+runs them nightly on `develop`, on pull requests that change files in `examples/`, and on demand
+from the GitHub Actions tab. When a nightly run fails, the workflow opens (or comments on) an issue
+labeled `nightly-examples`, and it closes that issue once the examples pass again.
+
+There are two example test modules:
+
+- `examples/test/test_all_examples.py` builds and runs each example model and checks key outputs,
+  such as levelized costs and annual production, for stability.
+- `examples/test/test_example_scripts.py` runs every `run_*.py` script in `examples/` from a
+  temporary copy of its folder, the same way a user would from the command line, to make sure
+  plotting and post-processing code keeps working. New example scripts must be named `run_*.py`
+  so they are picked up automatically.
+
+Run `pytest -m examples` to run the example tests locally. Because these tests do not run on every
+pull request, run the example tests that use any model you change before requesting a review, for
+example `pytest examples/test/test_all_examples.py -k steel`.
 
 ## Test coverage
 
