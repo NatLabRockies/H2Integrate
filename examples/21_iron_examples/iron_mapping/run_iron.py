@@ -30,9 +30,11 @@ from h2integrate.postprocess.mapping import (
 # TODO: Pull ore/transport prices from separate runs, not static csvs - ALMOST THERE
 
 # NOTE:
-# If this example has already been run and the cases.csv or cases.sql file are saved in ./ex_28_out,
+# If this example has already been run and the cases_transport.csv or cases_transport.sql file
+# are saved in ./ex_28_out,
 # you may leave rerun_model = False to save on run time.
-# Otherwise, set rerun_model = True to produce the cases.csv / cases.sql results files
+# Otherwise, set rerun_model = True to produce the
+# cases_iron_plant.csv + cases_transport.csv / cases_iron_plant.sql + cases_transport.sql results
 rerun_model = True
 
 # Define filepaths
@@ -135,7 +137,6 @@ fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
 )
 
 # Plot the LCOI results with geopandas and contextily
-# NOTE: you can swap './ex_28_out/cases.sql' with './ex_28_out/cases.csv' to read results from csv
 fig, ax, _, lcoi_layer_gdf = plot_geospatial_point_heat_map(
     case_results_fpath=iron_plant_results_filepath,
     latitude_var_name="iron_transport.destination_latitude (deg)",

@@ -72,10 +72,10 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
         )
 
         # Look up origin and destination from plant_config
-        self.add_input("origin_latitude", shape=1, require_connection=True, units="deg")
-        self.add_input("origin_longitude", shape=1, require_connection=True, units="deg")
-        self.add_input("destination_latitude", shape=1, require_connection=True, units="deg")
-        self.add_input("destination_longitude", shape=1, require_connection=True, units="deg")
+        self.add_input("origin_latitude", shape=1, units="deg")
+        self.add_input("origin_longitude", shape=1, units="deg")
+        self.add_input("destination_latitude", shape=1, units="deg")
+        self.add_input("destination_longitude", shape=1, units="deg")
 
         self.add_output("land_transport_distance_overland", val=0.0, units="km")
         self.add_output("land_transport_distance_great_lakes", val=0.0, units="km")
