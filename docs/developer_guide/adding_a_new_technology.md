@@ -198,6 +198,13 @@ The model is registered under its class name, which is the name used in YAML and
 The registry finds models by scanning the source as text, so each model's module is only imported when the model is used. Put `@register` directly above the `class` definition line.
 ```
 
+```{note}
+Package `__init__.py` files must not import model modules eagerly: importing one model's module would then import every sibling (and their heavy dependencies such as Ard, rex, or Pyomo) before the model is even used.
+New models do not need to be added to an `__init__.py`.
+To keep a name importable from its package (for example, `from h2integrate.converters.wind import ArdWindPlantModel`), add it to the `lazy_exports` mapping in that package's `__init__.py`, which imports the submodule on first access.
+Likewise, import expensive libraries inside the function that needs them unless the model always needs them.
+```
+
 ## More complex cases
 
 Adding a new technology to H2Integrate can be more complex than the simple example we walked through.
