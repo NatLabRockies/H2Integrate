@@ -1032,6 +1032,26 @@ def test_check_simulation_duration_respects_model_bounds():
 
 
 @pytest.mark.unit
+def test_system_level_controller_defaults_to_annual_only_duration():
+    class AnnualOnlyController:
+        def __init__(self, **kwargs):
+            raise AssertionError("controller should not be constructed for an unsupported duration")
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = {
+        "plant": {
+            "plant_life": 3,
+            "simulation": {"n_timesteps": 2 * 8760, "dt": 3600},
+        },
+        "system_level_control": {"control_strategy": "AnnualOnlyController"},
+    }
+    model.supported_models = {"AnnualOnlyController": AnnualOnlyController}
+
+    with pytest.raises(ValueError, match=r"Model AnnualOnlyController.*simulation durations"):
+        model.add_system_level_controller({})
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "duration_bounds,n_timesteps,is_supported",
     [

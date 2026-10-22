@@ -750,6 +750,13 @@ class H2IntegrateModel:
                 f"Must be a valid model name in supported_models."
             )
 
+        check_model_simulation_duration(
+            strategy_name,
+            slc_cls,
+            self.plant_config["plant"]["simulation"]["n_timesteps"],
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
+
         slc_comp = slc_cls(
             driver_config=self.driver_config,
             plant_config=self.plant_config,
