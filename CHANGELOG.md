@@ -15,6 +15,12 @@
   - Added the `Examples` GitHub Actions workflow, which opens or updates a `nightly-examples` issue when the nightly run fails and closes it when the run passes again.
   - Fixed plotting code in examples 3 (DOC methanol), 18, 19, 23, and 30 that used outdated variable names or config sections, and updated example scripts that relied on `h2integrate.EXAMPLE_DIR` to resolve files relative to the script.
   - Reused one example run across the SQL summary unit tests.
+- Consolidated duplicate examples so that framework changes touch fewer example files. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+  - Merged `21_iron_examples/iron_dri_nrri` into `21_iron_examples/iron_dri`, whose run script now compares the simple and NRRI iron mine models.
+  - Merged `38_time_marching_simulation` into `24_solar_battery_grid` as `run_time_marching.py`, since both used the same plant.
+  - Merged the `no_battery`, `yes_battery`, and `battery_with_controller` system-level control examples into `35_system_level_control/demand_following`.
+  - Merged `09_co2/ocean_alkalinity_enhancement_financials` into `09_co2/ocean_alkalinity_enhancement`.
+  - Removed `11_hybrid_energy_plant`, which is covered by examples 01 and 33, and moved its demand metric checks into the demand component unit tests.
 
 
 ## 0.10.0 [October 12, 2026]
