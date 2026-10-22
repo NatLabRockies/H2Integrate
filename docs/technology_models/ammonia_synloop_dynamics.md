@@ -68,9 +68,10 @@ delays. The cold and warm multipliers are derived from the same post-ramping
 reference profile, so the pass order does not change the result.
 
 ```{note}
-Feedstocks are consumed from the post-dynamic NH3 output profile. Zero-production
-startup-delay hours consume nothing, while partial warm-start hours consume in
-proportion to the partial NH3 output.
+Feedstocks are consumed in proportion to the final post-dynamic NH3 output profile.
+Zero-production startup-delay hours consume nothing, partial warm-start hours consume
+in proportion to the partial NH3 output, and positive ramp-down output below the
+turndown floor still consumes feedstock.
 ```
 
 ## Worked example
