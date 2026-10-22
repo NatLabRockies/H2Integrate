@@ -121,3 +121,32 @@ def test_adjusted_cf_comp_requires_method_for_multiyear_extrapolation(plant_conf
     problem.setup()
     with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
         problem.run_model()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [2 * 8760])
+def test_adjusted_cf_comp_subgroup_method_overrides_plant_method(plant_config, n_timesteps):
+    plant_config["plant"]["plant_life"] = 4
+    plant_config["plant"]["simulation"]["annual_extrapolation_method"] = "tile"
+    production_timeseries = np.concatenate((np.full(8760, 100.0), np.full(8760, 300.0)))
+
+    problem = om.Problem()
+    component = AdjustedCapacityFactorComp(
+        plant_config=plant_config,
+        commodity_type="electricity",
+        annual_extrapolation_method="final_sim_value",
+    )
+    problem.model.add_subsystem("component", component, promotes=["*"])
+
+    independent = om.IndepVarComp()
+    independent.add_output("electricity_produced", val=np.zeros(n_timesteps), units="kW")
+    problem.model.add_subsystem("independent", independent, promotes=["*"])
+
+    problem.setup()
+    problem.set_val("independent.electricity_produced", production_timeseries, units="kW")
+    problem.run_model()
+
+    np.testing.assert_allclose(
+        problem.get_val("component.capacity_factor", units="unitless"),
+        [1.0 / 3.0, 1.0, 1.0, 1.0],
+    )

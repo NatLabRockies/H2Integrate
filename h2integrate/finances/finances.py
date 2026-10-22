@@ -110,14 +110,17 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
     def initialize(self):
         self.options.declare("plant_config", types=dict)
         self.options.declare("commodity_type", types=str)
+        self.options.declare("annual_extrapolation_method", default=None, allow_none=True)
 
     def setup(self):
         self.commodity = self.options["commodity_type"]
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
-        self.annual_extrapolation_method = self.options["plant_config"]["plant"]["simulation"].get(
-            "annual_extrapolation_method"
-        )
+        self.annual_extrapolation_method = self.options["annual_extrapolation_method"]
+        if self.annual_extrapolation_method is None:
+            self.annual_extrapolation_method = self.options["plant_config"]["plant"][
+                "simulation"
+            ].get("annual_extrapolation_method")
 
         self.add_input(
             f"{self.commodity}_produced",

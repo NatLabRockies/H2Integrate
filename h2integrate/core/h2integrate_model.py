@@ -1419,6 +1419,9 @@ class H2IntegrateModel:
                         "commodity_stream_output": subgroup_params.get(
                             "commodity_stream_output", None
                         ),
+                        "annual_extrapolation_method": subgroup_params.get(
+                            "annual_extrapolation_method"
+                        ),
                     }
                 }
             )
@@ -1550,6 +1553,9 @@ class H2IntegrateModel:
                     adj_cf_comp = AdjustedCapacityFactorComp(
                         plant_config=filtered_plant_config,
                         commodity_type=commodity,
+                        annual_extrapolation_method=finance_subgroups[subgroup_name][
+                            "annual_extrapolation_method"
+                        ],
                     )
                     finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
 
