@@ -31,6 +31,8 @@ class GenericTransporterPerformanceModel(om.ExplicitComponent):
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "transport"
 
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

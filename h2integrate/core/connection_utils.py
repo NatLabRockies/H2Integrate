@@ -110,6 +110,60 @@ def split_indices_from_connected_parameter_definition(connected_parameter):
     return parameter_names, source_indices
 
 
+def check_resource_models_are_connected(sites, site_to_tech_connections):
+    """Raise if a resource model is unconnected or a connected resource is undefined.
+
+    Args:
+        sites (dict): Site definitions, such as ``plant_config["sites"]``. Resource models are
+            read from each site's ``resources`` entry.
+        site_to_tech_connections (list): Connections from site resources to technologies, such
+            as ``plant_config["site_to_tech_connections"]``. The first element of each
+            connection is the resource (or site) name.
+
+    Raises:
+        ValueError: If a resource model is not included in ``site_to_tech_connections``, or if a
+            connected resource is not defined in ``sites``.
+    """
+    resource_models = {}
+    for site_grp, site_grp_inputs in sites.items():
+        for resource_key, resource_params in site_grp_inputs.get("resources", {}).items():
+            resource_models[f"{site_grp}.{resource_key}"] = resource_params
+
+    resource_source_connections = [c[0] for c in site_to_tech_connections]
+    # Check if there is a missing resource to tech connection or missing resource model
+    if len(resource_models) != len(resource_source_connections):
+        if len(resource_models) > len(resource_source_connections):
+            # more resource models than resources connected to technologies
+            non_connected_resource = [
+                k for k in resource_models if k not in resource_source_connections
+            ]
+            # check if theres a resource model that isn't connected to a technology
+            if len(non_connected_resource) > 0:
+                msg = (
+                    "Some resources are not connected to a technology. Resource models "
+                    f"{non_connected_resource} are not included in "
+                    "`site_to_tech_connections`. Please connect these resources "
+                    "to their technologies under `site_to_tech_connections` in "
+                    "the plant config file."
+                )
+                raise ValueError(msg)
+        if len(resource_source_connections) > len(resource_models):
+            # more resources connected than resource models
+            missing_resource = [k for k in resource_source_connections if k not in resource_models]
+
+            missing_resource = list(set(missing_resource) - set(sites))
+            # check if theres a resource model that isn't connected to a technology
+            if len(missing_resource) > 0:
+                msg = (
+                    "Missing resource(s) are not defined but are connected to a"
+                    f" technology. Missing resource(s) are {missing_resource}. "
+                    "Please check ``site_to_tech_connections`` in the plant"
+                    " config file or add the missing resources"
+                    " to plant_config['site']['resources']."
+                )
+                raise ValueError(msg)
+
+
 def check_dispatch_connections(
     technology_config, dispatch_connections, supported_models, technology_graph
 ):

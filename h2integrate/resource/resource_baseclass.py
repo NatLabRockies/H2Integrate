@@ -21,6 +21,7 @@ from h2integrate.resource.utilities.time_tools import (
     check_data_length,
     contains_leap_day,
     add_resource_start_end_times,
+    resample_resource_data_to_dt,
     get_number_of_resource_years_needed,
 )
 from h2integrate.resource.utilities.download_tools import download_from_api
@@ -65,6 +66,16 @@ class ResourceBaseAPIConfig(BaseConfig):
         resource_year_order (list, optional): Only used running a simulation requiring multiple
             resource years. List of resource years in-order, such as [2012, 2011, 2013].
             Defaults to None.
+        upsample_method (str | None, optional): Pandas interpolation method to use when the
+            simulation timestep is finer than the resource data timestep (passed to
+            `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_).
+            Required only when upsampling is needed; otherwise defaults to None and no automatic
+            resampling occurs.
+        downsample_method (str | None, optional): Pandas resampling aggregation to use when the
+            simulation timestep is coarser than the resource data timestep (passed to
+            `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_).
+            Required only when downsampling is needed; otherwise defaults to None and no automatic
+            resampling occurs.
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -81,10 +92,13 @@ class ResourceBaseAPIConfig(BaseConfig):
     dataset_desc: str = field(default="default", init=False)
     resource_type: str = field(default="none", init=False)
     resource_data: dict | object = field(default={})
-    resource_filename: Path | str | list = field(default="")
+    resource_filename: Path | str | list[Path | str] = field(default="")
     resource_dir: Path | str | None = field(default=None)
     include_leap_day: bool = field(default=False)
     resource_year_order: list | None = field(default=None)
+    # Resampling methods used when the resource data's native timestep differs from the sim dt.
+    upsample_method: str | None = field(default=None)
+    downsample_method: str | None = field(default=None)
 
 
 class ResourceBaseAPIModel(om.ExplicitComponent):
@@ -174,7 +188,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
             # Didn't provide either, using resource_year as the start-year
             # Check that enough future-years are available from the start-year
             self.get_resource_years_from_start_year(self.config.resource_year)
-            # NOTE: should check if `resource_filename` is not an empty string
 
             # Cannot provide a single filename when running multiple years
             if provided_filename:
@@ -559,7 +572,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         # filepath, and a new download isn't forced, then load data using `load_data()`
         if filepath.is_file() and not forced_download:
             data = self.load_data(filepath)
-            # NOTE: this where we could up/downsample
             return data
 
         # If the filepath (resource_dir/filename) does not exist, download data
@@ -571,7 +583,6 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         if success:
             # 6) Load data from the file created in Step 5 using `load_data()`
             data = self.load_data(filepath)
-            # NOTE: this where we could up/downsample
             return data
 
         else:
@@ -581,9 +592,10 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         """Final processing of multi-year resource data. This method does the following:
 
         1. Remove resource data for leap-day if needed
-        2. Clip the resource data to the number of timesteps in a simulation
-        3. Add start and end-times to the resource data
-        4. Check that the length of the timeseries resource data is the same as n_timesteps
+        2. Resample resource data to the simulation timestep if needed
+        3. Clip the resource data to the number of timesteps in the simulation
+        4. Add start and end-times to the resource data
+        5. Check that the length of the timeseries resource data matches n_timesteps
 
         Args:
             resource_data (dict): dictionary of resource data for all resource years
@@ -591,8 +603,14 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         Returns:
             dict: resource_data after final processing and checks
         """
-        # NOTE: we could up/downsample here also
+
         resource_data = process_leap_day(resource_data, self.config.include_leap_day)
+        resource_data = resample_resource_data_to_dt(
+            resource_data,
+            self.dt,
+            self.config.upsample_method,
+            self.config.downsample_method,
+        )
         resource_data = clip_data_to_n_timesteps(resource_data, n_timesteps=self.n_timesteps)
         resource_data = add_resource_start_end_times(resource_data)
         check_data_length(resource_data, self.n_timesteps)
@@ -645,7 +663,7 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
         infer_years_from_files = False
         # 2) Determine the resource years and resource filenames to loop
         if self.resource_year_setting == "start_year":
-            # if running multiple years, resource_filename an empty string (based on earlier checks)
+            # Earlier checks require an empty resource_filename for multi-year runs.
             resource_years = self.get_resource_years_from_start_year(self.config.resource_year)
             resource_filenames = [self.config.resource_filename] * len(resource_years)
 
@@ -685,10 +703,12 @@ class ResourceBaseAPIModel(om.ExplicitComponent):
 
             if site_changed and self.raise_error_if_site_change:
                 msg = (
-                    f"Site changed from {tuple(self.resource_site)} to ({latitude},{longitude}). "
-                    f"When using `resource_year_setting` of 'filenames' with TMY datasets, "
-                    "the filenames must following the standard naming convention. Resource years "
-                    f"could not be estimated from the input filenames of {self.error_msg_details}."
+                    f"Site changed from {tuple(self.resource_site)} to "
+                    f"({latitude},{longitude}). When providing `resource_filename` "
+                    "as a list with TMY datasets, the filenames must follow the "
+                    "standard naming convention (or `resource_year_order` must be "
+                    "specified). Resource years could not be estimated from the input "
+                    f"filenames of {self.error_msg_details}."
                 )
                 raise ValueError(msg)
 
