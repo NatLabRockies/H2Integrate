@@ -1,4 +1,5 @@
 from attrs import field, define, validators
+from numpy import inf
 from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
@@ -63,9 +64,13 @@ class ATBBatteryCostModel(CostModelBaseClass):
     """
 
     _time_step_bounds = (
-        3600,
-        3600,
-    )  # (min, max) time step lengths (in seconds) compatible with this model
+        1e-6,
+        inf,
+    )  # (min, max) time step lengths (in seconds) compatible with this model. The ATB
+    # cost model is time-step independent (it only uses storage capacity and charge
+    # rate), so it accepts any sub-hourly-to-hourly time step.
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         self.config = ATBBatteryCostConfig.from_dict(

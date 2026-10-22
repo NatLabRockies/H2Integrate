@@ -20,6 +20,8 @@ class GenericDemandComponent(DemandComponentBase):
     ``performance_parameters``.
     """
 
+    # (min, max) permitted simulation duration in years
+    _simulation_duration_bounds = (0.0, float("inf"))
     _is_steppable = True
 
     def setup(self):

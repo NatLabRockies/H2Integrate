@@ -308,6 +308,7 @@ def _regenerate_time_columns_at_dt(
             calendar index. Defaults to True.
 
     Returns:
+
         dict[str, numpy.ndarray]: generated time columns keyed by ``present_time_keys``.
     """
     freq = pd.Timedelta(seconds=dt_seconds)
@@ -429,12 +430,12 @@ def resample_resource_data_to_dt(
         target_dt (int | float): desired simulation timestep in seconds.
         upsample_method (str | None): interpolation method passed to
             `pandas.DataFrame.interpolate <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html>`_
-            when upsampling. Must be explicitly set when upsampling is needed; otherwise a
-            ``ValueError`` is raised.
+            when upsampling. Must be explicitly set (for example ``"time"``) when upsampling is
+            needed; otherwise a ``ValueError`` is raised.
         downsample_method (str | None): aggregation passed to
             `pandas.DataFrame.agg <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html>`_
-            when downsampling. Must be explicitly set when downsampling is needed; otherwise a
-            ``ValueError`` is raised.
+            when downsampling. Must be explicitly set (for example ``"mean"``)  when downsampling
+            is needed; otherwise a ``ValueError`` is raised.
 
     Returns:
         dict: resource data resampled to ``target_dt``.
