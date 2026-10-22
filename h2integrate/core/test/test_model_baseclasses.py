@@ -11,9 +11,10 @@ from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceMode
 class _DummyPerformanceModel:
     """Minimal stand-in exposing the attributes the helper reads (``plant_life``, ``dt``)."""
 
-    def __init__(self, plant_life=6, dt=31_536_000):
+    def __init__(self, plant_life=6, dt=31_536_000, annual_extrapolation_method="tile"):
         self.plant_life = plant_life
         self.dt = dt
+        self.annual_extrapolation_method = annual_extrapolation_method
 
 
 def _run(dummy, performance_timeseries, rated, soh, eol, **kwargs):
@@ -50,6 +51,7 @@ def test_without_degradation_tile():
         rated=2.0,
         soh=None,
         eol=None,
+        no_degradation_extrapolation="tile",
     )
 
     np.testing.assert_allclose(cf_values, [0.6, 0.5, 0.4, 0.6, 0.5, 0.4])
@@ -72,14 +74,14 @@ def test_without_degradation_final_sim_value():
 
 
 @pytest.mark.unit
-def test_without_degradation_average_sim_value():
+def test_without_degradation_time_averaged_sim_value():
     cf_values, replacement_schedule = _run(
         _DummyPerformanceModel(plant_life=6),
         performance_timeseries=[0.6, 0.5, 0.4],
         rated=1.0,
         soh=None,
         eol=None,
-        no_degradation_extrapolation="average_sim_value",
+        no_degradation_extrapolation="time_averaged_sim_value",
     )
 
     np.testing.assert_allclose(cf_values, [0.6, 0.5, 0.4, 0.5, 0.5, 0.5])
@@ -95,10 +97,53 @@ def test_average_capacity_factor_weights_partial_year() -> None:
         rated=1.0,
         soh=None,
         eol=None,
-        no_degradation_extrapolation="average_sim_value",
+        no_degradation_extrapolation="time_averaged_sim_value",
     )
     np.testing.assert_allclose(capacity_factors, [1.0, 0.0, 0.8, 0.8])
     np.testing.assert_array_equal(replacement_schedule, np.zeros(4, dtype=int))
+
+
+@pytest.mark.unit
+def test_extrapolation_method_required_for_multiple_simulated_years():
+    with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
+        _run(
+            _DummyPerformanceModel(plant_life=3, annual_extrapolation_method=None),
+            performance_timeseries=[1.0, 0.0],
+            rated=1.0,
+            soh=None,
+            eol=None,
+        )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000
+    cost_model.plant_life = 3
+    with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
+        cost_model.calculate_annual_varopex(np.array([10.0, 0.0]))
+
+
+@pytest.mark.unit
+def test_extrapolation_method_not_required_for_single_simulated_year(subtests):
+    with subtests.test(
+        "single simulated year does not require extrapolation method for capacity factors"
+    ):
+        capacity_factors, _ = _run(
+            _DummyPerformanceModel(plant_life=3, annual_extrapolation_method=None),
+            performance_timeseries=[0.5],
+            rated=1.0,
+            soh=None,
+            eol=None,
+        )
+        np.testing.assert_allclose(capacity_factors, [0.5, 0.5, 0.5])
+
+    with subtests.test(
+        "single simulated year does not require extrapolation method for variable OPEX"
+    ):
+        cost_model = CostModelBaseClass()
+        cost_model.dt = 31_536_000
+        cost_model.plant_life = 3
+        np.testing.assert_allclose(
+            cost_model.calculate_annual_varopex(np.array([10.0])), [10.0, 10.0, 10.0]
+        )
 
 
 @pytest.mark.unit
@@ -109,13 +154,114 @@ def test_average_varopex_weights_partial_year() -> None:
     cost_model.plant_life = 4
     annual_varopex = cost_model.calculate_annual_varopex(
         np.array([10.0, 10.0, 10.0, 10.0, 0.0]),
-        extrapolation_method="average_sim_value",
+        annual_extrapolation_method="time_averaged_sim_value",
     )
     np.testing.assert_allclose(annual_varopex, [40.0, 0.0, 32.0, 32.0])
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("method", ["tile", "final_sim_value", "average_sim_value"])
+@pytest.mark.parametrize(
+    "annual_extrapolation_method,expected_capacity_factors,expected_varopex",
+    [
+        ("tile", [1.0, 0.0, 1.0, 0.0], [10.0, 0.0, 10.0, 0.0]),
+        ("final_sim_value", [1.0, 0.0, 0.0, 0.0], [10.0, 0.0, 0.0, 0.0]),
+        ("time_averaged_sim_value", [1.0, 0.0, 0.5, 0.5], [10.0, 0.0, 5.0, 5.0]),
+    ],
+)
+def test_plant_annual_extrapolation_method_is_base_class_default(
+    annual_extrapolation_method: str,
+    expected_capacity_factors: list[float],
+    expected_varopex: list[float],
+) -> None:
+    performance_model = _DummyPerformanceModel(
+        plant_life=4, dt=31_536_000, annual_extrapolation_method=annual_extrapolation_method
+    )
+    capacity_factors, _ = _run(
+        performance_model,
+        performance_timeseries=[1.0, 0.0],
+        rated=1.0,
+        soh=None,
+        eol=None,
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000
+    cost_model.plant_life = 4
+    cost_model.annual_extrapolation_method = annual_extrapolation_method
+    annual_varopex = cost_model.calculate_annual_varopex(np.array([10.0, 0.0]))
+
+    np.testing.assert_allclose(capacity_factors, expected_capacity_factors)
+    np.testing.assert_allclose(annual_varopex, expected_varopex)
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt", [300, 600])
+def test_exact_three_year_horizon_tiles_capacity_factor_and_varopex(subtests, dt: int) -> None:
+    """Tile year-one values after exact three-year simulations without a spurious segment."""
+    steps_per_year = 31_536_000 // dt
+    timeseries = np.zeros(3 * steps_per_year)
+    timeseries[:steps_per_year] = 1.0
+
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=timeseries,
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="tile",
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = dt
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timeseries, annual_extrapolation_method="tile"
+    )
+
+    with subtests.test("capacity factor tiles the first year after the horizon"):
+        np.testing.assert_allclose(capacity_factors, [1.0, 0.0, 0.0, 1.0])
+        np.testing.assert_array_equal(replacement_schedule, np.zeros(4, dtype=int))
+    with subtests.test("variable OpEx tiles the first year after the horizon"):
+        np.testing.assert_allclose(annual_varopex, [steps_per_year, 0.0, 0.0, steps_per_year])
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt", [300, 600])
+def test_exact_three_year_horizon_final_sim_value_uses_last_complete_year(
+    subtests, dt: int
+) -> None:
+    """Do not use a roundoff-sized segment as the final simulated annual value."""
+    steps_per_year = 31_536_000 // dt
+    timeseries = np.zeros(3 * steps_per_year)
+    timeseries[:steps_per_year] = 1.0
+    timeseries[-1] = 1.0
+
+    capacity_factors, _ = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=timeseries,
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="final_sim_value",
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = dt
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timeseries, annual_extrapolation_method="final_sim_value"
+    )
+
+    with subtests.test("capacity factor repeats the last complete year"):
+        np.testing.assert_allclose(
+            capacity_factors, [1.0, 0.0, 1.0 / steps_per_year, 1.0 / steps_per_year]
+        )
+    with subtests.test("variable OpEx repeats the last complete year"):
+        np.testing.assert_allclose(annual_varopex, [steps_per_year, 0.0, 1.0, 1.0])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("method", ["tile", "final_sim_value", "time_averaged_sim_value"])
 def test_varopex_splits_timestep_at_year_boundary(subtests, method: str) -> None:
     """Allocate a crossing timestep's cost by elapsed time before annualizing."""
     cost_model = CostModelBaseClass()
@@ -124,14 +270,14 @@ def test_varopex_splits_timestep_at_year_boundary(subtests, method: str) -> None
     timestep_costs = np.zeros(4000)
     timestep_costs[3153] = 100.0
     annual_varopex = cost_model.calculate_annual_varopex(
-        timestep_costs, extrapolation_method=method
+        timestep_costs, annual_extrapolation_method=method
     )
     partial_year_duration = (timestep_costs.size * cost_model.dt - 31_536_000) / 31_536_000
     partial_year_annual_cost = 40.0 / partial_year_duration
     expected_fill = {
         "tile": 60.0,
         "final_sim_value": partial_year_annual_cost,
-        "average_sim_value": 100.0 / (1.0 + partial_year_duration),
+        "time_averaged_sim_value": 100.0 / (1.0 + partial_year_duration),
     }[method]
 
     with subtests.test("the crossing timestep contributes 60 dollars and 40 dollars"):

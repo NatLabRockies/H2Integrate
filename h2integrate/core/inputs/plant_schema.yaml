@@ -77,6 +77,10 @@ properties:
             type: integer
             description: number of timesteps per window in a time-marching simulation
             minimum: 1
+          annual_extrapolation_method:
+            type: string
+            description: Extrapolation method for annualized profiles beyond the simulation horizon
+            enum: [tile, final_sim_value, time_averaged_sim_value]
           start_time:
             type: string
             description: simulation start time formatted as mm/dd/yyyy HH:MM:SS or mm/dd HH:MM:SS

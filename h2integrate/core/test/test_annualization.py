@@ -92,7 +92,7 @@ def test_extrapolate_annual_values_modes():
     )
     np.testing.assert_allclose(
         _extrapolate_annual_values(
-            simulated_values=simulated, plant_life=6, method="average_sim_value"
+            simulated_values=simulated, plant_life=6, method="time_averaged_sim_value"
         ),
         [0.6, 0.5, 0.4, 0.5, 0.5, 0.5],
     )
@@ -106,7 +106,7 @@ def test_extrapolate_annual_values_modes():
     [
         ("tile", np.array([1.0, 0.0, 1.0, 0.0])),
         ("final_sim_value", np.array([1.0, 0.0, 0.0, 0.0])),
-        ("average_sim_value", np.array([1.0, 0.0, 0.8, 0.8])),
+        ("time_averaged_sim_value", np.array([1.0, 0.0, 0.8, 0.8])),
     ],
 )
 def test_extrapolate_annual_values_with_partial_year(
@@ -120,6 +120,25 @@ def test_extrapolate_annual_values_with_partial_year(
         simulated_durations_years=np.array([1.0, 0.25]),
     )
     np.testing.assert_allclose(projected_values, expected_values)
+
+
+@pytest.mark.unit
+def test_extrapolate_annual_values_requires_method_only_when_needed():
+    with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
+        _extrapolate_annual_values(
+            simulated_values=np.array([1.0, 0.0]),
+            plant_life=3,
+            method=None,
+        )
+
+    np.testing.assert_array_equal(
+        _extrapolate_annual_values(
+            simulated_values=np.array([1.0, 0.0]),
+            plant_life=2,
+            method=None,
+        ),
+        [1.0, 0.0],
+    )
 
 
 @pytest.mark.unit
