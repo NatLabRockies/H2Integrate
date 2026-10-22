@@ -1,5 +1,5 @@
 name: technology_config
-description: This hybrid plant produces iron
+description: This hybrid plant produces iron using the NRRI iron mine model
 technologies:
   mine_electricity_feedstock:  # electricity feedstock for iron ore
     performance_model:
