@@ -1,6 +1,13 @@
-from h2integrate.resource.wind.nlr_developer_wtk_api_models import (
-    HRRRMETToolkitWindAPI,
-    WTKNLRDeveloperAPIWindResource,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__,
+    globals(),
+    {
+        "HRRRMETToolkitWindAPI": "nlr_developer_wtk_api_models",
+        "WTKNLRDeveloperAPIWindResource": "nlr_developer_wtk_api_models",
+        "WTKHRRRMETDatasetH5": "nlr_hrrr_met_toolkit_dataset_model",
+        "OpenMeteoHistoricalWindResource": "openmeteo_wind",
+    },
 )
-from h2integrate.resource.wind.nlr_hrrr_met_toolkit_dataset_model import WTKHRRRMETDatasetH5
-from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource

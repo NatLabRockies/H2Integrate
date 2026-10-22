@@ -1,18 +1,21 @@
-from h2integrate.converters.iron.humbert_ewin_perf import HumbertEwinPerformanceComponent
-from h2integrate.converters.iron.humbert_stinn_ewin_cost import HumbertStinnEwinCostComponent
-from h2integrate.converters.iron.iron_dri_plant import (
-    HydrogenIronReductionPlantCostComponent,
-    HydrogenIronReductionPlantPerformanceComponent,
-    NaturalGasIronReductionPlantCostComponent,
-    NaturalGasIronReductionPlantPerformanceComponent,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__,
+    globals(),
+    {
+        "HumbertEwinPerformanceComponent": "humbert_ewin_perf",
+        "HumbertStinnEwinCostComponent": "humbert_stinn_ewin_cost",
+        "HydrogenIronReductionPlantCostComponent": "iron_dri_plant",
+        "HydrogenIronReductionPlantPerformanceComponent": "iron_dri_plant",
+        "NaturalGasIronReductionPlantCostComponent": "iron_dri_plant",
+        "NaturalGasIronReductionPlantPerformanceComponent": "iron_dri_plant",
+        "IronTransportCostComponent": "iron_transport",
+        "IronTransportPerformanceComponent": "iron_transport",
+        "NRRIIronMineCostComponent": "nrri_iron_mine",
+        "NRRIIronMinePerformanceComponent": "nrri_iron_mine",
+        "SimpleIronMineCostComponent": "simple_mine_cost_model",
+        "SimpleIronMinePerformanceComponent": "simple_mine_perf_model",
+    },
 )
-from h2integrate.converters.iron.iron_transport import (
-    IronTransportCostComponent,
-    IronTransportPerformanceComponent,
-)
-from h2integrate.converters.iron.nrri_iron_mine import (
-    NRRIIronMineCostComponent,
-    NRRIIronMinePerformanceComponent,
-)
-from h2integrate.converters.iron.simple_mine_cost_model import SimpleIronMineCostComponent
-from h2integrate.converters.iron.simple_mine_perf_model import SimpleIronMinePerformanceComponent
