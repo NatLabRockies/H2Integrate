@@ -75,6 +75,16 @@ longer than `plant_life`. Partial-year and multi-year runs require support from 
 model; otherwise models default to annual-only support. At `dt: 3600`, for example, `4380`
 timesteps represent half a year.
 
+`plant.simulation.annual_extrapolation_method` controls how annualized profiles are extended
+beyond the simulated horizon. Choose `tile`, `final_sim_value`, or `time_averaged_sim_value`.
+Set it when multiple simulated year segments must be extended beyond the simulation horizon to
+cover plant life. It can be omitted for a single simulated year segment, where the methods
+produce the same result, or when the simulation covers the plant life. The setting applies to
+capacity factors and variable operating costs. A finance subgroup using a custom timeseries may
+override it with its own `annual_extrapolation_method`; otherwise the plant-level value applies.
+Technology implementations may also pass an explicit method to an annualization call to
+override the plant-level value.
+
 See the {ref}`model duration requirements <required-class-attributes>` and
 {ref}`annualization guidance <annualization-methods>` for developer details.
 

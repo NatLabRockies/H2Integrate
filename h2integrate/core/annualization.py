@@ -6,7 +6,7 @@ from itertools import pairwise
 import numpy as np
 
 
-_VALID_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "average_sim_value")
+_VALID_ANNUAL_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "time_averaged_sim_value")
 
 
 def _annualization_steps_per_year(dt):
@@ -25,7 +25,7 @@ def _annualization_steps_per_year(dt):
 def _extrapolate_annual_values(
     simulated_values: np.ndarray,
     plant_life: int,
-    method: str,
+    method: str | None,
     simulated_durations_years: np.ndarray | None = None,
 ) -> np.ndarray:
     """Extend or truncate simulated annual values to the plant lifetime.
@@ -38,9 +38,11 @@ def _extrapolate_annual_values(
         simulated_values (np.ndarray): Nonempty, one-dimensional array with one
             value per full or partial simulated year.
         plant_life (int): Positive integer number of plant years to return.
-        method (str): ``"tile"`` to repeat the values cyclically,
+        method (str | None): ``"tile"`` to repeat the values cyclically,
             ``"final_sim_value"`` to hold the last value, or
-            ``"average_sim_value"`` to hold their time-weighted mean.
+            ``"time_averaged_sim_value"`` to hold their time-weighted mean. If None,
+            a method is required only when multiple simulated segments need to
+            be extended to cover plant life; a single segment repeats naturally.
         simulated_durations_years (np.ndarray | None): Positive elapsed duration
             in years for each supplied value. Used only by the average method.
             Defaults to ``None``, treating all values as equal-duration years.
@@ -50,14 +52,28 @@ def _extrapolate_annual_values(
         same units as the supplied values.
 
     Raises:
-        ValueError: If ``method`` is not a supported extrapolation method.
+        ValueError: If ``method`` is unsupported or needed but not provided.
     """
-    if method not in _VALID_EXTRAPOLATION_METHODS:
+    if method is not None and method not in _VALID_ANNUAL_EXTRAPOLATION_METHODS:
         raise ValueError(
-            f"extrapolation method must be one of {_VALID_EXTRAPOLATION_METHODS}; got {method!r}."
+            f"extrapolation method must be one of {_VALID_ANNUAL_EXTRAPOLATION_METHODS}; "
+            f"got {method!r}."
         )
 
     n_sim_years = simulated_values.size
+    if n_sim_years >= plant_life:
+        return simulated_values[:plant_life].copy()
+
+    if method is None:
+        if n_sim_years == 1:
+            method = "tile"
+        else:
+            raise ValueError(
+                "An annual_extrapolation_method is required to extrapolate multiple simulated "
+                "annual values across the remaining plant life. Set it in "
+                "plant_config['plant']['simulation']['annual_extrapolation_method']."
+            )
+
     if method == "tile":
         n_tiles = math.ceil(plant_life / n_sim_years)
         return np.tile(simulated_values, n_tiles)[:plant_life]
@@ -97,7 +113,7 @@ def _validate_annualization_inputs(
         eol_soh (float | None): EOL threshold in [0, 1]. Required only when SOH
             is supplied.
         no_degradation_extrapolation (str): ``"tile"``, ``"final_sim_value"``,
-            or ``"average_sim_value"`` for extrapolating without SOH.
+            or ``"time_averaged_sim_value"`` for extrapolating without SOH.
         soh_cycle_repetition (str): ``"all_soh_cycles"`` to repeat all cycles
             or ``"final_soh_cycle"`` to repeat the final cycle.
 
@@ -121,10 +137,13 @@ def _validate_annualization_inputs(
     if not np.isfinite(rated_performance) or rated_performance <= 0.0:
         raise ValueError("rated_performance must be finite and greater than zero.")
 
-    if no_degradation_extrapolation not in _VALID_EXTRAPOLATION_METHODS:
+    if (
+        no_degradation_extrapolation is not None
+        and no_degradation_extrapolation not in _VALID_ANNUAL_EXTRAPOLATION_METHODS
+    ):
         raise ValueError(
             "no_degradation_extrapolation must be one of "
-            f"{_VALID_EXTRAPOLATION_METHODS}; got {no_degradation_extrapolation!r}."
+            f"{_VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {no_degradation_extrapolation!r}."
         )
 
     valid_soh_cycle_repetition_modes = ("all_soh_cycles", "final_soh_cycle")
@@ -184,8 +203,9 @@ def _time_weighted_annual_means(
         be shorter than one year.
     """
     # Keep the series' actual start and end, splitting at intervening plant-year boundaries.
-    sample_duration = dt / 31_536_000
-    sample_edges = start_year + np.arange(timestep_values.size + 1) * sample_duration
+    seconds_per_year = 31_536_000
+    sample_duration = dt / seconds_per_year
+    sample_edges = start_year + (np.arange(timestep_values.size + 1) * dt) / seconds_per_year
     annual_edges = np.arange(math.floor(start_year) + 1, math.ceil(sample_edges[-1]), dtype=float)
     segment_edges = np.concatenate(([start_year], annual_edges, [sample_edges[-1]]))
     durations = np.diff(segment_edges)

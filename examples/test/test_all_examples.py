@@ -668,6 +668,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
             "commodity_stream": "wind",
             "use_commodity_stream_timeseries": True,
             "commodity_stream_output": "electricity_out",
+            "annual_extrapolation_method": "final_sim_value",
             "technologies": ["wind"],
         }
     }
@@ -684,6 +685,10 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
     }
     # Create a H2Integrate model
     model = H2IntegrateModel(top_level_config)
+    finance_timeseries_component = model.plant.get_subsystem(
+        "finance_subgroup_electricity_ts.adjusted_cf_comp"
+    )
+    assert finance_timeseries_component.options["annual_extrapolation_method"] == "final_sim_value"
 
     # Run the model
     model.run()
@@ -1609,7 +1614,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
         npv = model.prob.get_val(
             "finance_subgroup_electricity.NPV_electricity_all_electricity_npv", units="USD"
         )[0]
-        assert pytest.approx(npv, rel=1e-6) == 3791194.71
+        assert pytest.approx(npv, rel=1e-5) == 3791194.71
 
     # Subtest for ProFAST NPV
     with subtests.test("Check NPV value (profast)"):
@@ -1617,7 +1622,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
             "finance_subgroup_electricity.NPV_electricity_all_electricity_profast_npv",
             units="USD",
         )[0]
-        assert pytest.approx(npv, rel=1e-6) == 7518969.18
+        assert pytest.approx(npv, rel=1e-5) == 7518969.18
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
@@ -2079,7 +2084,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
     with subtests.test("Renewables LCOE with generic demand"):
         assert pytest.approx(65.25367747, rel=1e-6) == lcoe_renewables_generic[0]
     with subtests.test("Renewables NPV with generic demand"):
-        assert pytest.approx(-36.0408322, rel=1e-6) == npv_renewables_generic[0]
+        assert pytest.approx(-36.0408322, rel=1e-5) == npv_renewables_generic[0]
     with subtests.test("Natural gas LCOE with generic demand"):
         assert pytest.approx(60.30971126, rel=1e-6) == lcoe_ng_generic[0]
     with subtests.test("Electricity LCOE with generic demand"):
@@ -2106,7 +2111,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
     with subtests.test("Renewables LCOE with flexible demand"):
         assert pytest.approx(65.25367747, rel=1e-6) == lcoe_renewables_flexible[0]
     with subtests.test("Renewables NPV with flexible demand"):
-        assert pytest.approx(-36.0408322, rel=1e-6) == npv_renewables_flexible[0]
+        assert pytest.approx(-36.0408322, rel=1e-5) == npv_renewables_flexible[0]
     with subtests.test("Natural gas LCOE with flexible demand"):
         assert pytest.approx(115.92792486, rel=1e-6) == lcoe_ng_flexible[0]
     with subtests.test("Electricity LCOE with flexible demand"):

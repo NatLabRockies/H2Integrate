@@ -750,6 +750,13 @@ class H2IntegrateModel:
                 f"Must be a valid model name in supported_models."
             )
 
+        check_model_simulation_duration(
+            strategy_name,
+            slc_cls,
+            self.plant_config["plant"]["simulation"]["n_timesteps"],
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
+
         slc_comp = slc_cls(
             driver_config=self.driver_config,
             plant_config=self.plant_config,
@@ -1419,6 +1426,9 @@ class H2IntegrateModel:
                         "commodity_stream_output": subgroup_params.get(
                             "commodity_stream_output", None
                         ),
+                        "annual_extrapolation_method": subgroup_params.get(
+                            "annual_extrapolation_method"
+                        ),
                     }
                 }
             )
@@ -1550,6 +1560,9 @@ class H2IntegrateModel:
                     adj_cf_comp = AdjustedCapacityFactorComp(
                         plant_config=filtered_plant_config,
                         commodity_type=commodity,
+                        annual_extrapolation_method=finance_subgroups[subgroup_name][
+                            "annual_extrapolation_method"
+                        ],
                     )
                     finance_subgroup.add_subsystem("adjusted_cf_comp", adj_cf_comp, promotes=["*"])
 

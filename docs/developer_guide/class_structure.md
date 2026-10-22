@@ -83,6 +83,13 @@ completion of the trailing cycle and integer replacement counts per year. For ar
 extrapolation options, and boundary behavior, see
 {py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
 and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.
+The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
+or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
+remaining plant life. Technology implementations can override it per call using
+`no_degradation_extrapolation` for capacity-factor projection or `annual_extrapolation_method`
+for variable OpEx projection. A finance subgroup using a custom timeseries may also override the
+plant setting; otherwise, it inherits the plant-level value. See
+{ref}`Plant lifetime and simulation <plant-simulation-settings>`.
 
 ### Multiple layers of inheritance
 
