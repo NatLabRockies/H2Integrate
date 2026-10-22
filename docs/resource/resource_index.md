@@ -42,7 +42,8 @@ If running a simulation that is longer than 1 year, then there are a few options
 
 ## Resampling resource data
 
-API resource data may have a different native timestep from the simulation, but H2I does not resample it by default. You may explicitly choose a pandas interpolation method for upsampling ([`pandas.DataFrame.interpolate`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html)) or a pandas aggregation method for downsampling ([`pandas.DataFrame.agg`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html)) in the resource's `resource_parameters`.
+API resource data may have a different native timestep from the simulation you would like to run. H2I does not resample resource data by default, but you can set explicit parameters in the input file to either upsample the data, downsample the data, or perform both upsampling and downsampling if you have nonuniform data time steps to obtain data for your desired timestep.
+The options available are those enabled in the pandas interpolation method for upsampling ([`pandas.DataFrame.interpolate`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html)) or a pandas aggregation method for downsampling ([`pandas.DataFrame.agg`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html)) in the resource's `resource_parameters`.
 
 Set `upsample_method` or `downsample_method` in `resource_parameters` to explicitly select the pandas operation. If the data timestep and simulation timestep already match, neither setting is needed. When resampling is requested, H2I emits a warning naming the source timestep, target timestep, direction, and method. If a mismatch requires resampling but no corresponding method is set, H2I raises an error. See {py:func}`h2integrate.resource.utilities.time_tools.resample_resource_data_to_dt` for method details.
 

@@ -88,6 +88,37 @@ def test_profast_params_config(profast_inputs_no1, subtests):
         assert pf_params["maintenance"]["escalation"] == 0.02
 
 
+@pytest.mark.unit
+def test_profast_setup_without_simulation(
+    profast_inputs_no1: dict, fake_filtered_tech_config: dict
+) -> None:
+    """Allow standalone annual finance inputs without timestep configuration."""
+    problem = om.Problem(reports=False)
+    plant_config = {
+        "plant": {"plant_life": 30},
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+    }
+    finance_model = ProFastLCO(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+    )
+    independent = om.IndepVarComp()
+    independent.add_output("rated_electricity_production", 500000.0, units="kW")
+    independent.add_output("capacity_factor", val=1.0, shape=30, units="unitless")
+    problem.model.add_subsystem("ivc", independent, promotes=["*"])
+    problem.model.add_subsystem(
+        "finance",
+        finance_model,
+        promotes_inputs=["rated_electricity_production", "capacity_factor"],
+    )
+
+    problem.setup()
+
+    assert finance_model.params.plant_life == 30
+
+
 @pytest.mark.regression
 def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
     mean_hourly_production = 500000.0
@@ -95,10 +126,6 @@ def test_profast_comp(profast_inputs_no1, fake_filtered_tech_config, fake_cost_d
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -198,10 +225,6 @@ def test_profast_comp_coproduct(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -268,10 +291,6 @@ def test_profast_comp_heat(profast_inputs_no1, fake_filtered_tech_config, fake_c
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -332,10 +351,6 @@ def test_profast_comp_sales_tax(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
@@ -384,10 +399,6 @@ def test_profast_lco_warnings(
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {
-                "dt": 3600,
-                "n_timesteps": 8760,
-            },
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }

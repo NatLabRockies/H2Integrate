@@ -5,22 +5,16 @@ import math
 import numpy as np
 import pytest
 
-from h2integrate.core.model_baseclass import (
-    PerformanceModelBaseClass,
-    _project_capacity_factors,
-    _extrapolate_annual_values,
-    _build_replacement_schedule,
-    _annualization_steps_per_year,
-    _simulated_annual_capacity_factors,
-)
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
 
 
 class _DummyPerformanceModel:
     """Minimal stand-in exposing the attributes the helper reads (``plant_life``, ``dt``)."""
 
-    def __init__(self, plant_life=6, dt=31_536_000):
+    def __init__(self, plant_life=6, dt=31_536_000, annual_extrapolation_method="tile"):
         self.plant_life = plant_life
         self.dt = dt
+        self.annual_extrapolation_method = annual_extrapolation_method
 
 
 def _run(dummy, performance_timeseries, rated, soh, eol, **kwargs):
@@ -44,18 +38,20 @@ def test_resets_on_replacement():
         eol=0.8,
     )
 
-    np.testing.assert_allclose(cf_values, [1.0, 0.92, 0.84, 1.0, 0.92, 0.84])
-    np.testing.assert_allclose(replacement_schedule, [0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+    projected_cf = 0.84 * 0.71 / 0.8
+    np.testing.assert_allclose(cf_values, [1.0, 0.92, 0.84, projected_cf, 1.0, 0.92])
+    np.testing.assert_allclose(replacement_schedule, [0, 0, 0, 0, 1, 0])
 
 
 @pytest.mark.unit
 def test_without_degradation_tile():
     cf_values, replacement_schedule = _run(
         _DummyPerformanceModel(plant_life=6),
-        performance_timeseries=[0.6, 0.5, 0.4],
-        rated=1.0,
+        performance_timeseries=[1.2, 1.0, 0.8],
+        rated=2.0,
         soh=None,
         eol=None,
+        no_degradation_extrapolation="tile",
     )
 
     np.testing.assert_allclose(cf_values, [0.6, 0.5, 0.4, 0.6, 0.5, 0.4])
@@ -78,18 +74,216 @@ def test_without_degradation_final_sim_value():
 
 
 @pytest.mark.unit
-def test_without_degradation_average_sim_value():
+def test_without_degradation_time_averaged_sim_value():
     cf_values, replacement_schedule = _run(
         _DummyPerformanceModel(plant_life=6),
         performance_timeseries=[0.6, 0.5, 0.4],
         rated=1.0,
         soh=None,
         eol=None,
-        no_degradation_extrapolation="average_sim_value",
+        no_degradation_extrapolation="time_averaged_sim_value",
     )
 
     np.testing.assert_allclose(cf_values, [0.6, 0.5, 0.4, 0.5, 0.5, 0.5])
     np.testing.assert_allclose(replacement_schedule, np.zeros(6))
+
+
+@pytest.mark.unit
+def test_average_capacity_factor_weights_partial_year() -> None:
+    """Weight a full year and a partial year by their elapsed durations."""
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=31_536_000 / 4),
+        performance_timeseries=np.array([1.0, 1.0, 1.0, 1.0, 0.0]),
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="time_averaged_sim_value",
+    )
+    np.testing.assert_allclose(capacity_factors, [1.0, 0.0, 0.8, 0.8])
+    np.testing.assert_array_equal(replacement_schedule, np.zeros(4, dtype=int))
+
+
+@pytest.mark.unit
+def test_extrapolation_method_required_for_multiple_simulated_years():
+    with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
+        _run(
+            _DummyPerformanceModel(plant_life=3, annual_extrapolation_method=None),
+            performance_timeseries=[1.0, 0.0],
+            rated=1.0,
+            soh=None,
+            eol=None,
+        )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000
+    cost_model.plant_life = 3
+    with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
+        cost_model.calculate_annual_varopex(np.array([10.0, 0.0]))
+
+
+@pytest.mark.unit
+def test_extrapolation_method_not_required_for_single_simulated_year(subtests):
+    with subtests.test(
+        "single simulated year does not require extrapolation method for capacity factors"
+    ):
+        capacity_factors, _ = _run(
+            _DummyPerformanceModel(plant_life=3, annual_extrapolation_method=None),
+            performance_timeseries=[0.5],
+            rated=1.0,
+            soh=None,
+            eol=None,
+        )
+        np.testing.assert_allclose(capacity_factors, [0.5, 0.5, 0.5])
+
+    with subtests.test(
+        "single simulated year does not require extrapolation method for variable OPEX"
+    ):
+        cost_model = CostModelBaseClass()
+        cost_model.dt = 31_536_000
+        cost_model.plant_life = 3
+        np.testing.assert_allclose(
+            cost_model.calculate_annual_varopex(np.array([10.0])), [10.0, 10.0, 10.0]
+        )
+
+
+@pytest.mark.unit
+def test_average_varopex_weights_partial_year() -> None:
+    """Weight annualized variable costs by the duration of each observed interval."""
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000 / 4
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        np.array([10.0, 10.0, 10.0, 10.0, 0.0]),
+        annual_extrapolation_method="time_averaged_sim_value",
+    )
+    np.testing.assert_allclose(annual_varopex, [40.0, 0.0, 32.0, 32.0])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "annual_extrapolation_method,expected_capacity_factors,expected_varopex",
+    [
+        ("tile", [1.0, 0.0, 1.0, 0.0], [10.0, 0.0, 10.0, 0.0]),
+        ("final_sim_value", [1.0, 0.0, 0.0, 0.0], [10.0, 0.0, 0.0, 0.0]),
+        ("time_averaged_sim_value", [1.0, 0.0, 0.5, 0.5], [10.0, 0.0, 5.0, 5.0]),
+    ],
+)
+def test_plant_annual_extrapolation_method_is_base_class_default(
+    annual_extrapolation_method: str,
+    expected_capacity_factors: list[float],
+    expected_varopex: list[float],
+) -> None:
+    performance_model = _DummyPerformanceModel(
+        plant_life=4, dt=31_536_000, annual_extrapolation_method=annual_extrapolation_method
+    )
+    capacity_factors, _ = _run(
+        performance_model,
+        performance_timeseries=[1.0, 0.0],
+        rated=1.0,
+        soh=None,
+        eol=None,
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 31_536_000
+    cost_model.plant_life = 4
+    cost_model.annual_extrapolation_method = annual_extrapolation_method
+    annual_varopex = cost_model.calculate_annual_varopex(np.array([10.0, 0.0]))
+
+    np.testing.assert_allclose(capacity_factors, expected_capacity_factors)
+    np.testing.assert_allclose(annual_varopex, expected_varopex)
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt", [300, 600])
+def test_exact_three_year_horizon_tiles_capacity_factor_and_varopex(subtests, dt: int) -> None:
+    """Tile year-one values after exact three-year simulations without a spurious segment."""
+    steps_per_year = 31_536_000 // dt
+    timeseries = np.zeros(3 * steps_per_year)
+    timeseries[:steps_per_year] = 1.0
+
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=timeseries,
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="tile",
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = dt
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timeseries, annual_extrapolation_method="tile"
+    )
+
+    with subtests.test("capacity factor tiles the first year after the horizon"):
+        np.testing.assert_allclose(capacity_factors, [1.0, 0.0, 0.0, 1.0])
+        np.testing.assert_array_equal(replacement_schedule, np.zeros(4, dtype=int))
+    with subtests.test("variable OpEx tiles the first year after the horizon"):
+        np.testing.assert_allclose(annual_varopex, [steps_per_year, 0.0, 0.0, steps_per_year])
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("dt", [300, 600])
+def test_exact_three_year_horizon_final_sim_value_uses_last_complete_year(
+    subtests, dt: int
+) -> None:
+    """Do not use a roundoff-sized segment as the final simulated annual value."""
+    steps_per_year = 31_536_000 // dt
+    timeseries = np.zeros(3 * steps_per_year)
+    timeseries[:steps_per_year] = 1.0
+    timeseries[-1] = 1.0
+
+    capacity_factors, _ = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=timeseries,
+        rated=1.0,
+        soh=None,
+        eol=None,
+        no_degradation_extrapolation="final_sim_value",
+    )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = dt
+    cost_model.plant_life = 4
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timeseries, annual_extrapolation_method="final_sim_value"
+    )
+
+    with subtests.test("capacity factor repeats the last complete year"):
+        np.testing.assert_allclose(
+            capacity_factors, [1.0, 0.0, 1.0 / steps_per_year, 1.0 / steps_per_year]
+        )
+    with subtests.test("variable OpEx repeats the last complete year"):
+        np.testing.assert_allclose(annual_varopex, [steps_per_year, 0.0, 1.0, 1.0])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("method", ["tile", "final_sim_value", "time_averaged_sim_value"])
+def test_varopex_splits_timestep_at_year_boundary(subtests, method: str) -> None:
+    """Allocate a crossing timestep's cost by elapsed time before annualizing."""
+    cost_model = CostModelBaseClass()
+    cost_model.dt = 10_000
+    cost_model.plant_life = 3
+    timestep_costs = np.zeros(4000)
+    timestep_costs[3153] = 100.0
+    annual_varopex = cost_model.calculate_annual_varopex(
+        timestep_costs, annual_extrapolation_method=method
+    )
+    partial_year_duration = (timestep_costs.size * cost_model.dt - 31_536_000) / 31_536_000
+    partial_year_annual_cost = 40.0 / partial_year_duration
+    expected_fill = {
+        "tile": 60.0,
+        "final_sim_value": partial_year_annual_cost,
+        "time_averaged_sim_value": 100.0 / (1.0 + partial_year_duration),
+    }[method]
+
+    with subtests.test("the crossing timestep contributes 60 dollars and 40 dollars"):
+        np.testing.assert_allclose(annual_varopex[:2], [60.0, partial_year_annual_cost])
+    with subtests.test("future costs follow the selected extrapolation mode"):
+        assert annual_varopex[2] == pytest.approx(expected_fill)
 
 
 @pytest.mark.unit
@@ -113,21 +307,6 @@ def test_extrapolates_incomplete_trailing_cycle_then_tiles():
 
 
 @pytest.mark.unit
-def test_preserves_multiple_simulated_cycles_all_soh_cycles():
-    # Two completed cycles are observed (EOL crossing at year 1 and year 4).
-    cf_values, replacement_schedule = _run(
-        _DummyPerformanceModel(plant_life=6),
-        performance_timeseries=[1.0, 0.95, 0.9, 0.85, 0.8],
-        rated=1.0,
-        soh=[0.85, 0.80, 0.90, 0.85, 0.80],
-        eol=0.8,
-    )
-
-    np.testing.assert_allclose(cf_values, [1.0, 0.95, 0.9, 0.85, 0.8, 1.0])
-    np.testing.assert_allclose(replacement_schedule, [0, 0, 1, 0, 0, 1])
-
-
-@pytest.mark.unit
 def test_final_soh_cycle_vs_all_soh_cycles():
     performance_timeseries = [1.0, 0.95, 0.9, 0.85, 0.8]
     soh = [0.85, 0.80, 0.90, 0.85, 0.80]
@@ -140,8 +319,8 @@ def test_final_soh_cycle_vs_all_soh_cycles():
         eol=0.8,
         soh_cycle_repetition="final_soh_cycle",
     )
-    np.testing.assert_allclose(final_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 0.9, 0.85, 0.8])
-    np.testing.assert_allclose(final_repl, [0, 0, 1, 0, 0, 1, 0, 0])
+    np.testing.assert_allclose(final_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.9, 0.85])
+    np.testing.assert_allclose(final_repl, [0, 0, 1, 0, 0, 0, 1, 0])
 
     all_cf, all_repl = _run(
         _DummyPerformanceModel(plant_life=8),
@@ -151,8 +330,8 @@ def test_final_soh_cycle_vs_all_soh_cycles():
         eol=0.8,
         soh_cycle_repetition="all_soh_cycles",
     )
-    np.testing.assert_allclose(all_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 1.0, 0.95, 0.9])
-    np.testing.assert_allclose(all_repl, [0, 0, 1, 0, 0, 1, 0, 1])
+    np.testing.assert_allclose(all_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 1.0, 0.95])
+    np.testing.assert_allclose(all_repl, [0, 0, 1, 0, 0, 0, 1, 0])
 
 
 @pytest.mark.unit
@@ -212,8 +391,8 @@ def test_invalid_soh_cycle_repetition_raises():
 @pytest.mark.parametrize(
     "mode,expected_cf,expected_schedule",
     [
-        ("all_soh_cycles", [0.8, 0.725, 0.725, 0.8], [1, 1, 1, 2]),
-        ("final_soh_cycle", [0.8, 0.725, 0.725, 0.725], [1, 1, 1, 1]),
+        ("all_soh_cycles", [0.8, 0.65125, 0.767083333333, 0.684166666667], [1, 1, 1, 1]),
+        ("final_soh_cycle", [0.8, 0.67625, 0.67625, 0.734166666667], [1, 1, 0, 1]),
     ],
 )
 def test_subyear_cycles_project_cf_and_replacements_together(
@@ -227,14 +406,92 @@ def test_subyear_cycles_project_cf_and_replacements_together(
         eol=0.8,
         soh_cycle_repetition=mode,
     )
-    with subtests.test("annual means 0.8 and 0.65 retain their half-year overlaps"):
+    with subtests.test("cycle-specific annual segments retain their half-year overlaps"):
         np.testing.assert_allclose(cf_values, expected_cf)
     with subtests.test("replacement counts follow the same cycle starts"):
         np.testing.assert_array_equal(schedule, expected_schedule)
 
 
 @pytest.mark.unit
-def test_partial_year_cycle_projects_multiple_replacements(subtests):
+def test_incomplete_and_observed_eol_cycles_project_future_replacements(subtests) -> None:
+    """Do not treat observed EOL as an observed reset when completing short cycles."""
+    dummy = _DummyPerformanceModel(plant_life=3, dt=31_536_000 / 10)
+    incomplete_cf, incomplete_schedule = _run(
+        dummy,
+        performance_timeseries=np.array([1.0, 0.9]),
+        rated=1.0,
+        soh=np.array([1.0, 0.9]),
+        eol=0.8,
+    )
+    observed_eol_cf, observed_eol_schedule = _run(
+        dummy,
+        performance_timeseries=np.array([1.0, 0.9, 0.8]),
+        rated=1.0,
+        soh=np.array([1.0, 0.9, 0.8]),
+        eol=0.8,
+    )
+    with subtests.test("observed EOL requires its own future timestep before replacement"):
+        np.testing.assert_allclose(incomplete_cf, np.full(3, 0.9))
+        np.testing.assert_allclose(observed_eol_cf, np.full(3, 0.85))
+    with subtests.test("multiple replacements per year remain whole counts"):
+        np.testing.assert_array_equal(incomplete_schedule, np.full(3, 3))
+        np.testing.assert_array_equal(observed_eol_schedule, [2, 2, 3])
+        assert np.issubdtype(incomplete_schedule.dtype, np.integer)
+
+
+@pytest.mark.unit
+def test_final_subyear_cycle_retains_its_own_performance(subtests) -> None:
+    """Do not mix production from different cycles before selecting a repeat cycle."""
+    cf_values, schedule = _run(
+        _DummyPerformanceModel(plant_life=3, dt=31_536_000 / 4),
+        performance_timeseries=np.array([0.0, 0.0, 1.0, 1.0]),
+        rated=1.0,
+        soh=np.array([1.0, 0.8, 1.0, 0.8]),
+        eol=0.8,
+        soh_cycle_repetition="final_soh_cycle",
+    )
+    with subtests.test("only the final cycle supplies projected production"):
+        np.testing.assert_allclose(cf_values, [0.5, 0.875, 0.9375])
+    with subtests.test("the final cycle includes a projected timestep before repeating"):
+        np.testing.assert_array_equal(schedule, [1, 1, 2])
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "soh,eol,dt_years,plant_life,expected_schedule",
+    [
+        (np.array([1.0, 0.9]), 0.85, 0.25, 3, np.array([1, 1, 1])),
+        (np.array([0.1, 0.05]), 0.0, 0.25, 3, np.array([1, 1, 1])),
+        (np.array([1.0, 0.99]), 0.1, 0.3, 2, np.array([0, 0])),
+    ],
+)
+def test_timestep_cycle_completion_boundaries(
+    subtests,
+    soh: np.ndarray,
+    eol: float,
+    dt_years: float,
+    plant_life: int,
+    expected_schedule: np.ndarray,
+) -> None:
+    """Keep projected EOL on timestep boundaries and exclude retirement events."""
+    cf_values, schedule = _run(
+        _DummyPerformanceModel(plant_life=plant_life, dt=dt_years * 31_536_000),
+        performance_timeseries=soh.copy(),
+        rated=1.0,
+        soh=soh,
+        eol=eol,
+    )
+    with subtests.test("only completed cycles before retirement cause replacements"):
+        np.testing.assert_array_equal(schedule, expected_schedule)
+        assert np.issubdtype(schedule.dtype, np.integer)
+    with subtests.test("projection remains finite through zero SOH or an incomplete cycle"):
+        assert cf_values.shape == (plant_life,)
+        assert np.all(np.isfinite(cf_values))
+        assert np.all(cf_values >= 0.0)
+
+
+@pytest.mark.unit
+def test_partial_year_cycle_projects_future_replacements(subtests):
     cf_values, schedule = _run(
         _DummyPerformanceModel(plant_life=3, dt=31_536_000 / 4),
         performance_timeseries=[1.0, 0.5],
@@ -243,17 +500,18 @@ def test_partial_year_cycle_projects_multiple_replacements(subtests):
         eol=0.8,
     )
     with subtests.test("partial-year cycle fills the entire projected lifetime"):
-        np.testing.assert_allclose(cf_values, [0.75, 0.75, 0.75])
-    with subtests.test("year-boundary replacements belong to the following plant year"):
-        np.testing.assert_array_equal(schedule, [1, 2, 2])
+        projected_cf = 0.5 * 0.7 / 0.8
+        np.testing.assert_allclose(cf_values, np.full(3, (1.0 + 0.5 + projected_cf) / 3))
+    with subtests.test("events at 0.75, 1.5, and 2.25 remain whole replacement counts"):
+        np.testing.assert_array_equal(schedule, [1, 1, 1])
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "mode,expected_cf,expected_schedule",
     [
-        ("all_soh_cycles", [0.8, 0.65, 0.75, 0.7], [1, 2, 1, 2]),
-        ("final_soh_cycle", [0.8, 0.6, 0.6, 0.6], [1, 2, 2, 2]),
+        ("all_soh_cycles", [0.8, 0.54375, 0.8, 0.54375], [1, 1, 2, 1]),
+        ("final_soh_cycle", [0.8, 0.54375, 0.491666666667, 0.491666666667], [1, 1, 2, 1]),
     ],
 )
 def test_midyear_resets_preserve_trailing_cycle_phase(
@@ -269,7 +527,7 @@ def test_midyear_resets_preserve_trailing_cycle_phase(
     )
     with subtests.test("annual means retain observed and repeated partial-year durations"):
         np.testing.assert_allclose(cf_values, expected_cf)
-    with subtests.test("observed event at 1.25 and projected event at 1.75 share year one"):
+    with subtests.test("observed event at 1.25 precedes the projected event at 2.0"):
         np.testing.assert_array_equal(schedule, expected_schedule)
     with subtests.test("all observed and projected replacements are whole units"):
         assert np.issubdtype(schedule.dtype, np.integer)
@@ -286,17 +544,25 @@ def test_multiple_observed_and_extrapolated_resets(subtests, mode):
         eol=0.8,
         soh_cycle_repetition=mode,
     )
-    expected = [2, 1, 1, 2, 1] if mode == "all_soh_cycles" else [2, 1, 1, 0, 1]
-    with subtests.test("events at 0.25, 0.75, 1.25 and extrapolated 2.75 precede repetition"):
+    expected = [2, 1, 3, 1, 3] if mode == "all_soh_cycles" else [2, 1, 2, 1, 1]
+    with subtests.test("events at 0.25, 0.75, 1.25 and extrapolated 2.0 precede repetition"):
         np.testing.assert_array_equal(schedule, expected)
-    with subtests.test("reset never also creates a synthetic start-of-cycle event"):
-        assert schedule[:3].sum() == 4
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("mode", ["all_soh_cycles", "final_soh_cycle"])
-@pytest.mark.parametrize("soh", [[1.0] * 6, [0.9] * 6, [0.9, 1.0]])
-def test_stalled_or_unmeasured_post_reset_degradation(subtests, mode, soh):
+@pytest.mark.parametrize(
+    "soh,mode,expected_schedule",
+    [
+        (np.ones(6), "all_soh_cycles", np.zeros(4, dtype=int)),
+        (np.full(6, 0.9), "all_soh_cycles", np.zeros(4, dtype=int)),
+        (np.array([0.9, 1.0]), "all_soh_cycles", np.full(4, 2, dtype=int)),
+        (np.array([0.9, 1.0]), "final_soh_cycle", np.array([1, 0, 0, 0])),
+    ],
+)
+def test_stalled_or_unmeasured_post_reset_degradation(
+    subtests, soh: np.ndarray, mode: str, expected_schedule: np.ndarray
+) -> None:
+    """Do not infer degradation from constant SOH or a single post-reset sample."""
     cf_values, schedule = _run(
         _DummyPerformanceModel(plant_life=4, dt=31_536_000 / 4),
         performance_timeseries=np.ones(len(soh)),
@@ -305,18 +571,15 @@ def test_stalled_or_unmeasured_post_reset_degradation(subtests, mode, soh):
         eol=0.8,
         soh_cycle_repetition=mode,
     )
-    expected = [2, 2, 2, 2] if soh == [0.9, 1.0] else [0, 0, 0, 0]
-    if mode == "final_soh_cycle" and soh == [0.9, 1.0]:
-        expected = [1, 0, 0, 0]
     with subtests.test("stalling does not invent an EOL replacement"):
-        np.testing.assert_array_equal(schedule, expected)
+        np.testing.assert_array_equal(schedule, expected_schedule)
     with subtests.test("annual CF remains available across the full plant life"):
         np.testing.assert_allclose(cf_values, np.ones(4))
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("sample_count,cycle_duration", [(8, 4.0), (6, 4.5)])
-def test_partial_final_year_normalizes_soh_degradation(subtests, sample_count, cycle_duration):
+@pytest.mark.parametrize("sample_count", [8, 6])
+def test_partial_final_year_normalizes_soh_degradation(subtests, sample_count):
     soh = np.linspace(1.0, 0.9, 8)[:sample_count]
     cf_values, schedule = _run(
         _DummyPerformanceModel(plant_life=10, dt=31_536_000 / 4),
@@ -325,16 +588,19 @@ def test_partial_final_year_normalizes_soh_degradation(subtests, sample_count, c
         soh=soh,
         eol=0.8,
     )
-    annual_rate = (1.0 - 0.9) / (7 / 4)
-    first_projected_cf = (soh[-1] - annual_rate) / soh[-1]
+    degradation_per_step = (1.0 - 0.9) / 7
+    projected_steps_in_year = 4 - sample_count % 4
+    first_projected_cf = (
+        soh[-1] - degradation_per_step * np.arange(1, projected_steps_in_year + 1)
+    ) / soh[-1]
     observed_duration = sample_count / 4
-    overlap = math.ceil(observed_duration) - observed_duration
-    expected_first_cf = overlap + (1.0 - overlap) * first_projected_cf
+    observed_fraction = observed_duration - math.floor(observed_duration)
+    expected_first_cf = observed_fraction + (1.0 - observed_fraction) * first_projected_cf.mean()
     with subtests.test("partial final year uses the same SOH loss per elapsed year"):
         assert cf_values[math.floor(observed_duration)] == pytest.approx(expected_first_cf)
-    with subtests.test("EOL event remains at the end of a full projected annual interval"):
+    with subtests.test("both observation lengths complete the same 3.75-year cycle"):
         expected = np.zeros(10, dtype=int)
-        for event_time in np.arange(cycle_duration, 10, cycle_duration):
+        for event_time in np.arange(3.75, 10, 3.75):
             expected[math.floor(event_time)] += 1
         np.testing.assert_array_equal(schedule, expected)
 
@@ -415,12 +681,10 @@ def test_annual_means_weight_timesteps_crossing_fixed_year_boundaries(subtests):
         soh=[0.9, 0.85, 0.8, 0.75],
         eol=0.8,
     )
-    with subtests.test("sample crossing year one contributes by elapsed overlap"):
-        assert cf_values[0] == pytest.approx(0.44)
-    with subtests.test("completed 1.2-year cycles share the same projection clock"):
-        np.testing.assert_allclose(cf_values, [0.44, 0.512, 0.512])
-    with subtests.test("replacement events at 1.2 and 2.4 remain whole"):
-        np.testing.assert_array_equal(schedule, [0, 1, 1])
+    with subtests.test("projected 1.5-year cycles share the same projection clock"):
+        np.testing.assert_allclose(cf_values, [0.44, 0.604, 0.604])
+    with subtests.test("replacement at 1.5 is counted and retirement at 3.0 is excluded"):
+        np.testing.assert_array_equal(schedule, [0, 1, 0])
 
 
 @pytest.mark.unit
@@ -434,87 +698,3 @@ def test_invalid_no_degradation_extrapolation_raises():
             eol=None,
             no_degradation_extrapolation="not_a_mode",
         )
-
-
-@pytest.mark.unit
-def test_annualization_steps_per_year():
-    assert _annualization_steps_per_year(dt=3600) == 8760
-    assert _annualization_steps_per_year(dt=31_536_000) == 1
-    # Never returns less than one step per year.
-    assert _annualization_steps_per_year(dt=10 * 31_536_000) == 1
-
-
-@pytest.mark.unit
-def test_simulated_annual_capacity_factors():
-    # Two years at a 1-year timestep; CF is simply value / rated per year.
-    cf = _simulated_annual_capacity_factors(
-        performance_timeseries=np.array([0.5, 0.25]), rated_performance=1.0, dt=31_536_000
-    )
-    np.testing.assert_allclose(cf, [0.5, 0.25])
-
-
-@pytest.mark.unit
-def test_extrapolate_annual_values_modes():
-    simulated = np.array([0.6, 0.5, 0.4])
-    np.testing.assert_allclose(
-        _extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="tile"),
-        [0.6, 0.5, 0.4, 0.6, 0.5, 0.4],
-    )
-    np.testing.assert_allclose(
-        _extrapolate_annual_values(
-            simulated_values=simulated, plant_life=6, method="final_sim_value"
-        ),
-        [0.6, 0.5, 0.4, 0.4, 0.4, 0.4],
-    )
-    np.testing.assert_allclose(
-        _extrapolate_annual_values(
-            simulated_values=simulated, plant_life=6, method="average_sim_value"
-        ),
-        [0.6, 0.5, 0.4, 0.5, 0.5, 0.5],
-    )
-    with pytest.raises(ValueError):
-        _extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="not_a_mode")
-
-
-@pytest.mark.unit
-def test_project_capacity_factors_repetition_modes():
-    # Two completed cycles of lengths 2 and 1.
-    cycle_cf_segments = [np.array([1.0, 0.9]), np.array([0.8])]
-    np.testing.assert_allclose(
-        _project_capacity_factors(
-            cycle_cf_segments, soh_cycle_repetition="all_soh_cycles", plant_life=5
-        ),
-        [1.0, 0.9, 0.8, 1.0, 0.9],
-    )
-    np.testing.assert_allclose(
-        _project_capacity_factors(
-            cycle_cf_segments, soh_cycle_repetition="final_soh_cycle", plant_life=5
-        ),
-        [1.0, 0.9, 0.8, 0.8, 0.8],
-    )
-
-
-@pytest.mark.unit
-def test_build_replacement_schedule_marks_post_eol_cycle_starts():
-    # A single 3-year cycle that reaches end of life, tiled across a 5-year plant life,
-    # triggers one replacement at the start of the second cycle (year 3).
-    cycle_cf_segments = [np.array([1.0, 0.9, 0.8])]
-    np.testing.assert_allclose(
-        _build_replacement_schedule(
-            cycle_cf_segments,
-            cycle_reached_eol=[True],
-            soh_cycle_repetition="all_soh_cycles",
-            plant_life=5,
-        ),
-        [0.0, 0.0, 0.0, 1.0, 0.0],
-    )
-    # No replacements when the cycle never reaches end of life.
-    np.testing.assert_allclose(
-        _build_replacement_schedule(
-            cycle_cf_segments,
-            cycle_reached_eol=[False],
-            soh_cycle_repetition="all_soh_cycles",
-            plant_life=5,
-        ),
-        np.zeros(5),
-    )

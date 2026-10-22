@@ -254,3 +254,54 @@ def test_flexible_demand_converter_controller_min_utilization(
 
     with subtests.test("Check min utilization value"):
         assert flexible_demand_utilization == pytest.approx(0.8010612244, rel=1e-6)
+
+
+@pytest.mark.unit
+def test_flexible_demand_converter_full_utilization(subtests, variable_h2_production_profile):
+    end_use_rated_demand = 10.0  # kg/h
+    tech_config = {
+        "performance_model": {"model": "FlexibleDemandComponent"},
+        "model_inputs": {
+            "performance_parameters": {
+                "commodity": "hydrogen",
+                "commodity_rate_units": "kg",
+                "rated_demand": end_use_rated_demand,
+                "demand_profile": end_use_rated_demand,
+                "turndown_ratio": 0.25,
+                "ramp_down_rate_fraction": 0.2,
+                "ramp_up_rate_fraction": 0.4,
+                "min_utilization": 1.0,
+            },
+        },
+    }
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+            "simulation": {"n_timesteps": len(variable_h2_production_profile), "dt": 3600},
+        }
+    }
+
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        name="IVC",
+        subsys=om.IndepVarComp(name="hydrogen_in", val=variable_h2_production_profile),
+        promotes=["*"],
+    )
+    prob.model.add_subsystem(
+        "flexible_demand",
+        FlexibleDemandComponent(plant_config=plant_config, tech_config=tech_config),
+        promotes=["*"],
+    )
+    prob.setup()
+    prob.run_model()
+
+    with subtests.test("Flexible demand profile equals the rated demand"):
+        assert prob.get_val("hydrogen_flexible_demand_profile", units="kg") == pytest.approx(
+            end_use_rated_demand
+        )
+
+    with subtests.test("Unmet demand is the demand not covered by the input"):
+        expected_unmet = np.maximum(end_use_rated_demand - variable_h2_production_profile, 0.0)
+        assert prob.get_val("unmet_hydrogen_demand_out", units="kg") == pytest.approx(
+            expected_unmet
+        )

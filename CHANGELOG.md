@@ -1,18 +1,22 @@
 # Changelog
+
 ## Unreleased [TBD]
+- Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
+- Updated the reverse osmosis desalination models to remove the base class, take time-varying `electricity_in` and `feedwater_in` inputs that limit `water_out`, and expose capacity and related config values as OpenMDAO inputs. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
-- Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. Leap-day-inclusive resources are rejected in full H2I runs until framework-wide calendar alignment is supported. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
+- Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
+- Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
+- Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. Leap-day-inclusive resources are rejected in full H2I simulations. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 - Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR 936](https://github.com/NatLabRockies/H2Integrate/pull/936)
 - Add SimSES battery model including degradation and thermal modeling. [PR 937](https://github.com/NatLabRockies/H2Integrate/pull/937)
 
 ## 0.10.0 [October 12, 2026]
 
 ### New Features
-
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Added a new NLR wind resource model: HRRR MET Toolkit [PR 837](https://github.com/NatLabRockies/H2Integrate/pull/837)
 - Added a converter controller that implements a peak-load management heuristic. [PR 773](https://github.com/NatLabRockies/H2Integrate/pull/773)

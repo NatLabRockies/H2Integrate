@@ -70,31 +70,26 @@ directly) means the baseclass:
     - Declares `_time_step_bounds` (min, max in seconds) used to validate the configured simulation time step against the model.
     - Declares `_simulation_duration_bounds` (min, max in years, default annual-only) used to validate the configured simulation duration against the model.
 
-Annualization uses fixed 365-day plant years. Until framework-wide calendar alignment is
-supported, `H2IntegrateModel` rejects site resources configured with `include_leap_day: true`
-during configuration loading. Set this resource option to `false` or omit it. Standalone
-resource models retain their leap-day processing support. This restriction does not change
-the timestamps generated from the simulation's `start_time` and `dt`.
+(annualization-methods)=
+### Annualization
 
-The CF/replacement helper requires finite, one-dimensional performance and SOH arrays
-of identical length, positive rated performance and timestep, and a positive integer
-plant life. SOH and its EOL threshold are fractions in [0, 1]. CF projection remains
-annual: annual means retain their elapsed durations, including a partial final year.
-When cycles repeat, their overlaps with plant years are duration-weighted; timestep
-performance is not reconstructed or projected.
+For models supporting nonannual simulations, use the inherited annualization methods
+to project annual outputs across plant life. Their pure calculation functions live in
+`h2integrate/core/annualization.py`; model implementations should normally call the base-class
+methods rather than assemble the private helpers themselves.
 
-An upward SOH jump greater than `1e-9` is assumed to mark a replacement at that sample's
-elapsed offset. It closes the outgoing unit's cycle, not the new unit's cycle. SOH alone
-cannot reveal a first-sample reset or repeated replacements with identical fresh SOH.
-The trailing cycle is completed using the last two post-reset samples' SOH loss per
-elapsed year. Projected EOL is checked only at the end of each full annual projection
-interval; threshold-crossing times are not interpolated. Fewer than two post-reset samples
-or stalled degradation do not imply an EOL replacement. The completed history then repeats
-as either all cycles or the final cycle, using identical durations for CF and events.
-Replacement counts are discrete events in `[year, year + 1)`, never annualized or rounded.
-An event on a year boundary belongs to the following year; initial installation and an
-event at retirement are excluded. Observed and projected events can share a plant year.
-For example, a completed half-year cycle produces counts `[1, 2, 2]` over three years.
+CF and variable costs use duration-weighted annual means. Optional SOH supports timestep-level
+completion of the trailing cycle and integer replacement counts per year. For arguments,
+extrapolation options, and boundary behavior, see
+{py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
+and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.
+The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
+or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
+remaining plant life. Technology implementations can override it per call using
+`no_degradation_extrapolation` for capacity-factor projection or `annual_extrapolation_method`
+for variable OpEx projection. A finance subgroup using a custom timeseries may also override the
+plant setting; otherwise, it inherits the plant-level value. See
+{ref}`Plant lifetime and simulation <plant-simulation-settings>`.
 
 ### Multiple layers of inheritance
 

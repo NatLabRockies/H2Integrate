@@ -31,6 +31,8 @@ class FeedstockPerformanceModel(om.ExplicitComponent):
     )  # Constant feedstock availability is independent of simulation timestep.
     _simulation_duration_bounds = (0.0, float("inf"))
 
+    _is_steppable = False
+
     def initialize(self):
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)

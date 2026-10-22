@@ -2,12 +2,12 @@ import attrs
 import numpy as np
 import openmdao.api as om
 from attrs import field, define, validators
-from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
 from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.core.model_baseclass import SkippableComputeMixin
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
@@ -455,7 +455,7 @@ class ProFASTDefaultIncentive(BaseConfig):
         return self.as_dict()
 
 
-class ProFastBase(om.ExplicitComponent):
+class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
     """
     Base component for using the ProFAST financial model within OpenMDAO.
 
@@ -496,8 +496,11 @@ class ProFastBase(om.ExplicitComponent):
             is replaced in each year of the plant life.
     """
 
+    _is_steppable = False
+
     def initialize(self):
         """Declare OpenMDAO component options."""
+        super().initialize()
         self.options.declare("driver_config", types=dict)
         self.options.declare("plant_config", types=dict)
         self.options.declare("tech_config", types=dict)
@@ -520,10 +523,7 @@ class ProFastBase(om.ExplicitComponent):
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
 
-        plant_cfg = self.options["plant_config"]["plant"]
-        plant_life = int(plant_cfg["plant_life"])
-        self.dt = int(plant_cfg["simulation"]["dt"])
-        self.n_timesteps = int(plant_cfg["simulation"]["n_timesteps"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
         # Add rated capacity and capacity factor inputs
         self.add_input(
@@ -629,33 +629,12 @@ class ProFastBase(om.ExplicitComponent):
         profast_params["commodity"].update({"unit": self.commodity_amount_units})
 
         # calculate capacity and total production based on commodity type
-        io_meta_data = self.get_io_metadata()
-        rate_units_capacity = io_meta_data[f"rated_{self.options['commodity_type']}_production"][
-            "units"
-        ]
-        # Convert the rated production (a rate, e.g. kg/h or kW) into commodity amount units by
-        # multiplying by a duration: one day gives ProFAST's daily capacity, one year the annual
-        # production.
-        day_amount_per_unit_rate = convert_units(
-            86_400,
-            "s",
-            f"({self.commodity_amount_units})/({rate_units_capacity})",
-        )
-        annual_amount_per_unit_rate = convert_units(
-            31_536_000,
-            "s",
-            f"({self.commodity_amount_units})/({rate_units_capacity})",
-        )
-
-        capacity = (
-            inputs[f"rated_{self.options['commodity_type']}_production"][0]
-            * day_amount_per_unit_rate
-        )
+        capacity = inputs[f"rated_{self.options['commodity_type']}_production"][0] * 24
         utilization = dict(zip(years_of_operation, inputs["capacity_factor"]))
         total_production = (
             inputs["capacity_factor"]
             * inputs[f"rated_{self.options['commodity_type']}_production"]
-            * annual_amount_per_unit_rate
+            * 8760
         )
 
         # define profast parameters for capacity and utilization

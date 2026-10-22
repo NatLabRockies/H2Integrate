@@ -22,6 +22,7 @@ class GenericDemandComponent(DemandComponentBase):
 
     # (min, max) permitted simulation duration in years
     _simulation_duration_bounds = (0.0, float("inf"))
+    _is_steppable = True
 
     def setup(self):
         self.config = DemandComponentBaseConfig.from_dict(
@@ -56,6 +57,6 @@ class GenericDemandComponent(DemandComponentBase):
             array shape ``(n_timesteps,)``.
         """
 
-        outputs = self.calculate_outputs(
-            inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
-        )
+        commodity_in = inputs[f"{self.commodity}_in"]
+        commodity_demand = inputs[f"{self.commodity}_demand"]
+        outputs = self.calculate_outputs(commodity_in, commodity_demand, inputs, outputs)

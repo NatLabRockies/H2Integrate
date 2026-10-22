@@ -27,6 +27,9 @@ Some API resource models support simulations spanning multiple years when the re
 simulation time range are compatible. See the [Resource Model Index](../resource/resource_index.md)
 for details, and set `plant.simulation.n_timesteps` and `dt` to match the desired simulation range.
 
+Connected technology models must also support the requested time range. See the
+{ref}`simulation settings <plant-simulation-settings>` for the fixed-year and leap-day rules.
+
 ## Site-to-resource connections overview
 
 The `site_to_tech_connections` section in your plant configuration file defines how technologies are connected to site data and resource outputs for that site. This includes resource data such as wind or solar time series and site parameters such as latitude and longitude.

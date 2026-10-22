@@ -17,7 +17,12 @@ from h2integrate import (
     load_driver_yaml,
 )
 from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
-from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
+from h2integrate.core.dict_utils import (
+    check_inputs,
+    percent_diff_dicts,
+    dict_to_yaml_formatting,
+    find_nonzero_percent_diffs,
+)
 from h2integrate.core.file_utils import (
     get_path,
     find_file,
@@ -881,3 +886,53 @@ def test_check_inputs(subtests):
                 assert expected_error_05 == str(excinfo.value)
             else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+
+@pytest.mark.unit
+def test_percent_diff_dicts(subtests):
+    d1 = {
+        "v1": 10.5,
+        "v2": np.array([1.0, 2.0, 3.5]),
+        "v3": {"results": ["complicated_string", 12345]},
+        "v4": "A good result",
+        "v5": True,
+    }
+    d2 = {
+        "v1": 10.5,
+        "v2": np.array([1.0, 2.0, 3.5]),
+        "v3": {"results": ["complicated_string", 54321]},
+        "v4": "A bad result",
+        "v5": False,
+    }
+
+    # Match openmdao formatting for input and output dicts.
+    d1 = {k: {"val": v} for k, v in d1.items()}
+    d2 = {k: {"val": v} for k, v in d2.items()}
+
+    pd_same = percent_diff_dicts(d1, d2)
+    abs_same, rel_same = find_nonzero_percent_diffs(pd_same, d1)
+
+    with subtests.test("Same dicts case"):
+        # Only the float and the array should be compared. The other values are skipped.
+        assert len(pd_same) == 2
+
+        assert pd_same["v1"] == 0
+        assert pd_same["v2"] == 0
+
+        assert len(abs_same) == 0
+        assert len(rel_same) == 0
+
+    # Change some values so there are differences between the two dicts.
+    d2["v1"]["val"] = 10
+    d2["v2"]["val"] = np.array([1.1, 2.0, 3.6])
+
+    pd_different = percent_diff_dicts(d1, d2)
+    abs_different, rel_different = find_nonzero_percent_diffs(pd_different, d1)
+
+    with subtests.test("Different dicts case"):
+        assert len(pd_different) == 2
+        assert np.isclose(4.878048780487805, pd_different["v1"])
+        assert np.isclose(9.931660555553472, pd_different["v2"])
+
+        assert len(abs_different) == 2
+        assert len(rel_different) == 2
