@@ -10,6 +10,9 @@
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
+- Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` by using the input
+  parameterization as a single turbine's model that gets applied `num_turbines` times and aggregated
+  using the fractional method. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
 
 
 ## 0.10.0 [October 12, 2026]

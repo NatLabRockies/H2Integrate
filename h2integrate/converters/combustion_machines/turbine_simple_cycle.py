@@ -4,6 +4,7 @@ import numpy as np
 from attrs import field, define, validators
 
 import h2integrate.converters.combustion_machines.NGCT_thermo_model as NGCT
+from h2integrate.reliability import PerformanceReliability
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 from h2integrate.core.supported_models import register
@@ -119,6 +120,7 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
+        self.reliability_model = None
 
     def setup(self):
         super().setup()
@@ -242,9 +244,23 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         ]
         self.fundamental_cycle = self.ngct.run_turbine_model(self.ambient_fluid_list)
 
+        if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
+            plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
+            simulation_config = {
+                "simulation": {
+                    "dt": plant_simulation_config.get("dt", 3600),
+                    "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+                },
+            }
+            config = self.options["tech_config"]["model_inputs"]["reliability"]
+            use_reliability = config.get("use_reliability", use_reliability)
+            self.reliability_model = PerformanceReliability.from_dict(config | simulation_config)
+        self.use_reliability = use_reliability
+
     def compute(self, inputs, outputs, discrete_inputs, _discrete_outputs):
         # working variables for inputs
         num_turbines = float(inputs["num_turbines"][0])
+        num_turbines_int = int(np.ceil(num_turbines))
         turbine_capacity_mw = float(inputs["turbine_capacity"][0])
         generator_nameplate_power_mw = (
             float(inputs["generator_oversize_ratio"][0]) * turbine_capacity_mw
@@ -308,52 +324,85 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         ]
         turbine_mass_flowrates_max = deepcopy(turbine_mass_flowrates)
 
+        # here, let's evaluate availability questions
+        turbine_net_work_max = np.array(
+            [m * w / 1000.0 for m, w in zip(turbine_mass_flowrates_max, unit_mass_net_work_vec)]
+        )  # MW, total power from a 100% available turbine
+
+        availability = np.ones((num_turbines_int, len(turbine_mass_flowrates_max)))
+        if self.use_reliability:
+            # Model the availability as N systems by running the model N times and extracting the
+            # results of each run to ensure variations in system availability, recreating the
+            # fractional availability calculation to get availability in the correct shape
+            for i in range(num_turbines_int):
+                self.reliability_model.run()
+                availability[i, :] = self.reliability_model.availability
+        # if we're using fractional turbines, ensure the last row reflects the fractional part
+        if (num_turbines - (num_turbines_int - 1)) != 0:
+            availability[-1, :] = np.minimum(
+                availability[-1, :], num_turbines - (num_turbines_int - 1)
+            )
+        self.availability = availability
+
+        # calculate the available net work and mass flowrates per turbine
+        turbine_net_work_available = turbine_net_work_max * self.availability
+        turbine_mass_flowrates_available = turbine_mass_flowrates_max * self.availability
+
         # do simplified throttling of the mass flowrates if we are below the command value
-        electricity_command_value = (
-            inputs["electricity_command_value"] / num_turbines
-        )  # assume equal balance across turbines
-        turbine_mass_flowrates = np.minimum(
-            turbine_mass_flowrates_max,
-            1000.0 * electricity_command_value / generator_efficiency / unit_mass_net_work_vec,
+        electricity_command_value = inputs["electricity_command_value"]  # total plant command
+        available_electricity = generator_efficiency * turbine_net_work_available.sum(axis=0)
+        flowrate_scaler = np.minimum(
+            np.divide(
+                electricity_command_value,
+                available_electricity,
+                out=np.zeros_like(available_electricity, dtype=float),
+                where=available_electricity != 0,
+            ),
+            1.0,
         )
+        turbine_mass_flowrates = (
+            flowrate_scaler * turbine_mass_flowrates_available
+        )  # if I have more than commanded, scale down proportionally
 
         # get the net work and heat input related to the mass flowrates
-        turbine_net_work_vec = np.array(
-            [m * w / 1000.0 for m, w in zip(turbine_mass_flowrates, unit_mass_net_work_vec)]
+        plant_net_work_vec = np.array(
+            [
+                m * w / 1000.0
+                for m, w in zip(turbine_mass_flowrates.sum(axis=0), unit_mass_net_work_vec)
+            ]
         )  # MW
-        turbine_net_heat_input_vec = np.array(
-            [m * q for m, q in zip(turbine_mass_flowrates, unit_mass_net_heat_input_vec)]
+        plant_net_heat_input_vec = np.array(
+            [
+                m * q
+                for m, q in zip(turbine_mass_flowrates.sum(axis=0), unit_mass_net_heat_input_vec)
+            ]
         )  # kJ/s
 
-        # get the maximum net work the system could do given current conditions
-        turbine_max_net_work_vec = np.array(
-            [m * w / 1000.0 for m, w in zip(turbine_mass_flowrates_max, unit_mass_net_work_vec)]
-        )  # MW
-
         # compute the electricity out and package work and heat outputs
-        electricity_out = num_turbines * generator_efficiency * turbine_net_work_vec  # MW
+        electricity_out = generator_efficiency * plant_net_work_vec  # MW
         outputs["electricity_out"] = electricity_out
-        outputs[f"{self.config.fuel_source}_consumed"] = num_turbines * turbine_net_heat_input_vec
+        outputs[f"{self.config.fuel_source}_consumed"] = num_turbines * plant_net_heat_input_vec
 
+        # get the rated electricity and related production
         outputs["rated_electricity_production"] = num_turbines * turbine_capacity_mw
-
         max_production = (
             num_turbines * inputs["turbine_capacity"] * len(electricity_out) * self.dt / 3600.0
         )
 
+        # total production
         outputs["total_electricity_produced"] = np.sum(electricity_out) * self.dt / 3600.0
         outputs["capacity_factor"] = outputs["total_electricity_produced"].sum() / max_production
         outputs["annual_electricity_produced"] = outputs["total_electricity_produced"] * (
             1 / self.fraction_of_year_simulated
         )
-        outputs[f"unmet_{self.commodity}_demand"] = (
-            num_turbines * electricity_command_value - electricity_out
-        )
+
+        # unmet demand
+        outputs[f"unmet_{self.commodity}_demand"] = electricity_command_value - electricity_out
 
         # compute the headroom of the generator
         outputs[f"{self.commodity}_headroom"] = np.maximum(
             0.0,
-            num_turbines * (turbine_max_net_work_vec - turbine_net_work_vec),
+            generator_efficiency * (turbine_net_work_available.sum(axis=0) - plant_net_work_vec),
         )
 
         # total capacity
