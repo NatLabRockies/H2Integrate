@@ -1,9 +1,11 @@
 import importlib.util
 from enum import IntEnum
 
+import numpy as np
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
 from h2integrate.core.model_checks import (
@@ -1576,6 +1578,38 @@ class H2IntegrateModel:
                 self.plant.connect(
                     f"{source_tech}.{stream_name}:{var_name}_out",
                     f"{dest_tech}.{stream_name}:{var_name}_in",
+                )
+
+    def _connect_parameters(
+        self, source_tech, dest_tech, source_parameter, dest_parameter, src_indices=None
+    ):
+        """Connect two technology parameters for a 3-element technology interconnection.
+
+        The connection is made on the top-level model because OpenMDAO only supports
+        input-to-input connections there. This also works for output-to-input connections.
+        Input-to-input connections need both inputs to share one default value. That default is
+        only set automatically for a demand component's demand input (e.g. to provide the
+        threshold of a threshold statistics model); other input-to-input connections need
+        matching defaults or a manual ``set_input_defaults``.
+        """
+        self.model.connect(
+            f"{source_tech}.{source_parameter}",
+            f"{dest_tech}.{dest_parameter}",
+            src_indices=src_indices,
+        )
+
+        # Only demand inputs get a shared default automatically: their default (the configured
+        # demand profile) is known before setup, and OpenMDAO errors on mismatched defaults.
+        if self.tech_control_classifiers.get(source_tech) == "demand":
+            params = merge_shared_inputs(
+                self.technology_config["technologies"][source_tech]["model_inputs"], "performance"
+            )
+            if source_parameter == f"{params['commodity']}_demand":
+                n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
+                self.model.set_input_defaults(
+                    f"{source_tech}.{source_parameter}",
+                    val=np.array(np.broadcast_to(params["demand_profile"], n_timesteps), float),
+                    units=params["commodity_rate_units"],
                 )
 
     def connect_technologies(self):
