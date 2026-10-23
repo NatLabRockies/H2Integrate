@@ -64,3 +64,12 @@ See additional information, which is more developer focused, about the [`SystemL
 
 ## Solver Options
 The system attempts to converge the system using a solver. The solver is defined in `solver_options`.
+
+Set `scale_control_variables: true` in `solver_options` to give the SLC set points, the auto-injected passthrough command values, and the ProFAST levelized-cost output characteristic OpenMDAO `ref` and `res_ref` scales (`1e5` for `kW`, `1e3` for `kg/h`, and `1e12` for the ProFAST output). Scaling keeps variables with very different magnitudes from dominating the solver's convergence norm in cyclic systems. It is off by default, which leaves existing models unchanged.
+
+```yaml
+system_level_control:
+  solver_options:
+    solver_name: gauss_seidel
+    scale_control_variables: true
+```

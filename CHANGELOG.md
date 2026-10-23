@@ -10,6 +10,7 @@
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
+- Added an opt-in `scale_control_variables` solver option for system-level control that applies characteristic `ref` and `res_ref` scales to SLC set points, passthrough command values, and the ProFAST levelized-cost output to improve coupled-solver convergence. [PR 957](https://github.com/NatLabRockies/H2Integrate/pull/957)
 
 
 ## 0.10.0 [October 12, 2026]

@@ -2,6 +2,10 @@ import numpy as np
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
+    get_control_rate_reference,
+)
+
 
 def _get_tech_buy_price_input_name(tech_config, tech_name):
     """Return the variable name of a tech's buy-price input, or ``None`` if absent.
@@ -152,6 +156,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
     def setup(self):
         plant_config = self.options["plant_config"]
         slc_topology = self.options["slc_topology"]
+        self.scale_control_variables = (
+            plant_config.get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
 
@@ -261,13 +270,20 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # Either explicit units or copy_units from a reference variable.
         if commodity_rate_units is not None:
             unit_kwargs = {"units": commodity_rate_units}
+            reference_units = commodity_rate_units
         else:
             unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
+            reference_units = self._var_rel2meta.get(commodity_reference_var, {}).get("units")
 
         # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
         set_point_name = f"{tech_name}_{commodity}_set_point"
+        set_point_reference = (
+            get_control_rate_reference(commodity, reference_units)
+            if self.scale_control_variables
+            else 1.0
+        )
 
         # --- Register inputs and output -------------------------------
         if add_in_name:
@@ -290,6 +306,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
             shape=self.n_timesteps,
             desc=f"Set-point sent to {tech_name} for {commodity}",
             **unit_kwargs,
+            **(
+                {"ref": set_point_reference, "res_ref": set_point_reference}
+                if self.scale_control_variables
+                else {}
+            ),
         )
 
         return in_name, set_point_name, rated_name

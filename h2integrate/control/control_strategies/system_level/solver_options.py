@@ -22,6 +22,8 @@ class SLCSolverOptionsConfig(BaseConfig):
         rtol: Relative convergence tolerance. Defaults to ``convergence_tolerance``.
         convergence_tolerance: Convenience value used to set both ``atol`` and ``rtol``
             when they are not specified individually.
+        scale_control_variables: Apply characteristic ``ref`` and ``res_ref`` scales to
+            SLC set points, passthrough commands, and the ProFAST LCO output.
         iprint: Solver print level (0 = silent, 2 = verbose).
         solver_option_kwargs: Additional keyword arguments passed directly to the
             solver's ``options`` dict.
@@ -34,6 +36,7 @@ class SLCSolverOptionsConfig(BaseConfig):
     atol: float | None = field(default=None)
     rtol: float | None = field(default=None)
     convergence_tolerance: float = field(default=1e-6, validator=validators.gt(0))
+    scale_control_variables: bool = field(default=False)
     iprint: int = field(default=2)
     solver_option_kwargs: dict = field(default={})
 
@@ -67,6 +70,7 @@ class SLCSolverOptionsConfig(BaseConfig):
             "solver_map",
             "solver_option_kwargs",
             "convergence_tolerance",
+            "scale_control_variables",
             "max_iter",
         ]
         solver_options = {k: v for k, v in d.items() if k not in non_solver_option_attrs}

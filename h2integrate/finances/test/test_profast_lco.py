@@ -394,6 +394,7 @@ def test_profast_lco_warnings(
 
     # Set rated capacity to 0
     prob.set_val("pf.rated_electricity_production", 0.0, units="kW")
+    prob.set_val("pf.LCOE_no1", 123.0)
 
     with subtests.test("Test zero capacity warning"):
         expected_str = "has a zero capacity."
@@ -410,6 +411,7 @@ def test_profast_lco_warnings(
     prob.set_val(
         "pf.capacity_factor", [0.0] * plant_config["plant"]["plant_life"], units="unitless"
     )
+    prob.set_val("pf.LCOE_no1", 123.0)
 
     with subtests.test("Test zero capacity factor warning"):
         expected_str = "has a zero capacity factor."
@@ -420,3 +422,32 @@ def test_profast_lco_warnings(
 
     with subtests.test("Test zero capacity factor value"):
         assert prob.get_val("pf.LCOE_no1", units="TUSD/(kW*h)")[0] == 1.0
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("scale_control_variables", [True, False])
+def test_profast_lco_output_scaling(
+    profast_inputs_no1, fake_filtered_tech_config, scale_control_variables
+):
+    plant_config = {
+        "plant": {"plant_life": 30},
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+        "system_level_control": {
+            "solver_options": {"scale_control_variables": scale_control_variables}
+        },
+    }
+    pf = ProFastLCO(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no1",
+    )
+    prob = om.Problem()
+    prob.model.add_subsystem("pf", pf)
+    prob.setup()
+
+    metadata = prob.model.pf._var_rel2meta["LCOE_no1"]
+    expected_reference = 1e12 if scale_control_variables else 1.0
+    assert metadata["ref"] == expected_reference
+    assert metadata["res_ref"] == expected_reference
