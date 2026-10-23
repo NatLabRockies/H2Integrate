@@ -8,6 +8,7 @@ import numpy as np
 import jsonschema as json
 
 from h2integrate.core.file_utils import load_yaml, write_yaml
+from h2integrate.core.annualization import SECONDS_PER_PLANT_YEAR
 
 
 fschema_tech = Path(__file__).parent / "tech_schema.yaml"
@@ -146,21 +147,57 @@ def _validate(finput, fschema, defaults=True):
 
 # ---------------------
 def load_tech_yaml(finput):
+    """Validate and return a technology configuration.
+
+    Args:
+        finput (dict | str | Path): Technology configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated technology configuration.
+    """
     return _validate(finput, fschema_tech)
 
 
 def load_plant_yaml(finput):
+    """Validate a plant configuration and ensure its simulation horizon fits the plant life.
+
+    Args:
+        finput (dict | str | Path): Plant configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated plant configuration.
+
+    Raises:
+        ValueError: If the simulation horizon is non-positive or longer than the plant life.
+    """
     plant_config = _validate(finput, fschema_plant)
 
-    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
-    dt = plant_config["plant"]["simulation"]["dt"]
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
+    dt = int(plant_config["plant"]["simulation"]["dt"])
+    plant_life = int(plant_config["plant"]["plant_life"])
 
-    if int(n_timesteps) * int(dt) != 31536000:  # seconds in simulation must be seconds/year
+    seconds_simulated = n_timesteps * dt
+    years_simulated = seconds_simulated / SECONDS_PER_PLANT_YEAR
+
+    # The simulation may cover any positive duration (a fraction of a year, a single
+    # year, or multiple years). Performance/cost/finance models annualize their results
+    # using ``fraction_of_year_simulated`` (see the model base classes), so an arbitrary
+    # horizon is supported as long as it is positive and does not exceed the plant life.
+    if seconds_simulated <= 0:
         msg = (
-            "H2Integrate does not currently support simulations that are less than or "
-            "greater than 1-year. Please ensure that "
+            "The simulation horizon must be positive. Please ensure that "
             "plant_config['plant']['simulation']['n_timesteps'] times "
-            "plant_config['plant']['simulation']['dt'] equals 31536000 (s)."
+            "plant_config['plant']['simulation']['dt'] is greater than 0 (s)."
+        )
+        raise ValueError(msg)
+
+    if years_simulated > plant_life:
+        msg = (
+            "H2Integrate does not support simulations that are longer than the plant "
+            f"life. The configured simulation covers {years_simulated:.4g} years "
+            f"(n_timesteps={n_timesteps} * dt={dt} s = {seconds_simulated} s), but "
+            f"plant_config['plant']['plant_life'] is {plant_life} years. Either shorten "
+            "the simulation horizon or increase plant_life."
         )
         raise ValueError(msg)
 
@@ -168,6 +205,14 @@ def load_plant_yaml(finput):
 
 
 def load_driver_yaml(finput):
+    """Validate and return a driver configuration.
+
+    Args:
+        finput (dict | str | Path): Driver configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated driver configuration.
+    """
     return _validate(finput, fschema_driver)
 
 
