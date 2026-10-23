@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from h2integrate.core.file_utils import load_yaml, write_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
@@ -191,6 +192,34 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             )
             == 16.52990277
         )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/yes_hydrogen", None)]
+)
+def test_slc_yes_hydrogen_scaled_control_variables(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    plant_config = load_yaml(example_folder / "plant_config.yaml")
+    plant_config["system_level_control"]["solver_options"]["scale_control_variables"] = True
+    write_yaml(plant_config, example_folder / "plant_config.yaml")
+
+    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+    model.run()
+
+    with subtests.test("controller set points and passthrough commands are scaled"):
+        metadata = model.prob.model.get_io_metadata(
+            iotypes="output",
+            metadata_keys=["ref"],
+            includes=["*electrolyzer_hydrogen_set_point", "*hydrogen_command_value"],
+        )
+        assert metadata
+        assert all(entry["ref"] == 1e3 for entry in metadata.values())
+
+    with subtests.test("LCOH matches the unscaled solution"):
+        lcoh = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")
+        assert pytest.approx(lcoh, rel=1e-4) == 16.52990277
 
 
 @pytest.mark.unit
