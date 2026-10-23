@@ -5,84 +5,11 @@ import openmdao.api as om
 from h2integrate.control.control_strategies.openloop_control_baseclass import (
     get_control_rate_reference,
 )
-
-
-def _get_tech_buy_price_input_name(tech_config, tech_name):
-    """Return the variable name of a tech's buy-price input, or ``None`` if absent.
-
-    Used by the ``"buy_price"`` ``cost_per_tech`` mode to figure out which
-    OpenMDAO input on the technology cost model carries the per-unit purchase
-    price. Currently recognizes:
-
-    - ``"electricity_buy_price"`` (Grid technologies)
-    - ``"price"`` (Feedstock technologies)
-
-    Args:
-        tech_config (dict): The full ``tech_config`` dictionary.
-        tech_name (str): Name of the technology.
-
-    Returns:
-        str | None: The input variable name, or ``None`` if the tech has no
-        recognized buy-price input in its cost / shared parameters.
-    """
-    tech_def = tech_config.get("technologies", {}).get(tech_name, {})
-    model_inputs = tech_def.get("model_inputs", {})
-    cost_params = model_inputs.get("cost_parameters", {})
-    shared_params = model_inputs.get("shared_parameters", {})
-    all_params = {**shared_params, **cost_params}
-    if "electricity_buy_price" in all_params:
-        return "electricity_buy_price"
-    if "price" in all_params:
-        return "price"
-    return None
-
-
-def _get_buy_price_default_and_shape(tech_config, tech_name, n_timesteps, plant_life):
-    """Return the default buy-price value and OpenMDAO input shape for a tech.
-
-    Mirrors the shape logic used by the technology cost models themselves so
-    the SLC's ``{tech_name}_buy_price`` input can be safely connected
-    input-to-input with the tech's own buy-price input:
-
-    - Grid (``electricity_buy_price``): shape is determined by
-      ``buy_price_mode`` (``per_timestep`` → ``n_timesteps``, ``per_year`` →
-      ``plant_life``, ``constant`` → ``1``).
-    - Feedstock (``price``): shape is the length of the configured price
-      array, or ``1`` for a scalar.
-    - Anything else: falls back to ``n_timesteps`` with a default of ``0.0``.
-
-    Args:
-        tech_config (dict): The full ``tech_config`` dictionary.
-        tech_name (str): Name of the technology.
-        n_timesteps (int): Number of simulation timesteps.
-        plant_life (int): Plant life in years.
-
-    Returns:
-        tuple[float | list | np.ndarray, int]: ``(default_value, shape)``
-        suitable for ``add_input(val=..., shape=...)``.
-    """
-    tech_def = tech_config.get("technologies", {}).get(tech_name, {})
-    model_inputs = tech_def.get("model_inputs", {})
-    cost_params = model_inputs.get("cost_parameters", {})
-    shared_params = model_inputs.get("shared_parameters", {})
-    all_params = {**shared_params, **cost_params}
-
-    if "electricity_buy_price" in all_params:
-        default_price = all_params["electricity_buy_price"]
-        buy_price_mode = all_params.get("buy_price_mode", "per_timestep")
-        if buy_price_mode == "per_year":
-            return default_price, plant_life
-        if buy_price_mode == "constant":
-            return default_price, 1
-        return default_price, n_timesteps
-
-    if "price" in all_params:
-        default_price = all_params["price"]
-        if isinstance(default_price, list | np.ndarray):
-            return default_price, len(default_price)
-        return default_price, 1
-
-    return 0.0, n_timesteps
+from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
+    buy_price_profile,
+    annualized_marginal_cost,
+    _get_buy_price_default_and_shape,
+)
 
 
 class SystemLevelControlBase(om.ExplicitComponent):
@@ -761,17 +688,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         per-year (shape ``(plant_life,)``); the value is broadcast or
         repeated as needed to span all simulation timesteps.
         """
-        buy_price = np.asarray(inputs[f"{tech_name}_buy_price"])
-
-        if buy_price.shape == (self.n_timesteps,) or buy_price.shape == (1,):
-            return np.broadcast_to(buy_price, self.n_timesteps).copy()
-
-        if buy_price.shape == (int(self.options["plant_config"]["plant"]["plant_life"]),):
-            # Per-year price: use the first year's value as a representative
-            # per-timestep marginal cost for dispatch decisions.
-            return np.full(self.n_timesteps, buy_price[0])
-
-        return np.broadcast_to(buy_price, self.n_timesteps).copy()
+        return buy_price_profile(
+            inputs[f"{tech_name}_buy_price"],
+            self.n_timesteps,
+            int(self.options["plant_config"]["plant"]["plant_life"]),
+        )
 
     def _varopex_marginal_cost(self, inputs, tech_name):
         """Compute marginal cost from VarOpEx and commodity output.
@@ -789,15 +710,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         commodity = tech_commodities[0] if tech_commodities else self.commodity
 
         production = inputs[f"{tech_name}_{commodity}_out"]  # rate units, shape=n_timesteps
-        total_production = production.sum() * self.dt_hours
-
-        if total_production > 0:
-            annual_production = total_production / self.fraction_of_year_simulated
-            marginal_cost_scalar = varopex[0] / annual_production
-        else:
-            marginal_cost_scalar = 0.0
-
-        return np.full(self.n_timesteps, marginal_cost_scalar)
+        return np.full(
+            self.n_timesteps,
+            annualized_marginal_cost(
+                varopex[0], production, self.dt_hours, self.fraction_of_year_simulated
+            ),
+        )
 
     def _find_feedstock_techs(self, tech_name):
         """Find feedstock technologies upstream of ``tech_name`` at any depth.
@@ -840,15 +758,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
         commodity = tech_commodities[0] if tech_commodities else self.commodity
 
         production = inputs[f"{tech_name}_{commodity}_out"]
-        total_production = production.sum() * self.dt_hours
-
-        if total_production > 0:
-            annual_production = total_production / self.fraction_of_year_simulated
-            marginal_cost_scalar = total_varopex / annual_production
-        else:
-            marginal_cost_scalar = 0.0
-
-        return np.full(self.n_timesteps, marginal_cost_scalar)
+        return np.full(
+            self.n_timesteps,
+            annualized_marginal_cost(
+                total_varopex, production, self.dt_hours, self.fraction_of_year_simulated
+            ),
+        )
 
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True
