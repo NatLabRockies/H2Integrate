@@ -13,6 +13,10 @@
 - Added an opt-in `scale_control_variables` solver option for system-level control that applies characteristic `ref` and `res_ref` scales to SLC set points, passthrough command values, and the ProFAST levelized-cost output to improve coupled-solver convergence. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Moved the system-level control purchase-price and marginal-cost helpers into `slc_marginal_costs.py` and added unit tests for them, with no change in behavior. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Added pure, OpenMDAO-independent system-level control topology and conversion helpers (`slc_topology.py`, `slc_conversion.py`) that trace commodity suppliers, build supply buses and conversion links, and compute conversion ratios, and made technology-graph edge commodities order-independent. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Added heterogeneous-commodity system-level control, which propagates demand backward across converters such as electrolyzers and Haber-Bosch loops to set upstream set points for every commodity. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+  - Demand propagates only along physical supply buses in a deterministic, setup-time dispatch order, so producers wired to one consumer never serve another.
+  - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand. Conversion ratios default to one production-weighted ratio per converter (`conversion_ratio_method: aggregate`), which damps solver feedback; `timestep` keeps hourly ratios.
+  - Removed the unused `get_upstream_techs_for_commodity()` and `find_converter_techs()` methods from `SystemLevelControlBase` in favor of the topology helpers.
 
 
 ## 0.10.0 [October 12, 2026]

@@ -2,9 +2,9 @@
 
 import numpy as np
 import pytest
-import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.connection_utils import create_technology_graph as _build_technology_graph
 from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
     buy_price_profile,
     annualized_marginal_cost,
@@ -115,18 +115,6 @@ def _build_plant_config(
     }
 
 
-def _build_technology_graph(technology_interconnections):
-    technology_graph = nx.DiGraph()
-    for connection in technology_interconnections:
-        source = connection[0]
-        destination = connection[1]
-        if len(connection) == 4:
-            technology_graph.add_edge(source, destination, commodity=connection[2])
-        else:
-            technology_graph.add_edge(source, destination)
-    return technology_graph
-
-
 def _build_tech_control_classifiers(
     fixed=None, flexible=None, dispatchable=None, storage=None, feedstock=None
 ):
@@ -147,11 +135,17 @@ def _build_slc_topology(
     storage_techs_with_control: list = [],
 ):
     sources_to_commodities = {
-        (e[0], e[-1]) for e in technology_graph.edges(data="commodity") if e[-1] is not None
+        (src, commodity)
+        for src, _dst, edge_commodity in technology_graph.edges(data="commodity")
+        if edge_commodity is not None
+        for commodity in (edge_commodity if isinstance(edge_commodity, list) else [edge_commodity])
     }
 
     tech_to_commodities = {
-        (e[0], e[-1]) for e in sources_to_commodities if e[0] in tech_control_classifiers
+        (e[0], e[-1])
+        for e in sources_to_commodities
+        if tech_control_classifiers.get(e[0])
+        in ("fixed", "flexible", "dispatchable", "storage", "feedstock")
     }
 
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
@@ -825,3 +819,69 @@ class TestProfitMaximizationControl:
 
         with pytest.raises(ValueError, match="at least one feedstock"):
             _build_problem(CostMinimizationControl, plant_config, slc_topology, demand=50000)
+
+
+# ---------------------------------------------------------------------------
+# Heterogeneous-commodity dispatch (backward demand propagation)
+# ---------------------------------------------------------------------------
+def _build_hetero_problem(
+    slc_cls,
+    plant_config,
+    slc_topology,
+    tech_config,
+    demand,
+    upstream_out=None,
+    commodity_units=None,
+):
+    """Build an SLC problem wiring non-demand commodity outputs via IVCs.
+
+    Every ``(tech, commodity)`` output whose commodity differs from the demand
+    commodity is fed by an ``IndepVarComp`` and connected into the controller,
+    mirroring the real plant connections so ``units_by_conn`` inputs resolve.
+
+    Args:
+        slc_cls: Controller class to instantiate.
+        plant_config (dict): Plant config.
+        slc_topology (dict): SLC topology.
+        tech_config (dict): Tech config.
+        demand (float | array): Demand-commodity demand profile.
+        upstream_out (dict): Optional ``{(tech, commodity): value}`` outputs for
+            the wired IVCs (defaults to zero).
+        commodity_units (dict): Optional ``{commodity: units}`` for the IVCs.
+
+    Returns:
+        om.Problem: A setup problem with the demand value applied.
+    """
+    upstream_out = upstream_out or {}
+    commodity_units = commodity_units or {}
+    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+    demand_commodity = slc_topology["demand_commodity"]
+    slc_topology["demand_profile"] = demand
+
+    prob = om.Problem()
+
+    ivc_connections = []
+    for i, (tech, commodity) in enumerate(sorted(slc_topology["tech_to_commodity"])):
+        if commodity == demand_commodity:
+            continue
+        val = upstream_out.get((tech, commodity), 0.0)
+        val = np.full(n_timesteps, val) if np.isscalar(val) else np.asarray(val, dtype=float)
+        ivc = prob.model.add_subsystem(f"src{i}", om.IndepVarComp())
+        ivc.add_output(f"{tech}_{commodity}_out", val=val, units=commodity_units.get(commodity))
+        ivc_connections.append((f"src{i}.{tech}_{commodity}_out", f"slc.{tech}_{commodity}_out"))
+
+    prob.model.add_subsystem(
+        "slc",
+        slc_cls(
+            driver_config={},
+            plant_config=plant_config,
+            tech_config=tech_config,
+            slc_topology=slc_topology,
+        ),
+    )
+    for src, dst in ivc_connections:
+        prob.model.connect(src, dst)
+
+    prob.setup()
+    prob.set_val(f"slc.{demand_commodity}_demand", demand)
+    return prob

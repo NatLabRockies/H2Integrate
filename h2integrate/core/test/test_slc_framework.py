@@ -2,13 +2,60 @@ from pathlib import Path
 
 import pytest
 import networkx as nx
+import openmdao.api as om
 from pytest import fixture
 
 from h2integrate import H2IntegrateModel, load_yaml
 from h2integrate.core.connection_utils import create_technology_graph
+from h2integrate.core.h2integrate_model import _SLCPlantGroup
+from h2integrate.control.control_strategies.system_level.slc_topology import (
+    ConversionLink,
+    DispatchTopology,
+    find_commodity_suppliers,
+)
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("has_consumption_output", [True, False])
+@pytest.mark.parametrize("as_group", [True, False])
+def test_slc_converter_consumption_interface(has_consumption_output, as_group):
+    topology = DispatchTopology(
+        demand_bus="hydrogen:demand",
+        buses={},
+        links=(
+            ConversionLink(
+                "electricity", "converter", "hydrogen", "electricity:converter", "hydrogen:demand"
+            ),
+        ),
+        dispatch_order=("hydrogen:demand", "electricity:converter"),
+    )
+    plant = _SLCPlantGroup(dispatch_topology=topology)
+    converter = om.IndepVarComp()
+    converter.add_output("hydrogen_out", 1.0)
+    if has_consumption_output:
+        converter.add_output("electricity_consumed", 5.0)
+    if as_group:
+        converter_group = om.Group()
+        converter_group.add_subsystem("performance", converter, promotes=["*"])
+        plant.add_subsystem("converter", converter_group)
+    else:
+        plant.add_subsystem("converter", converter)
+    plant.add_subsystem(
+        "system_level_controller", om.ExecComp("demand = 2 * converter_electricity_consumed")
+    )
+    problem = om.Problem(model=plant, reports=False)
+    if has_consumption_output:
+        problem.setup()
+        problem.run_model()
+        assert problem.get_val("system_level_controller.demand").item() == 10.0
+    else:
+        with pytest.raises(
+            ValueError, match=r"converter.*missing required output 'electricity_consumed'"
+        ):
+            problem.setup()
 
 
 @fixture
@@ -40,13 +87,15 @@ def tech_control_classifiers(connection_case):
     return tech_control_classification
 
 
-def make_mock_tech_config(demand_tech, storage_techs, demand_class_name="GenericDemandComponent"):
+def make_mock_tech_config(
+    demand_tech, storage_techs, demand_class_name="GenericDemandComponent", commodity="electricity"
+):
     demand_config = {
         demand_tech: {
             "performance_model": {"model": demand_class_name},
             "model_inputs": {
                 "performance_parameters": {
-                    "commodity": "electricity",
+                    "commodity": commodity,
                     "commodity_rate_units": "kW",
                 }
             },
@@ -316,7 +365,7 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
     model.tech_control_classifiers = tech_control_classifiers
     demand_tech = plant_config["system_level_control"]["demand_component"]
     storage_techs = [k for k, v in tech_control_classifiers.items() if v == "storage"]
-    tech_config = make_mock_tech_config(demand_tech, storage_techs)
+    tech_config = make_mock_tech_config(demand_tech, storage_techs, commodity="ammonia")
     model.technology_config = tech_config
     model.technology_graph = create_technology_graph(
         plant_config.get("technology_interconnections", {})
@@ -348,8 +397,23 @@ def test_slc_topology_fake_complex_system(plant_config, tech_control_classifiers
     slc_base.input_techs = set(input_techs)
     slc_base.feedstock_comps = feedstock_techs
 
-    upstream_techs = slc_base.get_upstream_techs_for_commodity(
-        "haber_bosch", "hydrogen", include_feedstock_sources=True
+    upstream_techs = find_commodity_suppliers(
+        slc_base.technology_graph,
+        "haber_bosch",
+        "hydrogen",
+        supplier_techs=slc_base.input_techs | set(slc_base.feedstock_comps),
     )
     with subtests.test("Electrolyzer is upstream of Haber Bosch"):
-        assert upstream_techs == ["electrolyzer"]
+        assert upstream_techs == ("electrolyzer",)
+
+    with subtests.test("Dispatch order for the multi-commodity system"):
+        # The feedstock-only buses (nitrogen, natural gas, salt water) are never dispatched.
+        assert slc_topology["dispatch_topology"].dispatch_order == (
+            "ammonia:nh3_load_demand",
+            "electricity:haber_bosch",
+            "heat:haber_bosch",
+            "hydrogen:haber_bosch",
+            "oxygen:haber_bosch",
+            "electricity:electrolyzer",
+            "fresh_water:electrolyzer",
+        )
