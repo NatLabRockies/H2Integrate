@@ -67,8 +67,8 @@ for the start time. Every selected model in the system must support the configur
 duration, and the requested period must be compatible with the connected resource data.
 
 **One simulation year is exactly 8,760 hours (365 days, or 31,536,000 seconds); leap years
-of 8,784 hours are not supported.** Set resource `include_leap_day: false` or omit it;
-`true` is rejected. Calendar leap-year resource data must exclude February 29.
+of 8,784 hours are not modeled.** Annualization assumes 365-day plant years, so keep resource
+`include_leap_day: false` (the default) for any run that relies on it.
 
 Simulation duration is `n_timesteps * dt / 31_536_000` years and must be positive and no
 longer than `plant_life`. Partial-year and multi-year runs require support from every selected
@@ -84,6 +84,13 @@ capacity factors and variable operating costs. A finance subgroup using a custom
 override it with its own `annual_extrapolation_method`; otherwise the plant-level value applies.
 Technology implementations may also pass an explicit method to an annualization call to
 override the plant-level value.
+
+```{note}
+The subgroup override should generally match `plant.simulation.annual_extrapolation_method`.
+The finance model divides variable costs by production, so using different methods for capacity
+factor and variable operating costs distorts the resulting unit costs. Per-call overrides in
+technology implementations should follow the same rule.
+```
 
 See the {ref}`model duration requirements <required-class-attributes>` and
 {ref}`annualization guidance <annualization-methods>` for developer details.

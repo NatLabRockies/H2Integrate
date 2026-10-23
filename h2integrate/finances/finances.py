@@ -102,7 +102,9 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
     Options:
         annual_extrapolation_method (str | None): ``"tile"``, ``"final_sim_value"``, or
             ``"time_averaged_sim_value"``. Defaults to the plant-level
-            ``plant.simulation.annual_extrapolation_method``.
+            ``plant.simulation.annual_extrapolation_method``. An override should generally match
+            the simulation setting: the finance model divides variable costs by production, so
+            mixing methods between capacity factor and variable costs distorts unit costs.
 
     Inputs:
         {commodity}_produced (array): Timeseries of commodity production values
@@ -124,6 +126,8 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
         self.commodity = self.options["commodity_type"]
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # Integer dt matches the base classes and plant validation, so the horizon agrees.
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
         self.annual_extrapolation_method = self.options["annual_extrapolation_method"]
         if self.annual_extrapolation_method is None:
             self.annual_extrapolation_method = self.options["plant_config"]["plant"][
@@ -154,8 +158,7 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
     def compute(self, inputs, outputs):
         production_timeseries = inputs[f"{self.commodity}_produced"]
         annual_mean_production, annual_durations = time_weighted_annual_means(
-            production_timeseries,
-            self.options["plant_config"]["plant"]["simulation"]["dt"],
+            production_timeseries, self.dt
         )
         rated_production = float(np.max(annual_mean_production))
         outputs[f"rated_{self.commodity}_production"] = rated_production

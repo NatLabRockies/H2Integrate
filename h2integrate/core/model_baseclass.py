@@ -279,7 +279,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 ``state_of_health_timeseries`` is provided.
             no_degradation_extrapolation (str | None): Extrapolation strategy when
                 ``state_of_health_timeseries`` is None. If None, use the plant simulation's
-                ``annual_extrapolation_method``. Required only when multiple simulated annual values
+                ``annual_extrapolation_method``; an override should generally match it. Required
+                only when multiple simulated annual values
                 must be extended to cover the remaining plant life. Options:
 
                 - ``"tile"``: repeat simulated annual values cyclically.
@@ -467,7 +468,8 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
                 annual cost numerator units (for example USD per timestep after any
                 flow * price multiplication).
             annual_extrapolation_method (str | None): Extrapolation strategy after the simulated
-                horizon. If None, use the plant simulation's ``annual_extrapolation_method``.
+                horizon. If None, use the plant simulation's ``annual_extrapolation_method``;
+                an override should generally match it.
                 Required only when multiple simulated annual values must be extended to cover
                 the remaining plant life. Options are ``"tile"``, ``"final_sim_value"``, and
                 ``"time_averaged_sim_value"``.
