@@ -35,7 +35,7 @@ def create_technology_graph(technology_interconnections):
                 technology_graph.add_edge(
                     source,
                     destination,
-                    commodity=list(set(existing_commodities + new_commodities)),
+                    commodity=sorted(set(existing_commodities + new_commodities)),
                 )
             else:
                 technology_graph.add_edge(
