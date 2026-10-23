@@ -106,7 +106,7 @@ For any other input-to-input connection, the two inputs must already have the sa
 
 ### Internal connection logic
 
-H2Integrate processes these connections in the `connect_technologies()` method of `h2integrate_model.py`. Here's what happens internally:
+H2Integrate processes these connections in `h2integrate_model.py`: `connect_technologies()` handles `technology_interconnections`, `connect_sites_to_techs()` handles `site_to_tech_connections`, `connect_techs_to_finance()` wires technology costs into the finance groups, and `connect_dispatch_rules()` handles `tech_to_dispatch_connections`. For `technology_interconnections`, here's what happens internally:
 
 1. **Transport component creation**: For 4-element connections, H2Integrate creates a transport component instance and adds it to the OpenMDAO model with a unique name like `{source}_to_{dest}_{transport_type}`.
 
