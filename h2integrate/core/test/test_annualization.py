@@ -5,11 +5,10 @@ import pytest
 
 from h2integrate.core.annualization import (
     _project_capacity_factors,
-    _extrapolate_annual_values,
+    extrapolate_annual_values,
+    time_weighted_annual_means,
     _build_replacement_schedule,
-    _time_weighted_annual_means,
     _degraded_replacement_cycles,
-    _annualization_steps_per_year,
 )
 
 
@@ -60,17 +59,9 @@ def test_projected_eol_at_or_below_final_observed_soh(subtests, soh) -> None:
 
 
 @pytest.mark.unit
-def test_annualization_steps_per_year():
-    assert _annualization_steps_per_year(dt=3600) == 8760
-    assert _annualization_steps_per_year(dt=31_536_000) == 1
-    # Never returns less than one step per year.
-    assert _annualization_steps_per_year(dt=10 * 31_536_000) == 1
-
-
-@pytest.mark.unit
 def test_time_weighted_annual_means() -> None:
     """Return time-weighted means and durations for two complete plant years."""
-    annual_means, durations = _time_weighted_annual_means(
+    annual_means, durations = time_weighted_annual_means(
         timestep_values=np.array([0.5, 0.25]), dt=31_536_000
     )
     np.testing.assert_allclose(annual_means, [0.5, 0.25])
@@ -81,23 +72,23 @@ def test_time_weighted_annual_means() -> None:
 def test_extrapolate_annual_values_modes():
     simulated = np.array([0.6, 0.5, 0.4])
     np.testing.assert_allclose(
-        _extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="tile"),
+        extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="tile"),
         [0.6, 0.5, 0.4, 0.6, 0.5, 0.4],
     )
     np.testing.assert_allclose(
-        _extrapolate_annual_values(
+        extrapolate_annual_values(
             simulated_values=simulated, plant_life=6, method="final_sim_value"
         ),
         [0.6, 0.5, 0.4, 0.4, 0.4, 0.4],
     )
     np.testing.assert_allclose(
-        _extrapolate_annual_values(
+        extrapolate_annual_values(
             simulated_values=simulated, plant_life=6, method="time_averaged_sim_value"
         ),
         [0.6, 0.5, 0.4, 0.5, 0.5, 0.5],
     )
     with pytest.raises(ValueError):
-        _extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="not_a_mode")
+        extrapolate_annual_values(simulated_values=simulated, plant_life=6, method="not_a_mode")
 
 
 @pytest.mark.unit
@@ -113,7 +104,7 @@ def test_extrapolate_annual_values_with_partial_year(
     method: str, expected_values: np.ndarray
 ) -> None:
     """Use interval durations only when averaging beyond the simulated horizon."""
-    projected_values = _extrapolate_annual_values(
+    projected_values = extrapolate_annual_values(
         simulated_values=np.array([1.0, 0.0]),
         plant_life=4,
         method=method,
@@ -125,14 +116,14 @@ def test_extrapolate_annual_values_with_partial_year(
 @pytest.mark.unit
 def test_extrapolate_annual_values_requires_method_only_when_needed():
     with pytest.raises(ValueError, match="annual_extrapolation_method is required"):
-        _extrapolate_annual_values(
+        extrapolate_annual_values(
             simulated_values=np.array([1.0, 0.0]),
             plant_life=3,
             method=None,
         )
 
     np.testing.assert_array_equal(
-        _extrapolate_annual_values(
+        extrapolate_annual_values(
             simulated_values=np.array([1.0, 0.0]),
             plant_life=2,
             method=None,
