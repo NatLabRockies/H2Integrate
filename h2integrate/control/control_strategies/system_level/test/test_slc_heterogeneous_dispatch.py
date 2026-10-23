@@ -310,6 +310,47 @@ def test_816_example_topology_fixtures_build(topology_name, slc_topologies):
     assert topology.dispatch_order[0] == topology.demand_bus
 
 
+def _heterogeneous_example_problem(topology_data, connections=None):
+    """Build the full shared-splitter example topology with hand-set profiles."""
+    if connections is None:
+        connections = topology_data["connections"]
+    plant_config = _build_plant_config(connections)
+    classifiers = topology_data["classifiers"].copy()
+    topology = _build_slc_topology(
+        create_technology_graph(connections),
+        classifiers,
+        demand_tech=topology_data["demand_tech"],
+        demand_commodity=topology_data["demand_commodity"],
+        demand_commodity_rate_units=topology_data["demand_rate_units"],
+    )
+    problem = _build_hetero_problem(
+        DemandFollowingControl,
+        plant_config,
+        topology,
+        {},
+        demand=100.0,
+        upstream_out={
+            ("wind", "electricity"): 1200.0,
+            ("solar", "electricity"): 300.0,
+            ("battery", "electricity"): 0.0,
+            ("electrolyzer", "hydrogen"): 18.0,
+            ("haber_bosch", "ammonia"): 100.0,
+        },
+        commodity_units={"electricity": "kW", "hydrogen": "kg/h", "nitrogen": "kg/h"},
+    )
+    for tech_name, commodity, capacity in (
+        ("wind", "electricity", 1500.0),
+        ("solar", "electricity", 500.0),
+        ("battery", "electricity", 500.0),
+        ("electrolyzer", "hydrogen", 40.0),
+        ("haber_bosch", "ammonia", 1000.0),
+    ):
+        problem.set_val(f"slc.{tech_name}_rated_{commodity}_production", capacity)
+    for name, value in APPENDIX_A_MEASURED.items():
+        problem.set_val(f"slc.{name}", value)
+    return problem
+
+
 class DummyElectrolyzer(om.ExplicitComponent):
     electricity_per_hydrogen = 55.0
 
@@ -658,6 +699,168 @@ def test_conversion_ratio_method_selects_timestep_or_aggregate_ratios(subtests):
     with subtests.test("unknown method raises at setup"):
         with pytest.raises(ValueError, match="Unknown conversion_ratio_method 'hourly'"):
             grid_set_point("hourly")
+
+
+def _splitter_problem(splitter_outputs, connections=None):
+    """Wind through a splitter to an electrolyzer and a Haber-Bosch loop (Appendix A numbers)."""
+    if connections is None:
+        connections = [
+            ["wind", "electricity_splitter", "electricity", "cable"],
+            *[["electricity_splitter", tech, "electricity", "cable"] for tech in splitter_outputs],
+            ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+            ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
+        ]
+    classifiers = _build_tech_control_classifiers(
+        flexible=["wind"], dispatchable=["electrolyzer", "haber_bosch"]
+    )
+    classifiers["electricity_splitter"] = "splitter"
+    slc_topology = _build_slc_topology(
+        create_technology_graph(connections),
+        classifiers,
+        demand_tech="ammonia_demand",
+        demand_commodity="ammonia",
+        demand_commodity_rate_units="kg/h",
+    )
+    prob = _build_hetero_problem(
+        DemandFollowingControl,
+        _build_plant_config(connections),
+        slc_topology,
+        {},
+        demand=100.0,
+        upstream_out=APPENDIX_A_AVAILABLE,
+        commodity_units={"electricity": "kW", "hydrogen": "kg/h"},
+    )
+    prob.set_val("slc.wind_rated_electricity_production", 1500.0)
+    for name, value in APPENDIX_A_MEASURED.items():
+        prob.set_val(f"slc.{name}", value)
+    return prob
+
+
+@pytest.mark.unit
+def test_splitter_allocates_to_the_consumer_behind_out1(subtests):
+    # Electrolyzer: 18 kg/h * 55 kWh/kg = 990 kW. Haber-Bosch: 100 kg/h * 0.5 kWh/kg = 50 kW.
+    with subtests.test("out1 to the electrolyzer"):
+        prob = _splitter_problem(["electrolyzer", "haber_bosch"])
+        prob.run_model()
+        np.testing.assert_allclose(
+            prob.get_val("slc.electricity_splitter_electricity_set_point"), 990.0
+        )
+
+    with subtests.test("out1 to Haber-Bosch"):
+        prob = _splitter_problem(["haber_bosch", "electrolyzer"])
+        prob.run_model()
+        np.testing.assert_allclose(
+            prob.get_val("slc.electricity_splitter_electricity_set_point"), 50.0
+        )
+
+
+@pytest.mark.unit
+def test_splitter_set_points_ignore_order_while_out1_is_preserved(subtests):
+    splitter_outputs = ["electrolyzer", "haber_bosch"]
+    connections = [
+        ["wind", "electricity_splitter", "electricity", "cable"],
+        ["electricity_splitter", "electrolyzer", "electricity", "cable"],
+        ["electricity_splitter", "haber_bosch", "electricity", "cable"],
+        ["electrolyzer", "haber_bosch", "hydrogen", "pipe"],
+        ["haber_bosch", "ammonia_demand", "ammonia", "pipe"],
+    ]
+    priority_connections = [edge for edge in connections if edge[0] == "electricity_splitter"]
+    other_connections = [edge for edge in connections if edge[0] != "electricity_splitter"]
+
+    baseline_problem = _splitter_problem(splitter_outputs, connections=connections)
+    baseline_problem.run_model()
+    expected = _set_point_outputs(baseline_problem)
+
+    for seed in range(10):
+        order = np.random.default_rng(seed).permutation(len(other_connections))
+        shuffled_connections = [other_connections[index] for index in order] + priority_connections
+        problem = _splitter_problem(splitter_outputs, connections=shuffled_connections)
+        problem.run_model()
+        actual = _set_point_outputs(problem)
+
+        with subtests.test(f"non-priority connection shuffle {seed}"):
+            assert actual.keys() == expected.keys()
+            for name in expected:
+                np.testing.assert_allclose(actual[name], expected[name], rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.unit
+def test_heterogeneous_example_set_points_ignore_connection_order(slc_topologies, subtests):
+    example = slc_topologies["hetero_example"]
+    connections = example["connections"]
+    priority_connections = [edge for edge in connections if edge[0] == "electricity_splitter"]
+    other_connections = [edge for edge in connections if edge[0] != "electricity_splitter"]
+
+    baseline_problem = _heterogeneous_example_problem(example)
+    baseline_problem.run_model()
+    expected = _set_point_outputs(baseline_problem)
+
+    connection_orders = [list(reversed(other_connections)) + priority_connections]
+    for seed in range(10):
+        order = np.random.default_rng(seed).permutation(len(other_connections))
+        connection_orders.append(
+            [other_connections[index] for index in order] + priority_connections
+        )
+
+    for index, shuffled_connections in enumerate(connection_orders):
+        problem = _heterogeneous_example_problem(example, shuffled_connections)
+        problem.run_model()
+        actual = _set_point_outputs(problem)
+
+        with subtests.test(f"heterogeneous connection order {index}"):
+            assert actual.keys() == expected.keys()
+            for name in expected:
+                np.testing.assert_allclose(actual[name], expected[name], rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.unit
+def test_heterogeneous_example_splitter_swap_changes_priority_draw(slc_topologies, subtests):
+    example = slc_topologies["hetero_example"]
+    connections = [edge.copy() for edge in example["connections"]]
+    splitter_positions = [
+        index for index, edge in enumerate(connections) if edge[0] == "electricity_splitter"
+    ]
+    assert len(splitter_positions) == 2
+    connections[splitter_positions[0]], connections[splitter_positions[1]] = (
+        connections[splitter_positions[1]],
+        connections[splitter_positions[0]],
+    )
+    problem = _heterogeneous_example_problem(example, connections)
+    problem.run_model()
+
+    with subtests.test("out1 priority moves from electrolyzer to Haber-Bosch"):
+        np.testing.assert_allclose(
+            problem.get_val("slc.electricity_splitter_electricity_set_point"), 50.0
+        )
+
+
+@pytest.mark.unit
+def test_splitter_allocates_the_demand_to_a_priority_demand_technology():
+    connections = [
+        ["wind", "electricity_splitter", "electricity", "cable"],
+        ["electricity_splitter", "demand", "electricity", "cable"],
+        ["electricity_splitter", "other_load", "electricity", "cable"],
+    ]
+    classifiers = _build_tech_control_classifiers(flexible=["wind"])
+    classifiers["electricity_splitter"] = "splitter"
+    slc_topology = _build_slc_topology(
+        create_technology_graph(connections),
+        classifiers,
+        demand_commodity="electricity",
+        demand_commodity_rate_units="kW",
+    )
+    prob = _build_hetero_problem(
+        DemandFollowingControl,
+        _build_plant_config(connections),
+        slc_topology,
+        {},
+        demand=[10.0, 20.0, 30.0, 40.0],
+    )
+    prob.run_model()
+
+    np.testing.assert_allclose(
+        prob.get_val("slc.electricity_splitter_electricity_set_point"), [10.0, 20.0, 30.0, 40.0]
+    )
 
 
 @pytest.mark.unit

@@ -68,6 +68,22 @@ class _SLCPlantGroup(om.Group):
                 f"{tech_name}.{signal}",
                 f"system_level_controller.{tech_name}_{signal}",
             )
+        for splitter in topology.splitters:
+            technology = self._get_subsystem(splitter.name)
+            input_names = {
+                metadata["prom_name"]
+                for metadata in technology.get_io_metadata(iotypes="input").values()
+            }
+            signal = "prescribed_commodity_to_priority_tech"
+            if signal not in input_names:
+                raise ValueError(
+                    f"SLC splitter '{splitter.name}' is missing required input '{signal}'. "
+                    "Use split_mode='prescribed_commodity' for controller-managed splitters."
+                )
+            self.connect(
+                f"system_level_controller.{splitter.name}_{splitter.commodity}_set_point",
+                f"{splitter.name}.{signal}",
+            )
 
 
 class State(IntEnum):
@@ -548,7 +564,7 @@ class H2IntegrateModel:
                   ``"dispatchable"``, ``"storage"``, ``"feedstock"``). Determines how
                   the SLC interacts with each tech.
                 - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
-                  links, and dispatch order, built once
+                  links, dispatch order, and controller-managed splitters, built once
                   from the technology graph by ``build_dispatch_topology``.
         """
         slc_topology = {}
@@ -678,8 +694,9 @@ class H2IntegrateModel:
         slc_topology["tech_control_classifiers"] = upstream_tech_control_classifiers
 
         # Build the supply buses, conversion links (e.g. electrolyzer: electricity ->
-        # hydrogen), and dispatch order once, so the controller and the
-        # consumption-signal connections made below all use the same topology
+        # hydrogen), dispatch order, and controller-managed splitters once, so the
+        # controller and the consumption-signal and splitter connections made below
+        # all use the same topology
         slc_topology["dispatch_topology"] = build_dispatch_topology(
             upstream_tech_graph,
             upstream_tech_control_classifiers,
@@ -764,9 +781,10 @@ class H2IntegrateModel:
                   has its own sub-controller.
                 - ``"technology_graph"`` (nx.DiGraph): Directed graph of technology
                   interconnections.
-                - ``"dispatch_topology"`` (DispatchTopology): Supply buses and conversion
-                  links. Its converter inputs are connected to the controller's
-                  measured-consumption inputs.
+                - ``"dispatch_topology"`` (DispatchTopology): Supply buses, conversion
+                  links, and controller-managed splitters. Its converter inputs are
+                  connected to the controller's measured-consumption inputs and its
+                  splitters to the controller's splitter set points.
 
         Raises:
             ValueError: If ``control_strategy`` is not found in ``self.supported_models``.
@@ -846,7 +864,8 @@ class H2IntegrateModel:
 
         # --- Step 2b: Hand the topology to the plant group -----------------
         # _SLCPlantGroup.configure() validates and connects each converter's
-        # ``{in_commodity}_consumed`` output once all technology outputs are declared.
+        # ``{in_commodity}_consumed`` output and each splitter's prescribed allocation
+        # once all technology outputs are declared.
         self.plant.options["dispatch_topology"] = slc_topology["dispatch_topology"]
 
         # --- Step 3: Connect marginal-cost inputs (cost-aware strategies) -

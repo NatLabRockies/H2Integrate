@@ -67,7 +67,7 @@ H2IntegrateModel._classify_slc_technologies()
   store slc_topology["dispatch_topology"]
 H2IntegrateModel.add_system_level_controller()
   wire production, rated capacity, set points, and cost inputs
-  defer measured-consumption connections until interfaces exist
+  defer measured-consumption and splitter connections until interfaces exist
   _get_tech_buy_price_input_name()              -> shared price-input identification
 
 SystemLevelControlBase.setup()
@@ -79,6 +79,7 @@ SystemLevelControlBase.setup()
   _warn_undispatched_tech_commodities()
   _build_converters()                           -> input registration and link caches
   find_commodity_suppliers()                    -> _storage_suppliers
+  add_output()                                 -> splitter set points
 CostMinimizationControl.setup() / ProfitMaximizationControl.setup()
   super().setup()                               -> base setup above
   ProfitMaximization only: register commodity_sell_price input
@@ -88,6 +89,7 @@ CostMinimizationControl.setup() / ProfitMaximizationControl.setup()
 _SLCPlantGroup.configure()                      -> after all child setup methods
   inspect actual promoted technology outputs/inputs
   connect consumed signals (or raise a converter-specific error)
+  connect splitter allocations (or reject missing prescribed-allocation input)
 ```
 ````
 
@@ -123,6 +125,7 @@ compute()                                      # all three controllers
           record ratio value and source (or warn once and skip if unavailable)
           accumulate_derived_demand()          -> NEW demand and contribution maps
         assign derived_demand, _converter_contributions from returned maps
+    _set_splitter_setpoints()                   -> write priority allocations
     assign dispatch_trace                      -> snapshot for this compute only
       demand_ratios()                          -> plant-wide upstream need per unit demand
 ```
@@ -132,15 +135,15 @@ compute()                                      # all three controllers
 
 | State | Written by | Read by / lifetime |
 |---|---|---|
-| `_dispatch_topology` | Model classification builds it; base `setup()` stores it or builds a standalone fallback. | Model wiring, `_build_converters()`, `_run_dispatch()`. Reused across computes. |
+| `_dispatch_topology` | Model classification builds it; base `setup()` stores it or builds a standalone fallback. | Model wiring, `_build_converters()`, `_run_dispatch()`, splitter allocation. Reused across computes. |
 | OpenMDAO I/O names and units | Category setup helpers and `_build_converters()`. | Dispatch and ratio wrappers. Registered once at setup. |
 | `_links_by_out_bus` | `_build_converters()`. | Dispatch loop. Setup-time cache; ratio wrappers read `ConversionLink.suppliers` directly. |
 | `_storage_suppliers` | Base `setup()`, using `find_commodity_suppliers()`. | `_dispatch_storage()`. No graph traversal during compute. |
-| `outputs[*_set_point]` | Flexible pre-pass, flexible/storage/dispatchable steps. Fixed producers have no commanded set point. | Technology controllers and converter-demand propagation. Set points are commands, not measured production. |
+| `outputs[*_set_point]` | Flexible pre-pass, flexible/storage/dispatchable steps, then `_set_splitter_setpoints()`. Fixed producers have no commanded set point. | Technology controllers and converter-demand propagation. Set points are commands, not measured production. |
 | `derived_demand` | `_run_dispatch()` seeds this local map; the pure accumulator returns replacements assigned by the loop. | Each bus dispatch and the next accumulation. New each compute. |
-| `_converter_contributions` | Reset by `_run_dispatch()`; replaced with the pure accumulator's returned map. | Subsequent accumulation and the trace snapshot. New each compute. |
+| `_converter_contributions` | Reset by `_run_dispatch()`; replaced with the pure accumulator's returned map. | Subsequent accumulation, splitter priority allocation, trace snapshot. New each compute. |
 | `_missing_ratio_warned` | Initialized by `_build_converters()`; extended by the accumulation wrapper. | Warning suppression across computes, once per conversion triple. |
-| `dispatch_trace` | `_run_dispatch()`; ratio snapshots are collected by the accumulation wrapper. | Debugger or caller inspection. Overwritten, not appended, on each compute. **Not a public API.** |
+| `dispatch_trace` | `_run_dispatch()` after splitter allocation; ratio snapshots are collected by the accumulation wrapper. | Debugger or caller inspection. Overwritten, not appended, on each compute. **Not a public API.** |
 
 The pure accumulator mutates neither input map nor its arrays. For one input bus,
 contributions from **distinct converters sum**; contributions from multiple outputs of
@@ -355,9 +358,14 @@ committed after downstream dispatch.
   cannot reach every consumer on that bus; physical flow allocation is not solved here.
 - **Cycles:** a conversion cycle reachable from the demand bus raises `ValueError` at setup,
   naming the buses and converter technologies. A separate downstream fuel-cell bus can be acyclic.
+- **Connection order:** splitter out1 follows the first outgoing connection and receives
+  priority. This is the only intentional connection-order dependence; preserve that pair's
+  order when rearranging connections.
 - **Model interface:** dispatched converter inputs must expose promoted
   `{input_commodity}_consumed` outputs. Full-model setup checks actual OpenMDAO metadata before
-  connecting them and raises `ValueError` naming the converter and missing signal.
+  connecting them and raises `ValueError` naming the converter and missing signal. Controlled
+  splitters must expose `prescribed_commodity_to_priority_tech`; use `prescribed_commodity`
+  mode rather than `fraction`. Missing splitter inputs receive a similarly explicit error.
   The standalone NaN fallback does not bypass these full-model interface requirements.
 - **Scope:** one demand component is supported. Multiple-storage allocation and flow-based
   optimization of partially overlapping buses are not addressed by this backward walk.

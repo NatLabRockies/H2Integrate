@@ -212,6 +212,32 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for commodity in self._get_commodity_for_tech(storage_tech)
         }
 
+        # Register a set-point output for every controller-managed splitter so
+        # the controller can drive its per-timestep priority allocation from the
+        # backpropagated demand of the consumers behind its first output.
+        for splitter in self._dispatch_topology.splitters:
+            splitter_units = self._get_splitter_rate_units(splitter.name)
+            splitter_reference = (
+                get_control_rate_reference(splitter.commodity, splitter_units)
+                if self.scale_control_variables
+                else 1.0
+            )
+            self.add_output(
+                f"{splitter.name}_{splitter.commodity}_set_point",
+                val=0.0,
+                shape=self.n_timesteps,
+                units=splitter_units,
+                desc=(
+                    f"Prescribed {splitter.commodity} allocation to the priority "
+                    f"consumer of splitter {splitter.name}"
+                ),
+                **(
+                    {"ref": splitter_reference, "res_ref": splitter_reference}
+                    if self.scale_control_variables
+                    else {}
+                ),
+            )
+
     def _warn_undispatched_tech_commodities(self):
         """Warn when a controller-managed output is outside the demand-reachable topology."""
         dispatched_producers = {
@@ -234,6 +260,14 @@ class SystemLevelControlBase(om.ExplicitComponent):
             UserWarning,
             stacklevel=2,
         )
+
+    def _get_splitter_rate_units(self, splitter_name):
+        """Return the ``commodity_rate_units`` of a splitter from the tech config, or ``None``."""
+        splitter_config = self.options["tech_config"].get("technologies", {}).get(splitter_name, {})
+        performance_parameters = splitter_config.get("model_inputs", {}).get(
+            "performance_parameters", {}
+        )
+        return performance_parameters.get("commodity_rate_units", None)
 
     def _setup_commodity(
         self,
@@ -715,7 +749,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
         one never offsets a deficit on the other. The map also handles two topologies
         beyond the simple single-input, single-output chain:
 
-        - Multiple consumers of one bus: when several converters (or
+        - Splitters / multiple consumers of one bus: when several converters (or
           loads) draw from the same bus, each contributes its translated demand
           into the same ``derived_demand[bus]`` entry, so the upstream producers
           are sized against the summed draw without any special grouping logic.
@@ -789,6 +823,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
                     derived_demand, link, inputs, outputs, ratio_trace
                 )
 
+        self._set_splitter_setpoints(inputs, outputs)
         self.dispatch_trace = {
             "dispatch_order": tuple(topology.dispatch_order),
             "bus_demand": bus_demand,
@@ -806,6 +841,39 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 topology.demand_bus,
             ),
         }
+
+    def _set_splitter_setpoints(self, inputs, outputs):
+        """Set each controller-managed splitter's prescribed priority allocation.
+
+        A ``GenericSplitterPerformanceModel`` in ``prescribed_commodity`` mode
+        divides its input commodity so the priority output (out1) receives a
+        prescribed per-timestep amount and the second output (out2) receives the
+        remainder. For a splitter placed on a controller-managed bus, the correct
+        prescribed amount is the backpropagated demand of the consumers behind
+        out1, found at setup by tracing forward through combiners, splitters, and
+        storage. The dispatch already accumulates each converter's draw on the bus
+        as its converter contribution, and the demand technology's draw is the
+        demand profile itself. Setting the prescribed amount to the sum of those
+        draws makes out2 equal the other consumers' draw whenever the upstream
+        producers deliver the summed demand. Every consumer is then served from a
+        single physical stream without starving any of them.
+
+        Args:
+            inputs: OpenMDAO inputs.
+            outputs: OpenMDAO outputs; each splitter's
+                ``{name}_{commodity}_set_point`` output is written in place.
+        """
+        for splitter in self._dispatch_topology.splitters:
+            contributions = self._converter_contributions.get(splitter.bus, {})
+            priority_demand = np.zeros(self.n_timesteps)
+            for consumer in splitter.priority_consumers:
+                if consumer == self.demand_tech:
+                    priority_demand = priority_demand + inputs[self.demand_input_name]
+                elif consumer in contributions:
+                    priority_demand = priority_demand + contributions[consumer]
+            outputs[f"{splitter.name}_{splitter.commodity}_set_point"] = np.maximum(
+                priority_demand, 0.0
+            )
 
     def _dispatch_commodity(
         self, commodity, demand, inputs, outputs, producers=None, is_demand_bus=False
