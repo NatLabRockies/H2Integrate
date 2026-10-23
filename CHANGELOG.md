@@ -18,6 +18,7 @@
   - Conversion ratios are measured from converter consumption, seeded from rated capacities, and summarized as plant-wide upstream requirements per unit of demand. Conversion ratios default to one production-weighted ratio per converter (`conversion_ratio_method: aggregate`), which damps solver feedback; `timestep` keeps hourly ratios.
   - Removed the unused `get_upstream_techs_for_commodity()` and `find_converter_techs()` methods from `SystemLevelControlBase` in favor of the topology helpers.
 - Added controller-managed splitters to system-level control: when a `GenericSplitterPerformanceModel` in `prescribed_commodity` mode sits on a dispatched bus, the SLC sets its priority allocation from the backpropagated demand of the consumers behind its first output, with a named error when the splitter does not expose `prescribed_commodity_to_priority_tech`. [PR 961](https://github.com/NatLabRockies/H2Integrate/pull/961)
+- Added the `35_system_level_control/heterogeneous_commodity` example, a worked dispatch guide, and an integration regression for heterogeneous-commodity system-level control; the example opts into coupled-solver rate scaling, aggregate conversion ratios with plain Gauss-Seidel, strict convergence, and hourly rename/order regression checks. [PR 962](https://github.com/NatLabRockies/H2Integrate/pull/962)
 
 
 ## 0.10.0 [October 12, 2026]

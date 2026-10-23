@@ -151,7 +151,8 @@ contributions from **distinct converters sum**; contributions from multiple outp
 
 ### Worked Example: Grid Supplies Only Haber-Bosch
 
-This small `DemandFollowingControl` case uses four identical timesteps.
+This small `DemandFollowingControl` case uses four identical timesteps. It is separate
+from the shared-electricity-bus example linked in {ref}`slc-demand-following`.
 
 ```text
 wind --electricity--> electrolyzer --hydrogen--> haber_bosch --ammonia--> ammonia_demand
@@ -317,9 +318,11 @@ throughout.
 
 When `system_level_control.solver_options.scale_control_variables` is true, common rate outputs
 use `ref` and `res_ref` (`kW`: `1e5`, `kg/h`: `1e3`); passthrough command outputs use the same
-scales, and the ProFAST LCO output uses `1e12` to match its zero-capacity sentinel. The solver
-norm still measures changes across the full model, so scaling changes convergence behavior but
-not the dispatch logic.
+scales, and the ProFAST LCO output uses `1e12` to match its zero-capacity sentinel. The
+heterogeneous example enables this option, uses plain Gauss-Seidel (no Aitken), allows 150
+iterations, sets `rtol` to `1e-8`, and raises on nonconvergence. The solver norm still measures
+changes across the full model, so the integration regression also checks hourly physical
+constraints and rename/order invariance.
 
 #### Conversion ratio method and solver convergence
 
@@ -341,8 +344,13 @@ cluster switching, degradation), and storage carries any change in one timestep'
 every later timestep. The resulting feedback is not guaranteed to contract and can settle into
 small limit cycles.
 
-The trade-off of `aggregate` is part-load fidelity: at hours far from the average operating
-point, the propagated demand is biased toward the average efficiency.
+In the heterogeneous example, `timestep` takes 76 Gauss-Seidel iterations with Aitken and does
+not converge in 150 iterations when electrolyzer degradation is disabled. `aggregate` converges in
+24 plain Gauss-Seidel iterations (34 with Aitken), and annual ammonia and LCOA change by less than
+0.05%. The trade-off is part-load fidelity: at hours far from the average operating point, the
+propagated demand is biased toward the average efficiency. Ratios averaged over shorter blocks
+(for example 24 hours) did not converge in 150 iterations in the same example, so only the two
+methods above are offered.
 
 For this example, the capacity-only estimates are `500 / 1000 = 0.5` for Haber-Bosch
 electricity, `40 / 1000 = 0.04` for hydrogen, and `1500 / 40 = 37.5` for electrolyzer
