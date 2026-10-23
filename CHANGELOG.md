@@ -11,6 +11,7 @@
 - Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
 - Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. Leap-day-inclusive resources are rejected in full H2I simulations. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
+- Moved resource resampling into `resample_tools.py`, used `contains_leap_day()` for leap-day detection in `time_tools.py` (fixing a malformed leap-day error message), and made the leap-day-excluded calendar regeneration exact instead of using an upper bound. [PR 964](https://github.com/NatLabRockies/H2Integrate/pull/964)
 
 ## 0.10.0 [October 12, 2026]
 
