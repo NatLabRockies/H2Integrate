@@ -1,4 +1,3 @@
-import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
@@ -12,6 +11,7 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 class ProfitMaximizationControlConfig(BaseConfig):
     commodity_sell_price: float = field(default=0.0)
     cost_per_tech: dict = field(default={})
+    conversion_ratio_method: str = field(default="aggregate")
 
 
 @register
@@ -103,57 +103,30 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
-        demand = inputs[self.demand_input_name].copy()
-        sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
+        self._run_dispatch(inputs, outputs)
 
-        # 1. Fixed techs: always produce, subtract from demand
-        for fixed_tech in self.fixed_techs:
-            commodity_from_tech = self._get_commodity_for_tech(fixed_tech)
-            if self.commodity in commodity_from_tech:
-                demand = self._subtract_fixed(fixed_tech, demand, self.commodity, inputs)
+    def _dispatch_dispatchables(
+        self,
+        commodity,
+        remaining_demand,
+        inputs,
+        outputs,
+        producers=None,
+        is_demand_bus=False,
+    ):
+        """Merit-order dispatch, profit-gated for the bus that delivers the demand commodity.
 
-        # 2. Flexible techs: full production (always profitable)
-        for flexible_tech in self.flexible_techs:
-            commodity_from_tech = self._get_commodity_for_tech(flexible_tech)
-            if self.commodity in commodity_from_tech:
-                demand = self._subtract_flexible(
-                    flexible_tech, demand, self.commodity, inputs, outputs
-                )
-
-        # 3. Storage dispatch
-        # number of storage components that produce the demanded commodity
-        n_storage = len(
-            [s for s in self.storage_techs if self.commodity in self._get_commodity_for_tech(s)]
+        The demand bus is dispatched only at timesteps where a technology's
+        marginal cost is below the sell price. Upstream (derived) buses are
+        dispatched at minimum cost to supply the profitable primary production,
+        since the profitability decision has already been made on the demand bus.
+        """
+        sell_price = inputs["commodity_sell_price"] if is_demand_bus else None
+        return self._merit_order_dispatch(
+            commodity,
+            remaining_demand,
+            inputs,
+            outputs,
+            sell_price=sell_price,
+            producers=producers,
         )
-        for storage_tech in self.storage_techs:
-            commodity_from_tech = self._get_commodity_for_tech(storage_tech)
-            if self.commodity in commodity_from_tech:
-                demand = self._dispatch_storage(
-                    storage_tech, demand / n_storage, self.commodity, inputs, outputs
-                )
-
-        # 4. Profit-driven merit-order dispatch
-        remaining = np.maximum(demand, 0.0)
-
-        marginal_costs = self._compute_marginal_costs(inputs)
-
-        # Merit order: sort by mean marginal cost (cheapest first)
-        mean_costs = np.array([mc.mean() for mc in marginal_costs])
-        dispatch_order = np.argsort(mean_costs)
-
-        # Initialize all dispatchable set-point outputs to zero
-        for set_point_name in self.dispatchable_set_point_names:
-            outputs[set_point_name] = np.zeros(self.n_timesteps)
-
-        # Dispatch only where profitable (element-wise comparison)
-        for idx in dispatch_order:
-            mc = marginal_costs[idx]  # per-timestep array
-            profitable = mc < sell_price  # boolean mask per timestep
-
-            set_point_name = self.dispatchable_set_point_names[idx]
-            rated_name = self.dispatchable_rated_names[idx]
-            rated = inputs[rated_name]
-
-            dispatch = np.where(profitable, np.minimum(remaining, rated), 0.0)
-            outputs[set_point_name] = dispatch
-            remaining -= dispatch
