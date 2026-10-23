@@ -42,6 +42,7 @@ plant:
   simulation:
     dt: 3600
     n_timesteps: 8760
+    annual_extrapolation_method: tile
 finance_parameters:
   finance_groups:
     profast_model:

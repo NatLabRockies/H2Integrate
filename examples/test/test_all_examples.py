@@ -668,7 +668,6 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
             "commodity_stream": "wind",
             "use_commodity_stream_timeseries": True,
             "commodity_stream_output": "electricity_out",
-            "annual_extrapolation_method": "final_sim_value",
             "technologies": ["wind"],
         }
     }
@@ -685,10 +684,6 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
     }
     # Create a H2Integrate model
     model = H2IntegrateModel(top_level_config)
-    finance_timeseries_component = model.plant.get_subsystem(
-        "finance_subgroup_electricity_ts.adjusted_cf_comp"
-    )
-    assert finance_timeseries_component.options["annual_extrapolation_method"] == "final_sim_value"
 
     # Run the model
     model.run()
