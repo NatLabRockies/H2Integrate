@@ -12,6 +12,7 @@
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
 - Added an opt-in `scale_control_variables` solver option for system-level control that applies characteristic `ref` and `res_ref` scales to SLC set points, passthrough command values, and the ProFAST levelized-cost output to improve coupled-solver convergence. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Moved the system-level control purchase-price and marginal-cost helpers into `slc_marginal_costs.py` and added unit tests for them, with no change in behavior. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Added pure, OpenMDAO-independent system-level control topology and conversion helpers (`slc_topology.py`, `slc_conversion.py`) that trace commodity suppliers, build supply buses and conversion links, and compute conversion ratios, and made technology-graph edge commodities order-independent. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 
 ## 0.10.0 [October 12, 2026]
