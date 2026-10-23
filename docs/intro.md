@@ -41,12 +41,13 @@ Check individual model docs and definitions for time step bounds for individual 
 ```
 
 ```{note}
-Simulations are no longer restricted to exactly one year. A simulation may cover any
+Simulations are no longer restricted to exactly one year by the framework. A simulation may cover any
 positive duration up to the plant life (a fraction of a year, a single year, or multiple
 years), set via `n_timesteps` and `dt` in `plant_config`. Performance, cost, and finance
 results are annualized across the plant life using the simulated horizon. Each model
 declares the durations it supports with a `_simulation_duration_bounds` class attribute
-(min, max in years); the default is annual-only. All models in a given simulation must be
+(min, max in years); the default is annual-only, and currently available models keep that
+default unless their documentation states otherwise. All models in a given simulation must be
 compatible with the specified duration.
 ```
 

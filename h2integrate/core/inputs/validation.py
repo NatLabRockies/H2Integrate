@@ -8,6 +8,7 @@ import numpy as np
 import jsonschema as json
 
 from h2integrate.core.file_utils import load_yaml, write_yaml
+from h2integrate.core.annualization import SECONDS_PER_PLANT_YEAR
 
 
 fschema_tech = Path(__file__).parent / "tech_schema.yaml"
@@ -175,9 +176,8 @@ def load_plant_yaml(finput):
     dt = int(plant_config["plant"]["simulation"]["dt"])
     plant_life = int(plant_config["plant"]["plant_life"])
 
-    seconds_per_year = 31_536_000  # 8760 h/year * 3600 s/h
     seconds_simulated = n_timesteps * dt
-    years_simulated = seconds_simulated / seconds_per_year
+    years_simulated = seconds_simulated / SECONDS_PER_PLANT_YEAR
 
     # The simulation may cover any positive duration (a fraction of a year, a single
     # year, or multiple years). Performance/cost/finance models annualize their results

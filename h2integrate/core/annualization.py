@@ -1,4 +1,11 @@
-"""Annual capacity-factor projection and replacement-cycle calculations."""
+"""Annual capacity-factor projection and replacement-cycle calculations.
+
+The public names (``SECONDS_PER_PLANT_YEAR``, ``VALID_ANNUAL_EXTRAPOLATION_METHODS``,
+``time_weighted_annual_means``, ``extrapolate_annual_values``) are shared with the finance
+components. Underscore-prefixed helpers implement the degradation and replacement logic and are
+meant to be called through
+``PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule``.
+"""
 
 import math
 from itertools import pairwise
@@ -6,23 +13,13 @@ from itertools import pairwise
 import numpy as np
 
 
-_VALID_ANNUAL_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "time_averaged_sim_value")
+# H2Integrate plant years are always 365 days (8760 h); leap days are not modeled.
+SECONDS_PER_PLANT_YEAR = 31_536_000
+
+VALID_ANNUAL_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "time_averaged_sim_value")
 
 
-def _annualization_steps_per_year(dt):
-    """Estimate the number of equal timesteps in a fixed 365-day year.
-
-    Args:
-        dt (float): Positive timestep duration in seconds.
-
-    Returns:
-        int: Timesteps per year, rounded to the nearest integer and clamped to
-        at least one. This is an estimate when ``dt`` does not divide a year evenly.
-    """
-    return max(1, round(31_536_000 / dt))
-
-
-def _extrapolate_annual_values(
+def extrapolate_annual_values(
     simulated_values: np.ndarray,
     plant_life: int,
     method: str | None,
@@ -54,9 +51,9 @@ def _extrapolate_annual_values(
     Raises:
         ValueError: If ``method`` is unsupported or needed but not provided.
     """
-    if method is not None and method not in _VALID_ANNUAL_EXTRAPOLATION_METHODS:
+    if method is not None and method not in VALID_ANNUAL_EXTRAPOLATION_METHODS:
         raise ValueError(
-            f"extrapolation method must be one of {_VALID_ANNUAL_EXTRAPOLATION_METHODS}; "
+            f"extrapolation method must be one of {VALID_ANNUAL_EXTRAPOLATION_METHODS}; "
             f"got {method!r}."
         )
 
@@ -139,11 +136,11 @@ def _validate_annualization_inputs(
 
     if (
         no_degradation_extrapolation is not None
-        and no_degradation_extrapolation not in _VALID_ANNUAL_EXTRAPOLATION_METHODS
+        and no_degradation_extrapolation not in VALID_ANNUAL_EXTRAPOLATION_METHODS
     ):
         raise ValueError(
             "no_degradation_extrapolation must be one of "
-            f"{_VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {no_degradation_extrapolation!r}."
+            f"{VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {no_degradation_extrapolation!r}."
         )
 
     valid_soh_cycle_repetition_modes = ("all_soh_cycles", "final_soh_cycle")
@@ -179,7 +176,7 @@ def _validate_annualization_inputs(
     return performance_timeseries, rated_performance, state_of_health_timeseries, use_degradation
 
 
-def _time_weighted_annual_means(
+def time_weighted_annual_means(
     timestep_values: np.ndarray, dt: float, start_year: float = 0.0
 ) -> tuple[np.ndarray, np.ndarray]:
     """Calculate time-weighted means over fixed 365-day plant-year segments.
@@ -203,9 +200,8 @@ def _time_weighted_annual_means(
         be shorter than one year.
     """
     # Keep the series' actual start and end, splitting at intervening plant-year boundaries.
-    seconds_per_year = 31_536_000
-    sample_duration = dt / seconds_per_year
-    sample_edges = start_year + (np.arange(timestep_values.size + 1) * dt) / seconds_per_year
+    sample_duration = dt / SECONDS_PER_PLANT_YEAR
+    sample_edges = start_year + (np.arange(timestep_values.size + 1) * dt) / SECONDS_PER_PLANT_YEAR
     annual_edges = np.arange(math.floor(start_year) + 1, math.ceil(sample_edges[-1]), dtype=float)
     segment_edges = np.concatenate(([start_year], annual_edges, [sample_edges[-1]]))
     durations = np.diff(segment_edges)
@@ -272,7 +268,7 @@ def _degraded_replacement_cycles(
         element by element; its sum is the cycle duration. The final replacement
         flag can remain false when the cycle cannot be completed.
     """
-    sample_duration = dt / 31_536_000
+    sample_duration = dt / SECONDS_PER_PLANT_YEAR
     simulation_duration = state_of_health_timeseries.size * sample_duration
     # The difference index identifies the preceding sample; +1 identifies the first
     # sample with reset SOH, which starts the new unit's cycle.
@@ -323,7 +319,7 @@ def _degraded_replacement_cycles(
     cycle_cf_segments = []
     cycle_segment_durations = []
     for start_index, end_index in pairwise(cycle_boundaries):
-        capacity_factors, durations = _time_weighted_annual_means(
+        capacity_factors, durations = time_weighted_annual_means(
             timestep_capacity_factors[start_index:end_index],
             dt,
             start_year=start_index * sample_duration,
