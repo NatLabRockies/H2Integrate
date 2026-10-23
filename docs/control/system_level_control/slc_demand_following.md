@@ -94,6 +94,10 @@ Haber-Bosch loop), the same four-step order is applied to each supply bus: after
 dispatched, the demand placed on each converter is translated into demand for its input commodity
 through measured or capacity-based conversion ratios, and the dispatch is repeated upstream.
 
+For an executable walkthrough of the heterogeneous-commodity example, including measured
+conversion ratios and time histories of electricity, hydrogen, ammonia, and battery dispatch, see
+{ref}`Heterogeneous-Commodity SLC Example <slc-heterogeneous-commodity>`.
+
 ```{seealso}
 {ref}`slc-base` documents the setup and compute call trees, state ownership, topology inspection,
 and the separate case where a grid supplies **only** Haber-Bosch.
