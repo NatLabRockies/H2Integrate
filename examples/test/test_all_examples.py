@@ -3141,6 +3141,9 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
 
     with subtests.test("Battery SOC stays within bounds"):
         soc = model.prob.get_val("battery.SOC", units="percent")
+        import pdb
+
+        pdb.set_trace()
         assert soc.max() <= 90.0 + 1e-3
         assert soc.min() >= 10.0 - 1e-3
 
@@ -3264,6 +3267,102 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
         total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
         assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("38_battery_degradation", None)]
+)
+def test_battery_degradation_exclusive_months_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    config = load_yaml(example_folder / "38_battery_degradation.yaml")
+    for config_key in ("driver_config", "technology_config", "plant_config"):
+        config[config_key] = load_yaml(example_folder / config[config_key])
+    config["driver_config"].setdefault("general", {})["create_om_reports"] = False
+
+    dt = 900
+    n_timesteps = 5 * 24 * 3600 // dt
+    start_time = "11/29/2009 00:00:00"
+    time_index = pd.date_range(start="2009-11-29", periods=n_timesteps, freq="15min", tz="UTC")
+    hours = time_index.hour
+    months = time_index.month
+    lmp_signal = np.full(n_timesteps, 0.07)
+    lmp_signal[(months == 12) & (hours >= 17) & (hours < 20)] = 0.25
+    demand_signal = np.full(n_timesteps, 500.0)
+    demand_signal[(hours >= 16) & (hours < 20)] = 2500.0
+
+    plant_config = config["plant_config"]
+    plant_config["plant"]["simulation"].update(
+        {
+            "dt": dt,
+            "n_timesteps": n_timesteps,
+            "start_time": start_time,
+            "timezone": 0,
+        }
+    )
+    plant_config["sites"]["site"].update({"latitude": 39.7392, "longitude": -104.9903})
+    resource_parameters = plant_config["sites"]["site"]["resources"]["solar_resource"][
+        "resource_parameters"
+    ]
+    resource_parameters.clear()
+    resource_parameters.update(
+        {
+            "resource_year": 2009,
+            "resource_filename": "Denver_weather_2009_h2i.csv",
+            "upsample_method": "time",
+        }
+    )
+    control = config["technology_config"]["technologies"]["battery"]["model_inputs"][
+        "control_parameters"
+    ]
+    performance = config["technology_config"]["technologies"]["battery"]["model_inputs"][
+        "performance_parameters"
+    ]
+    control["lmp_signal"] = lmp_signal.tolist()
+    control["demand_signal"] = demand_signal.tolist()
+    performance["deg_scale"] = 1.0
+    performance["eol_soh_capacity"] = 0.999
+
+    model = H2IntegrateModel(config)
+    model.setup()
+    model.run()
+
+    controller = model.control_strategies[0]
+    battery_power = model.prob.get_val("battery.electricity_out", units="kW")
+    replacement_schedule = model.prob.get_val("battery.replacement_schedule")
+    soh = model.prob.get_val("battery.soh_capacity")
+    reset_indices = np.flatnonzero(np.diff(soh) > 1e-9) + 1
+    lcoe = model.prob.get_val("finance_subgroup_battery.LCOE")[0]
+    with subtests.test("controller horizon is 24 hours at 15-minute resolution"):
+        assert controller.config.n_control_window_hours == 96
+    with subtests.test("Nov windows use local bill minimization"):
+        assert not controller.in_exclusive_control_month[: 2 * 96].any()
+    with subtests.test("Dec windows use Exclusive Control Month dispatch"):
+        assert controller.in_exclusive_control_month[2 * 96 :].all()
+    with subtests.test("optimized battery output covers the simulation"):
+        assert battery_power.shape == (n_timesteps,)
+    with subtests.test("optimized battery output is finite"):
+        assert np.all(np.isfinite(battery_power))
+    with subtests.test("optimized battery dispatch is nonzero"):
+        assert np.any(np.abs(battery_power) > 0.0)
+    with subtests.test("accelerated degradation produces multiple observable replacements"):
+        assert reset_indices.size > 1
+    with subtests.test("replacement samples log fresh capacity SOH"):
+        np.testing.assert_allclose(soh[reset_indices], 1.0)
+    with subtests.test("replacement samples log configured initial SOC"):
+        np.testing.assert_allclose(model.prob.get_val("battery.SOC")[reset_indices], 90.0)
+    with subtests.test("finance replacement schedule spans the plant life"):
+        assert replacement_schedule.shape == (30,)
+    with subtests.test("first-year finance count includes each observable physical replacement"):
+        assert replacement_schedule[0] == reset_indices.size
+    with subtests.test("replacement schedule contains only nonnegative integer counts"):
+        np.testing.assert_array_equal(replacement_schedule, np.floor(replacement_schedule))
+    with subtests.test("replacement schedule is nonnegative"):
+        assert np.all(replacement_schedule >= 0)
+    with subtests.test("replacement cycles project beyond the simulated horizon"):
+        assert np.all(replacement_schedule[1:] > 0)
+    with subtests.test("finance remains finite with physical replacement costs"):
+        assert np.isfinite(lcoe)
 
 
 @pytest.mark.integration

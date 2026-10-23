@@ -26,9 +26,10 @@ class FeedstockPerformanceConfig(BaseConfig):
 @register
 class FeedstockPerformanceModel(om.ExplicitComponent):
     _time_step_bounds = (
-        3600,
-        3600,
-    )  # (min, max) time step lengths (in seconds) compatible with this model
+        1,
+        np.inf,
+    )  # Constant feedstock availability is independent of simulation timestep.
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     _is_steppable = False
 
