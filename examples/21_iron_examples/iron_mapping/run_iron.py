@@ -8,7 +8,9 @@ Warning: this may take some time (up to a few minutes) depending on your PC's pr
 
 """
 
-from h2integrate import ROOT_DIR, EXAMPLE_DIR, H2IntegrateModel
+from pathlib import Path
+
+from h2integrate import ROOT_DIR, H2IntegrateModel
 from h2integrate.postprocess.mapping import (
     plot_geospatial_point_heat_map,
     plot_straight_line_shipping_routes,
@@ -28,8 +30,8 @@ if rerun_model:
     model.post_process(summarize_sql=True)
 
 # Define filepaths
-ex_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
-ex_out_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping/ex_out"
+ex_dir = Path(__file__).parent
+ex_out_dir = ex_dir / "ex_out"
 save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
 case_results_filepath = ex_out_dir / "cases.csv"

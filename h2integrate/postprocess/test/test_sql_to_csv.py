@@ -60,9 +60,9 @@ def run_example_19_sql_fpath(example_folder):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_returns_dict(temp_copy_of_example):
+def test_summarize_case_returns_dict(temp_copy_of_example_module_scope):
     """summarize_case should return a dictionary of scalar results."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     cr = om.CaseReader(str(sql_path))
     case = list(cr.get_cases())[0]
 
@@ -74,9 +74,9 @@ def test_summarize_case_returns_dict(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_return_units(temp_copy_of_example):
+def test_summarize_case_return_units(temp_copy_of_example_module_scope):
     """When return_units=True, summarize_case should return (values, units)."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     cr = om.CaseReader(str(sql_path))
     case = list(cr.get_cases())[0]
 
@@ -94,9 +94,9 @@ def test_summarize_case_return_units(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_scalar_only(temp_copy_of_example):
+def test_summarize_case_scalar_only(temp_copy_of_example_module_scope):
     """summarize_case should only contain scalar (single-element) values, not timeseries."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     cr = om.CaseReader(str(sql_path))
     case = list(cr.get_cases())[0]
 
@@ -114,9 +114,9 @@ def test_summarize_case_scalar_only(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_known_variables(temp_copy_of_example):
+def test_summarize_case_known_variables(temp_copy_of_example_module_scope):
     """Expected variables from example 19 should appear in the summary."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     cr = om.CaseReader(str(sql_path))
     case = list(cr.get_cases())[0]
 
@@ -143,9 +143,9 @@ def test_file_not_found(tmp_path):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_returns_dataframe(temp_copy_of_example):
+def test_returns_dataframe(temp_copy_of_example_module_scope):
     """convert_sql_to_csv_summary should return a pandas DataFrame."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
 
     assert isinstance(result, pd.DataFrame)
@@ -154,9 +154,9 @@ def test_returns_dataframe(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_column_names_include_units(temp_copy_of_example):
+def test_column_names_include_units(temp_copy_of_example_module_scope):
     """Columns for continuous variables should include units in parentheses."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
 
     cols = result.columns.to_list()
@@ -166,9 +166,9 @@ def test_column_names_include_units(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_save_to_file_creates_csv(subtests, temp_copy_of_example):
+def test_save_to_file_creates_csv(subtests, temp_copy_of_example_module_scope):
     """When save_to_file=True, a CSV file should be written next to the SQL file."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(sql_path, save_to_file=True)
 
     expected_csv = sql_path.parent / f"{sql_path.stem}.csv"
@@ -184,9 +184,9 @@ def test_save_to_file_creates_csv(subtests, temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_save_to_file_false_no_csv(temp_copy_of_example):
+def test_save_to_file_false_no_csv(temp_copy_of_example_module_scope):
     """When save_to_file=False, no CSV file should be written."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     csv_path = sql_path.parent / f"{sql_path.stem}.csv"
     # Remove any pre-existing CSV from earlier tests
     if csv_path.exists():
@@ -199,9 +199,9 @@ def test_save_to_file_false_no_csv(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_accepts_string_path(temp_copy_of_example):
+def test_accepts_string_path(temp_copy_of_example_module_scope):
     """The function should accept a plain string path."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(str(sql_path), save_to_file=False)
 
     assert isinstance(result, pd.DataFrame)
@@ -210,9 +210,9 @@ def test_accepts_string_path(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_result_contains_expected_columns(temp_copy_of_example):
+def test_result_contains_expected_columns(temp_copy_of_example_module_scope):
     """The summary should contain known scalar outputs from example 19."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
 
     cols = result.columns.to_list()
@@ -228,9 +228,9 @@ def test_result_contains_expected_columns(temp_copy_of_example):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_result_has_single_row(temp_copy_of_example):
+def test_result_has_single_row(temp_copy_of_example_module_scope):
     """A single run should produce exactly one row in the summary."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example)
+    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
     result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
 
     assert len(result) == 1
