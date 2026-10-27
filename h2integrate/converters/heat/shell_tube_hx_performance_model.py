@@ -26,7 +26,7 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     * ``working_fluid`` — shell-side fluid; the utility fluid that brings
       heat to (or removes heat from) the process fluid.
 
-    Args:
+    Attributes:
         process_fluid_temp_C: Default process (tube-side) inlet temperature in degC.
         working_fluid_temp_C: Default working (shell-side) inlet temperature in degC.
         process_fluid_mass_flow_kg_s: Default process mass flow rate in kg/s.
