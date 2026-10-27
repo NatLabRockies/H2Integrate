@@ -54,6 +54,13 @@ Within this framework, there are two distinct layers, **finance groups** and **f
   {ref}`Plant lifetime and simulation <plant-simulation-settings>` for the available methods and
   when a method is required.
 
+  ```{note}
+  A subgroup `annual_extrapolation_method` should generally match
+  `plant.simulation.annual_extrapolation_method`. The finance model divides variable costs by
+  production, so a different method for the capacity factor than for variable operating costs
+  distorts the resulting unit costs.
+  ```
+
 ```{important}
 If no subgroups are defined, a **default subgroup** is created that contains *all technologies* and references the default finance model and commodity defined in `finance_groups`.
 ```

@@ -152,7 +152,8 @@ properties:
               annual_extrapolation_method:
                 type: string
                 enum: [tile, final_sim_value, time_averaged_sim_value]
-                description: Override plant.simulation.annual_extrapolation_method for this subgroup
+                description: Override plant.simulation.annual_extrapolation_method for this subgroup. Should generally match
+                  the simulation setting so capacity factors and variable costs are extended consistently.
             required: [commodity, technologies]
             additionalProperties: false
       cost_adjustment_parameters:
