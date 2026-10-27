@@ -34,6 +34,12 @@ This model represents a reactor with:
 - a low-pressure electric conversion stage
 - an extractable process heat stream, extracted upstream of the low-pressure turbine stages (dashed red arrow in the figure)
 
+The thermal reactor cost model takes `rated_capacity` in MW, `upfront_cost` in USD/MW,
+`fixed_om_cost` in USD/(MW*year), and `variable_om_cost` in USD/MWh. It converts the
+`electricity_out` input from kW to MWh before calculating variable O&M. Example 36 uses the
+advanced large-LWR non-fuel O&M estimates from Table 38 of the
+[INL Meta-Analysis of Advanced Nuclear Reactor Cost Estimations](https://www.osti.gov/biblio/2371533).
+
 The model was developed to provide both heat and electricity for high-temperature steam electrolysis as modeled in `HTSEPerformanceModel` and `HTSEPerformanceModel`. The integrated thermal-nuclear and HTSE system is shown in the figure below. However, the models were implemented in such a way as to allow integration with other technologies.
 
 ```{figure} images/nuclear_htse_system_diagram.png
