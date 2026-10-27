@@ -4,9 +4,9 @@ import pytest
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("35_system_level_control/no_battery", None)]
+    "example_folder,resource_example_folder", [("35_system_level_control/demand_following", None)]
 )
 def test_slc_no_battery(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -58,19 +58,20 @@ def test_slc_no_battery(subtests, temp_copy_of_example):
             "finance_subgroup_electricity.LCOE", units="USD/(MW*h)"
         )
     with subtests.test("Wind NPV"):
-        assert pytest.approx(-38.5777102298, rel=1e-6) == model.prob.get_val(
+        # NPV amplifies ~1e-7 wind resource parsing differences (pandas 3.0 vs 3.1 read_csv) ~80x
+        assert pytest.approx(-38.5777102298, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
         )
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("35_system_level_control/yes_battery", None)]
+    "example_folder,resource_example_folder", [("35_system_level_control/demand_following", None)]
 )
 def test_slc_yes_battery(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+    model = H2IntegrateModel(example_folder / "wind_ng_battery_demand.yaml")
 
     model.run()
 
@@ -126,12 +127,13 @@ def test_slc_yes_battery(subtests, temp_copy_of_example):
             "finance_subgroup_electricity.LCOE", units="USD/(MW*h)"
         )
     with subtests.test("Wind NPV"):
-        assert pytest.approx(-38.5777102298, rel=1e-6) == model.prob.get_val(
+        # NPV amplifies ~1e-7 wind resource parsing differences (pandas 3.0 vs 3.1 read_csv) ~80x
+        assert pytest.approx(-38.5777102298, rel=1e-5) == model.prob.get_val(
             "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
         )
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("35_system_level_control/profit_maximization", None)],
@@ -166,7 +168,7 @@ def test_slc_profit_max(subtests, temp_copy_of_example):
         assert wind_out.sum() > 0
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("35_system_level_control/yes_hydrogen", None)]
 )
@@ -187,19 +189,19 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg"), rel=1e-6
             )
-            == 14.878096642042243
+            == 16.52990277
         )
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("35_system_level_control/battery_with_controller", None)],
+    [("35_system_level_control/demand_following", None)],
 )
 def test_slc_battery_with_controller(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+    model = H2IntegrateModel(example_folder / "wind_ng_battery_controller_demand.yaml")
 
     model.run()
 
@@ -221,7 +223,7 @@ def test_slc_battery_with_controller(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("35_system_level_control/complex_profit_max", None)],
@@ -310,7 +312,7 @@ def test_slc_complex_profit_max(subtests, temp_copy_of_example):
         assert grid_out.sum() == 0
 
 
-@pytest.mark.unit
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("35_system_level_control/upstream_demand", None)]
 )

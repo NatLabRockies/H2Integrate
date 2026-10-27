@@ -1,16 +1,31 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
+- Updated the reverse osmosis desalination models to remove the base class, take time-varying `electricity_in` and `feedwater_in` inputs that limit `water_out`, and expose capacity and related config values as OpenMDAO inputs. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
+- Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
+- Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
+- Moved tests that run full examples into a new `examples` test suite that runs nightly on `develop` and on pull requests that change `examples/`, instead of with the integration tests on every pull request. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+  - Added `examples/test/test_example_scripts.py`, which runs every `run_*.py` example script from a temporary copy, and renamed the example 14 script to `run_hydrogen_dispatch.py`.
+  - Added the `Examples` GitHub Actions workflow, which opens or updates a `nightly-examples` issue when the nightly run fails and closes it when the run passes again.
+  - Fixed plotting code in examples 3 (DOC methanol), 18, 19, 23, and 30 that used outdated variable names or config sections, and updated example scripts that relied on `h2integrate.EXAMPLE_DIR` to resolve files relative to the script.
+  - Reused one example run across the SQL summary unit tests.
+- Consolidated duplicate examples so that framework changes touch fewer example files. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+  - Merged `21_iron_examples/iron_dri_nrri` into `21_iron_examples/iron_dri`, whose run script now compares the simple and NRRI iron mine models.
+  - Merged `38_time_marching_simulation` into `24_solar_battery_grid` as `run_time_marching.py`, since both used the same plant.
+  - Merged the `no_battery`, `yes_battery`, and `battery_with_controller` system-level control examples into `35_system_level_control/demand_following`.
+  - Merged `09_co2/ocean_alkalinity_enhancement_financials` into `09_co2/ocean_alkalinity_enhancement`.
+  - Removed `11_hybrid_energy_plant`, which is covered by examples 01 and 33, and moved its demand metric checks into the demand component unit tests.
 
 
 ## 0.10.0 [October 12, 2026]
 
 ### New Features
-
 - Add `PySAMWavePerformanceModel` and `WaveResource` to wrap PySAM MhkWave as an H2I performance model, replacing the HOPP wave module in example 09. [PR 825](https://github.com/NatLabRockies/H2Integrate/pull/825)
 - Added a new NLR wind resource model: HRRR MET Toolkit [PR 837](https://github.com/NatLabRockies/H2Integrate/pull/837)
 - Added a converter controller that implements a peak-load management heuristic. [PR 773](https://github.com/NatLabRockies/H2Integrate/pull/773)

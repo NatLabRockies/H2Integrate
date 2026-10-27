@@ -179,6 +179,8 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    _is_steppable = True
+
     def setup(self):
         super().setup()
 
@@ -228,6 +230,9 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
             system_model = Pvwatts.default(self.config.config_name)
             # Apply user options before reading the configured angle defaults
             system_model.assign(design_dict)
+
+        # Flag to avoid unnecessary re-calculation of PySAM model
+        self._PYSAM_model_has_been_executed = False
 
         if self.config.tilt_angle_setting == "input":
             tilt = self.get_initial_angle_value("tilt", system_model)
@@ -432,75 +437,29 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
                     reformatted_data.update({new_key: values})
         return reformatted_data
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        if inputs["system_capacity_DC"][0] <= 0:
-            outputs["electricity_out"] = np.zeros(self.n_timesteps)
-            outputs["system_capacity_AC"] = 0.0
-            outputs["rated_electricity_production"] = 0.0
-            outputs["total_electricity_produced"] = 0.0
-            outputs["annual_electricity_produced"] = 0.0
-            outputs["capacity_factor"] = 0.0
-            self.apply_curtailment(outputs)
-            return
-
-        if self.config.create_model_from == "default":
-            system_model = Pvwatts.default(self.config.config_name)
-        elif self.config.create_model_from == "new":
-            system_model = Pvwatts.new(self.config.config_name)
-
-        system_model.assign(self.design_dict)
-
-        if "tilt_angle" in inputs:
-            tilt_angle = inputs["tilt_angle"][0]
-        else:
-            # calculate the tilt angle based on site latitude (use 0 if site latitude is not input)
-            tilt = self.calc_tilt_angle(discrete_inputs["solar_resource_data"].get("site_lat", 0))
-            # over-write the tilt angle if it was specified in the design dict
-            tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
-        # assign the tilt angle
-        system_model.value("tilt", tilt_angle)
-
-        if "azimuth_angle" in inputs:
-            azimuth = inputs["azimuth_angle"][0]
-        else:
-            # calculate the azimuth angle based on site latitude or get user input azimuth angle
-            azimuth = self.calc_azimuth_angle(
-                discrete_inputs["solar_resource_data"].get("site_lat", 0)
-            )
-
-        # assign the azimuth angle
-        system_model.value("azimuth", azimuth)
-
-        # assign the dc_ac_ratio
-        system_model.value("dc_ac_ratio", inputs["dc_ac_ratio"][0])
-
-        # set the system capacity
-        system_model.value("system_capacity", inputs["system_capacity_DC"][0])
-
-        solar_resource_data = discrete_inputs["solar_resource_data"]
-        # format solar resource data into the necessary format for PySAM
-        solar_resource = self.format_resource_data(solar_resource_data)
-        system_model.value("solar_resource_data", solar_resource)
-
-        # run the model
-        system_model.execute(0)
+    def _compute_outputs(self, inputs, outputs):
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
         # assign outputs
-        pv_capacity_kWdc = system_model.value("system_capacity")
-        dc_ac_ratio = system_model.value("dc_ac_ratio")
+        pv_capacity_kWdc = self.system_model.value("system_capacity")
+        dc_ac_ratio = self.system_model.value("dc_ac_ratio")
         outputs["system_capacity_AC"] = pv_capacity_kWdc / dc_ac_ratio
         outputs["rated_electricity_production"] = outputs["system_capacity_AC"]
 
         if bool(self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)):
             # using lifetime results
             # split the generation profile to have results per-year
-            generation_per_year = np.split(np.array(system_model.Outputs.gen), self.plant_life)
+            generation_per_year = np.split(np.array(self.system_model.Outputs.gen), self.plant_life)
             # sum the generation per-year
             aep_per_year = np.array(generation_per_year).sum(axis=1)
             # get the number of timesteps per year (should be the same for all years)
             n_timesteps_per_year = np.array([len(k) for k in generation_per_year])
             # output the first n_timesteps of the generation profile
-            outputs["electricity_out"] = np.array(system_model.Outputs.gen)[: self.n_timesteps]
+            outputs["electricity_out"][simulation_range] = np.array(self.system_model.Outputs.gen)[
+                : self.n_timesteps
+            ][simulation_range.start : simulation_range.stop]
             # make production is the max production per-year
             max_production = (
                 outputs["rated_electricity_production"] * n_timesteps_per_year * (self.dt / 3600)
@@ -513,11 +472,13 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         else:
             # not using lifetime output, use results as-is
-            outputs["electricity_out"] = system_model.Outputs.gen  # kW-AC
+            outputs["electricity_out"][simulation_range] = self.system_model.Outputs.gen[
+                simulation_range.start : simulation_range.stop
+            ]  # kW-AC
             max_production = (
                 outputs["rated_electricity_production"] * self.n_timesteps * (self.dt / 3600)
             )
-            outputs["annual_electricity_produced"] = system_model.value("ac_annual")
+            outputs["annual_electricity_produced"] = self.system_model.value("ac_annual")
             outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * (
                 self.dt / 3600
             )
@@ -525,3 +486,74 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
 
         # Apply curtailment based on set_point
         self.apply_curtailment(outputs)
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        if inputs["system_capacity_DC"][0] <= 0:
+            outputs["electricity_out"] = np.zeros(self.n_timesteps)
+            outputs["system_capacity_AC"] = 0.0
+            outputs["rated_electricity_production"] = 0.0
+            outputs["total_electricity_produced"] = 0.0
+            outputs["annual_electricity_produced"] = 0.0
+            outputs["capacity_factor"] = 0.0
+            self.apply_curtailment(outputs)
+            return
+
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
+        if not self._PYSAM_model_has_been_executed:
+            assert simulation_range.start == 0, (
+                "PYSAM model should only be executed at the start of the simulation"
+            )
+
+            if self.config.create_model_from == "default":
+                self.system_model = Pvwatts.default(self.config.config_name)
+            elif self.config.create_model_from == "new":
+                self.system_model = Pvwatts.new(self.config.config_name)
+
+            self.system_model.assign(self.design_dict)
+
+            if "tilt_angle" in inputs:
+                tilt_angle = inputs["tilt_angle"][0]
+            else:
+                # calculate the tilt angle based on site latitude (use 0 if site
+                # latitude is not input)
+                tilt = self.calc_tilt_angle(
+                    discrete_inputs["solar_resource_data"].get("site_lat", 0)
+                )
+                # over-write the tilt angle if it was specified in the design dict
+                tilt_angle = self.design_dict.get("SystemDesign", {}).get("tilt", tilt)
+            # assign the tilt angle
+            self.system_model.value("tilt", tilt_angle)
+
+            if "azimuth_angle" in inputs:
+                azimuth = inputs["azimuth_angle"][0]
+            else:
+                # calculate the azimuth angle based on site latitude or get user input azimuth angle
+                azimuth = self.calc_azimuth_angle(
+                    discrete_inputs["solar_resource_data"].get("site_lat", 0)
+                )
+
+            # assign the azimuth angle
+            self.system_model.value("azimuth", azimuth)
+
+            # assign the dc_ac_ratio
+            self.system_model.value("dc_ac_ratio", inputs["dc_ac_ratio"][0])
+
+            # set the system capacity
+            self.system_model.value("system_capacity", inputs["system_capacity_DC"][0])
+
+            solar_resource_data = discrete_inputs["solar_resource_data"]
+            # format solar resource data into the necessary format for PySAM
+            solar_resource = self.format_resource_data(solar_resource_data)
+            self.system_model.value("solar_resource_data", solar_resource)
+
+            # run the model
+            self.system_model.execute(0)
+
+            self._PYSAM_model_has_been_executed = True
+
+        # Re-set model execution flag at the end of the simulation
+        if simulation_range.stop >= self.n_timesteps:
+            self._PYSAM_model_has_been_executed = False
+
+        self._compute_outputs(inputs, outputs)

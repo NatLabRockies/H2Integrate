@@ -39,6 +39,20 @@ def tech_config():
     return config
 
 
+def _run_electrolyzer(plant_config, tech_config, power_profile, command_value=None):
+    prob = om.Problem()
+    comp = ECOElectrolyzerPerformanceModel(
+        plant_config=plant_config, tech_config=tech_config, driver_config={}
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.electricity_in", power_profile, units="MW")
+    if command_value is not None:
+        prob.set_val("comp.hydrogen_command_value", command_value, units="kg/h")
+    prob.run_model()
+    return prob
+
+
 @pytest.mark.unit
 def test_electrolyzer_outputs(tech_config, plant_config, subtests):
     plant_life = int(plant_config["plant"]["plant_life"])
@@ -243,3 +257,102 @@ def test_electrolyzer_outputs_never_operated(tech_config, plant_config, subtests
 
     with subtests.test("Zero capacity factor"):
         assert prob.get_val("comp.capacity_factor").sum() == 0.0
+
+
+@pytest.mark.unit
+def test_electrolyzer_slc_clips_hydrogen_linked_outputs(tech_config, plant_config, subtests):
+    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+    power_profile = np.full(n_timesteps, 32.0)
+    reference_prob = _run_electrolyzer(plant_config, tech_config, power_profile)
+    reference_hydrogen = reference_prob.get_val("comp.hydrogen_out", units="kg/h")
+
+    command_value = np.full(n_timesteps, 1e9)
+    command_value[:24] = reference_hydrogen[:24] * 0.5
+    slc_plant_config = plant_config | {"system_level_control": {}}
+    slc_prob = _run_electrolyzer(
+        slc_plant_config, tech_config, power_profile, command_value=command_value
+    )
+
+    hydrogen_out = slc_prob.get_val("comp.hydrogen_out", units="kg/h")
+    clipped_hours = (np.arange(n_timesteps) < 24) & (reference_hydrogen > 0.0)
+    annual_scale = hydrogen_out.sum() / reference_hydrogen.sum()
+
+    with subtests.test("Commanded hydrogen is clipped"):
+        assert np.any(clipped_hours)
+        np.testing.assert_allclose(hydrogen_out[clipped_hours], command_value[clipped_hours])
+        assert np.all(hydrogen_out <= command_value)
+
+    with subtests.test("Electricity per hydrogen matches the unclipped operating point"):
+        np.testing.assert_allclose(
+            slc_prob.get_val("comp.electricity_consumed", units="kW")[clipped_hours]
+            / hydrogen_out[clipped_hours],
+            reference_prob.get_val("comp.electricity_consumed", units="kW")[clipped_hours]
+            / reference_hydrogen[clipped_hours],
+            rtol=1e-12,
+        )
+        assert np.all(
+            slc_prob.get_val("comp.electricity_consumed", units="kW")
+            <= slc_prob.get_val("comp.electricity_in", units="kW")
+        )
+
+    with subtests.test("Oxygen and water scale with commanded hydrogen"):
+        np.testing.assert_allclose(
+            slc_prob.get_val("comp.oxygen_out", units="kg/h")[clipped_hours]
+            / hydrogen_out[clipped_hours],
+            reference_prob.get_val("comp.oxygen_out", units="kg/h")[clipped_hours]
+            / reference_hydrogen[clipped_hours],
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            slc_prob.get_val("comp.water_consumed", units="galUS/h")[clipped_hours]
+            / hydrogen_out[clipped_hours],
+            reference_prob.get_val("comp.water_consumed", units="galUS/h")[clipped_hours]
+            / reference_hydrogen[clipped_hours],
+            rtol=1e-12,
+        )
+
+    with subtests.test("Totals and annual hydrogen-linked schedules follow clipping"):
+        assert slc_prob.get_val("comp.total_hydrogen_produced", units="kg")[0] == pytest.approx(
+            hydrogen_out.sum()
+        )
+        for output_name in (
+            "annual_hydrogen_produced",
+            "annual_oxygen_produced",
+            "capacity_factor",
+        ):
+            np.testing.assert_allclose(
+                slc_prob.get_val(f"comp.{output_name}"),
+                reference_prob.get_val(f"comp.{output_name}") * annual_scale,
+                rtol=1e-12,
+            )
+
+
+@pytest.mark.unit
+def test_electrolyzer_large_slc_command_preserves_outputs(tech_config, plant_config, subtests):
+    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+    power_profile = np.full(n_timesteps, 32.0)
+    reference_prob = _run_electrolyzer(plant_config, tech_config, power_profile)
+    slc_plant_config = plant_config | {"system_level_control": {}}
+    slc_prob = _run_electrolyzer(
+        slc_plant_config,
+        tech_config,
+        power_profile,
+        command_value=np.full(n_timesteps, 1e9),
+    )
+
+    with subtests.test("No command input is registered without SLC"):
+        input_names = {name for name, _ in reference_prob.model.list_inputs(out_stream=None)}
+        assert "comp.hydrogen_command_value" not in input_names
+
+    with subtests.test("A nonbinding SLC command leaves every output unchanged"):
+        reference_outputs = {
+            name: reference_prob.get_val(name).copy()
+            for name, _ in reference_prob.model.list_outputs(out_stream=None)
+        }
+        slc_outputs = {
+            name: slc_prob.get_val(name).copy()
+            for name, _ in slc_prob.model.list_outputs(out_stream=None)
+        }
+        assert reference_outputs.keys() == slc_outputs.keys()
+        for output_name in reference_outputs:
+            np.testing.assert_array_equal(slc_outputs[output_name], reference_outputs[output_name])
