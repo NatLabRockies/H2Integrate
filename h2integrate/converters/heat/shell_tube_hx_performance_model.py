@@ -57,8 +57,8 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
             within the single-phase liquid range of ``process_fluid_name`` at
             ``process_fluid_pressure_bar`` (at or above the fluid's minimum temperature and
             below its boiling point).
-        working_fluid_temp_C (float): Default working (shell-side) inlet temperature in degC. Must be
-            within the single-phase liquid range of ``working_fluid_name`` at
+        working_fluid_temp_C (float): Default working (shell-side) inlet temperature in degC. Must
+            be within the single-phase liquid range of ``working_fluid_name`` at
             ``working_fluid_pressure_bar``.
         process_fluid_mass_flow_kg_s (float): Default process mass flow rate in kg/s.
         working_fluid_mass_flow_kg_s (float): Default working mass flow rate in kg/s.

@@ -39,6 +39,10 @@ class ShellTubeHXCostModel(CostModelBaseClass):
 
     - CapEx = (a + b * S^n) * CEPCI_index * install_factor * material_factor
     - OpEx = 4% of CapEx per year
+
+    Refs:
+        Sinnot, R. K., & Towler, G. (2021). Chemical Engineering Design: Principles,
+            Practice and Economics of Plant and Process Design.
     """
 
     def setup(self):
