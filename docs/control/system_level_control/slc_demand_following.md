@@ -17,6 +17,7 @@ kernelspec:
 The demand following controller, `DemandFollowingControl`, aims to fully meet the demand and does not have any inputs related to cost.
 
 The N2 diagram below shows an example system using the demand following controller with wind, natural gas, and battery storage technologies.
+The full example in `examples/35_system_level_control/demand_following` runs the same plant with no battery, with a battery, and with a battery that has its own open-loop controller.
 
 ```{code-cell} ipython3
 :tags: [remove-input]
@@ -30,9 +31,9 @@ from pathlib import Path
 from h2integrate import EXAMPLE_DIR
 from IPython.display import HTML, display
 
-os.chdir(EXAMPLE_DIR / "35_system_level_control/battery_with_controller/")
+os.chdir(EXAMPLE_DIR / "35_system_level_control/demand_following/")
 
-h2i_model = H2IntegrateModel("wind_ng_demand.yaml")
+h2i_model = H2IntegrateModel("wind_ng_battery_controller_demand.yaml")
 h2i_model.setup()
 
 om.n2(
