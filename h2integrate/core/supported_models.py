@@ -54,6 +54,7 @@ class _ModelRegistry(dict):
 supported_models = _ModelRegistry()
 no_cost_models = set()
 no_replacement_schedule_models = set()
+_model_exports = {}
 
 
 def _find_model_sources():
@@ -77,7 +78,11 @@ for module, text in _find_model_sources():
         name = name_match[1] if name_match else match["cls"]
         if name in supported_models:
             raise ValueError(f"Model name '{name}' is registered more than once.")
-        supported_models[name] = f"{module.removesuffix('.__init__')}:{match['cls']}"
+        target_module = module.removesuffix(".__init__")
+        supported_models[name] = f"{target_module}:{match['cls']}"
+        if not module.endswith(".__init__"):
+            package, _, _ = module.rpartition(".")
+            _model_exports.setdefault(package, {}).setdefault(match["cls"], []).append(module)
         if "no_cost=True" in args:
             no_cost_models.add(name)
         if "no_replacement_schedule=True" in args:

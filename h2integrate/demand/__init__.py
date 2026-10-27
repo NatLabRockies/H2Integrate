@@ -1,8 +1,4 @@
 from h2integrate.core.lazy_imports import lazy_exports
 
 
-__getattr__, __dir__ = lazy_exports(
-    __name__,
-    globals(),
-    {"FlexibleDemandComponent": "flexible_demand", "GenericDemandComponent": "generic_demand"},
-)
+__getattr__, __dir__ = lazy_exports(__name__, globals())

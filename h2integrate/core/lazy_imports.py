@@ -7,27 +7,39 @@ module-level ``__getattr__`` instead, and each submodule is imported on first ac
 
 import importlib
 
+from h2integrate.core.supported_models import _model_exports
 
-def lazy_exports(package_name, package_globals, exports):
+
+def lazy_exports(package_name, package_globals, extra_exports=None):
     """Build ``__getattr__`` and ``__dir__`` functions that import re-exported names on demand.
 
     Use in a package ``__init__.py`` as ``__getattr__, __dir__ = lazy_exports(__name__,
-    globals(), {...})``.
+    globals())``. Registered models in the package are exported automatically.
 
     Args:
         package_name (str): Name of the package, usually ``__name__``.
         package_globals (dict): The package's ``globals()``, used to cache imported names.
-        exports (dict[str, str]): Maps each exported name to the submodule that defines it,
-            given relative to the package (for example ``{"Foo": "foo_module"}``).
+        extra_exports (dict[str, str], optional): Non-model names mapped to their defining
+            submodules, relative to the package (for example ``{"Foo": "foo_module"}``).
 
     Returns:
         tuple[Callable, Callable]: The module-level ``__getattr__`` and ``__dir__`` functions.
     """
 
+    exports = {}
+    for name, modules in _model_exports.get(package_name, {}).items():
+        if len(modules) != 1:
+            raise ValueError(f"Multiple modules export {name!r} in {package_name!r}: {modules}")
+        exports[name] = modules[0]
+    for name, submodule in (extra_exports or {}).items():
+        if name in exports:
+            raise ValueError(f"Duplicate export {name!r} in {package_name!r}")
+        exports[name] = f"{package_name}.{submodule}"
+
     def __getattr__(name):
         if name not in exports:
             raise AttributeError(f"module {package_name!r} has no attribute {name!r}")
-        module = importlib.import_module(f"{package_name}.{exports[name]}")
+        module = importlib.import_module(exports[name])
         value = getattr(module, name)
         package_globals[name] = value
         return value
