@@ -19,7 +19,7 @@ def plot_methanol(model):
         "electricity_in", units="MW"
     )
     elyzer_h2_out = model.plant.electrolyzer.ECOElectrolyzerPerformanceModel.get_val(
-        "hydrogen_out", units="t/day"
+        "hydrogen_out", units="t/d"
     )
     plt.plot(times, elyzer_elec_in, label="Electricity Available [MW]", color=[0.5, 0.5, 1])
     plt.plot(
@@ -69,8 +69,8 @@ def plot_methanol(model):
     plt.subplot(3, 2, 3)
     T = plt.title("Hydrogen\nStorage")
     T.set_position([-0.2, 1.1])
-    h2_storage_in = model.plant.electrolyzer_to_h2_storage_pipe.get_val("hydrogen_in", units="kg/h")
-    h2_storage_out = model.plant.h2_storage_to_methanol_pipe.get_val("hydrogen_out", units="kg/h")
+    h2_storage_in = model.plant.h2_storage.get_val("hydrogen_in", units="kg/h")
+    h2_storage_out = model.plant.h2_storage.get_val("hydrogen_out", units="kg/h")
     plt.plot(times, h2_storage_in, label="Hydrogen In [kg/hr]", color=[1, 0.5, 0])
     plt.plot(times, h2_storage_out, label="Hydrogen Out [kg/hr]", color=[0, 0.5, 0])
     plt.legend(bbox_to_anchor=(0, 1.02), loc=3)
@@ -85,8 +85,8 @@ def plot_methanol(model):
     plt.subplot(3, 2, 4)
     T = plt.title("CO$_2$\nStorage")
     T.set_position([-0.2, 1.1])
-    co2_storage_in = model.plant.doc_to_co2_storage_pipe.get_val("co2_in", units="kg/h")
-    co2_storage_out = model.plant.co2_storage_to_methanol_pipe.get_val("co2_out", units="kg/h")
+    co2_storage_in = model.plant.co2_storage.get_val("co2_in", units="kg/h")
+    co2_storage_out = model.plant.co2_storage.get_val("co2_out", units="kg/h")
     plt.plot(times, co2_storage_in, label="CO$_2$ In [kg/hr]", color=[0.5, 0.25, 0])
     plt.plot(times, co2_storage_out, label="CO$_2$ Out [kg/hr]", color=[0, 0.25, 0.5])
     plt.legend(bbox_to_anchor=(0, 1.02), loc=3)
@@ -125,8 +125,8 @@ def plot_methanol(model):
     plt.subplot(3, 2, 6)
     T = plt.title("State of\nCharge\n(SOC)")
     T.set_position([-0.2, 1.1])
-    h2_soc = model.plant.h2_storage.get_val("hydrogen_soc", units="percent")
-    co2_soc = model.plant.co2_storage.get_val("co2_soc", units="percent")
+    h2_soc = model.plant.h2_storage.get_val("SOC", units="percent")
+    co2_soc = model.plant.co2_storage.get_val("SOC", units="percent")
     plt.plot(times, h2_soc, label="Hydrogen SOC [%]", color=[1, 0.5, 0])
     plt.plot(times, co2_soc, label="CO$_2$ SOC [%]", color=[0.5, 0.25, 0])
     plt.legend(bbox_to_anchor=(0, 1.02), loc=3)
