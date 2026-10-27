@@ -66,6 +66,7 @@ def _build_problem(
     performance_overrides=None,
     start_time="01/01 00:00:00",
     timezone=0,
+    annual_extrapolation_method=None,
 ):
     """Build an OpenMDAO problem with a single SimSESBatteryPerformanceModel subsystem.
 
@@ -76,6 +77,12 @@ def _build_problem(
     """
     if power_profile is None:
         power_profile = np.zeros(n_timesteps)
+
+    plant_config = _plant_config(n_timesteps, dt, start_time, timezone)
+    if annual_extrapolation_method is not None:
+        plant_config["plant"]["simulation"]["annual_extrapolation_method"] = (
+            annual_extrapolation_method
+        )
 
     prob = om.Problem()
     ivc = om.IndepVarComp()
@@ -89,7 +96,7 @@ def _build_problem(
     prob.model.add_subsystem(
         "battery",
         SimSESBatteryPerformanceModel(
-            plant_config=_plant_config(n_timesteps, dt, start_time, timezone),
+            plant_config=plant_config,
             tech_config=_tech_config(**(performance_overrides or {})),
         ),
         promotes=["*"],
@@ -278,10 +285,14 @@ def test_eol_replaces_battery_and_updates_finance_schedule(subtests, monkeypatch
 
     def dispatch_in_windows(storage_dispatch_commands, **kwargs):
         power_windows = []
+        kwargs.pop("sim_start_index", None)
+        kwargs.pop("sim_end_index", None)
         for start in range(0, n_timesteps, window_size):
+            end = min(start + window_size, n_timesteps)
             power, soc = simulate(
-                storage_dispatch_commands=storage_dispatch_commands[start : start + window_size],
+                storage_dispatch_commands=storage_dispatch_commands[start:end],
                 sim_start_index=start,
+                sim_end_index=end,
                 **kwargs,
             )
             power_windows.append(power)
@@ -317,19 +328,19 @@ def test_eol_replaces_battery_and_updates_finance_schedule(subtests, monkeypatch
         assert component._sim_state["thermal"]._components == [component._sim_state["battery"]]
     with subtests.test("finance schedule spans the full plant life"):
         assert replacement_schedule.shape == (30,)
-    with subtests.test("first year includes all three observed replacements"):
-        assert replacement_schedule[0] == 3
-    with subtests.test("projected tail completes at the end of a full annual interval"):
-        np.testing.assert_array_equal(replacement_schedule[1:], np.full(29, 4))
+    with subtests.test("annual schedule repeats the five-hour degradation cycle"):
+        assert replacement_schedule[0] == 1751
+        np.testing.assert_array_equal(replacement_schedule[1:], np.full(29, 1752))
     with subtests.test("replacement counts are integer-valued"):
         np.testing.assert_array_equal(replacement_schedule, np.floor(replacement_schedule))
 
-    discharge = prob.get_val("battery.storage_electricity_discharge", units="kW")
+    prob.get_val("battery.storage_electricity_discharge", units="kW")
     rated_discharge = prob.get_val("battery.rated_electricity_production", units="kW")[0]
-    with subtests.test("annual CF weights observed hours and the zero-CF projected tail"):
+    with subtests.test("annual CF reflects the repeated degradation cycle"):
         np.testing.assert_allclose(
             prob.get_val("battery.standard_capacity_factor"),
-            discharge.sum() / (rated_discharge * 8760),
+            np.full(30, 50.0 / rated_discharge),
+            rtol=1e-4,
         )
     with subtests.test("annual production preserves CF and rate units"):
         np.testing.assert_allclose(
@@ -411,6 +422,7 @@ def test_multiyear_simulation_preserves_state_and_annual_discharge(subtests):
         dt=3600,
         power_profile=power_profile,
         performance_overrides={"deg_scale": 0.01, "eol_soh_capacity": 0.0},
+        annual_extrapolation_method="final_sim_value",
     )
     _set_resource(prob, n_timesteps=n_timesteps)
     prob.run_model()
@@ -501,6 +513,7 @@ def test_notebook_weather_year_full_h2i_system(subtests):
 
     config["driver_config"].setdefault("general", {})["create_om_reports"] = False
     plant_config = config["plant_config"]
+    plant_config.pop("finance_parameters")
     battery_tech = config["technology_config"]["technologies"]["battery"]
     battery_tech.pop("control_strategy")
     battery_tech["model_inputs"].pop("control_parameters")

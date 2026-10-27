@@ -25,6 +25,7 @@ plant:
     dt: 900
     timezone: 0
     start_time: 01/01/2026 00:00:00
+    annual_extrapolation_method: final_sim_value
 # Left-to-right technology interconnections.
 technology_interconnections:
   - [electricity_feedstock, battery, electricity, cable]

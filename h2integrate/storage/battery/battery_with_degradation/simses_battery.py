@@ -799,11 +799,17 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         storage_capacity: float,
         commodity_available: list | np.ndarray,
         sim_start_index: int = 0,
-    ):
+        sim_end_index: int | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Advance the SimSES battery over one controller window.
 
         ``commodity_available`` is accepted for the storage-controller interface; grid
         purchases are metered from the actual charge output after the battery simulation.
+
+        Args:
+            sim_start_index: Starting index of the simulation window.
+            sim_end_index: Exclusive ending index of the simulation window. If omitted,
+                it is inferred from the command count for callers that provide only a start.
         """
         del storage_capacity
         state = self._sim_state
@@ -811,8 +817,29 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         converter = state["converter"]
         thermal = state["thermal"]
         commands = np.asarray(storage_dispatch_commands, dtype=float)
-        storage_power = np.empty(len(commands))
-        soc = np.empty(len(commands))
+        if sim_end_index is None:
+            sim_end_index = sim_start_index + len(commands)
+
+        if not 0 <= sim_start_index <= self.n_timesteps or sim_end_index < sim_start_index:
+            raise ValueError(
+                f"Simulation range [{sim_start_index}, {sim_end_index}) is outside the "
+                f"{self.n_timesteps}-step horizon."
+            )
+
+        sim_end_index = min(sim_end_index, self.n_timesteps)
+        n_window = sim_end_index - sim_start_index
+        if len(commands) == self.n_timesteps:
+            commands = commands[sim_start_index:sim_end_index]
+        elif len(commands) < n_window:
+            raise ValueError(
+                f"Received {len(commands)} dispatch commands for a {n_window}-step "
+                "simulation window. Expected at least one command per simulated step."
+            )
+        else:
+            commands = commands[:n_window]
+
+        storage_power = np.empty(n_window)
+        soc = np.empty(n_window)
 
         for local_index, command in enumerate(commands):
             index = sim_start_index + local_index
