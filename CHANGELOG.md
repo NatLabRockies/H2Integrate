@@ -25,6 +25,8 @@
 - Reduced startup time by importing model modules and heavy dependencies only when they are used. [PR 955](https://github.com/NatLabRockies/H2Integrate/pull/955)
   - Package `__init__.py` files now use the model registry to re-export model classes lazily, so using one model no longer imports every model in its package (for example, Ard, rex, and Pyomo).
   - Deferred the `requests` and `timezonefinder` imports in the resource download tools, removed an unused Pyomo star import from the PEM electrolyzer, imported the Pyomo controller base class only when a dispatch check needs it, and sped up the model registry scan.
+- Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
+  samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
 
 
 ## 0.10.0 [October 12, 2026]
