@@ -254,7 +254,10 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             }
             config = self.options["tech_config"]["model_inputs"]["reliability"]
             use_reliability = config.get("use_reliability", use_reliability)
-            self.reliability_model = PerformanceReliability.from_dict(config | simulation_config)
+            self._reliability_config = deepcopy(config | simulation_config)
+            self.reliability_model = PerformanceReliability.from_dict(
+                deepcopy(self._reliability_config)
+            )
         self.use_reliability = use_reliability
 
     def compute(self, inputs, outputs, discrete_inputs, _discrete_outputs):
@@ -331,11 +334,12 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
 
         availability = np.ones((num_turbines_int, len(turbine_mass_flowrates_max)))
         if self.use_reliability:
-            # Model the availability as N systems by running the model N times and extracting the
-            # results of each run to ensure variations in system availability, recreating the
-            # fractional availability calculation to get availability in the correct shape
+            # Start each evaluation from the same RNG states, then advance them between turbines.
+            self.reliability_model = PerformanceReliability.from_dict(
+                deepcopy(self._reliability_config)
+            )
             for i in range(num_turbines_int):
-                self.reliability_model.run()
+                self.reliability_model.run(reset_rng=False)
                 availability[i, :] = self.reliability_model.availability
         # if we're using fractional turbines, ensure the last row reflects the fractional part
         if (num_turbines - (num_turbines_int - 1)) != 0:
@@ -365,23 +369,14 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
         )  # if I have more than commanded, scale down proportionally
 
         # get the net work and heat input related to the mass flowrates
-        plant_net_work_vec = np.array(
-            [
-                m * w / 1000.0
-                for m, w in zip(turbine_mass_flowrates.sum(axis=0), unit_mass_net_work_vec)
-            ]
-        )  # MW
-        plant_net_heat_input_vec = np.array(
-            [
-                m * q
-                for m, q in zip(turbine_mass_flowrates.sum(axis=0), unit_mass_net_heat_input_vec)
-            ]
-        )  # kJ/s
+        plant_mass_flowrates = turbine_mass_flowrates.sum(axis=0)
+        plant_net_work_vec = plant_mass_flowrates * unit_mass_net_work_vec / 1000.0  # MW
+        plant_net_heat_input_vec = plant_mass_flowrates * unit_mass_net_heat_input_vec  # kJ/s
 
         # compute the electricity out and package work and heat outputs
         electricity_out = generator_efficiency * plant_net_work_vec  # MW
         outputs["electricity_out"] = electricity_out
-        outputs[f"{self.config.fuel_source}_consumed"] = num_turbines * plant_net_heat_input_vec
+        outputs[f"{self.config.fuel_source}_consumed"] = plant_net_heat_input_vec
 
         # get the rated electricity and related production
         outputs["rated_electricity_production"] = num_turbines * turbine_capacity_mw
