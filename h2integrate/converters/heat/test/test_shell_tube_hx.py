@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -40,8 +42,11 @@ def shell_tube_hx_config():
 
 @pytest.mark.unit
 class TestShellTubeHXPerformanceModel:
-    def _create_problem(self, config):
-        tech_config, plant_config, driver_config = config
+    def _create_problem(self, config, n_timesteps=None, **performance_overrides):
+        tech_config, plant_config, driver_config = copy.deepcopy(config)
+        if n_timesteps is not None:
+            plant_config["plant"]["simulation"]["n_timesteps"] = n_timesteps
+        tech_config["model_inputs"]["performance_parameters"].update(performance_overrides)
         prob = om.Problem()
         prob.model.add_subsystem(
             "shell_tube_hx",
@@ -138,6 +143,10 @@ class TestShellTubeHXPerformanceModel:
         with subtests.test("working_fluid:pressure_out"):
             assert working_pressure_out[0] == approx(1.0 - expected_dp_working_Pa / 1e5, rel=rel)
 
+        with subtests.test("no guardrail flags raised"):
+            assert prob.get_val("shell_tube_hx.no_heat_transfer")[0] == 0.0
+            assert prob.get_val("shell_tube_hx.solver_warning")[0] == 0.0
+
     def test_hx_timeseries_shape(self, shell_tube_hx_config, subtests):
         """Confirm the model runs for n_timesteps > 1 and returns time-series outputs."""
         tech_config, plant_config, driver_config = shell_tube_hx_config
@@ -232,3 +241,142 @@ class TestShellTubeHXPerformanceModel:
             with subtests.test(f"{name} unchanged by swap"):
                 values = get(name)
                 assert values[1] == approx(values[0], rel=rel)
+
+    def test_hx_config_temperature_limits(self, shell_tube_hx_config, subtests):
+        """Default inlet temperatures must be in the fluid's single-phase liquid range."""
+        invalid_cases = {
+            "process fluid frozen": ({"process_fluid_temp_C": -5.0}, "process_fluid_temp_C"),
+            "working fluid below triple point": (
+                {"working_fluid_temp_C": 0.0},
+                "working_fluid_temp_C",
+            ),
+            "process fluid boiling at 1 bar": (
+                {"process_fluid_temp_C": 100.0},
+                "process_fluid_temp_C",
+            ),
+            "working fluid boiling at 0.04 bar": (
+                {"working_fluid_temp_C": 30.0, "working_fluid_pressure_bar": 0.04},
+                "working_fluid_temp_C",
+            ),
+        }
+        for name, (overrides, match) in invalid_cases.items():
+            with subtests.test(name):
+                with pytest.raises(ValueError, match=match):
+                    self._create_problem(shell_tube_hx_config, **overrides)
+
+        with subtests.test("above 100 degC is valid at higher pressure"):
+            prob = self._create_problem(
+                shell_tube_hx_config, process_fluid_temp_C=120.0, process_fluid_pressure_bar=3.0
+            )
+            assert prob.get_val("shell_tube_hx.process_fluid:temperature_in")[0] == 120.0
+
+    def test_hx_inlet_guardrails(self, shell_tube_hx_config, subtests):
+        """Non-physical inlet values raise an AnalysisError naming the offending timestep."""
+        invalid_cases = {
+            "negative process mass flow": ("process_fluid:mass_flow_in", -5.0, "must be > 0"),
+            "zero working mass flow": ("working_fluid:mass_flow_in", 0.0, "must be > 0"),
+            "zero process pressure": ("process_fluid:pressure_in", 0.0, "must be > 0 bar"),
+            "negative working pressure": ("working_fluid:pressure_in", -1.0, "must be > 0 bar"),
+            "NaN process temperature": ("process_fluid:temperature_in", np.nan, "must be finite"),
+            "inf working mass flow": ("working_fluid:mass_flow_in", np.inf, "must be finite"),
+            "frozen working fluid": ("working_fluid:temperature_in", -5.0, "minimum temperature"),
+            "boiling process fluid": ("process_fluid:temperature_in", 120.0, "boiling point"),
+        }
+        for name, (var, bad_value, match) in invalid_cases.items():
+            with subtests.test(name):
+                prob = self._create_problem(shell_tube_hx_config, n_timesteps=2)
+                values = prob.get_val(var).copy()
+                values[1] = bad_value
+                prob.set_val(var, values)
+                with pytest.raises(om.AnalysisError, match=rf"{var}.*{match}.*timestep\(s\) \[1\]"):
+                    prob.run_model()
+
+    def test_hx_outlet_pressure_guardrail(self, shell_tube_hx_config):
+        """A pressure drop larger than the inlet pressure raises an AnalysisError."""
+        prob = self._create_problem(shell_tube_hx_config)
+        prob.set_val("process_fluid:temperature_in", 50.0, units="degC")
+        prob.set_val("process_fluid:pressure_in", 0.2, units="bar")
+        prob.set_val("process_fluid:mass_flow_in", 60.0, units="kg/s")
+        with pytest.raises(om.AnalysisError, match=r"process_fluid pressure drop .* exceeds"):
+            prob.run_model()
+
+    def test_hx_solve_failure_reports_timestep(self, shell_tube_hx_config):
+        """Solver trial temperatures outside the CoolProp range raise an AnalysisError."""
+        prob = self._create_problem(
+            shell_tube_hx_config, working_fluid_mass_flow_kg_s=18.0, L_tube_m=30.0
+        )
+        with pytest.raises(om.AnalysisError, match="steady solve failed at timestep 0"):
+            prob.run_model()
+
+    def test_hx_no_heat_transfer(self, shell_tube_hx_config, subtests):
+        """Equal (or nearly equal) inlet temperatures pass through with no heat transfer.
+
+        Timestep 0 is nominal, timestep 1 has equal inlet temperatures, and timestep 2 has
+        inlet temperatures within ``min_inlet_temp_diff_K`` (0.01 K by default).
+        """
+        prob = self._create_problem(shell_tube_hx_config, n_timesteps=3)
+        prob.set_val("process_fluid:temperature_in", [90.0, 30.0, 30.005], units="degC")
+        with pytest.warns(UserWarning, match=r"no heat transfer at timestep\(s\) \[1, 2\]"):
+            prob.run_model()
+
+        def get(name, units=None):
+            return prob.get_val(f"shell_tube_hx.{name}", units=units)
+
+        with subtests.test("no_heat_transfer flag"):
+            assert get("no_heat_transfer") == approx([0.0, 1.0, 1.0])
+        with subtests.test("solver_warning flag"):
+            assert get("solver_warning") == approx([0.0, 0.0, 0.0])
+
+        with subtests.test("nominal timestep unaffected"):
+            assert get("total_heat_transfer_rate", units="kW")[0] == approx(
+                2462.235075109509, rel=1e-5
+            )
+
+        with subtests.test("outlet temperatures equal inlet temperatures"):
+            assert get("process_fluid:temperature_out", units="degC")[1:] == approx(
+                [30.0, 30.005], rel=1e-12
+            )
+            assert get("working_fluid:temperature_out", units="degC")[1:] == approx(
+                [30.0, 30.0], rel=1e-12
+            )
+
+        for name in [
+            "total_heat_transfer_rate",
+            "hx_effectiveness",
+            "number_of_transfer_units",
+            "overall_heat_transfer_coefficient",
+            "entropy_generation_rate",
+            "exergy_destruction_rate",
+        ]:
+            with subtests.test(f"{name} is zero"):
+                assert get(name)[1:] == approx([0.0, 0.0])
+
+        with subtests.test("heat_capacity_rate_ratio still computed"):
+            C_r = get("heat_capacity_rate_ratio")[1:]
+            assert np.all((C_r > 0.0) & (C_r <= 1.0))
+
+        dp_process = get("pressure_drop_process_fluid", units="Pa")
+        dp_working = get("pressure_drop_working_fluid", units="Pa")
+        with subtests.test("pressure drops and pump power still computed"):
+            assert np.all(dp_process[1:] > 0.0)
+            assert np.all(dp_working[1:] > 0.0)
+            assert np.all(get("pump_power", units="kW")[1:] > 0.0)
+
+        with subtests.test("outlet pressures reflect pressure drops"):
+            assert get("process_fluid:pressure_out", units="bar")[1:] == approx(
+                1.0 - dp_process[1:] / 1e5, rel=1e-10
+            )
+            assert get("working_fluid:pressure_out", units="bar")[1:] == approx(
+                1.0 - dp_working[1:] / 1e5, rel=1e-10
+            )
+
+    def test_hx_pinch_warning(self, shell_tube_hx_config, subtests):
+        """A temperature approach below pinch_threshold_K is reported, not flagged unreliable."""
+        prob = self._create_problem(shell_tube_hx_config, process_fluid_mass_flow_kg_s=2.0)
+        with pytest.warns(UserWarning, match=r"pinch_threshold_K .* at timestep\(s\) \[0\]"):
+            prob.run_model()
+
+        with subtests.test("solver_warning not set for pinch"):
+            assert prob.get_val("shell_tube_hx.solver_warning")[0] == 0.0
+        with subtests.test("results still computed"):
+            assert prob.get_val("shell_tube_hx.total_heat_transfer_rate")[0] > 0.0

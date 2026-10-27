@@ -1,6 +1,7 @@
+import warnings
 from math import log
 from pathlib import Path
-from functools import partial
+from functools import partial, lru_cache
 
 import numpy as np
 import openmdao.api as om
@@ -12,6 +13,31 @@ from h2integrate.core.commodity_stream_definitions import (
     multivariable_streams,
     add_multivariable_output,
 )
+
+
+@lru_cache(maxsize=256)
+def fluid_temperature_limits_C(fluid_name: str, P_bar: float) -> tuple[float, float]:
+    """Return the single-phase liquid temperature window of a CoolProp fluid.
+
+    Args:
+        fluid_name (str): CoolProp fluid name, e.g. "Water" or "INCOMP::MEG-30%".
+        P_bar (float): Absolute pressure in bar.
+
+    Returns:
+        tuple[float, float]: ``(T_min_C, T_sat_C)``. ``T_min_C`` is the lowest temperature
+        CoolProp supports for the fluid (the triple point for water). ``T_sat_C`` is the
+        saturated-liquid (boiling) temperature at ``P_bar``; it is ``inf`` when the
+        pressure is at or above the critical pressure, or when CoolProp has no
+        saturation data for the fluid (e.g. incompressible mixtures).
+    """
+    T_min_C = PropsSI("Tmin", fluid_name) - 273.15
+    try:
+        if P_bar * 1e5 >= PropsSI("pcrit", fluid_name):
+            return T_min_C, np.inf
+        T_sat_C = PropsSI("T", "P", P_bar * 1e5, "Q", 0, fluid_name) - 273.15
+    except ValueError:
+        T_sat_C = np.inf
+    return T_min_C, T_sat_C
 
 
 @define(kw_only=True)
@@ -27,8 +53,13 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
       heat to (or removes heat from) the process fluid.
 
     Args:
-        process_fluid_temp_C: Default process (tube-side) inlet temperature in degC.
-        working_fluid_temp_C: Default working (shell-side) inlet temperature in degC.
+        process_fluid_temp_C: Default process (tube-side) inlet temperature in degC. Must be
+            within the single-phase liquid range of ``process_fluid_name`` at
+            ``process_fluid_pressure_bar`` (at or above the fluid's minimum temperature and
+            below its boiling point).
+        working_fluid_temp_C: Default working (shell-side) inlet temperature in degC. Must be
+            within the single-phase liquid range of ``working_fluid_name`` at
+            ``working_fluid_pressure_bar``.
         process_fluid_mass_flow_kg_s: Default process mass flow rate in kg/s.
         working_fluid_mass_flow_kg_s: Default working mass flow rate in kg/s.
         process_fluid_pressure_bar: Default process inlet pressure in bar. Defaults to 1.0.
@@ -75,6 +106,9 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
             Defaults to 298.15.
         pinch_threshold_K: Minimum temperature approach below which a pinch warning
             is flagged, in K. Defaults to 3.0.
+        min_inlet_temp_diff_K: Inlet temperature difference, in K, below which a timestep
+            is treated as having no heat transfer (outlet temperatures equal inlet
+            temperatures). Must be greater than 0.002 K. Defaults to 0.01.
         fzero_tol: Convergence tolerance for the shooting-method bisection.
             Defaults to 1e-6.
         fzero_maxit: Maximum number of iterations for the shooting-method bisection.
@@ -86,8 +120,8 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
             Defaults to False.
     """
 
-    process_fluid_temp_C: float = field(validator=validators.gt(0))
-    working_fluid_temp_C: float = field(validator=validators.gt(0))
+    process_fluid_temp_C: float = field()
+    working_fluid_temp_C: float = field()
     process_fluid_mass_flow_kg_s: float = field(validator=validators.gt(0))
     working_fluid_mass_flow_kg_s: float = field(validator=validators.gt(0))
     process_fluid_pressure_bar: float = field(default=1.0, validator=validators.gt(0))
@@ -126,12 +160,26 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
     T_amb_C: float = field(default=25.0)
     T0_env_K: float = field(default=298.15, validator=validators.gt(0))
     pinch_threshold_K: float = field(default=3.0, validator=validators.ge(0))
+    # The shooting bracket is [Tc_in + 1e-3, Th_in - 1e-3], so it needs more than 2 mK
+    min_inlet_temp_diff_K: float = field(default=0.01, validator=validators.gt(2e-3))
     fzero_tol: float = field(default=1e-6, validator=validators.gt(0))
     fzero_maxit: int = field(default=50, validator=validators.gt(0))
     enable_plot: bool = field(default=False)
     plot_dir: str | None = field(default=None)
     show_plot: bool = field(default=False)
     print_summary: bool = field(default=False)
+
+    def __attrs_post_init__(self):
+        for stream in ("process_fluid", "working_fluid"):
+            fluid = getattr(self, f"{stream}_name")
+            T_C = getattr(self, f"{stream}_temp_C")
+            P_bar = getattr(self, f"{stream}_pressure_bar")
+            T_min_C, T_sat_C = fluid_temperature_limits_C(fluid, P_bar)
+            if not T_min_C <= T_C < T_sat_C:
+                raise ValueError(
+                    f"{stream}_temp_C = {T_C} degC is outside the single-phase liquid range "
+                    f"of {fluid} at {P_bar} bar: [{T_min_C:.2f}, {T_sat_C:.2f}) degC."
+                )
 
 
 class ShellTubeHXPerformanceModel(om.ExplicitComponent):
@@ -143,6 +191,19 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         hotter fluid to colder fluid, but other physical checks are currently limited.
         The user is warned to use physically reasonable values for inputs and to check
         results with utilities such as the plotting or printing functions.
+
+    **Input guardrails:** At each timestep the inlet mass flows must be positive, the
+        inlet pressures must be positive (absolute), and the inlet temperatures must be
+        within the single-phase liquid range of each fluid at its inlet pressure. The
+        outlet pressures must also stay positive. Violations raise ``om.AnalysisError``
+        so that drivers can treat the point as a failed evaluation. An ``om.AnalysisError``
+        naming the timestep is also raised if the solver's trial temperatures leave the
+        fluid property range. Timesteps whose inlet temperatures differ by less than
+        ``min_inlet_temp_diff_K`` are passed through with no heat transfer and flagged in
+        ``no_heat_transfer``. Timesteps where the shooting solver did not bracket a
+        solution or the temperature profiles cross are flagged in ``solver_warning``. A
+        ``UserWarning`` lists the affected timesteps for these cases and for timesteps
+        whose pinch is below ``pinch_threshold_K``.
 
     The component exposes two multivariable-stream inlet ports
     (``process_fluid`` on the tube side and ``working_fluid`` on the shell side) and
@@ -247,6 +308,27 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             ),
             **ts,
         )
+        self.add_output(
+            "no_heat_transfer",
+            units="unitless",
+            desc=(
+                "Per-timestep flag (0/1). 1 indicates the inlet temperatures differed by "
+                "less than min_inlet_temp_diff_K, so the streams passed through with no "
+                "heat transfer. Thermal outputs are 0 at these timesteps; pressure drops "
+                "and pump power are still computed."
+            ),
+            **ts,
+        )
+        self.add_output(
+            "solver_warning",
+            units="unitless",
+            desc=(
+                "Per-timestep flag (0/1). 1 indicates the shooting solver did not bracket "
+                "a solution (a fallback guess was used) or the hot and cold temperature "
+                "profiles cross, so results at that timestep are unreliable."
+            ),
+            **ts,
+        )
 
     # ----------------------------------------------------------------------
     # 1) Main HX model
@@ -270,6 +352,11 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
         m_dot_working = inputs["working_fluid:mass_flow_in"]
         T_working = inputs["working_fluid:temperature_in"]
         P_working = inputs["working_fluid:pressure_in"]
+
+        self._validate_inlet_states(inputs)
+        no_heat_transfer = np.abs(T_process - T_working) < cfg.min_inlet_temp_diff_K
+        solver_warning_steps = []
+        pinch_warning_steps = []
 
         # Geometry
         N_tubes = int(cfg.N_tubes)
@@ -424,6 +511,43 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                     fluid_working_fun,
                 )
 
+            if no_heat_transfer[i]:
+                # No driving temperature difference: the streams pass through unchanged,
+                # but they still flow, so pressure drops and pump power are computed.
+                _, dp_tube_total, dp_shell_total, P_pump_tube, P_pump_shell = self.hydraulics(
+                    m_dot_h,
+                    m_dot_c,
+                    fluid_hot_fun(Th_in),
+                    fluid_cold_fun(Tc_in),
+                    geom,
+                    shell,
+                    eta_pump,
+                    Re_laminar_max,
+                )
+                C_hot = m_dot_h * fluid_hot_fun(Th_in)["cp"]
+                C_cold = m_dot_c * fluid_cold_fun(Tc_in)["cp"]
+                self._write_timestep_outputs(
+                    outputs,
+                    i,
+                    inputs,
+                    swap=swap,
+                    T_hot_out=Th_in,
+                    T_cold_out=Tc_in,
+                    dp_tube=dp_tube_total,
+                    dp_shell=dp_shell_total,
+                    Q_total_W=0.0,
+                    epsilon=0.0,
+                    NTU=0.0,
+                    C_r=min(C_hot, C_cold) / max(C_hot, C_cold),
+                    U_global=0.0,
+                    P_pump_total_W=P_pump_tube + P_pump_shell,
+                    S_gen_W_K=0.0,
+                    Ex_dest_W=0.0,
+                )
+                outputs["no_heat_transfer"][i] = 1.0
+                outputs["solver_warning"][i] = 0.0
+                continue
+
             # Shooting for counter-current
             Tc_out0_min = Tc_in + 1e-3
             Tc_out0_max = Th_in - 1e-3
@@ -441,30 +565,41 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             }
             residual = partial(self.residual_Tc_out, Th_in=Th_in, Tc_in=Tc_in, **stream_state)
 
-            Tc_root, _r_min, _r_max = self.find_root_bisect(
-                residual, Tc_out0_min, Tc_out0_max, fzero_tol, fzero_maxit
-            )
-            shooting_bracket_ok = True
-            if Tc_root is None:
-                shooting_bracket_ok = False
-                Tc_root = Tc_out0_guess
+            # Trial outlet temperatures at the edges of the shooting bracket can march the
+            # streams outside CoolProp's valid range (e.g. below freezing) even when the
+            # inlet states are valid; report that as a failed evaluation for this timestep.
+            try:
+                Tc_root, _r_min, _r_max = self.find_root_bisect(
+                    residual, Tc_out0_min, Tc_out0_max, fzero_tol, fzero_maxit
+                )
+                shooting_bracket_ok = True
+                if Tc_root is None:
+                    shooting_bracket_ok = False
+                    Tc_root = Tc_out0_guess
 
-            # March with final
-            (
-                Th,
-                Tc,
-                Tw,
-                U_seg,
-                Q_seg,
-                Q_loss_seg,
-                Re_t_seg,
-                Re_s_seg,
-                h_i_seg,
-                h_o_seg,
-                Nu_t_seg,
-                Nu_s_seg,
-                S_gen_seg,
-            ) = self.march_segments(Th_in, Tc_root, **stream_state)
+                # March with final
+                (
+                    Th,
+                    Tc,
+                    Tw,
+                    U_seg,
+                    Q_seg,
+                    Q_loss_seg,
+                    Re_t_seg,
+                    Re_s_seg,
+                    h_i_seg,
+                    h_o_seg,
+                    Nu_t_seg,
+                    Nu_s_seg,
+                    S_gen_seg,
+                ) = self.march_segments(Th_in, Tc_root, **stream_state)
+            except ValueError as err:
+                raise om.AnalysisError(
+                    f"ShellTubeHXPerformanceModel: steady solve failed at timestep {i}. "
+                    f"Fluid properties were requested outside the valid CoolProp range while "
+                    f"marching the segments, which typically happens when the exchanger is "
+                    f"very effective (high NTU) for the given flows. CoolProp error: {err}"
+                ) from err
 
             x = np.linspace(0.0, L_tube, N_seg + 1)
             x_mid = 0.5 * (x[:-1] + x[1:])
@@ -542,34 +677,11 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             Q_error_frac = (Q_total - Q_LMTD_lumped) / Q_total
 
             # Pressure drops & pump power
-            Th_mean = float(np.mean(Th))
-            Tc_mean = float(np.mean(Tc))
-            hot_mean = fluid_hot_fun(Th_mean)
-            cold_mean = fluid_cold_fun(Tc_mean)
-
-            V_tube = m_dot_h / (hot_mean["rho"] * A_tube_flow)
-            Re_t = hot_mean["rho"] * V_tube * D_i / hot_mean["mu"]
-
-            if Re_t < Re_laminar_max:
-                f_t = 64.0 / Re_t
-            else:
-                f_t = 0.3164 * Re_t ** (-0.25)
-
-            L_equiv_tube = L_tube * N_passes
-            dp_fric_tube = f_t * (L_equiv_tube / D_i) * 0.5 * hot_mean["rho"] * V_tube**2
-
-            K_inlet = 1.0
-            K_exit = 1.0
-            K_bends = 1.5 * (N_passes - 1)
-            K_total = K_inlet + K_exit + K_bends
-            dp_minor_tube = K_total * 0.5 * hot_mean["rho"] * V_tube**2
-
-            dp_tube_total = dp_fric_tube + dp_minor_tube
-
-            dp_shell_total = self.shell_dp_Kern(m_dot_c, cold_mean, geom, shell)
-
-            P_pump_tube = (m_dot_h / hot_mean["rho"]) * dp_tube_total / eta_pump
-            P_pump_shell = (m_dot_c / cold_mean["rho"]) * dp_shell_total / eta_pump
+            hot_mean = fluid_hot_fun(float(np.mean(Th)))
+            cold_mean = fluid_cold_fun(float(np.mean(Tc)))
+            V_tube, dp_tube_total, dp_shell_total, P_pump_tube, P_pump_shell = self.hydraulics(
+                m_dot_h, m_dot_c, hot_mean, cold_mean, geom, shell, eta_pump, Re_laminar_max
+            )
             P_pump_total = P_pump_tube + P_pump_shell
 
             # Inventories + time constants
@@ -599,6 +711,11 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             min_deltaT = float(np.min(deltaT))
             has_cross = bool(np.any(deltaT <= 0.0))
             pinch_warning = (not has_cross) and (min_deltaT < pinch_threshold)
+            solver_warning = has_cross or not shooting_bracket_ok
+            if solver_warning:
+                solver_warning_steps.append(i)
+            if pinch_warning:
+                pinch_warning_steps.append(i)
 
             # 2nd law metrics
             Th_in_K = Th_in + 273.15
@@ -765,20 +882,6 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
                 },
             }
 
-            # Map solver-frame results back to the process/working streams.
-            # The "tube" pressure drop belongs to whichever stream was routed
-            # into the hot role; the "shell" drop belongs to the cold role.
-            if swap:
-                T_process_out = Tc_out
-                T_working_out = Th_out
-                dp_process = dp_shell_total
-                dp_working = dp_tube_total
-            else:
-                T_process_out = Th_out
-                T_working_out = Tc_out
-                dp_process = dp_tube_total
-                dp_working = dp_shell_total
-
             if cfg.enable_plot:
                 self.plot_results(
                     res,
@@ -790,28 +893,204 @@ class ShellTubeHXPerformanceModel(om.ExplicitComponent):
             if cfg.print_summary:
                 self.print_summary(res)
 
-            # Outlet multivariable-stream values
-            outputs["process_fluid:mass_flow_out"][i] = float(m_dot_process[i])
-            outputs["process_fluid:temperature_out"][i] = T_process_out
+            self._write_timestep_outputs(
+                outputs,
+                i,
+                inputs,
+                swap=swap,
+                T_hot_out=Th_out,
+                T_cold_out=Tc_out,
+                dp_tube=dp_tube_total,
+                dp_shell=dp_shell_total,
+                Q_total_W=Q_total,
+                epsilon=epsilon,
+                NTU=NTU,
+                C_r=C_r,
+                U_global=U_global,
+                P_pump_total_W=P_pump_total,
+                S_gen_W_K=S_gen_dot_seg,
+                Ex_dest_W=Ex_dest_dot_seg,
+            )
+            outputs["no_heat_transfer"][i] = 0.0
+            outputs["solver_warning"][i] = 1.0 if solver_warning else 0.0
+
+        self._warn_timesteps(
+            np.flatnonzero(no_heat_transfer),
+            f"inlet temperatures differ by less than min_inlet_temp_diff_K "
+            f"({cfg.min_inlet_temp_diff_K} K); treated as no heat transfer",
+        )
+        self._warn_timesteps(
+            solver_warning_steps,
+            "shooting solver did not bracket a solution or the temperature profiles cross; "
+            "results are unreliable",
+        )
+        self._warn_timesteps(
+            pinch_warning_steps,
+            f"minimum temperature approach is below pinch_threshold_K ({pinch_threshold} K)",
+        )
+
+    @staticmethod
+    def _raise_at_timesteps(bad_mask, values, msg):
+        """Raise ``om.AnalysisError`` listing the timesteps (and values) where ``bad_mask``."""
+        bad = np.flatnonzero(bad_mask)
+        if bad.size:
+            shown = bad[:10]
+            more = f" (and {bad.size - shown.size} more)" if bad.size > shown.size else ""
+            raise om.AnalysisError(
+                f"ShellTubeHXPerformanceModel: {msg}. Violated at timestep(s) "
+                f"{shown.tolist()}{more} with value(s) {np.asarray(values)[shown].tolist()}."
+            )
+
+    def _validate_inlet_states(self, inputs):
+        """Check the per-timestep inlet stream states before solving.
+
+        Raises:
+            om.AnalysisError: If any inlet mass flow, temperature, or pressure is
+                non-finite, if a mass flow or pressure is not positive, or if a
+                temperature is outside the single-phase liquid range of its fluid at
+                that timestep's inlet pressure.
+        """
+        for stream in ("process_fluid", "working_fluid"):
+            fluid = getattr(self.config, f"{stream}_name")
+            m_dot = inputs[f"{stream}:mass_flow_in"]
+            T = inputs[f"{stream}:temperature_in"]
+            P = inputs[f"{stream}:pressure_in"]
+
+            for var, vals in (("mass_flow_in", m_dot), ("temperature_in", T), ("pressure_in", P)):
+                self._raise_at_timesteps(~np.isfinite(vals), vals, f"{stream}:{var} must be finite")
+            self._raise_at_timesteps(m_dot <= 0.0, m_dot, f"{stream}:mass_flow_in must be > 0 kg/s")
+            self._raise_at_timesteps(
+                P <= 0.0, P, f"{stream}:pressure_in must be > 0 bar (absolute)"
+            )
+
+            limits = np.array([fluid_temperature_limits_C(fluid, float(p)) for p in P])
+            T_min_C, T_sat_C = limits[:, 0], limits[:, 1]
+            self._raise_at_timesteps(
+                T < T_min_C,
+                T,
+                f"{stream}:temperature_in must be >= {fluid} minimum temperature "
+                f"({T_min_C.min():.2f} degC)",
+            )
+            self._raise_at_timesteps(
+                T >= T_sat_C,
+                T,
+                f"{stream}:temperature_in must be below the {fluid} boiling point at the inlet "
+                f"pressure (model is single-phase liquid)",
+            )
+
+    @staticmethod
+    def _warn_timesteps(steps, msg):
+        steps = [int(step) for step in steps]
+        if steps:
+            shown = steps[:10]
+            more = f" (and {len(steps) - len(shown)} more)" if len(steps) > len(shown) else ""
+            warnings.warn(
+                f"ShellTubeHXPerformanceModel: {msg} at timestep(s) {shown}{more}.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def _write_timestep_outputs(
+        self,
+        outputs,
+        i,
+        inputs,
+        *,
+        swap,
+        T_hot_out,
+        T_cold_out,
+        dp_tube,
+        dp_shell,
+        Q_total_W,
+        epsilon,
+        NTU,
+        C_r,
+        U_global,
+        P_pump_total_W,
+        S_gen_W_K,
+        Ex_dest_W,
+    ):
+        """Map solver-frame (hot/cold, tube/shell) results back to the streams and write them.
+
+        Raises:
+            om.AnalysisError: If either outlet pressure is not positive, i.e. the pressure
+                drop exceeds the inlet pressure.
+        """
+        # The "tube" pressure drop belongs to whichever stream was routed into the hot
+        # role; the "shell" drop belongs to the cold role.
+        if swap:
+            T_process_out, T_working_out = T_cold_out, T_hot_out
+            dp_process, dp_working = dp_shell, dp_tube
+        else:
+            T_process_out, T_working_out = T_hot_out, T_cold_out
+            dp_process, dp_working = dp_tube, dp_shell
+
+        for stream, T_out, dp in (
+            ("process_fluid", T_process_out, dp_process),
+            ("working_fluid", T_working_out, dp_working),
+        ):
+            P_in = float(inputs[f"{stream}:pressure_in"][i])
             # Convert Pa drop back into a bar-scale pressure decrement
-            outputs["process_fluid:pressure_out"][i] = float(P_process[i]) - dp_process / 1e5
+            P_out = P_in - dp / 1e5
+            if P_out <= 0.0:
+                raise om.AnalysisError(
+                    f"ShellTubeHXPerformanceModel: {stream} pressure drop ({dp / 1e5:.4g} bar) "
+                    f"exceeds its inlet pressure ({P_in:.4g} bar) at timestep {i}, giving a "
+                    f"non-positive outlet pressure."
+                )
+            outputs[f"{stream}:mass_flow_out"][i] = float(inputs[f"{stream}:mass_flow_in"][i])
+            outputs[f"{stream}:temperature_out"][i] = T_out
+            outputs[f"{stream}:pressure_out"][i] = P_out
 
-            outputs["working_fluid:mass_flow_out"][i] = float(m_dot_working[i])
-            outputs["working_fluid:temperature_out"][i] = T_working_out
-            outputs["working_fluid:pressure_out"][i] = float(P_working[i]) - dp_working / 1e5
+        outputs["total_heat_transfer_rate"][i] = Q_total_W / 1e3
+        outputs["hx_effectiveness"][i] = float(epsilon)
+        outputs["number_of_transfer_units"][i] = float(NTU)
+        outputs["heat_capacity_rate_ratio"][i] = float(C_r)
+        outputs["overall_heat_transfer_coefficient"][i] = float(U_global)
+        outputs["pressure_drop_process_fluid"][i] = dp_process
+        outputs["pressure_drop_working_fluid"][i] = dp_working
+        outputs["pump_power"][i] = float(P_pump_total_W) / 1e3
+        outputs["entropy_generation_rate"][i] = S_gen_W_K
+        outputs["exergy_destruction_rate"][i] = Ex_dest_W / 1e3
+        outputs["roles_swapped"][i] = 1.0 if swap else 0.0
 
-            # Diagnostic time-series outputs
-            outputs["total_heat_transfer_rate"][i] = Q_total / 1e3
-            outputs["hx_effectiveness"][i] = float(epsilon)
-            outputs["number_of_transfer_units"][i] = float(NTU)
-            outputs["heat_capacity_rate_ratio"][i] = float(C_r)
-            outputs["overall_heat_transfer_coefficient"][i] = float(U_global)
-            outputs["pressure_drop_process_fluid"][i] = dp_process
-            outputs["pressure_drop_working_fluid"][i] = dp_working
-            outputs["pump_power"][i] = float(P_pump_total) / 1e3
-            outputs["entropy_generation_rate"][i] = S_gen_dot_seg
-            outputs["exergy_destruction_rate"][i] = Ex_dest_dot_seg / 1e3
-            outputs["roles_swapped"][i] = 1.0 if swap else 0.0
+    def hydraulics(self, m_dot_h, m_dot_c, hot_props, cold_props, geom, shell, eta_pump, Re_lam):
+        """Tube- and shell-side pressure drops and pump power.
+
+        Args:
+            m_dot_h (float): Hot-side (tube) mass flow in kg/s.
+            m_dot_c (float): Cold-side (shell) mass flow in kg/s.
+            hot_props (dict): Hot-fluid properties at the representative temperature.
+            cold_props (dict): Cold-fluid properties at the representative temperature.
+            geom (dict): Heat exchanger geometry.
+            shell (dict): Shell-side parameters.
+            eta_pump (float): Pump efficiency.
+            Re_lam (float): Upper Reynolds number limit for laminar tube flow.
+
+        Returns:
+            tuple: ``(V_tube, dp_tube_total, dp_shell_total, P_pump_tube, P_pump_shell)``
+            with velocity in m/s, pressure drops in Pa, and pump powers in W.
+        """
+        D_i = geom["D_i"]
+        N_passes = geom["N_passes"]
+
+        V_tube = m_dot_h / (hot_props["rho"] * geom["A_tube_flow"])
+        Re_t = hot_props["rho"] * V_tube * D_i / hot_props["mu"]
+        f_t = 64.0 / Re_t if Re_t < Re_lam else 0.3164 * Re_t ** (-0.25)
+
+        L_equiv_tube = geom["L_tube"] * N_passes
+        dp_fric_tube = f_t * (L_equiv_tube / D_i) * 0.5 * hot_props["rho"] * V_tube**2
+
+        # Inlet + exit + return bends
+        K_total = 1.0 + 1.0 + 1.5 * (N_passes - 1)
+        dp_minor_tube = K_total * 0.5 * hot_props["rho"] * V_tube**2
+
+        dp_tube_total = dp_fric_tube + dp_minor_tube
+        dp_shell_total = self.shell_dp_Kern(m_dot_c, cold_props, geom, shell)
+
+        P_pump_tube = (m_dot_h / hot_props["rho"]) * dp_tube_total / eta_pump
+        P_pump_shell = (m_dot_c / cold_props["rho"]) * dp_shell_total / eta_pump
+        return V_tube, dp_tube_total, dp_shell_total, P_pump_tube, P_pump_shell
 
     # ----------------------------------------------------------------------
     # 2) CoolProp-based generic fluid properties
