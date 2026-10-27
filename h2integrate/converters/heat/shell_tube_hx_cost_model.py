@@ -9,7 +9,7 @@ class ShellTubeHXCostModelConfig(BaseConfig):
     """
     Configuration class for the ShellTubeHXCostModel.
 
-    Args:
+    Attributes:
         cost_year (int): The year for which the cost model is applicable. Default is 2022.
         hx_transfer_area (float): Total heat transfer area of the heat exchanger in square meters.
             Default is 10.0, limited to a range of 10 to 1000 m^2.
