@@ -157,3 +157,78 @@ class TestShellTubeHXPerformanceModel:
         # All timesteps use the same (config-default) inlets, so results are identical
         with subtests.test("total_heat_transfer_rate constant across timesteps"):
             assert np.allclose(Q, Q[0])
+
+    def test_hx_role_swap(self, shell_tube_hx_config, subtests):
+        """Working fluid entering hotter than the process fluid triggers the role swap.
+
+        Timestep 0 uses the nominal inlets (process hot, working cold). Timestep 1 exchanges
+        the process and working inlet states, so the working fluid is hotter. Both streams are
+        water, so after the internal swap the solver sees identical hot/cold inputs and the
+        timestep 1 results should mirror timestep 0 with the stream roles exchanged.
+        """
+        tech_config, _, driver_config = shell_tube_hx_config
+        plant_config = {
+            "plant": {
+                "simulation": {"n_timesteps": 2, "dt": 3600},
+                "plant_life": 30,
+            }
+        }
+        prob = self._create_problem((tech_config, plant_config, driver_config))
+        prob.set_val("process_fluid:temperature_in", [90.0, 30.0], units="degC")
+        prob.set_val("process_fluid:mass_flow_in", [18.0, 40.0], units="kg/s")
+        prob.set_val("working_fluid:temperature_in", [30.0, 90.0], units="degC")
+        prob.set_val("working_fluid:mass_flow_in", [40.0, 18.0], units="kg/s")
+        prob.run_model()
+
+        def get(name, units=None):
+            return prob.get_val(f"shell_tube_hx.{name}", units=units)
+
+        process_temp_out = get("process_fluid:temperature_out", units="degC")
+        working_temp_out = get("working_fluid:temperature_out", units="degC")
+        process_mass_flow_out = get("process_fluid:mass_flow_out", units="kg/s")
+        working_mass_flow_out = get("working_fluid:mass_flow_out", units="kg/s")
+        process_pressure_out = get("process_fluid:pressure_out", units="bar")
+        working_pressure_out = get("working_fluid:pressure_out", units="bar")
+        dp_process_Pa = get("pressure_drop_process_fluid", units="Pa")
+        dp_working_Pa = get("pressure_drop_working_fluid", units="Pa")
+
+        rel = 1e-8
+        with subtests.test("roles_swapped flag"):
+            assert get("roles_swapped") == approx([0.0, 1.0])
+
+        with subtests.test("process fluid heats up when swapped"):
+            assert process_temp_out[1] > 30.0
+        with subtests.test("working fluid cools down when swapped"):
+            assert working_temp_out[1] < 90.0
+
+        with subtests.test("swapped process_fluid:temperature_out mirrors nominal working"):
+            assert process_temp_out[1] == approx(working_temp_out[0], rel=rel)
+        with subtests.test("swapped working_fluid:temperature_out mirrors nominal process"):
+            assert working_temp_out[1] == approx(process_temp_out[0], rel=rel)
+
+        with subtests.test("swapped pressure_drop_process_fluid mirrors nominal working"):
+            assert dp_process_Pa[1] == approx(dp_working_Pa[0], rel=rel)
+        with subtests.test("swapped pressure_drop_working_fluid mirrors nominal process"):
+            assert dp_working_Pa[1] == approx(dp_process_Pa[0], rel=rel)
+
+        with subtests.test("swapped outlet pressures reflect remapped pressure drops"):
+            assert process_pressure_out[1] == approx(1.0 - dp_working_Pa[0] / 1e5, rel=rel)
+            assert working_pressure_out[1] == approx(1.0 - dp_process_Pa[0] / 1e5, rel=rel)
+
+        with subtests.test("mass flow is conserved per stream when swapped"):
+            assert process_mass_flow_out[1] == approx(40.0, rel=1e-12)
+            assert working_mass_flow_out[1] == approx(18.0, rel=1e-12)
+
+        for name in [
+            "total_heat_transfer_rate",
+            "hx_effectiveness",
+            "number_of_transfer_units",
+            "heat_capacity_rate_ratio",
+            "overall_heat_transfer_coefficient",
+            "pump_power",
+            "entropy_generation_rate",
+            "exergy_destruction_rate",
+        ]:
+            with subtests.test(f"{name} unchanged by swap"):
+                values = get(name)
+                assert values[1] == approx(values[0], rel=rel)
