@@ -53,70 +53,70 @@ class ShellTubeHXPerformanceModelConfig(BaseConfig):
       heat to (or removes heat from) the process fluid.
 
     Args:
-        process_fluid_temp_C: Default process (tube-side) inlet temperature in degC. Must be
+        process_fluid_temp_C (float): Default process (tube-side) inlet temperature in degC. Must be
             within the single-phase liquid range of ``process_fluid_name`` at
             ``process_fluid_pressure_bar`` (at or above the fluid's minimum temperature and
             below its boiling point).
-        working_fluid_temp_C: Default working (shell-side) inlet temperature in degC. Must be
+        working_fluid_temp_C (float): Default working (shell-side) inlet temperature in degC. Must be
             within the single-phase liquid range of ``working_fluid_name`` at
             ``working_fluid_pressure_bar``.
-        process_fluid_mass_flow_kg_s: Default process mass flow rate in kg/s.
-        working_fluid_mass_flow_kg_s: Default working mass flow rate in kg/s.
-        process_fluid_pressure_bar: Default process inlet pressure in bar. Defaults to 1.0.
-        working_fluid_pressure_bar: Default working inlet pressure in bar. Defaults to 1.0.
-        N_tubes: Number of tubes in the heat exchanger.
-        N_passes: Number of tube passes.
-        L_tube_m: Length of each tube in meters.
-        D_o_m: Outer diameter of the tubes in meters.
-        t_wall_m: Wall thickness of the tubes in meters.
-        D_shell_m: Diameter of the shell in meters.
-        tube_material: Material of the tubes in the heat exchanger. Possible values are:
+        process_fluid_mass_flow_kg_s (float): Default process mass flow rate in kg/s.
+        working_fluid_mass_flow_kg_s (float): Default working mass flow rate in kg/s.
+        process_fluid_pressure_bar (float): Default process inlet pressure in bar. Defaults to 1.0.
+        working_fluid_pressure_bar (float): Default working inlet pressure in bar. Defaults to 1.0.
+        N_tubes (int): Number of tubes in the heat exchanger.
+        N_passes (int): Number of tube passes.
+        L_tube_m (float): Length of each tube in meters.
+        D_o_m (float): Outer diameter of the tubes in meters.
+        t_wall_m (float): Wall thickness of the tubes in meters.
+        D_shell_m (float): Diameter of the shell in meters.
+        tube_material (str): Material of the tubes in the heat exchanger. Possible values are:
             "carbon_steel", "stainless_304", "copper". Defaults to "carbon_steel".
-        shell_material: Material of the shell in the heat exchanger. Possible values are:
+        shell_material (str): Material of the shell in the heat exchanger. Possible values are:
             "carbon_steel", "stainless_304", "copper". Defaults to "carbon_steel".
-        process_fluid_name: CoolProp fluid name for the process stream. Defaults to "Water".
-        working_fluid_name: CoolProp fluid name for the working stream. Defaults to "Water".
-        k_wall_W_mK: Tube wall thermal conductivity in W/m-K. If None, the value
+        process_fluid_name (str): CoolProp fluid name for the process stream. Defaults to "Water".
+        working_fluid_name (str): CoolProp fluid name for the working stream. Defaults to "Water".
+        k_wall_W_mK (float): Tube wall thermal conductivity in W/m-K. If None, the value
             is taken from ``tube_material``. Defaults to None.
-        t_shell_m: Shell wall thickness in meters. Defaults to 0.02.
-        N_seg: Number of axial segments used to discretize the HX. Defaults to 20.
-        R_fi_m2K_W: Tube-side (inner) fouling resistance in m^2-K/W. Defaults to 1e-4.
-        R_fo_m2K_W: Shell-side (outer) fouling resistance in m^2-K/W. Defaults to 2e-4.
-        pitch_m: Tube pitch in meters. If None, ``1.1 * D_o_m`` is used. Defaults to None.
-        baffle_spacing_m: Shell-side baffle spacing in meters. Defaults to 0.20.
-        baffle_cut: Baffle cut as a fraction of the shell diameter (0-1). Defaults to 0.20.
-        layout: Tube layout. Possible values are: "triangular", "square".
+        t_shell_m (float): Shell wall thickness in meters. Defaults to 0.02.
+        N_seg (int): Number of axial segments used to discretize the HX. Defaults to 20.
+        R_fi_m2K_W (float): Tube-side (inner) fouling resistance in m^2-K/W. Defaults to 1e-4.
+        R_fo_m2K_W (float): Shell-side (outer) fouling resistance in m^2-K/W. Defaults to 2e-4.
+        pitch_m (float): Tube pitch in meters. If None, ``1.1 * D_o_m`` is used. Defaults to None.
+        baffle_spacing_m (float): Shell-side baffle spacing in meters. Defaults to 0.20.
+        baffle_cut (float): Baffle cut as a fraction of the shell diameter (0-1). Defaults to 0.20.
+        layout (str): Tube layout. Possible values are: "triangular", "square".
             Defaults to "triangular".
-        shell_model: Shell-side heat transfer correlation. Possible values are:
+        shell_model (str): Shell-side heat transfer correlation. Possible values are:
             "kern", "bell_delaware" (currently a placeholder equal to Kern).
             Defaults to "kern".
-        F_shell: Correction factor applied to the shell-side heat transfer coefficient.
+        F_shell (float): Correction factor applied to the shell-side heat transfer coefficient.
             Defaults to 0.8.
-        use_SiederTate_tube: Whether to use the Sieder-Tate correlation for turbulent
+        use_SiederTate_tube (bool): Whether to use the Sieder-Tate correlation for turbulent
             tube-side flow (otherwise Dittus-Boelter). Defaults to True.
-        use_wall_viscosity_correction: Whether to apply the wall viscosity correction
+        use_wall_viscosity_correction (bool): Whether to apply the wall viscosity correction
             in the Sieder-Tate correlation. Defaults to True.
-        Re_laminar_max: Upper Reynolds number limit for laminar flow. Defaults to 2300.
-        Re_turb_min: Lower Reynolds number limit for turbulent flow. Defaults to 4000.
-        eta_pump: Pump efficiency (0-1] used to compute pumping power. Defaults to 0.7.
-        U_loss_W_m2K: Overall heat loss coefficient from shell to ambient in W/m^2-K.
+        Re_laminar_max (float): Upper Reynolds number limit for laminar flow. Defaults to 2300.
+        Re_turb_min (float): Lower Reynolds number limit for turbulent flow. Defaults to 4000.
+        eta_pump (float): Pump efficiency (0-1] used to compute pumping power. Defaults to 0.7.
+        U_loss_W_m2K (float): Overall heat loss coefficient from shell to ambient in W/m^2-K.
             Defaults to 0.0 (adiabatic shell).
-        T_amb_C: Ambient temperature for shell heat loss in degC. Defaults to 25.0.
-        T0_env_K: Dead-state (environment) temperature for exergy analysis in K.
+        T_amb_C (float): Ambient temperature for shell heat loss in degC. Defaults to 25.0.
+        T0_env_K (float): Dead-state (environment) temperature for exergy analysis in K.
             Defaults to 298.15.
-        pinch_threshold_K: Minimum temperature approach below which a pinch warning
+        pinch_threshold_K (float): Minimum temperature approach below which a pinch warning
             is flagged, in K. Defaults to 3.0.
-        min_inlet_temp_diff_K: Inlet temperature difference, in K, below which a timestep
+        min_inlet_temp_diff_K (float): Inlet temperature difference, in K, below which a timestep
             is treated as having no heat transfer (outlet temperatures equal inlet
             temperatures). Must be greater than 0.002 K. Defaults to 0.01.
-        fzero_tol: Convergence tolerance for the shooting-method bisection.
+        fzero_tol (float): Convergence tolerance for the shooting-method bisection.
             Defaults to 1e-6.
-        fzero_maxit: Maximum number of iterations for the shooting-method bisection.
+        fzero_maxit (int): Maximum number of iterations for the shooting-method bisection.
             Defaults to 50.
-        enable_plot: Whether to enable plotting of the HX performance. Defaults to False.
-        plot_dir: Directory to save plots if plotting is enabled. Defaults to None.
-        show_plot: Whether to display plots interactively. Defaults to False.
-        print_summary: Whether to print a detailed summary at each timestep.
+        enable_plot (bool): Whether to enable plotting of the HX performance. Defaults to False.
+        plot_dir (str | None): Directory to save plots if plotting is enabled. Defaults to None.
+        show_plot (bool): Whether to display plots interactively. Defaults to False.
+        print_summary (bool): Whether to print a detailed summary at each timestep.
             Defaults to False.
     """
 
