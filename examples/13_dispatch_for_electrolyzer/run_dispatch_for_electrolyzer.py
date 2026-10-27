@@ -1,15 +1,9 @@
 from pathlib import Path
 
-from h2integrate import (
-    EXAMPLE_DIR,
-    H2IntegrateModel,
-    load_tech_yaml,
-    load_plant_yaml,
-    load_driver_yaml,
-)
+from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
 
 
-this_dir = EXAMPLE_DIR / "13_dispatch_for_electrolyzer"
+this_dir = Path(__file__).parent
 tech_config = load_tech_yaml(this_dir / "tech_config.yaml")
 plant_config = load_plant_yaml(this_dir / "plant_config.yaml")
 driver_config = load_driver_yaml(this_dir / "driver_config.yaml")
