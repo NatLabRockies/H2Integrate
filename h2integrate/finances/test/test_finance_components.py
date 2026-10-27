@@ -150,3 +150,27 @@ def test_adjusted_cf_comp_subgroup_method_overrides_plant_method(plant_config, n
         problem.get_val("component.capacity_factor", units="unitless"),
         [1.0 / 3.0, 1.0, 1.0, 1.0],
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [8760])
+def test_adjusted_cf_comp_uses_integer_dt_like_plant_validation(plant_config, n_timesteps):
+    # A fractional dt is truncated by plant validation and the base classes, so 8760 steps are
+    # exactly one year; using the raw dt would split them into two segments and require a method.
+    plant_config["plant"]["simulation"]["dt"] = 3600.5
+    production_timeseries = np.full(n_timesteps, 100.0)
+
+    problem = om.Problem()
+    component = AdjustedCapacityFactorComp(plant_config=plant_config, commodity_type="electricity")
+    problem.model.add_subsystem("component", component, promotes=["*"])
+
+    independent = om.IndepVarComp()
+    independent.add_output("electricity_produced", val=production_timeseries, units="kW")
+    problem.model.add_subsystem("independent", independent, promotes=["*"])
+
+    problem.setup()
+    problem.run_model()
+
+    np.testing.assert_allclose(
+        problem.get_val("component.capacity_factor", units="unitless"), np.ones(30)
+    )

@@ -78,8 +78,28 @@ to project annual outputs across plant life. Their pure calculation functions li
 `h2integrate/core/annualization.py`; model implementations should normally call the base-class
 methods rather than assemble the private helpers themselves.
 
-CF and variable costs use duration-weighted annual means. Optional SOH supports timestep-level
-completion of the trailing cycle and integer replacement counts per year. For arguments,
+A "plant year" here is always 365 days (31,536,000 s); a simulation shorter or longer than that is
+split at plant-year boundaries and each segment is averaged over its actual duration. No built-in
+model calls these methods yet because all models default to annual-only support (see
+`_simulation_duration_bounds`); a model opts in by widening its bounds and calling them, for example:
+
+```python
+# In a performance model's compute(); state of health (SOH) is optional
+annual_capacity_factors, replacement_schedule = self.calculate_annual_cf_and_replacement_schedule(
+    performance_timeseries=outputs["electricity_out"],
+    rated_performance=self.config.rated_capacity,
+    state_of_health_timeseries=None,  # or a timeseries of SOH fractions in [0, 1]
+    eol_soh=None,  # end-of-life SOH threshold, required only when SOH is given
+)
+
+# In a cost model's compute(); timestep-level variable costs in USD per timestep
+annual_varopex = self.calculate_annual_varopex(varopex_timeseries)
+```
+
+Both results have one entry per plant year (`plant_life` entries).
+
+CF (capacity factor) and variable costs use duration-weighted annual means. Optional SOH supports
+timestep-level completion of the trailing cycle and integer replacement counts per year. For arguments,
 extrapolation options, and boundary behavior, see
 {py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
 and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.

@@ -10,11 +10,12 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.annualization import (
-    _VALID_ANNUAL_EXTRAPOLATION_METHODS,
+    SECONDS_PER_PLANT_YEAR,
+    VALID_ANNUAL_EXTRAPOLATION_METHODS,
     _project_capacity_factors,
-    _extrapolate_annual_values,
+    extrapolate_annual_values,
+    time_weighted_annual_means,
     _build_replacement_schedule,
-    _time_weighted_annual_means,
     _degraded_replacement_cycles,
     _validate_annualization_inputs,
 )
@@ -216,8 +217,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         return range(ti, ti + self.n_timesteps_window)
 
     def apply_curtailment(self, outputs):
-        """
-        Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
+        """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
         then clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` element-wise.
@@ -249,22 +249,22 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         no_degradation_extrapolation=None,
         soh_cycle_repetition="all_soh_cycles",
     ):
-        """Project annual capacity factors and replacement schedule across plant life.
-            Inputs must be finite one-dimensional arrays of identical length. SOH and
-            its EOL threshold use fractions in [0, 1]. Resets are upward SOH jumps greater
-            than 1e-9 at sample offsets; SOH alone cannot identify a first-sample reset or
-            resets without an upward jump. Each reset closes the outgoing unit's cycle.
-            Trailing degradation uses the SOH loss between the last two post-reset
-            samples to complete the cycle at the simulation timestep. Projected CF scales
-            the last timestep CF by projected SOH relative to the last observed SOH.
-            EOL is checked at timestep boundaries, without interpolating. With fewer than
-            two post-reset samples or stalled degradation, no EOL is inferred.
-            Each cycle's CF is then aggregated into annual segments, retaining partial-year
-            durations. Segments are duration-weighted into fixed 365-day plant years
-            when completed cycles repeat.
-            Cycle-end events are discrete counts in [year, year + 1); initial installation
-            and retirement at the end of the plant life are excluded. CF and replacement
-            events use the same cycle durations.
+        """Project annual capacity factors and replacement counts across plant life.
+
+        The simulated horizon can be any positive length up to plant life. Behavior:
+
+        - Without ``state_of_health_timeseries``, capacity factors are time-weighted means of
+          each simulated plant year (the last may be partial) and are extended to plant life
+          with the selected extrapolation method. No replacements occur.
+        - With SOH, the simulation is split into replacement cycles. A cycle ends at an upward
+          SOH jump greater than 1e-9 (a reset). The final cycle is extended using the SOH loss
+          between its last two samples until SOH reaches ``eol_soh`` or plant life is covered.
+          Projected CF is the last timestep CF scaled by projected SOH over last observed SOH.
+          EOL is checked at timestep boundaries without interpolation, and nothing is inferred
+          from fewer than two post-reset samples or from stalled degradation.
+        - Completed cycles are then repeated per ``soh_cycle_repetition`` and averaged into
+          fixed 365-day plant years. Replacements are integer counts binned into
+          ``[year, year + 1)``; initial installation and retirement are not counted.
 
         Args:
             performance_timeseries (array-like): timestep-level performance values used
@@ -279,7 +279,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
                 ``state_of_health_timeseries`` is provided.
             no_degradation_extrapolation (str | None): Extrapolation strategy when
                 ``state_of_health_timeseries`` is None. If None, use the plant simulation's
-                ``annual_extrapolation_method``. Required only when multiple simulated annual values
+                ``annual_extrapolation_method``; an override should generally match it. Required
+                only when multiple simulated annual values
                 must be extended to cover the remaining plant life. Options:
 
                 - ``"tile"``: repeat simulated annual values cyclically.
@@ -331,8 +332,8 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             (
                 simulated_annual_capacity_factors,
                 simulated_durations_years,
-            ) = _time_weighted_annual_means(performance_timeseries / rated_performance, self.dt)
-            annual_capacity_factors = _extrapolate_annual_values(
+            ) = time_weighted_annual_means(performance_timeseries / rated_performance, self.dt)
+            annual_capacity_factors = extrapolate_annual_values(
                 simulated_annual_capacity_factors,
                 plant_life,
                 no_degradation_extrapolation,
@@ -467,10 +468,11 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
                 annual cost numerator units (for example USD per timestep after any
                 flow * price multiplication).
             annual_extrapolation_method (str | None): Extrapolation strategy after the simulated
-                horizon. If None, use the plant simulation's ``annual_extrapolation_method``.
+                horizon. If None, use the plant simulation's ``annual_extrapolation_method``;
+                an override should generally match it.
                 Required only when multiple simulated annual values must be extended to cover
-                the remaining plant life. Options are ``"tile"``, ``"final_sim_value``, and
-                ``"time_averaged_sim_value``.
+                the remaining plant life. Options are ``"tile"``, ``"final_sim_value"``, and
+                ``"time_averaged_sim_value"``.
 
         Returns:
             np.ndarray: annualized variable OpEx for each year of plant life.
@@ -484,19 +486,19 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
 
         if (
             annual_extrapolation_method is not None
-            and annual_extrapolation_method not in _VALID_ANNUAL_EXTRAPOLATION_METHODS
+            and annual_extrapolation_method not in VALID_ANNUAL_EXTRAPOLATION_METHODS
         ):
             raise ValueError(
                 "annual_extrapolation_method must be one of "
-                f"{_VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {annual_extrapolation_method!r}."
+                f"{VALID_ANNUAL_EXTRAPOLATION_METHODS}; got {annual_extrapolation_method!r}."
             )
 
-        mean_timestep_costs, simulated_durations_years = _time_weighted_annual_means(
+        mean_timestep_costs, simulated_durations_years = time_weighted_annual_means(
             varopex_timeseries, self.dt
         )
-        simulated_annual_varopex = mean_timestep_costs * (31_536_000 / self.dt)
+        simulated_annual_varopex = mean_timestep_costs * (SECONDS_PER_PLANT_YEAR / self.dt)
 
-        return _extrapolate_annual_values(
+        return extrapolate_annual_values(
             simulated_annual_varopex,
             self.plant_life,
             annual_extrapolation_method,

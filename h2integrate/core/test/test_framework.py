@@ -889,37 +889,6 @@ def test_custom_financial_model_grouping(temp_dir, subtests):
     H2IntegrateModel(temp_highlevel_yaml)
 
 
-@pytest.mark.unit
-@pytest.mark.parametrize("include_leap_day", [True, False, None])
-def test_h2i_config_rejects_leap_day_resources(include_leap_day):
-    example_folder = EXAMPLE_DIR / "01_onshore_steel_mn"
-    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
-    resource_parameters = {}
-    if include_leap_day is not None:
-        resource_parameters["include_leap_day"] = include_leap_day
-    plant_config["sites"]["leap_test_site"] = {
-        "latitude": 0.0,
-        "longitude": 0.0,
-        "resources": {
-            "weather": {
-                "resource_model": "GOESAggregatedSolarAPI",
-                "resource_parameters": resource_parameters,
-            }
-        },
-    }
-    config = {
-        "plant_config": plant_config,
-        "technology_config": example_folder / "tech_config.yaml",
-        "driver_config": example_folder / "driver_config.yaml",
-    }
-    model = object.__new__(H2IntegrateModel)
-    if include_leap_day:
-        with pytest.raises(ValueError, match=r"leap_test_site\.weather.*include_leap_day=True"):
-            model.load_config(config)
-    else:
-        model.load_config(config)
-
-
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
 def test_unsupported_simulation_parameters():

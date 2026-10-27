@@ -22,7 +22,7 @@ ROOT = Path(__file__).parents[1]
 
 
 # docs fencepost start: DO NOT REMOVE
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
 def test_steel_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -134,7 +134,7 @@ def test_steel_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_simple_ammonia_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -267,7 +267,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("12_ammonia_synloop", None)])
 def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -390,7 +390,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("03_methanol/smr", None)])
 def test_smr_methanol_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -411,7 +411,7 @@ def test_smr_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation", None)]
 )
@@ -461,7 +461,7 @@ def test_co2h_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation_doc", None)]
 )
@@ -487,7 +487,7 @@ def test_doc_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("05_wind_h2_opt", None)])
 def test_wind_h2_opt_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -587,7 +587,7 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("06_custom_tech", None)])
 def test_paper_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -608,7 +608,7 @@ def test_paper_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("09_co2/direct_ocean_capture", None)]
 )
@@ -645,7 +645,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
 )
@@ -802,7 +802,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
 )
@@ -830,50 +830,7 @@ def test_hydro_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("11_hybrid_energy_plant", None)]
-)
-def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
-    example_folder = temp_copy_of_example
-
-    # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "wind_pv_battery.yaml")
-
-    # Run the model
-    model.run()
-
-    model.post_process()
-
-    # Subtests for checking specific values
-    with subtests.test("Check LCOE is positive"):
-        lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0]
-        assert lcoe <= 69
-
-    with subtests.test("Check wind rated production"):
-        wind_rated = model.prob.get_val("wind.rated_electricity_production", units="kW")[0]
-        assert wind_rated <= 3005
-
-    with subtests.test("Check solar rated production"):
-        solar_rated = model.prob.get_val("solar.rated_electricity_production", units="kW")[0]
-        assert solar_rated <= 1925
-
-    with subtests.test("Check percent_load_missed"):
-        pct_missed = model.prob.get_val("electrical_load_demand.percent_load_missed")[0]
-        assert pct_missed <= 18.7
-
-    with subtests.test("Check curtailment_percent"):
-        curtailment = model.prob.get_val("electrical_load_demand.curtailment_percent")[0]
-        assert curtailment <= 16.5
-
-    with subtests.test("Check delivered total electricity produced"):
-        load_total = model.prob.get_val(
-            "electrical_load_demand.total_electricity_produced", units="kW*h"
-        )[0]
-        assert load_total <= 9700000
-
-
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("13_dispatch_for_electrolyzer", None)]
 )
@@ -973,7 +930,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
         assert pytest.approx(226775.45532130863, rel=1e-6) == electricity_to_electrolyzer
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("14_wind_hydrogen_dispatch", None)]
 )
@@ -1059,7 +1016,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("09_co2/ocean_alkalinity_enhancement", None)]
 )
@@ -1098,16 +1055,16 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("09_co2/ocean_alkalinity_enhancement_financials", None)],
+    [("09_co2/ocean_alkalinity_enhancement", None)],
 )
 def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "offshore_plant_oae.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_oae_financials.yaml")
 
     # Run the model
     model.run()
@@ -1131,10 +1088,8 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
-)
+@pytest.mark.examples
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("16_natural_gas", None)])
 def test_natural_gas_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1306,10 +1261,10 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
         assert pytest.approx(ng_cf, rel=1e-6) == 0.5676562763739097
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("15_wind_solar_electrolyzer", "11_hybrid_energy_plant/")],
+    [("15_wind_solar_electrolyzer", None)],
 )
 def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1388,7 +1343,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
         assert pytest.approx(total_generation.sum(), rel=1e-5) == total_energy_to_electrolyzer.sum()
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("10_electrolyzer_om", None)])
 def test_electrolyzer_om_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1413,7 +1368,7 @@ def test_electrolyzer_om_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoh_with_lcoe_finance, rel=2e-3) == 10.3360027653
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("08_wind_electrolyzer", None)])
 def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1447,7 +1402,7 @@ def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoe_with_profast_model, rel=1e-5) == 59.0962084
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("18_pyomo_heuristic_dispatch", None)]
 )
@@ -1548,7 +1503,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
         model = H2IntegrateModel(model_config)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
 def test_simple_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1707,7 +1662,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("29_wind_ard", None)])
 def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
@@ -1793,7 +1748,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
         assert electricity_missed_load == pytest.approx(1403.5372787817894)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
 )
@@ -1940,7 +1895,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
     new_csv_filename.unlink()
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("22_site_doe", None)])
 def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2050,10 +2005,10 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         assert all(k for k in lcoe_comp)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("23_solar_wind_ng_demand", "11_hybrid_energy_plant/")],
+    [("23_solar_wind_ng_demand", None)],
 )
 def test_ng_demand_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2113,7 +2068,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
         assert pytest.approx(76.39162926, rel=1e-6) == lcoe_electricity_flexible[0]
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("26_floris", None)])
 def test_floris_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2259,9 +2214,9 @@ def test_floris_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", None)]
 )
 def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     # NOTE: would be good to compare LCOE against the same example without grid selling
@@ -2369,7 +2324,7 @@ def test_24_solar_battery_grid_non_annual(subtests, temp_copy_of_example):
         assert load_served > 0.0
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_mapping", None)]
 )
@@ -2530,7 +2485,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_png_fpath.unlink(missing_ok=True)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_natural_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2608,7 +2563,7 @@ def test_natural_geoh2(subtests, temp_copy_of_example):
         assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_stimulated_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2654,7 +2609,7 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_dri", None)]
 )
@@ -2678,14 +2633,14 @@ def test_iron_dri_eaf_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri_nrri", None)]
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri", None)]
 )
 def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    h2i = H2IntegrateModel(example_folder / "single_site_iron.yaml")
+    h2i = H2IntegrateModel(example_folder / "single_site_iron_nrri.yaml")
 
     h2i.run()
 
@@ -2702,7 +2657,7 @@ def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 520.417
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_electrowinning", None)]
 )
@@ -2749,7 +2704,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoi, rel=1e-4) == 2.266210286641621
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("27_site_doe_diff", None)])
 def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2863,7 +2818,7 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
 )
@@ -2959,7 +2914,7 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert price == pytest.approx(0.134, rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("31_tidal", None)])
 def test_tidal_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2987,7 +2942,7 @@ def test_tidal_example(subtests, temp_copy_of_example):
         assert lcoe == pytest.approx(0.287, rel=1e-4)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("32_multivariable_streams", None)]
 )
@@ -3069,7 +3024,7 @@ def test_multivariable_streams_example(subtests, temp_copy_of_example):
         assert avg_pres[0] == pytest.approx(10.40, rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("21_iron_examples/iron_cmu/scrap_only", None)],
@@ -3096,7 +3051,7 @@ def test_cmu_eaf_scrap_only_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 0.2233330
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("21_iron_examples/iron_cmu/dri", None)],
@@ -3123,7 +3078,7 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 1.4932
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("33_peak_load_management_heuristics/plm_storage", None)],
@@ -3173,7 +3128,7 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder,expected",
     [
@@ -3222,7 +3177,7 @@ def test_plm_converter_heuristic_example(subtests, temp_copy_of_example, expecte
         assert np.sum(command > 0) == expected["nonzero_dispatch"]
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("34_plm_optimized_dispatch", None)]
 )
@@ -3269,7 +3224,7 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("38_battery_degradation", None)]
 )
@@ -3418,9 +3373,9 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
         assert pytest.approx(unused_electricity.sum(), rel=1e-6) == grid_electricity_in.sum()
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("38_time_marching_simulation", None)]
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", None)]
 )
 def test_time_marching_simulation_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -3434,8 +3389,6 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
     config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
 
     # Run simulation sequentially, one subsystem at a time
-    config["plant_config"]["plant"]["simulation"].pop("n_timesteps_window")
-
     h2i_seq = H2IntegrateModel(config)
     h2i_seq.run()
     h2i_seq.post_process(print_results=False)
@@ -3479,7 +3432,7 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
             )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("37_paper_mill", None)],

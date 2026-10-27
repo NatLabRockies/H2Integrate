@@ -43,6 +43,7 @@ plant:
     dt: 3600
     n_timesteps: 8760
     annual_extrapolation_method: tile
+    # Add `n_timesteps_window: 24` to simulate 24 timesteps at a time (see run_time_marching.py)
 finance_parameters:
   finance_groups:
     profast_model:
