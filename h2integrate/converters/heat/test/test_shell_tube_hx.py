@@ -55,7 +55,7 @@ class TestShellTubeHXPerformanceModel:
         prob.setup()
         return prob
 
-    def test_hx_performance_calculation(self, shell_tube_hx_config):
+    def test_hx_performance_calculation(self, shell_tube_hx_config, subtests):
         prob = self._create_problem(shell_tube_hx_config)
 
         prob.run_model()
@@ -101,28 +101,44 @@ class TestShellTubeHXPerformanceModel:
         expected_pump_power_kW = 0.28157427036731625
 
         rel = 1e-5
-        assert Q_total_kW[0] == approx(expected_Q_total_kW, rel=rel)
-        assert U_global_W_m2K[0] == approx(expected_U_global_W_m2K, rel=rel)
-        assert C_r[0] == approx(expected_C_r, rel=rel)
-        assert Ex_dest_dot_kW[0] == approx(expected_Ex_dest_dot_kW, rel=rel)
-        assert NTU[0] == approx(expected_NTU, rel=rel)
-        assert S_gen_dot_W_per_K[0] == approx(expected_S_gen_dot_W_per_K, rel=rel)
-        assert working_temp_out[0] == approx(expected_working_temp_out_C, rel=rel)
-        assert process_temp_out[0] == approx(expected_process_temp_out_C, rel=rel)
-        assert dp_working_Pa[0] == approx(expected_dp_working_Pa, rel=rel)
-        assert dp_process_Pa[0] == approx(expected_dp_process_Pa, rel=rel)
-        assert epsilon[0] == approx(expected_epsilon, rel=rel)
-        assert pump_power_kW[0] == approx(expected_pump_power_kW, rel=rel)
+        with subtests.test("total_heat_transfer_rate"):
+            assert Q_total_kW[0] == approx(expected_Q_total_kW, rel=rel)
+        with subtests.test("overall_heat_transfer_coefficient"):
+            assert U_global_W_m2K[0] == approx(expected_U_global_W_m2K, rel=rel)
+        with subtests.test("heat_capacity_rate_ratio"):
+            assert C_r[0] == approx(expected_C_r, rel=rel)
+        with subtests.test("exergy_destruction_rate"):
+            assert Ex_dest_dot_kW[0] == approx(expected_Ex_dest_dot_kW, rel=rel)
+        with subtests.test("number_of_transfer_units"):
+            assert NTU[0] == approx(expected_NTU, rel=rel)
+        with subtests.test("entropy_generation_rate"):
+            assert S_gen_dot_W_per_K[0] == approx(expected_S_gen_dot_W_per_K, rel=rel)
+        with subtests.test("working_fluid:temperature_out"):
+            assert working_temp_out[0] == approx(expected_working_temp_out_C, rel=rel)
+        with subtests.test("process_fluid:temperature_out"):
+            assert process_temp_out[0] == approx(expected_process_temp_out_C, rel=rel)
+        with subtests.test("pressure_drop_working_fluid"):
+            assert dp_working_Pa[0] == approx(expected_dp_working_Pa, rel=rel)
+        with subtests.test("pressure_drop_process_fluid"):
+            assert dp_process_Pa[0] == approx(expected_dp_process_Pa, rel=rel)
+        with subtests.test("hx_effectiveness"):
+            assert epsilon[0] == approx(expected_epsilon, rel=rel)
+        with subtests.test("pump_power"):
+            assert pump_power_kW[0] == approx(expected_pump_power_kW, rel=rel)
 
         # Mass flow is conserved through the HX
-        assert process_mass_flow_out[0] == approx(18.0, rel=1e-12)
-        assert working_mass_flow_out[0] == approx(40.0, rel=1e-12)
+        with subtests.test("process_fluid:mass_flow_out conserved"):
+            assert process_mass_flow_out[0] == approx(18.0, rel=1e-12)
+        with subtests.test("working_fluid:mass_flow_out conserved"):
+            assert working_mass_flow_out[0] == approx(40.0, rel=1e-12)
 
         # Outlet pressure = inlet pressure - Δp (converted from Pa to bar)
-        assert process_pressure_out[0] == approx(1.0 - expected_dp_process_Pa / 1e5, rel=rel)
-        assert working_pressure_out[0] == approx(1.0 - expected_dp_working_Pa / 1e5, rel=rel)
+        with subtests.test("process_fluid:pressure_out"):
+            assert process_pressure_out[0] == approx(1.0 - expected_dp_process_Pa / 1e5, rel=rel)
+        with subtests.test("working_fluid:pressure_out"):
+            assert working_pressure_out[0] == approx(1.0 - expected_dp_working_Pa / 1e5, rel=rel)
 
-    def test_hx_timeseries_shape(self, shell_tube_hx_config):
+    def test_hx_timeseries_shape(self, shell_tube_hx_config, subtests):
         """Confirm the model runs for n_timesteps > 1 and returns time-series outputs."""
         tech_config, plant_config, driver_config = shell_tube_hx_config
         # Bump n_timesteps and rerun
@@ -132,20 +148,12 @@ class TestShellTubeHXPerformanceModel:
                 "plant_life": 30,
             }
         }
-        prob = om.Problem()
-        prob.model.add_subsystem(
-            "shell_tube_hx",
-            ShellTubeHXPerformanceModel(
-                tech_config=tech_config,
-                plant_config=plant_config,
-                driver_config=driver_config,
-            ),
-            promotes=["*"],
-        )
-        prob.setup()
+        prob = self._create_problem((tech_config, plant_config, driver_config))
         prob.run_model()
 
         Q = prob.get_val("shell_tube_hx.total_heat_transfer_rate", units="kW")
-        assert Q.shape == (3,)
+        with subtests.test("total_heat_transfer_rate shape"):
+            assert Q.shape == (3,)
         # All timesteps use the same (config-default) inlets, so results are identical
-        assert np.allclose(Q, Q[0])
+        with subtests.test("total_heat_transfer_rate constant across timesteps"):
+            assert np.allclose(Q, Q[0])
