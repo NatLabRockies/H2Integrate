@@ -12,6 +12,10 @@ There are specific costs and performance specifications in the ATB for:
 - [Distributed Wind](https://atb.nlr.gov/electricity/2024/distributed_wind)
 
 Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#atb-wind-cost-model).
+See {py:class}`~h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModel` and
+{py:class}`~h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModelConfig`.
+The model multiplies `rated_electricity_production` by the configured rates to produce `CapEx`
+and annual `OpEx`, and supports one-hour time steps.
 
 (atb-wind-cost-model)=
 ## ATB Wind Cost Model

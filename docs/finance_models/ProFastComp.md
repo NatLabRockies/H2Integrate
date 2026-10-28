@@ -1,7 +1,11 @@
 
 (profastcomp:profastcompmodel)=
 # ProFastComp
-The `ProFastLCO` finance model calculates levelized cost of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST).
+The {py:class}`~h2integrate.finances.profast_lco.ProFastLCO` finance model calculates levelized
+cost of a commodity using [ProFAST](https://github.com/NatLabRockies/ProFAST). Its shared
+configuration and inputs are described in the
+{py:class}`~h2integrate.finances.profast_baseclass.ProFastBase` API and
+{doc}`ProFastBase guide <ProFastBase>`.
 
 The inputs, outputs, and naming convention for the `ProFastLCO` model are outlined in this doc page.
 

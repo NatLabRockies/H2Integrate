@@ -10,19 +10,35 @@ The main difference is the required feedstocks for processing the pellets.
 The original models were constructed in Aspen Pro and translated into Python and added to H2I. The models were developed in conjunction with [Lawrence Berkeley National Laboratory (LBNL)](https://www.lbl.gov/).
 
 The models implemented in H2I are:
-- Natural Gas Electric Arc Furnace
-  - `NaturalGasEAFPlantPerformanceComponent`
-  - `NaturalGasEAFPlantCostComponent`
-- Hydrogen Electric Arc Furnace
-  - `HydrogenEAFPlantPerformanceComponent`
-  - `HydrogenEAFPlantCostComponent`
+- Natural gas direct-reduction route:
+  {py:class}`~h2integrate.converters.steel.steel_eaf_plant.NaturalGasEAFPlantPerformanceComponent`
+  and {py:class}`~h2integrate.converters.steel.steel_eaf_plant.NaturalGasEAFPlantCostComponent`.
+- Hydrogen direct-reduction route:
+  {py:class}`~h2integrate.converters.steel.steel_eaf_plant.HydrogenEAFPlantPerformanceComponent`
+  and {py:class}`~h2integrate.converters.steel.steel_eaf_plant.HydrogenEAFPlantCostComponent`.
+
+Both routes use
+{py:class}`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnacePerformanceBaseConfig`
+and {py:class}`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnaceCostBaseConfig`.
+The performance components take `steel_command_value`, `system_capacity`, and the feedstock
+profiles above, and report `steel_out`, consumption, and production summaries. The cost components
+report `CapEx`, fixed `OpEx`, and `VarOpEx`. All require one-hour time steps.
 
 ## Simple steel plant
 
-The separate `SteelPerformanceModel` represents annual steel production using a configured plant
-capacity and capacity factor. `SteelCostAndFinancialModel` calculates capital and operating costs
+The separate {py:class}`~h2integrate.converters.steel.steel.SteelPerformanceModel` represents
+steel production using a configured plant capacity and capacity factor.
+{py:class}`~h2integrate.converters.steel.steel.SteelCostAndFinancialModel` calculates capital and operating costs
 and reports levelized cost of steel (`LCOS`). Both use hourly time steps. These models are distinct
 from the natural-gas and hydrogen EAF performance components described above.
+
+The simple performance model uses `electricity_in` only to determine the profile length, not to
+limit production. It distributes configured annual production over the simulated time steps,
+then annualizes the resulting total; partial-year simulations therefore require care.
+
+See {py:class}`~h2integrate.converters.steel.steel.SteelPerformanceModelConfig` and
+{py:class}`~h2integrate.converters.steel.steel.SteelCostAndFinancialModelConfig` for the
+simple models' configuration APIs.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.steel.steel.SteelPerformanceModelConfig

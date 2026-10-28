@@ -7,6 +7,39 @@ The `StoragePerformanceModel` model provides a flexible framework for modeling v
 
 The `StoragePerformanceModel` is a component that defines a simple storage performance model for any defined commodity. This model allows the storage system to work with any commodity type by simply configuring the commodity name and units, making it quite versatile.
 
+## Configuration and operation
+
+The performance model is
+{py:class}`~h2integrate.storage.storage_performance_model.StoragePerformanceModel`, configured by
+{py:class}`~h2integrate.storage.storage_performance_model.StoragePerformanceModelConfig`.
+It supports time steps from 1 second to 1 hour and can be used in time-marching simulations.
+Configure the commodity and rate/amount units, capacity, charge rate, minimum, maximum and
+initial state-of-charge fractions, and demand profile. Either provide a round-trip efficiency
+or both charge and discharge efficiencies. By default the discharge rate equals the charge
+rate; set `charge_equals_discharge` to `false` and supply `max_discharge_rate` to use a
+different rate.
+
+The model receives `{commodity}_in`, `max_charge_rate`, `storage_capacity`, and, when rates
+differ, `max_discharge_rate`. With open-loop control it also receives
+`{commodity}_command_value`; negative commands request charging and positive commands request
+discharging. With feedback dispatch it instead receives `{commodity}_set_point` and a discrete
+`pyomo_dispatch_solver`. Actual flows are limited by the command, storage limits and available
+commodity for charging, with efficiency losses applied.
+
+In addition to the {ref}`common storage outputs <storage-performance-outputs>`,
+the model reports `{commodity}_charge_demand` and `{commodity}_headroom`, estimates of the
+available charge and discharge rates based on the state of charge at the end of each timestep.
+`SOC` is reported as a percentage.
+
+The optional {py:class}`~h2integrate.storage.generic_storage_cost.GenericStorageCostModel` uses
+{py:class}`~h2integrate.storage.generic_storage_cost.GenericStorageCostConfig`. It accepts
+`storage_capacity`, `max_charge_rate`, `capacity_capex`, `charge_capex`, and `opex_fraction`
+as OpenMDAO inputs and reports `CapEx` and annual `OpEx`. It computes storage duration in hours
+as capacity divided by charge rate, then calculates
+`CapEx = (duration * capacity_capex + charge_capex) * max_charge_rate` and
+`OpEx = opex_fraction * CapEx`. Its supported time step is one hour. Cost rate units are
+restricted to the units listed in its configuration reference.
+
 ## Example Applications
 
 ### Battery Storage (Example 19)

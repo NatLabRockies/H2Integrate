@@ -2,6 +2,10 @@
 
 The `WOMBATElectrolyzerModel` provides a detailed, simulation-based approach to estimating the operations and maintenance (O&M) costs and availability of hydrogen electrolyzers. This model leverages the [WOMBAT](https://github.com/NLRWindSystems/WOMBAT) (Windfarm Operations and Maintenance cost-Benefit Analysis Tool) framework, originally developed for wind farm O&M analysis, and adapts it for hydrogen systems.
 
+See {py:class}`~h2integrate.converters.hydrogen.wombat_model.WOMBATElectrolyzerModel` and
+{py:class}`~h2integrate.converters.hydrogen.wombat_model.WOMBATElectrolyzerModelConfig`, which
+extends the [PEM electrolyzer configuration](pem_electrolyzer.md).
+
 ## What is WOMBAT?
 
 WOMBAT is a discrete-event simulation tool designed to model the full lifecycle of O&M activities for energy systems. It tracks maintenance events, failures, repairs, and resource constraints, providing a realistic estimate of downtime, lost production, and O&M costs. By simulating both scheduled and unscheduled maintenance, WOMBAT captures the complexity of real-world operations, including compounding failures and limited servicing capacity.
@@ -65,7 +69,9 @@ The provided electrolyzer library and associated O&M costs in this model are ill
 ```
 
 ```{note}
-The WOMBAT model is designed to simulate a single electrolyzer unit for one year. If you need to model multiple units or longer time periods, you may need to adjust the H2Integrate source code accordingly.
+The WOMBAT model simulates one electrolyzer system for 8,760 hours. Its configured stack count
+times stack capacity must equal the PEM cluster count times cluster rating. A fixed random seed is
+used for the WOMBAT simulation.
 ```
 
 ## Key Outputs
@@ -73,8 +79,11 @@ The WOMBAT model is designed to simulate a single electrolyzer unit for one year
 The WOMBAT electrolyzer model provides the following outputs:
 
 - **hydrogen_out**: Hourly hydrogen production, adjusted for simulated availability
-- **total_hydrogen_produced**: Total annual hydrogen output (kg)
+- **annual_hydrogen_produced**: Hydrogen output after availability is applied
 - **percent_hydrogen_lost**: Percentage of hydrogen lost due to O&M downtime
 - **OpEx**: Annual operational expenditure, based on simulated maintenance events
 - **CapEx**: Capital expenditure (from configuration)
 - **electrolyzer_availability**: Simulated time-based availability
+
+The inherited `total_hydrogen_produced`, oxygen, and consumption outputs are not recalculated
+after the WOMBAT availability adjustment. `VarOpEx` is declared but not assigned by this model.

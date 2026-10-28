@@ -4,6 +4,13 @@
 This model uses the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html) available in PySAM to simulate the performance of a solar-PV system.
 
 To use this model, specify `"PYSAMSolarPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
+See {py:class}`~h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModel` and
+{py:class}`~h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModelConfig`.
+
+The model receives the discrete `solar_resource_data` dictionary, `system_capacity_DC`, and
+`dc_ac_ratio`, plus `tilt_angle` or `azimuth_angle` inputs when the respective setting is
+`input`. It reports AC capacity, the electricity profile and production summaries. It supports
+one-hour time steps. See [solar cost models](atb_costs_pv.md) for capacity-based cost options.
 
 ```yaml
 technologies:

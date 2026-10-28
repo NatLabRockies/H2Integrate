@@ -35,6 +35,8 @@ class SimpleCycleTurbinePerformanceConfig(BaseConfig):
             allowed by the generator per rated (ISO) capacity.
         fuel_source (str): type of fuel used by the turbine. Currently only supports
             "natural_gas". Additional fuel types may be added in the future.
+
+    See :class:`SimpleCycleTurbinePerformanceModel` and :doc:`/technology_models/natural_gas`.
     """
 
     num_turbines: float = field(default=1, validator=validators.ge(0))
@@ -73,8 +75,9 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             timeseries. The ``temperature`` (degrees Celsius) and ``pressure``
             (hPa) entries are used to set the ambient state of the working fluid
             at each timestep.
-        system_capacity (float): rated (ISO) turbine capacity in MW. Defaults to
-            the configured ``system_capacity_mw``.
+        num_turbines (float): Number of turbines, defaulting to the configured value.
+        turbine_capacity (float): Rated (ISO) per-turbine capacity in MW. Defaults to
+            the configured ``turbine_capacity_mw``.
         generator_oversize_ratio (float): ratio of generator nameplate capacity
             to rated turbine capacity, unitless. Defaults to the configured
             ``generator_oversize_ratio``.
@@ -107,6 +110,9 @@ class SimpleCycleTurbinePerformanceModel(PerformanceModelBaseClass):
             a full year in MW*h/year.
         capacity_factor (float): total electricity produced divided by the
             maximum production possible at rated capacity, unitless.
+        system_capacity (float): Total rated turbine capacity in MW.
+
+    See :class:`SimpleCycleTurbinePerformanceConfig` and :doc:`/technology_models/natural_gas`.
     """
 
     _time_step_bounds = (

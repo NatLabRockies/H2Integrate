@@ -15,6 +15,11 @@ from h2integrate.converters.iron.load_top_down_coeffs import load_top_down_coeff
 
 @define(kw_only=True)
 class IronTransportPerformanceComponentConfig(BaseConfig):
+    """Route selection for :class:`IronTransportPerformanceComponent`.
+
+    See :doc:`/technology_models/iron_transport`.
+    """
+
     find_closest_ship_site: bool = field()
     shipment_site: str = field(
         converter=(str.lower, str.capitalize),
@@ -30,6 +35,12 @@ class IronTransportPerformanceComponentConfig(BaseConfig):
 
 @register(no_replacement_schedule=True)
 class IronTransportPerformanceComponent(om.ExplicitComponent):
+    """Estimate land and water route distances to a Great Lakes shipping site.
+
+    See :class:`IronTransportPerformanceComponentConfig` and
+    :doc:`/technology_models/iron_transport`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,
@@ -164,6 +175,11 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 
 @define(kw_only=True)
 class IronTransportCostComponentConfig(BaseConfig):
+    """Cost parameters for :class:`IronTransportCostComponent`.
+
+    See :doc:`/technology_models/iron_transport`.
+    """
+
     transport_year: int = field(converter=int, validator=(validators.ge(2022), validators.le(2065)))
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
     marginal_cost: float = field(default=0.0)
@@ -171,6 +187,11 @@ class IronTransportCostComponentConfig(BaseConfig):
 
 @register
 class IronTransportCostComponent(CostModelBaseClass):
+    """Estimate iron shipping costs from the input route and ore profile.
+
+    See :class:`IronTransportCostComponentConfig` and :doc:`/technology_models/iron_transport`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

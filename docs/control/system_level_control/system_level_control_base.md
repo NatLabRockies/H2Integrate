@@ -40,4 +40,5 @@ Helper functions for cost-aware controllers.
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 ```

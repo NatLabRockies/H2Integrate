@@ -6,7 +6,9 @@ other technologies to them as source or destination technologies in `technology_
 
 ## Combiner
 
-`GenericCombinerPerformanceModel` sums one commodity from multiple sources into one output. It
+{py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceModel`, configured
+with {py:class}`~h2integrate.transporters.generic_combiner.GenericCombinerPerformanceConfig`,
+sums one commodity from multiple sources into one output. It
 accepts `commodity`, `commodity_rate_units`, and optional `in_streams` (defaults to 2). Set
 `in_streams` to the number of incoming connections when combining more than two sources.
 
@@ -123,7 +125,9 @@ technology_interconnections:
 
 ## Splitter
 
-`GenericSplitterPerformanceModel` takes one input and produces exactly two outputs. `out1` is the
+{py:class}`~h2integrate.transporters.generic_splitter.GenericSplitterPerformanceModel`, configured
+with {py:class}`~h2integrate.transporters.generic_splitter.GenericSplitterPerformanceConfig`,
+takes one input and produces exactly two outputs. `out1` is the
 priority branch; `out2` receives the remainder. Configure `commodity` and `commodity_rate_units`
 under `model_inputs.performance_parameters`, together with one of these modes:
 
@@ -147,7 +151,9 @@ technologies:
 ```
 
 Connect the two downstream technologies to the splitter in the same order as the intended `out1`
-and `out2` branches.
+and `out2` branches. The inputs are `{commodity}_in` and the selected mode's allocation input.
+The model also reports `{commodity}_consumed` alongside `{commodity}_out1` and
+`{commodity}_out2`. The allocation inputs can be connected or overridden in OpenMDAO.
 
 ### Example: splitting wind electricity
 
@@ -165,11 +171,17 @@ technology_interconnections:
 
 ## Multivariable gas streams
 
-`GasStreamCombinerPerformanceModel` combines supported multivariable gas streams. It sums each
+{py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModel`,
+configured with
+{py:class}`~h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModelConfig`,
+combines supported multivariable gas streams. It sums each
 stream's mass flow and computes mass-weighted averages for intensive properties such as temperature,
 pressure, and composition. Set `commodity` and `in_streams` in its performance parameters. The
 connection syntax and stream variable names are covered in
 {ref}`Connecting Technologies <transport-connections>`.
+Its inputs are `{commodity}:{variable}_in{i}` and its outputs are
+`{commodity}:{variable}_out`. Intensive outputs are zero when total mass flow is not positive.
+All three components support time steps from 1 second to $10^9$ seconds.
 
 ## API reference
 

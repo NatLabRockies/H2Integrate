@@ -13,6 +13,8 @@ class MCHTOLStorageCostModelConfig(BaseConfig):
 
     Fields include `max_capacity`, `max_charge_rate`, `max_discharge_rate`,
     `charge_equals_discharge`, `commodity_name`, `commodity_units`, and `cost_year`.
+
+    See :class:`MCHTOLStorageCostModel` and :doc:`/storage/hydrogen_storage`.
     """
 
     max_capacity: float = field()
@@ -48,6 +50,8 @@ class MCHTOLStorageCostModel(CostModelBaseClass):
     Cost model representing a toluene/methylcyclohexane (TOL/MCH) hydrogen storage system.
 
     Costs are in 2024 USD.
+
+    See :class:`MCHTOLStorageCostModelConfig` and :doc:`/storage/hydrogen_storage`.
 
     Sources:
         Breunig, H., Rosner, F., Saqline, S. et al. "Achieving gigawatt-scale green hydrogen

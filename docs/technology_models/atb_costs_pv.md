@@ -11,6 +11,14 @@ As mentioned on the [Utility-Scale PV ATB page](https://atb.nlr.gov/electricity/
 - The `"ATBUtilityPVCostModel"` model has costs input in `$/kW-AC` to match the ATB and the outputted capacity in kW-AC from the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#utility-scale-pv-cost-model).
 - The `"ATBResComPVCostModel"` model has costs input in `$/kW-DC` and the PV capacity is input in kW-DC from the **shared input parameter** of the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the second section below](#commercial-and-residential-pv-cost-model).
 
+The APIs are {py:class}`~h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModel`
+and {py:class}`~h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModelConfig`, and
+{py:class}`~h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModel` and
+{py:class}`~h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModelConfig`.
+Both support one-hour time steps and multiply their capacity input by the configured cost rates to
+produce `CapEx` and annual `OpEx`. The inputs are `system_capacity_AC` for utility PV and
+`system_capacity_DC` for residential and commercial PV.
+
 (utility-scale-pv-cost-model)=
 ## Utility-Scale PV Cost Model
 

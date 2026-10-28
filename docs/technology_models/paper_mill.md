@@ -9,14 +9,22 @@ The model is implemented in {mod}`h2integrate.converters.paper_mill`. An example
 that connects the paper mill to a sustainable aviation fuel (SAF) plant is provided
 in `examples/37_paper_mill/`.
 
+The performance model is
+{py:class}`~h2integrate.converters.paper_mill.paper_mill.PaperMillPerformanceModel`, configured by
+{py:class}`~h2integrate.converters.paper_mill.paper_mill.PaperMillPerformanceModelConfig`. Its
+OpenMDAO input `plant_capacity_mtpy` is initialized from the configuration. Capacity factor,
+co-product yields, and feedstock consumption rates are configured separately. Besides the
+product outputs below, it reports per-timestep wood, water, and chemical consumption, as well as
+rated, total, and annual production. The model supports one-hour time steps.
+
 ## Production Model
 
 The performance model calculates paper production from the mill's annual nameplate
 capacity and capacity factor:
 
 ```{math}
-	ext{annual paper production} =
-	ext{plant\_capacity\_mtpy} \times \text{capacity\_factor}
+\text{annual paper production} =
+\text{plant\_capacity\_mtpy} \times \text{capacity\_factor}
 ```
 
 The default co-product yields are:
@@ -55,6 +63,10 @@ Variable operating costs include:
 
 The default cost assumptions use a 2023 cost year. Project-specific assumptions can
 be supplied through the technology configuration.
+The {py:class}`~h2integrate.converters.paper_mill.paper_mill.PaperMillCostModel` uses
+{py:class}`~h2integrate.converters.paper_mill.paper_mill.PaperMillCostModelConfig`; its
+`plant_capacity_mtpy` input drives `CapEx`, `OpEx`, and `VarOpEx`. Variable costs scale with
+nameplate capacity, not the actual paper output or capacity factor.
 
 ## Lignin Output
 
@@ -76,7 +88,7 @@ selected connection model does not introduce material losses, the delivered lign
 profile satisfies:
 
 ```{math}
-	ext{saf.lignin\_in} = \text{paper\_mill.lignin\_out}
+\text{saf.lignin\_in} = \text{paper\_mill.lignin\_out}
 ```
 
 The lignin stream is time dependent, so changes in paper mill capacity or capacity

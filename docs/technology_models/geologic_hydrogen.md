@@ -16,6 +16,16 @@ There is one cost model available to model the hydrogen well subsurface, which a
 
 - [`"GeoH2SubsurfaceCostModel"`](#mathur-modified-geoh2-cost): A subsurface cost model that calculates the capital and operating for subsurface well systems in geologic hydrogen production.
 
+All five models use one-hour time steps. Their API and configuration references are:
+
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.converters.hydrogen.geologic.simple_natural_geoh2.NaturalGeoH2PerformanceModel` | {py:class}`~h2integrate.converters.hydrogen.geologic.simple_natural_geoh2.NaturalGeoH2PerformanceConfig` |
+| {py:class}`~h2integrate.converters.hydrogen.geologic.templeton_serpentinization.StimulatedGeoH2PerformanceModel` | {py:class}`~h2integrate.converters.hydrogen.geologic.templeton_serpentinization.StimulatedGeoH2PerformanceConfig` |
+| {py:class}`~h2integrate.converters.hydrogen.geologic.mathur_modified.GeoH2SubsurfaceCostModel` | {py:class}`~h2integrate.converters.hydrogen.geologic.mathur_modified.GeoH2SubsurfaceCostConfig` |
+| {py:class}`~h2integrate.converters.hydrogen.geologic.aspen_surface_processing.AspenGeoH2SurfacePerformanceModel` | {py:class}`~h2integrate.converters.hydrogen.geologic.aspen_surface_processing.AspenGeoH2SurfacePerformanceConfig` |
+| {py:class}`~h2integrate.converters.hydrogen.geologic.aspen_surface_processing.AspenGeoH2SurfaceCostModel` | {py:class}`~h2integrate.converters.hydrogen.geologic.aspen_surface_processing.AspenGeoH2SurfaceCostConfig` |
+
 (simple-natural-geoh2-performance)=
 ### Simple Natural GeoH2 Performance
 
@@ -30,12 +40,21 @@ The natural geologic hydrogen model is able to model well decline over time and 
     1. `decline_fit_params` is a dictionary where a user can specify the decline rate and loss rate. It should be noted that typically the modeling of these decline rates are monthly. This model uses hourly timesteps so the decline and loss rate should be modified accordingly.
     2. `decline_fit_params["fit_name"]` is an optional string that can be specified within the `decline_fit_params` dictionary that will model a decline rate similar to those noted at either the "Bakken", "Eagle Ford" or "Permian" shale wells documented in Tang et al. (Southwest Petroleum University) Figure 7: <https://doi.org/10.1016/j.petsci.2024.07.029>.
 
+It takes initial flow, gas density, concentration or prospectivity, reservoir size, and ramp-up
+parameters. Outputs include `wellhead_gas_out`, hydrogen production, wellhead concentrations,
+and production summaries. The built-in decline fit names use underscores, for example
+`Eagle_Ford`.
+
 (templeton-serpentinization-geoh2-performance)=
 ### Templeton Serpentinization GeoH2 Performance
 
 The modeling approach in this performance model is informed by:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 - Templeton et al. (UC Boulder): <https://doi.org/10.3389/fgeoc.2024.1366268>
+
+Formation geometry, composition, grain size, and water temperature determine an average
+production rate. The same rate is reported across the simulated profile as `hydrogen_out_stim`,
+`hydrogen_out`, and `wellhead_gas_out`; a stimulated surface processing model is not implemented.
 
 (mathur-modified-geoh2-cost)=
 ### Mathur Modified GeoH2 Cost
@@ -44,6 +63,10 @@ The modeling approach in this cost model is based on:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 - NETL Quality Guidelines: <https://doi.org/10.2172/1567736>
 - Drill cost curves are based on an adapted [GETEM model](https://sam.nlr.gov/geothermal.html)
+
+The subsurface cost model uses well geometry and drilling, land, permitting, and operating cost
+parameters to report `CapEx` and `OpEx`. Choose either the drilling cost curve or a constant
+drilling cost. Costs are adjusted to the plant's target dollar year, clipped to 2010-2024.
 
 ## Hydrogen Surface Processing Models
 
@@ -59,11 +82,21 @@ There is one performance model and one cost model available to model the hydroge
 The modeling approach in this performance model is based on:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
 
+The surface performance model receives wellhead gas flow, hydrogen concentration, and processing
+capacity and reports hydrogen, electricity and water consumption, and steam. The capacity can
+instead be sized from the maximum wellhead flow. Its concentration input is declared in mol/mol,
+but the calculation divides its value by 100; verify concentration units when connecting models.
+Water and steam outputs are declared in kt/h.
+
 (aspen-geoh2-surface-cost)=
 ### Aspen GeoH2 Cost
 
 The modeling approach in this cost model is based on:
 - Mathur et al. (Stanford): <https://doi.org/10.31223/X5599G>
+
+The surface cost model uses curve fits or configured custom costs. With curve fits it also uses
+electricity and water consumption and prices, labor rate, and overhead to compute `CapEx`,
+`OpEx`, and `VarOpEx`.
 
 ## Example
 

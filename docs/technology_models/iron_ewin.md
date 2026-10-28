@@ -25,16 +25,28 @@ To use this model, specify `"HumbertEwinPerformanceComponent"` as the performanc
 The performance model will use Humbert et al.'s energy consumption data to consume electricity as a feedstock and feed this information to the cost model.
 The cost model will calculate capex costs based on the Stinn correlations and opex costs based on the Humbert SI.
 
+The performance model takes `electricity_in`, `iron_ore_in`, and, for the applicable process,
+`NaOH_in` or `CaCl2_in`. It limits `sponge_iron_out` by these inputs and installed electrical
+capacity and reports feedstock consumption, energy intensity, rated and annual production, and
+capacity factor. `limiting_input` uses 0 for ore, 1 for electricity, 2 for NaOH or capacity,
+and 3 for CaCl2; code 2 does not distinguish NaOH from capacity.
+The code combines the pre-capacity limiter and capacity flag with a maximum operation, so it may
+retain 3 even when capacity further limits production.
+
+The cost model uses rated iron production and electrolysis parameters to report `CapEx`, labor
+`OpEx`, anode `VarOpEx`, and cost breakdowns. Its current calculation bases both annual cost
+outputs on rated production, not actual output. Both components support one-hour time steps.
+
 ## Performance Model
 
 For API details, see:
 
-- [`HumbertEwinPerformanceComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
-- [`HumbertEwinPerformanceComponent`](../_autosummary/h2integrate.converters.iron.humbert_ewin_perf)
+- {py:class}`~h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponentConfig`
+- {py:class}`~h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponent`
 
 ## Cost Model
 
 For API details, see:
 
-- [`HumbertStinnEwinCostComponentConfig`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
-- [`HumbertStinnEwinCostComponent`](../_autosummary/h2integrate.converters.iron.humbert_stinn_ewin_cost)
+- {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponentConfig`
+- {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent`

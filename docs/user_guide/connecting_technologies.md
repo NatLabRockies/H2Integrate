@@ -223,6 +223,18 @@ For the splitter outputs, variables are indexed as `wellhead_gas_mixture:<var_na
 
 See [Example 32](https://github.com/NatLabRockies/H2Integrate/tree/main/examples/32_multivariable_streams) for a complete working example that demonstrates two gas producers with different properties feeding into a gas stream combiner, which then feeds a consumer.
 
+The example-only {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerPerformance`
+generates randomized stream properties using
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerPerformanceConfig`.
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerPerformance`
+receives the stream and reports hydrogen flow, total gas consumed, and mean temperature and
+pressure; it has no model-specific configuration. The corresponding fixed-cost components are
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerCost`
+with {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerCostConfig`
+and {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerCost`
+with {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerCostConfig`.
+These components illustrate connections and do not model physical equipment.
+
 (transport-connections)=
 ## Combiners, splitters, and transporters
 

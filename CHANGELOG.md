@@ -23,6 +23,7 @@
   - Removed `11_hybrid_energy_plant`, which is covered by examples 01 and 33, and moved its demand metric checks into the demand component unit tests.
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
+- Improve model documentation guidance, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 
 
 ## 0.10.0 [October 12, 2026]

@@ -10,6 +10,8 @@ Within H2I there are models for:
 (pysam_mhk_costs)=
 ## PySAM MHK Cost Model
 The **PySAM Marine Cost Model** estimates capital and operational costs for marine hydrokinetic (MHK) energy systems, including tidal and wave energy technologies. The model wraps the [PySAM MhkCosts module](https://nrel-pysam.readthedocs.io/en/main/modules/MhkCosts.html) implementation of the marine hydrokinetic cost model used in the [System Advisor Model (SAM)](https://sam.nlr.gov/). To use this model, specify `"PySAMMarineCostModel"` as the cost model.
+See {py:class}`~h2integrate.converters.water_power.pysam_marine_cost.PySAMMarineCostModel` and
+{py:class}`~h2integrate.converters.water_power.pysam_marine_cost.PySAMMarineCostConfig`.
 
 The cost model leverages technology assumptions and cost structures developed through the U.S. Department of Energy [Reference Model Project](https://energy.sandia.gov/programs/renewable-energy/water-power/projects/reference-model-project-rmp/) for marine energy technologies. These reference models provide standardized system configurations and cost relationships for different MHK device types.
 
@@ -30,6 +32,9 @@ Costs are derived using the PySAM MhkCosts module, which calculates costs for:
 - Operations and maintenance
 
 The final outputs are total installed capital cost and annual operating cost.
+The OpenMDAO inputs `device_rating` and `num_devices` default to their configuration values.
+The outputs are `CapEx` and `OpEx`; the cost year is restricted to 2022 and the model supports
+one-hour time steps.
 
 The model supports several reference technologies from the DOE Reference Model Project. Each reference model corresponds to cost relationships embedded in the PySAM cost library.
 

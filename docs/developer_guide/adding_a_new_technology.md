@@ -58,6 +58,17 @@ automatically and generate the model's input template. If a model intentionally
 shares a base config or requires a specialized config name, document that
 relationship and ensure the model's own setup path remains unambiguous.
 
+### Documenting a model
+
+Add a user guide page for the model, link it from the table of contents, and link from it to
+each relevant model and configuration API entry using `{py:class}`. Explain the model's
+capabilities and limitations, configuration and defaults, OpenMDAO inputs and outputs (including
+units and inherited variables), and any supported time-step or control restrictions. Distinguish
+configuration values from similarly named OpenMDAO inputs if the model uses them differently.
+Add reciprocal `:class:` and `:doc:` links to the model and configuration docstrings so API
+readers can find the related reference and guide. See the
+[reverse osmosis guide](../technology_models/desalination.md) for an example.
+
 ```{note}
 `setup` is where the configuration object is built and where any additional I/O is registered. Always call `super().setup()` first so that the baseclass can register the standard production outputs (and, for flexible models, the command-value input). The `compute` signature is
 `compute(self, inputs, outputs, discrete_inputs, discrete_outputs)` because performance models may use discrete I/O (e.g. resource data dictionaries).

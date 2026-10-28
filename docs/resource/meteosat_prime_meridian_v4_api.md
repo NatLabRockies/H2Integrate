@@ -6,6 +6,11 @@ There are two datasets that use the [NSRDB Meteosat Prime Meridian PSM v4 API](h
 - "MeteosatPrimeMeridianTMYSolarAPI"
     - supports solar resource data for typical meteorological year (TMY), typical global horizontal irradiance year (TGY), and typical direct normal irradiance year (TDY)
 
+API and configuration references:
+
+- {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPIConfig`
+- {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPIConfig`
+
 These datasets allow for resource data to be downloaded for **locations** within Africa and Europe.
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |

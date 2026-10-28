@@ -29,6 +29,9 @@ from h2integrate.core.supported_models import register
 class CMUElectricArcFurnaceDRIPerformanceComponentConfig(BaseConfig):
     """Configuration baseclass for CMUElectricArcFurnaceDRIPerformanceComponent.
 
+    See :class:`CMUElectricArcFurnaceDRIPerformanceComponent` and
+    :doc:`/technology_models/steel_eaf_cmu`.
+
     Attributes:
         steel_production_capacity_tonnes_per_year (float): Rated electric arc furnace capacity
             in tonnes of steel produced per year. Default is 2200000 tonnes/year based on the CMU
@@ -140,6 +143,12 @@ class CMUElectricArcFurnaceDRIPerformanceComponentConfig(BaseConfig):
 
 @register
 class CMUElectricArcFurnaceDRIPerformanceComponent(PerformanceModelBaseClass):
+    """CMU decarbSTEEL electric arc furnace with a DRI and scrap charge.
+
+    See :class:`CMUElectricArcFurnaceDRIPerformanceComponentConfig` and
+    :doc:`/technology_models/steel_eaf_cmu`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

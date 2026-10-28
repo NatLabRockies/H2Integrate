@@ -9,6 +9,9 @@ class PyomoRuleStorageMinOperatingCosts:
     """Class defining Pyomo rules for the optimized dispatch for load following
     for generic commodity storage components.
 
+    Constructed by the optimized controller; see
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+
     Args:
         commodity_info (dict): Dictionary of commodity information. This must contain the keys
             "commodity_name" and "commodity_storage_units".

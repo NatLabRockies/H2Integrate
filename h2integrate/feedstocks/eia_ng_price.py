@@ -56,6 +56,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             Defaults to 0.0.
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
             Defaults to 0.0.
+
+    See :class:`EIANaturalGasFeedstockCostModel` and :doc:`/technology_models/feedstocks`.
     """
 
     resource_year: int = field(validator=validators.in_(range(2001, CURRENT_YEAR + 1)))
@@ -127,6 +129,8 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     The model will pull the single site data if it is made available to pass the ``latitude`` and
     ``longitude`` from the site configuration, otherwise the ``state`` will need to be provided
     in the configuration.
+
+    See :class:`EIANaturalGasFeedstockConfig` and :doc:`/technology_models/feedstocks`.
     """
 
     def setup(self):

@@ -7,6 +7,13 @@ nameplate capacity, capacity factor, and hourly availability of lignin feedstock
 The model is implemented in {mod}`h2integrate.converters.saf`. An example that
 connects the SAF plant to a paper mill is provided in `examples/37_paper_mill/`.
 
+The performance model is {py:class}`~h2integrate.converters.saf.saf.SAFPerformanceModel`,
+configured by {py:class}`~h2integrate.converters.saf.saf.SAFPerformanceModelConfig`. Its
+OpenMDAO inputs are `plant_capacity_mtpy` and `lignin_in`; its outputs include `saf_out`,
+`lignin_consumed`, and rated, total, and annual production and consumption. The reported
+`capacity_factor` is the configured value, even when lignin limits actual production. The model
+supports one-hour time steps.
+
 ## Production Model
 
 The SAF plant receives lignin through the `lignin_in` commodity stream, with units
@@ -15,17 +22,17 @@ SAF. At each simulation time step, SAF production is limited by both the
 configured operating rate of the plant and the amount of lignin available:
 
 ```{math}
-	ext{capacity\_limited\_saf} =
+\text{capacity\_limited\_saf} =
 \frac{\text{plant\_capacity\_mtpy} \times \text{capacity\_factor}}{8760}
 ```
 
 ```{math}
-	ext{lignin\_limited\_saf} =
+\text{lignin\_limited\_saf} =
 \frac{\text{lignin\_in}}{\text{lignin\_consumption}}
 ```
 
 ```{math}
-	ext{saf\_out} = \min(\text{capacity\_limited\_saf}, \text{lignin\_limited\_saf})
+\text{saf\_out} = \min(\text{capacity\_limited\_saf}, \text{lignin\_limited\_saf})
 ```
 
 This formulation ensures that the lignin consumed by the SAF plant cannot exceed
@@ -53,6 +60,10 @@ Variable operating costs include:
 
 The default cost assumptions use a 2023 cost year and can be replaced with
 project-specific values through the technology configuration.
+The {py:class}`~h2integrate.converters.saf.saf.SAFCostModel` uses
+{py:class}`~h2integrate.converters.saf.saf.SAFCostModelConfig`; its `plant_capacity_mtpy` input
+drives `CapEx`, `OpEx`, and `VarOpEx`. Variable costs scale with nameplate capacity rather than
+the actual SAF output, so they do not decrease when lignin availability limits production.
 
 ## Connection to a Paper Mill
 

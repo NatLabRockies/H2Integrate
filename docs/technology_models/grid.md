@@ -1,6 +1,10 @@
 # Grid Performance and Cost Models
 
-This page documents the unified `GridPerformanceModel` and `GridCostModel` models, which together represent a flexible, configurable grid interconnection point within an H2I simulation.
+This page documents the {py:class}`~h2integrate.converters.grid.grid.GridPerformanceModel` and
+{py:class}`~h2integrate.converters.grid.grid.GridCostModel`, which together represent a flexible,
+configurable grid interconnection point within an H2I simulation. Their configurations are
+{py:class}`~h2integrate.converters.grid.grid.GridPerformanceModelConfig` and
+{py:class}`~h2integrate.converters.grid.grid.GridCostModelConfig`.
 These components support both power flows and cost accounting for buying and selling electricity through a constrained interconnection.
 This is a single model that can be configured to either sell electricity to the grid, buy electricity from the grid, or both.
 
@@ -14,6 +18,13 @@ It supports:
 - Selling electricity to the grid.
 - Enforcing maximum allowed interconnection power.
 - Computing unmet demand, unsold electricity, and remaining usable headroom due to constraints.
+
+The OpenMDAO inputs are `interconnection_size` (kW), `electricity_in` (kW available for
+sale), and `electricity_command_value` (kW requested for purchase). The model clips purchases
+and sales independently to the interconnection size. `electricity_out` and `electricity_sold`
+report those flows, while `electricity_unmet_demand` and `electricity_excess` report the
+unfulfilled command and unsold input. The model also reports annual electricity sold and the
+inherited production, capacity-factor, and lifetime outputs. It supports time-marching simulation.
 
 The model exposes two headroom outputs that are useful for dispatch logic and controller tuning:
 - `electricity_headroom` is the remaining grid import capacity available for meeting downstream demand.
@@ -33,6 +44,12 @@ Multiple grid instances may be used within the same plant to represent different
 The **costs** of purchasing electricity from the grid are represented as a variable operating expense (`VarOpEx`) and are represented as a positive value. This allows it to be tracked as an expense in the financial models.
 
 The **revenue** of selling electricity to the grid is represented as a variable operating expense (`VarOpEx`) and a represented as a negative value. This is allows it to be tracked as a coproduct in the financial models.
+
+The cost model receives `interconnection_size` and the purchase and sales profiles. Price inputs
+exist only when the corresponding price is configured. The flow inputs are timestep power or
+annual energy, depending on the price mode described below. `CapEx` includes the capacity-based
+and fixed interconnection costs, `OpEx` is the capacity-based annual fixed cost, and `VarOpEx`
+is the purchase cost less sales revenue.
 
 ```{note}
 If you're using a price-maker financial model (e.g., calculating the LCOE) and selling all of the electricity to the grid, then the `electricity_sell_price` should most likely be set to 0. since you want to know the breakeven price of selling that electricity.

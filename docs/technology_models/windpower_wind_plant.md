@@ -3,6 +3,15 @@
 This model uses the [Windpower module](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) available in PySAM to simulate the performance of a wind power plant.
 
 To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#windpower-performance-parameters).
+See {py:class}`~h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModel`,
+{py:class}`~h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModelConfig`, and
+{py:class}`~h2integrate.converters.wind.wind_pysam.PySAMPowerCurveCalculationInputs`.
+
+The model receives a discrete `wind_resource_data` dictionary, `num_turbines`,
+`wind_turbine_rating`, `rotor_diameter`, and `hub_height`. It reports an electricity profile
+and production summaries and supports one-hour time steps. The current setup requires a `layout`
+section in the performance parameters. See [wind cost models](atb_costs_wind.md) for a
+capacity-based cost option.
 
 ```yaml
 technologies:

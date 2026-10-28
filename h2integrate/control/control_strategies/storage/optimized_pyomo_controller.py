@@ -35,6 +35,9 @@ class OptimizedDispatchStorageControllerConfig(PyomoStorageControllerBaseConfig)
     Values are typically populated from the technology
     `tech_config.yaml` (merged under the "control" section).
 
+    See :class:`OptimizedDispatchStorageController` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+
     Attributes:
         max_charge_rate (float):
             The maximum charge that the storage can accept
@@ -102,6 +105,9 @@ class OptimizedDispatchStorageController(PyomoStorageControllerBaseClass):
         available commodity from generation profiles and demand profile while minimizing costs.
 
     Uses a rolling-window optimization approach with configurable horizon and control windows.
+
+    See :class:`OptimizedDispatchStorageControllerConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
 
     """
 

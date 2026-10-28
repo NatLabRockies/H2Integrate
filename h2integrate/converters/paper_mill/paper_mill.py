@@ -7,6 +7,11 @@ from h2integrate.core.supported_models import register
 
 @define(kw_only=True)
 class PaperMillPerformanceModelConfig(BaseConfig):
+    """Configure capacity, production yields, and feedstock consumption.
+
+    See :class:`PaperMillPerformanceModel` and :doc:`/technology_models/paper_mill`.
+    """
+
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
     lignin_yield: float = field(default=0.06)  # t lignin/t paper
@@ -27,6 +32,8 @@ class PaperMillPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an paper mill plant.
     Computes annual paper production based on plant capacity and capacity factor.
+
+    See :class:`PaperMillPerformanceModelConfig` and :doc:`/technology_models/paper_mill`.
     """
 
     _time_step_bounds = (
@@ -132,6 +139,11 @@ class PaperMillPerformanceModel(PerformanceModelBaseClass):
 
 @define(kw_only=True)
 class PaperMillCostModelConfig(BaseConfig):
+    """Configure capacity, cost year, feedstock consumption, and unit costs.
+
+    See :class:`PaperMillCostModel` and :doc:`/technology_models/paper_mill`.
+    """
+
     installation_time: int = field()
     inflation_rate: float = field()
     operational_year: int = field()
@@ -175,7 +187,9 @@ class PaperMillCostModelConfig(BaseConfig):
 class PaperMillCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with paper mill production.
-    Includes CapEx, OpEx, and byproduct credits.
+    Reports CapEx, fixed OpEx, and VarOpEx based on nameplate capacity.
+
+    See :class:`PaperMillCostModelConfig` and :doc:`/technology_models/paper_mill`.
     """
 
     _time_step_bounds = (

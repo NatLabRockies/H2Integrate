@@ -14,6 +14,9 @@ class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     This dataset covers regions covered by the Meteosat Prime Meridian satellite (Africa and Europe)
     at a spatial resolution of 4 km.
 
+    See :class:`MeteosatPrimeMeridianSolarAPI` and
+    :doc:`/resource/meteosat_prime_meridian_v4_api`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2005 and 2022 (inclusive).
@@ -45,6 +48,11 @@ class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Meteosat data using :class:`MeteosatPrimeMeridianSolarAPIConfig`.
+
+    See :doc:`/resource/meteosat_prime_meridian_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -66,6 +74,9 @@ class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
     `Meteosat Prime Meridian TDY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tdy-download/>`_,
     and `Meteosat Prime Meridian TGY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tgy-download/>`_,
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
+
+    See :class:`MeteosatPrimeMeridianTMYSolarAPI` and
+    :doc:`/resource/meteosat_prime_meridian_v4_api`.
 
     Args:
         resource_year (str): Year to use for resource data. Can be any of the following:
@@ -118,6 +129,11 @@ class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Meteosat typical-year data using :class:`MeteosatPrimeMeridianTMYSolarAPIConfig`.
+
+    See :doc:`/resource/meteosat_prime_meridian_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 

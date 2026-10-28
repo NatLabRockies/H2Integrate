@@ -8,6 +8,13 @@ There are four datasets that use the [NSRDB GOES PSM v4 API](https://developer.n
 - "GOESTMYSolarAPI"
     - supports solar resource data for typical meteorological year (TMY), typical global horizontal irradiance year (TGY), and typical direct normal irradiance year (TDY)
 
+API and configuration references:
+
+- {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPIConfig`
+- {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPIConfig`
+- {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPIConfig`
+- {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPIConfig`
+
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |
 | :--------- | :---------------: | :---------------: | :---------------: | :---------------: | :---------------: |

@@ -7,23 +7,45 @@ a fixed-rate conversion.
 
 ## Registered models
 
-- `ECOElectrolyzerPerformanceModel` computes hydrogen and oxygen production, electricity and water
+- {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModel` computes hydrogen and oxygen production, electricity and water
   consumption, capacity factor, and the replacement schedule.
-- `BasicElectrolyzerCostModel`, `SingliticoCostModel`, and `CustomElectrolyzerCostModel` provide
-  alternative capital-cost models. Choose the cost model whose assumptions and input data fit the
-  analysis; their configuration classes are documented below.
+- {py:class}`~h2integrate.converters.hydrogen.basic_cost_model.BasicElectrolyzerCostModel`,
+  {py:class}`~h2integrate.converters.hydrogen.singlitico_cost_model.SingliticoCostModel`, and
+  {py:class}`~h2integrate.converters.hydrogen.custom_electrolyzer_cost_model.CustomElectrolyzerCostModel`
+  provide alternative capital and operating cost estimates.
 
 The performance model requires a one-hour time step. `size_mode: normal` uses the configured
 cluster count and rating. `resize_by_max_feedstock` can size from the maximum available electricity,
-and `resize_by_max_commodity` can size from a connected hydrogen demand. The resize modes also
-require `flow_used_for_sizing`; see [Sizing Modes](../user_guide/run_size_modes.md) for the
+and `resize_by_max_commodity` sizes from the `max_hydrogen_capacity` input. The resize modes also
+require `flow_used_for_sizing` to be `electricity` or `hydrogen`, respectively; see
+[Sizing Modes](../user_guide/run_size_modes.md) for the
 framework-level behavior.
+
+The performance input `electricity_in` is in kW. Outputs include `hydrogen_out` and `oxygen_out`
+in kg/h, `electrolyzer_size_mw`, `electricity_consumed`, `water_consumed`, and annual production
+and replacement schedules. Cluster rounding determines the reported size. The model declares
+`water_consumed` in galUS/h but currently assigns 3.79 times the wrapped model's kg/h water
+consumption. When a system-level control command is present, reported production and consumption
+are proportionally clipped after the underlying PEM calculation.
+
+The basic cost model uses electrolyzer size and the electricity profile and includes site and
+installation assumptions; the Singlitico model uses size and location with scale-dependent costs.
+The custom model multiplies size by configured unit capital and fixed operating costs. Its input
+named `electrolyzer_size_mw` is declared in kW, so OpenMDAO unit conversion is needed when
+connecting the performance model's MW output.
 
 ## Configuration
 
 The performance configuration controls cluster count and rating, onshore/offshore location,
 turndown, degradation penalties, and operating hours to end of life. Cost inputs depend on the
 selected cost model.
+
+API references:
+
+- {py:class}`~h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModelConfig`
+- {py:class}`~h2integrate.converters.hydrogen.basic_cost_model.BasicElectrolyzerCostModelConfig`
+- {py:class}`~h2integrate.converters.hydrogen.singlitico_cost_model.SingliticoCostModelConfig`
+- {py:class}`~h2integrate.converters.hydrogen.custom_electrolyzer_cost_model.CustomElectrolyzerCostModelConfig`
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModelConfig

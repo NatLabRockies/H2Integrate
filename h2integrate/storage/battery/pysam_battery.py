@@ -51,6 +51,8 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
         pysam_options (dict, optional): Additional PySAM BatteryStateful parameters grouped
             by PySAM group name (for example, ``{"ParamsCell": {"calendar_choice": 1}}``).
+
+    See :class:`PySAMBatteryPerformanceModel` and :doc:`/storage/pysam_battery`.
     """
 
     max_capacity: float = field(validator=validators.ge(0))
@@ -87,6 +89,8 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     Attributes:
         system_model (``BatteryStateful``): Instance of the PySAM BatteryStateful model, initialized
             with the selected chemistry and configuration parameters.
+
+    See :class:`PySAMBatteryPerformanceModelConfig` and :doc:`/storage/pysam_battery`.
     """
 
     _time_step_bounds = (

@@ -11,16 +11,21 @@ Please see the example `16_natural_gas` in the `examples` directory for a comple
 
 Each feedstock type requires two model components:
 
-1. **Performance Model** (`FeedstockPerformanceModel`):
+1. **Performance Model** ({py:class}`~h2integrate.feedstocks.feedstocks.FeedstockPerformanceModel`,
+   configured by {py:class}`~h2integrate.feedstocks.feedstocks.FeedstockPerformanceConfig`):
    - Generates the feedstock supply profile
    - Outputs `{commodity}_out` variable
    - Located at the beginning of the technology chain
 
-2. **Cost Model** (`FeedstockCostModel`):
+2. **Cost Model** ({py:class}`~h2integrate.feedstocks.feedstocks.FeedstockCostModel`,
+   configured by {py:class}`~h2integrate.feedstocks.feedstocks.FeedstockCostConfig`):
    - Calculates consumption costs based on actual usage
-   - Takes `{commodity}_consumed` as input
+   - Takes `{commodity}_consumed` and `{commodity}_out` as inputs
    - Located after all consuming technologies in the chain
    - Calculates the capacity factor of the consumed feedstock
+
+The performance model takes a scalar `{commodity}_capacity` input, defaulting to `rated_capacity`,
+and outputs a constant supply profile at that rate. Both models support one-hour time steps.
 
 ### Technology Interconnections
 
@@ -83,7 +88,7 @@ ng_feedstock:
 - `commodity_amount_units` (str | None, optional): the amount units of the commodity (i.e., "MMBtu", "kg", "galUS" or "kW*h"). If None, will be set as `commodity_rate_units*h`
 
 ```{tip}
-The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation will be used and a warning is issued for clarity.
+The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation is used.
 ```
 
 ### Consumed Feedstock Outputs
@@ -95,10 +100,16 @@ The feedstock model outputs cost and performance information about the consumed 
 - `rated_{commodity}_production`: this is equal to the the `rated_capacity` of the feedstock model (in `commodity_rate_units`)
 - `capacity_factor`: ratio of the feedstock consumed to the maximum feedstock available
 
+For partial-year simulations, annual consumption is annualized, but `VarOpEx` is based on
+the simulated-period consumption without annualization. `CapEx` and `OpEx` are the configured
+startup and annual fixed costs.
+
 (feedstocks:eia_ng_price)=
 ## EIA Natural Gas Pricing
 
-A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` exists to enable users
+A special case of the feedstock cost model
+{py:class}`~h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockCostModel`, configured by
+{py:class}`~h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockConfig`, enables users
 to download data from the EIA API's natural gas price
 portal for a single site (see
 [the relevant API docs](https://h2integrate.readthedocs.io/en/latest/_autosummary/h2integrate.feedstocks.eia_ng_price.html)
@@ -135,7 +146,7 @@ If relying on site coordinate data (`latitude` and `longitude`), then the `rever
 is required, which can be pip installed directly or through the `gis` library extras.
 :::
 
-- `resource_year` (int): Which year to obtain the data from in the range [2001, 2026].
+- `resource_year` (int): Which year to obtain the data from, between 2001 and the current year.
 - `monthly` (bool): If True, the monthly data are retrieved, otherwise the annual price is used.
 - location data options 1) use `state` or 2) use `latitude` and `longitude`:
   - `state` (str): Full name of the state or two-letter state abbreviation, such as "United States" or

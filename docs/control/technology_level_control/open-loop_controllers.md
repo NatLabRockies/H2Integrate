@@ -16,13 +16,18 @@ kernelspec:
 
 ## Open-Loop Storage Controllers
 The open-loop storage controllers can be attached as the control strategy in the `tech_config` for various storage components (e.g., battery or hydrogen storage). There are three controller types for storage:
-1. [Simple Open-Loop Storage Controller](#pass-through-controller) — passes the commodity flow to the output with only minimal or no modifications.
+1. [Simple Open-Loop Storage Controller](#pass-through-controller) — commands the difference between demand and incoming commodity.
 2. [Demand Open-Loop Storage Controller](#demand-open-loop-storage-controller) — uses simple logic to attempt to meet demand using the storage technology.
 3. [Peak Load Management Open-Loop Storage Controller](#peak-load-management-open-loop-storage-controller) — computes a peak-shaving dispatch schedule to reduce demand peaks, supporting one or two demand profiles with configurable event limits and time windows.
 
 (pass-through-controller)=
 ### Simple Open-Loop Storage Controller
-The `SimpleStorageOpenLoopController` passes the input commodity flow to the output, possibly with minor adjustments to meet demand. It is useful for testing and as a placeholder for more complex controllers.
+{py:class}`~h2integrate.control.control_strategies.storage.simple_openloop_controller.SimpleStorageOpenLoopController`,
+configured by
+{py:class}`~h2integrate.control.control_strategies.storage.simple_openloop_controller.SimpleStorageOpenLoopControllerConfig`,
+sets `{commodity}_command_value` to `{commodity}_set_point` minus `{commodity}_in`. Negative
+commands charge storage and positive commands discharge it. When configured to use average input
+as demand, it substitutes the mean of `{commodity}_in` for the set-point.
 
 For examples of how to use the `SimpleStorageOpenLoopController` open-loop control framework, see the following:
 - `examples/01_onshore_steel_mn`
@@ -31,7 +36,14 @@ For examples of how to use the `SimpleStorageOpenLoopController` open-loop contr
 
 (demand-open-loop-storage-controller)=
 ### Demand Open-Loop Storage Controller
-The `DemandOpenLoopStorageController` uses simple logic to dispatch the storage technology when demand is higher than commodity generation and charges the storage technology when the commodity generation exceeds demand, both cases depending on the storage technology's state of charge. For the `DemandOpenLoopStorageController`, the storage state of charge is an estimate in the control logic and is not informed in any way by the storage technology performance model.
+{py:class}`~h2integrate.control.control_strategies.storage.demand_openloop_storage_controller.DemandOpenLoopStorageController`,
+configured by
+{py:class}`~h2integrate.control.control_strategies.storage.demand_openloop_storage_controller.DemandOpenLoopStorageControllerConfig`,
+dispatches storage when demand exceeds generation and charges it when generation exceeds demand.
+It takes `{commodity}_in`, `{commodity}_set_point`, and storage capacity and rate inputs, and
+outputs `{commodity}_command_value`. Its state of charge is estimated in the controller and is not
+fed back from the storage performance model. Both the simple and demand controllers require
+one-hour time steps.
 
 An interactive example of an N2 diagram for a system using the open-loop control framework for hydrogen storage and dispatch is shown below.
 
@@ -83,6 +95,10 @@ For examples of how to use the `DemandOpenLoopStorageController` open-loop contr
 (peak-load-management-open-loop-storage-controller)=
 ### Peak Load Management Open-Loop Storage Controller
 The `PeakLoadManagementHeuristicOpenLoopStorageController` computes and executes a peak-shaving dispatch schedule assuming perfect forecasting. It is designed for reducing peak loads, not meeting a specific demand, using either one or two loads for determining peaks.
+See
+{py:class}`~h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageController`
+and
+{py:class}`~h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageControllerConfig`.
 
 ```{note}
 The algorithm currently only supports daily cycles, but could be adjusted to accommodate alternate cycle rates.
@@ -117,6 +133,10 @@ The open-loop converter controllers can be attached as the control strategy in t
 (peak-load-management-open-loop-converter-controller)=
 ### Peak Load Management Open-Loop Converter Controller
 The `PLMHeuristicOpenLoopConverterController` computes a per-timestep converter command that shaves demand peaks using threshold-based heuristics rather than storage state-of-charge dynamics or optimization. It is designed for dispatching a converter (such as a fuel cell) to reduce peak loads using either one or two demand profiles.
+See
+{py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterController`
+and
+{py:class}`~h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterControllerConfig`.
 
 The command at each timestep is determined by three limits:
 

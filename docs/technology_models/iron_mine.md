@@ -4,6 +4,18 @@ H2I contains two iron mine models that simulate the extraction of crude ore and 
     - `SimpleIronMinePerformanceComponent` and `SimpleIronMineCostComponent`: model the flow of `crude_ore` in and `iron_ore` out, with costs lumped together.
     - `NRRIIronMinePerformanceComponent` and `NRRIIronMineCostComponent`: model mass flows and electricity/fuel consumption at intermediate steps, with costs broken out.
 
+The simple APIs are
+{py:class}`~h2integrate.converters.iron.simple_mine_perf_model.SimpleIronMinePerformanceComponent`,
+{py:class}`~h2integrate.converters.iron.simple_mine_perf_model.SimpleIronMinePerformanceComponentConfig`,
+{py:class}`~h2integrate.converters.iron.simple_mine_cost_model.SimpleIronMineCostComponent`, and
+{py:class}`~h2integrate.converters.iron.simple_mine_cost_model.SimpleIronMineCostComponentConfig`.
+The NRRI APIs are
+{py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMinePerformanceComponent`,
+{py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMinePerformanceComponentConfig`,
+{py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponent`, and
+{py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponentConfig`.
+All four support one-hour time steps.
+
 ## SimpleIronMine
 The main input feedstock is `crude_ore`, i.e. the unprocessed ore in the earth containing iron oxide.
 The output commodity is `iron_ore` in the form of pellets that can be shipped to other plants (e.g. `iron_plant`) for further processing.
@@ -19,7 +31,8 @@ There are two potential grades of ore produced from an iron mine in this model:
 It was determined that 3 of these mines (Northshore, United, and Hibbing) had crude reserves sufficient to produce DR-grade pellets, although only one (Northshore) reported production data on DR-grade pellets, with the rest reporting their data strictly on standard ore pellets.
 The increases in cost and energy usage reported at the Northshore mine were used to project the potential performance and cost of DR-grade production at United and Hibbing.
 The results of this analysis are compiled in the directory `h2integrate/converters/iron/simple_ore/`.
-Performance data are included in `perf_inputs.csv` with cost data in `cost_inputs.csv`.
+Performance coefficients are included in `perf_coeffs.csv` with cost coefficients in
+`cost_coeffs.csv`.
 
 These data were compiled from two sources:
 - The EPA's "Taconite Iron Ore NESHAP Economic Impact Analysis" by [Heller et al.](https://www.epa.gov/sites/default/files/2020-07/documents/taconite_eia_neshap_final_08-2003.pdf) - Capex estimates
@@ -34,12 +47,20 @@ These data were compiled from two sources:
 To use the simple model, specify `"SimpleIronMinePerformanceComponent"` as the performance model and `"SimpleIronMineCostComponent"` as the cost model. The NRRI model uses `"NRRIIronMinePerformanceComponent"` and `"NRRIIronMineCostComponent"`.
 Currently, no complex calculations occur beyond importing performance and costs.
 In the performance model, the "wet long tons" (wlt) that ore production is typically reported in are converted to dry metric tons for use in H2I.
-In the cost model, the total capex costs for a plant are scaled by the amount of are produced annually.
+The performance model takes `crude_ore_in`, `electricity_in`, `system_capacity`, and
+`iron_ore_command_value`, and reports pellet production and feedstock consumption.
+The cost model scales capital cost with `system_capacity` and variable cost with the
+simulated `iron_ore_out` profile; the variable cost is not annualized for partial-year simulations.
 Besides these calculations, previously-calculated performance and cost metrics are simply loaded from the input spreadsheets.
 
 ## NRRIIronMine
 The main inputs are `electricity` and `fuel`.
 The output commodity is `iron_ore` in the form of pellets that can be shipped to other plants (e.g. `iron_plant`) for further processing.
+The performance model takes electricity, natural gas, and diesel supply, system capacity, and
+mine coordinates; it reports consumption, pellets, tailings, and intermediate flows. The cost
+model takes annual ore production and coordinates and scales capital and operating costs with
+the first year's annual production. Both cost models adjust 2021 coefficients to a target
+dollar year clipped to the range 2010-2024.
 
 This model was developed in conjunction with the [University of Minnesota's Natural Resource Research Institute (NRRI)](https://www.nrri.umn.edu/), led by Kimberly Anderson <kimander@d.umn.edu>
 

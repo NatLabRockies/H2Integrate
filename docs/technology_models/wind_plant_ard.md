@@ -4,6 +4,12 @@ The intent of [Ard](https://github.com/NLRWindSystems/Ard) is to be a modular, f
 
 Ard is included in H2Integrate as an [OpenMDAO sub-model](https://openmdao.org/newdocs/versions/latest/features/building_blocks/components/submodel_comp.html), which means that Ard is treated as a distinct and separate OpenMDAO problem within the larger H2I OpenMDAO problem. In this way, the user can run an independent wind farm optimization within Ard, or allow H2Integrate to manage the wind farm design variables directly. One drawback of including Ard as a sub-model is that N2 diagrams made from the H2Integrate problems will show Ard only as a single black-box model, rather than showing all the subsystems within Ard. If you wish to view an N2 diagram of Ard, you will need to use the Ard problem instead. The Ard subproblem can be created using Ard as a standalone package (see the [Ard documentation](https://nlrwindsystems.github.io/Ard/intro.html)) or by accessing the Ard subproblem in the H2Integrate problem by running a command such as `om.n2(h2i_model.prob.model.plant.wind.wind.ard_sub_prob._subprob)`, where the exact path of the `ard_sub_prob` may differ in your model depending on your config and names.
 
+See {py:class}`~h2integrate.converters.wind.wind_plant_ard.ArdWindPlantModel` and
+{py:class}`~h2integrate.converters.wind.wind_plant_ard.ArdWindPlantModelConfig`. The model requires
+the optional Ard package and one-hour time steps. It reports an `electricity_out` profile,
+production summaries, `CapEx`, and `OpEx`. Curtailment is applied to `electricity_out` after
+the production summaries are calculated.
+
 ## Required input files and information unique to using Ard in H2Integrate
 
 ### WindIO input file
@@ -16,11 +22,11 @@ An example of a technology config is shown below:
 ```yaml
 technologies:
     wind:
+        performance_model:
+            model: "ArdWindPlantModel"
+        cost_model:
+            model: "ArdWindPlantModel"
         model_inputs:
-            performance_model:
-                model: "ArdWindPlantModel"
-            cost_model:
-                model: "ArdWindPlantModel"
             cost_parameters:
                 cost_year: 2024
             performance_parameters:

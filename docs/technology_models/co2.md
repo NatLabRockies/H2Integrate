@@ -9,6 +9,10 @@ This section provides an overview of the marine carbon dioxide capture models in
 Direct Ocean Capture extracts dissolved CO₂ directly from seawater using engineered processes. By reducing the concentration of dissolved inorganic carbon, the ocean naturally reabsorbs an equivalent amount of atmospheric CO₂. The resultant CO₂ can then be used for downstream processes and conversion or storage.
 
 The DOC models, `DOCPerformanceModel` and `DOCCostModel`, are built on electrodialysis-based separation and includes both performance and cost components, allowing users to explore a wide range of system configurations, operational scenarios, and infrastructure options. It is designed for process design, optimization, and cost evaluation of marine carbon capture systems and is integrated from NLR's [MarineCarbonManagement Repository](https://github.com/NatLabRockies/MarineCarbonManagement). Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol7030052)
+See {py:class}`~h2integrate.converters.co2.marine.direct_ocean_capture.DOCPerformanceModel`,
+{py:class}`~h2integrate.converters.co2.marine.direct_ocean_capture.DOCPerformanceConfig`,
+{py:class}`~h2integrate.converters.co2.marine.direct_ocean_capture.DOCCostModel`, and
+{py:class}`~h2integrate.converters.co2.marine.direct_ocean_capture.DOCCostModelConfig`.
 
 ### Why Use This Model
 - Evaluate technology performance — quantify system throughput, process efficiencies, and resource usage under different operating conditions.
@@ -21,6 +25,9 @@ Like other technology models in H2Integrate, the DOC model contains both a Perfo
 
 #### DOC Performance Model
 Simulates the physical and operational aspects of the electrodialysis process.
+The OpenMDAO input is `electricity_in` in W. The CO2 output and production summaries use
+kg/h and kg, with `total_tank_volume` in m³. The cost model receives annual and rated CO2
+production in t/year and t/h, respectively, and tank volume. Both use one-hour time steps.
 
 **Outputs include:**
 - Hourly CO₂ capture rate (t/h)
@@ -56,6 +63,14 @@ This model estimates the CO₂ absorption potential of the ocean after the OAE p
 ```
 
 The OAE models, `OAEPerformanceModel` and `OAECostModel`, are adapted from NLR’s MarineCarbonManagement Repository and includes both performance and cost components, as well as a financial model enabling users to explore a variety of system designs, operational strategies, and infrastructure setups. Additional information about this specific model can be found in [Niffenegger et al.](https://doi.org/10.3390/cleantechnol8010012)
+See {py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAEPerformanceModel`
+and {py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAEPerformanceConfig`,
+{py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostModel` and
+{py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostModelConfig`,
+and
+{py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostAndFinancialModel`
+and
+{py:class}`~h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostAndFinancialModelConfig`.
 
 ### Why Use This Model
 - Assess system performance — determine processing capacity, flow characteristics, and operational profiles.
@@ -68,6 +83,10 @@ The OAE model contains both a Performance Model and a Cost Model, with an additi
 
 #### OAE Performance Model
 Simulates the alkalinity enhancement process, tracking physical, chemical, and operational parameters.
+It receives an `electricity_in` profile in W and reports estimated CO2 removal as `co2_out`,
+treated seawater properties, products, acid disposal, and `unused_energy`. The cost components
+consume these outputs and report `CapEx` and `OpEx`. All three OAE components use one-hour
+time steps.
 
 **Outputs include:**
 - Hourly and annual dissolved carbon processing (t/h, t/year)
@@ -95,7 +114,8 @@ Computes capital (CapEx) and operational (OpEx) costs based on plant design and 
 - Annual operating cost (USD/year)
 
 #### OAE Cost and Financial Model
-The `OAECostAndFinancialModel` extends the cost model to include financial metrics. Allows calculation of net present value (NPV) and determination of credit values required for financial viability.
+The `OAECostAndFinancialModel` is a separate cost component that also calculates net present
+value (NPV) and the credit value required for financial viability.
 
 **Additional inputs include:**
 - Levelized cost of electricity (LCOE)

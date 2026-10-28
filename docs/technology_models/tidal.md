@@ -5,12 +5,19 @@
 
 The **PySAM Tidal Performance Model** simulates electricity generation from **tidal current energy devices** using a time-series tidal velocity resource. The model wraps the [PySAM MhkTidal module](https://nrel-pysam.readthedocs.io/en/main/modules/MhkTidal.html) implementation of the tidal performance model used in the [System Advisor Model (SAM)](https://sam.nlr.gov/).
 
-This component integrates the PySAM **MhkTidal** module into an **OpenMDAO-compatible performance model**, allowing it to be used within hybrid energy system simulations. To use this model, specify `"PYSAMTidalPerformanceModel"` as the performance model.
+This component integrates the PySAM **MhkTidal** module into an **OpenMDAO-compatible performance model**, allowing it to be used within hybrid energy system simulations. To use it, specify `"PySAMTidalPerformanceModel"` as the performance model. See
+{py:class}`~h2integrate.converters.water_power.tidal_pysam.PySAMTidalPerformanceModel` and
+{py:class}`~h2integrate.converters.water_power.tidal_pysam.PySAMTidalPerformanceConfig`.
 
 The model converts a **tidal velocity resource time series** and **device power curve** into:
 - time-series electricity generation
 - annual energy production
 - system capacity factor
+
+The inputs are `tidal_velocity`, `num_devices`, and `device_rating`. The model reports
+`electricity_out`, `rated_electricity_production`, total and annual electricity production,
+and `capacity_factor`, and supports one-hour time steps. With system-level control, the output
+profile is curtailed after production summaries are calculated, so summaries remain uncurtailed.
 
 ### Model Overview
 

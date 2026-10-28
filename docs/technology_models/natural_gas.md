@@ -1,42 +1,47 @@
-# Natural gas power plant model
+# Natural gas power plant models
 
-The natural gas power plant model simulates electricity generation from natural gas combustion, suitable for both natural gas combustion turbines (NGCT) and natural gas combined cycle (NGCC) plants. The model calculates electricity output based on natural gas input and plant heat rate, along with comprehensive cost modeling that includes capital expenses, operating expenses, and fuel costs.
+H2Integrate provides a heat-rate-based natural gas plant and a separate simple-cycle turbine
+model. Both accept natural gas energy and produce electricity, but they use different
+performance assumptions.
 
-To use this model, specify `"NaturalGasPerformanceModel"` as the performance model and `"NaturalGasCostModel"` as the cost model.
+## Heat-rate-based plant
 
-## Performance Parameters
+The {py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasPerformanceModel`
+uses the configured capacity and heat rate to represent either a combustion turbine or a
+combined-cycle plant. Its
+{py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasPerformanceConfig`
+requires `system_capacity_mw` and `heat_rate_mmbtu_per_mwh`.
 
-The performance model requires the following parameters:
+The OpenMDAO inputs are `system_capacity` (MW), `heat_rate_mmbtu_per_mwh` (MMBtu/MWh),
+`natural_gas_in` (MMBtu/h), and `electricity_command_value` (MW, defaulting to the configured
+capacity). Output is limited by the command, fuel availability, and available capacity.
+It reports `electricity_out`, `natural_gas_consumed`, `unmet_electricity_demand`,
+`electricity_headroom_out`, and the inherited production and lifetime outputs. The model
+supports one-hour time steps and optional [reliability modeling](../reliability/reliability_guide.md).
 
-- `system_capacity` (required): Rated capacity of the natural gas plant in MW.
-- `heat_rate` (required): Heat rate of the natural gas plant in MMBtu/MWh. This represents the amount of fuel energy required to produce one MWh of electricity. Lower values indicate higher efficiency. Typical values:
-  - **NGCC (Combined Cycle)**: 6-8 MMBtu/MWh (high efficiency)
-  - **NGCT (Combustion Turbine)**: 10-14 MMBtu/MWh (lower efficiency, faster response)
+The {py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasCostModel` uses
+{py:class}`~h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasCostModelConfig`.
+It accepts `rated_electricity_production`, `electricity_out`, `capex_per_kw`,
+`fixed_opex_per_kw_per_year`, and `variable_opex_per_mwh` as inputs, and reports `CapEx` and
+`OpEx`. `OpEx` combines annual fixed O&M and variable O&M on electricity generated during the
+simulation; the variable term is not annualized for a partial-year simulation. Fuel costs are
+handled separately by a feedstock model. The cost model supports one-hour time steps.
 
-Optional parameter:
-- `electricity_set_point` (optional): Defaults to the `system_capacity` but can be set to a particular set point profile.
-  - See example `16_natural_gas` to see how missed load from the battery is set as the electricity set point for the natural gas plant.
+## Simple-cycle turbine
 
-The model implements the relationship:
+The {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel`
+uses a Brayton-cycle thermodynamic calculation with ambient temperature and pressure rather
+than a fixed heat rate. Its
+{py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceConfig`
+specifies turbine count and per-turbine rating, compressor pressure ratio, firing temperature,
+working-fluid flow limit, component efficiencies, generator oversize ratio, and fuel source.
+Currently `natural_gas` is the only supported fuel.
 
-$$
-\text{Electricity Output (MW)} = \frac{\text{Natural Gas Input (MMBtu/h)}}{\text{Heat Rate (MMBtu/MWh)}}
-$$
-
-The `electricity_out` is limited by the system capacity and the available natural gas feedstock.
-
-## Cost Parameters
-
-The cost model calculates capital and operating costs based on the following parameters:
-
-- `capex` (required): Capital cost per unit capacity in $/kW. This includes all equipment, installation, and construction costs. Typical values:
-  - **NGCT**: 600-2000 $/kW (lower capital cost)
-  - **NGCC**: 800-2400 $/kW (higher capital cost)
-
-- `fopex` (required): Fixed operating expenses per unit capacity in \$/kW/year. This includes fixed O&M costs that don't vary with generation. Typical values: 5-15 \$/kW/year
-
-- `vopex` (required): Variable operating expenses per unit generation in \$/MWh. This includes variable O&M costs that scale with electricity generation. Typical values: 1-5 \$/MWh
-
-- `heat_rate` (required): Heat rate in MMBtu/MWh, used for fuel cost calculations.
-
-- `cost_year` (required): Dollar year corresponding to input costs.
+Inputs include `num_turbines`, `turbine_capacity` (MW per turbine),
+`generator_oversize_ratio`, `flowrate_max_fluid` (m^3/s), `electricity_command_value` (MW
+for the plant), and `natural_gas_in` (kJ/s). The discrete `solar_resource_data` input supplies
+temperature in degrees Celsius and pressure in hPa. The model reports `electricity_out`,
+`natural_gas_consumed`, `unmet_electricity_demand`, `electricity_headroom`, `system_capacity`,
+and inherited production metrics. It supports 5-minute to one-hour time steps. Optional
+reliability modeling samples availability independently for each turbine; see the
+[reliability guide](../reliability/reliability_guide.md).

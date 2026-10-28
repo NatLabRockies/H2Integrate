@@ -30,6 +30,7 @@ parts:
       - file: user_guide/plotting_geospatial_data_with_geopandas
   - caption: Technology Models
     chapters:
+      - file: technology_models/generic_converter_cost
       - file: technology_models/transport
       - file: technology_models/combiners_and_splitters
       - file: technology_models/feedstocks

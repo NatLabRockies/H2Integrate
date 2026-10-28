@@ -16,6 +16,25 @@ H2Integrate models four types of bulk hydrogen storage technologies:
 
 These storage options provide different cost-capacity relationships suitable for various scales of hydrogen production and distribution.
 
+The model API entries are
+{py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.PipeStorageCostModel`,
+{py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.LinedRockCavernStorageCostModel`,
+{py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.SaltCavernStorageCostModel`, and
+{py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.CompressedGasStorageCostModel`.
+All four use
+{py:class}`~h2integrate.storage.hydrogen.h2_storage_cost.HydrogenStorageBaseCostModelConfig`.
+Set `sizing_mode` to `set` and provide `max_capacity` and `max_charge_rate`, or use `auto`
+without those parameters when the performance model supplies the size. The models accept
+`storage_capacity`, `max_charge_rate`, and the `hydrogen_in` profile as OpenMDAO inputs.
+They calculate `CapEx` and annual `OpEx` in 2018 dollars and support one-hour time steps.
+The costs use the average hydrogen input rate, not its maximum, for the HDSAM system flow rate.
+
+The separate {py:class}`~h2integrate.storage.hydrogen.mch_storage.MCHTOLStorageCostModel`
+uses {py:class}`~h2integrate.storage.hydrogen.mch_storage.MCHTOLStorageCostModelConfig` to
+estimate costs for a toluene/methylcyclohexane system in 2024 dollars. Its inputs are
+`max_charge_rate`, `max_discharge_rate`, `max_capacity`, and the `hydrogen_soc` time series;
+it reports `CapEx`, `OpEx`, and `VarOpEx`. It supports one-hour time steps.
+
 ## Cost Correlations - Options 1-3
 
 For the first three options (underground pipe, lined rock caverns, and salt caverns), cost correlations from [Papadias and Ahluwalia](https://doi.org/10.1016/j.ijhydene.2021.08.028) are used for capital cost calculation.
@@ -63,7 +82,7 @@ HDSAM was developed as hydrogen storage *and* transport model; we have only incl
 
 The model uses the calculation in the HDSAM "Compressed Gas H2 Terminal" sheet.
 Although HDSAM as a whole calculates the "Terminal capacity (kg/day)", and "Design terminal storage capacity (kg)" values from other sheets, our simplified CGT model instead takes these as inputs.
-- "Terminal capacity (kg/day)" from HDSAM is, in our model, set by the maximum value of the `hydrogen_in` input across its entire timeseries
+- "Terminal capacity (kg/day)" from HDSAM is, in our model, set by the average value of the `hydrogen_in` input across its entire timeseries, converted to kg/day
 - "Design terminal storage capacity (kg)" from HDSAM is, in our model, set by the `storage_capacity` input
 
 For all of the capital and operating costs, CEPCI indexes from with in HDSAM were used to adjust costs to the 2018 cost year that is used by the other models.

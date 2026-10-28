@@ -5,12 +5,19 @@ to a Great Lakes port. It reads the mine location from `plant_config.sites.site`
 port coordinates and shipping waypoints. Set `find_closest_ship_site: true` and
 `shipment_site: "None"` to select the shortest modeled route, or set `find_closest_ship_site: false`
 and choose `Duluth`, `Chicago`, `Cleveland`, or `Buffalo` explicitly.
+See {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponent` and
+{py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponentConfig`.
 
 The performance component reports `land_transport_distance`, `water_transport_distance`, and
 `total_transport_distance` in kilometers. `IronTransportCostComponent` uses these distances and the
 `iron_ore_in` profile to calculate transport cost outputs. Its `transport_year` and `marginal_cost`
 inputs are configured in the technology's cost parameters; the cost year is set from the plant's
 `target_dollar_year`.
+See {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponent` and
+{py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponentConfig`.
+The cost component passes `iron_ore_in` through as `iron_ore_out` and reports
+`iron_transport_cost`, `ore_profit_margin`, and `VarOpEx`. It divides by total input ore when
+computing the unit cost, so a zero-throughput profile leads to division by zero.
 
 Both models require hourly time steps. See the iron DRI and mine documentation for their use in
 complete flowsheets.

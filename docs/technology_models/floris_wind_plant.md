@@ -3,6 +3,8 @@
 `FlorisWindPlantPerformanceModel` wraps the [FLORIS](https://github.com/NatLabRockies/floris) wind farm
 model to calculate wind-farm electrical output from wind resource data and turbine configuration.
 It supports a single turbine design per farm and uses one-hour time steps.
+See {py:class}`~h2integrate.converters.wind.floris.FlorisWindPlantPerformanceModel` and
+{py:class}`~h2integrate.converters.wind.floris.FlorisWindPlantPerformanceModelConfig`.
 
 The model requires a FLORIS wake configuration and a turbine configuration [formatted for FLORIS](https://natlabrockies.github.io/floris/). The `floris_wake_config` is a dictionary containing the [FLORIS wake parameters](https://natlabrockies.github.io/floris/wake_models.html), with an example in the H2I library named [`floris_v4_default_template.yaml`](https://github.com/NatLabRockies/H2Integrate/blob/develop/library/floris_v4_default_template.yaml). The `floris_turbine_config` is a dictionary containing [FLORIS wind turbine design information](https://natlabrockies.github.io/floris/input_reference_turbine.html), with some examples provided in the [H2I library](https://github.com/NatLabRockies/H2Integrate/tree/develop/library), with filenames starting with `floris_turbine_`. Please see the [section below](turbine-file-preprocessing) on some tips to create the floris turbine input files.
 
@@ -11,11 +13,14 @@ The configurations can be included from YAML files as in [Example 26](https://gi
 The `layout` configuration selects a layout generator and its options; do not also set turbine
 coordinates in `floris_wake_config.farm.layout_x` or `layout_y`, because the layout settings create
 those coordinates. Multiple turbine designs in the same farm are not currently supported.
+Include a `layout` dictionary in `performance_parameters` even when using the default basic grid.
 
 Resource data is supplied through the plant's site resource configuration and
 `site_to_tech_connections`. The model selects or averages the resource heights around the turbine
 hub height using `resource_data_averaging_method` (`weighted_average`, `average`, or `nearest`).
 Turbulence intensity can be taken from the resource data or supplied as a default (defined as a fraction, with a value between 0 and 1). Additional farm losses are applied based on the `operational_losses` input (which is represented as a percent, with a value between 0 and 100)
+The model reports `electricity_out` and production summaries. Curtailment is applied to
+`electricity_out` after those summaries are calculated.
 
 FLORIS calculations can be expensive for larger wind farms and more complicated wake models, so caching is enabled by default. `cache_dir` selects the
 cache location when caching is enabled. Cache entries are based on the model configuration and

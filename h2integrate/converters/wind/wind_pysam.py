@@ -41,6 +41,9 @@ class PySAMPowerCurveCalculationInputs(BaseConfig):
             - 1: Single Stage - Low Speed Generator
             - 2: Multi-Generator
             - 3: Direct Drive
+
+    See :class:`PYSAMWindPlantPerformanceModel` and
+    :doc:`/technology_models/windpower_wind_plant`.
     """
 
     elevation: int | float = field(default=0)
@@ -75,6 +78,9 @@ class PYSAMWindPlantPerformanceModelConfig(BaseConfig):
             )
         run_recalculate_power_curve (bool, optional): whether to recalculate the wind turbine
             power curve. defaults to True.
+
+    See :class:`PYSAMWindPlantPerformanceModel` and
+    :doc:`/technology_models/windpower_wind_plant`.
     """
 
     num_turbines: int = field(converter=int, validator=validators.ge(0))
@@ -188,6 +194,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
     """
     An OpenMDAO component that wraps a WindPlant model.
     It takes wind parameters as input and outputs power generation data.
+
+    See :class:`PYSAMWindPlantPerformanceModelConfig`, :class:`PySAMPowerCurveCalculationInputs`,
+    and :doc:`/technology_models/windpower_wind_plant`.
     """
 
     _time_step_bounds = (

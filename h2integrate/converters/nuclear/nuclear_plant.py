@@ -14,6 +14,8 @@ from h2integrate.core.supported_models import register
 class QuinnNuclearPerformanceModelConfig(BaseConfig):
     """Configuration class for the nuclear plant performance model.
 
+    See :class:`QuinnNuclearPerformanceModel` and :doc:`/technology_models/nuclear`.
+
     Args:
         system_capacity_kw (float): Rated electric capacity in kW.
     """
@@ -26,7 +28,10 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
     """
     Simple nuclear performance model producing electricity.
 
-    The model limits output by a fixed capacity factor and optional demand profile.
+    The model clips commanded output to the rated capacity.
+
+    See :class:`QuinnNuclearPerformanceModelConfig`, :class:`QuinnNuclearCostModel`, and
+    :doc:`/technology_models/nuclear`.
 
     Based on Quinn, J. et al., 2023.
     Small modular reactor light water reactor techno-economic analysis.
@@ -94,6 +99,8 @@ class QuinnNuclearPerformanceModel(PerformanceModelBaseClass):
 class QuinnNuclearCostModelConfig(CostModelBaseConfig):
     """Configuration class for the nuclear plant cost model.
 
+    See :class:`QuinnNuclearCostModel` and :doc:`/technology_models/nuclear`.
+
     Args:
         system_capacity_kw (float): Rated electric capacity in kW.
         capex_per_kw (float): Capital cost per kW.
@@ -124,6 +131,9 @@ class QuinnNuclearCostModel(CostModelBaseClass):
     Cost model for nuclear power plants.
 
     The model supports type-based parameters and optional scaling by size.
+
+    See :class:`QuinnNuclearCostModelConfig`, :class:`QuinnNuclearPerformanceModel`, and
+    :doc:`/technology_models/nuclear`.
 
     Based on Quinn, J. et al., 2023.
     Small modular reactor light water reactor techno-economic analysis.

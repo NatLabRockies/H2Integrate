@@ -6,6 +6,8 @@
 The **PySAM Wave Performance Model** simulates electricity generation from **wave energy converter (WEC) devices** using a timeseries wave resource. The model wraps the [PySAM MhkWave module](https://nrel-pysam.readthedocs.io/en/main/modules/MhkWave.html) implementation of the wave energy performance model used in the [System Advisor Model (SAM)](https://sam.nlr.gov/).
 
 This component integrates the PySAM **MhkWave** module into an H2I performance model. To use this model, specify `"PySAMWavePerformanceModel"` as the performance model.
+See {py:class}`~h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceModel` and
+{py:class}`~h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceConfig`.
 
 The model converts a wave resource timeseries (significant wave height and energy period) and a device power matrix into:
 - timeseries electricity generation
@@ -18,6 +20,11 @@ The model converts a wave resource timeseries (significant wave height and energ
 The model represents an array of wave energy converters operating in an ocean wave resource. Electricity production is calculated at each timestep by looking up device power output in the wave power matrix using the instantaneous significant wave height (Hs) and energy period (Te), then scaling by the number of devices.
 
 The model operates in timeseries mode (`wave_resource_model_choice = 1`) and requires hourly Hs and Te arrays. Use the {ref}`wave_resource` component to read and interpolate wave data files to the required hourly resolution.
+Inputs are `significant_wave_height`, `energy_period`, `num_devices`, and `device_rating`.
+Outputs include `electricity_out`, `rated_electricity_production`,
+`total_electricity_produced`, `annual_electricity_produced`, and `capacity_factor`.
+With system-level control, the output profile is curtailed after production summaries are
+calculated, so summaries remain uncurtailed.
 
 (pysam-options-wave)=
 #### PySAM Options
