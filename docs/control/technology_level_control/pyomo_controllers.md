@@ -174,6 +174,14 @@ Given a price signal (`lmp_signal`) and the local party's demand (`demand_signal
 
 The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
 
+The controller's configuration is:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.storage.plm_optimized_storage_controller.PeakLoadManagementOptimizedStorageControllerConfig
+   :members:
+   :no-index:
+```
+
 ### Definitions
 
 **Given:**

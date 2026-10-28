@@ -7,12 +7,17 @@ an OpenMDAO component. For full documentation see the [PySAM battery model docum
 The registered model is
 {py:class}`~h2integrate.storage.battery.pysam_battery.PySAMBatteryPerformanceModel`, configured by
 {py:class}`~h2integrate.storage.battery.pysam_battery.PySAMBatteryPerformanceModelConfig`. Its
-configuration includes capacity, charge rate, chemistry, SOC limits and initial SOC, control
-variable, thermal properties, and optional PySAM settings. It supports one-hour time steps.
+configuration is shown below. It supports one-hour time steps.
 Inputs include `electricity_in`, `storage_capacity`, `max_charge_rate`, and the applicable
 storage control inputs; see the {ref}`common storage outputs <storage-performance-outputs>` for
 flow, state-of-charge, and aggregate outputs. If capacity or charge rate is nonpositive, the
 model reports zero flow and retains the configured initial SOC.
+
+```{eval-rst}
+.. autoclass:: h2integrate.storage.battery.pysam_battery.PySAMBatteryPerformanceModelConfig
+   :members:
+   :no-index:
+```
 
 The PySAM battery model simulates the response of the battery to control commands. However, the control commands may not be strictly followed. Specifically, the SOC bounds have been seen to be exceeded by nearly 4% SOC for the upper bound and close to 1% SOC on the lower bound.
 

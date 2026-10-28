@@ -32,7 +32,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         resource_year (int): The YYYY-format year whose data should be retrieved. Must be between
             2001 and the current year, inclusive of endpoints.
         cost_year (int): dollar-year for costs. Defaults to the current year.
-        monthly (Path): True, if monthly data is desired, False if annual data is desired.
+        monthly (bool): True if monthly data is desired, False if annual data is desired.
         price_category (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
             "industrial", "electrical_power", or "exports". Note that not all categories will return
             state-level data.

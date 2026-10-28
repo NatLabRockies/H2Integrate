@@ -70,6 +70,16 @@ to scale baseline capital and operating costs to the rated capacity and target d
 OpenMDAO inputs are `rated_ammonia_production` and `annual_ammonia_produced`; it reports `CapEx`,
 `OpEx` and detailed cost components. Both synloop models use one-hour time steps.
 
+```{eval-rst}
+.. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_performance.AmmoniaSynLoopPerformanceConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_cost.AmmoniaSynLoopCostConfig
+   :members:
+   :no-index:
+```
+
 ## Synloop purge gas output
 
 The Synloop Ammonia Model exposes the purge gas exiting the synthesis loop as a **multivariable stream** called `process_gas_mixture`. This is a general-purpose stream type for process gas mixtures that can be reused by other components. It bundles seven constituent variables into a single connection type:

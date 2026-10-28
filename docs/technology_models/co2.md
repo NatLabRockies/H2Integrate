@@ -35,11 +35,17 @@ production in t/year and t/h, respectively, and tank volume. Both use one-hour t
 - Total storage tank volume (m³)
 - Theoretical maximum plant throughput (t/h)
 
-**Key configuration parameters:**
-- Electrodialysis unit power and flow rate
-- Separation efficiencies
-- Seawater properties (temperature, salinity, dissolved inorganic carbon, pH)
-- Storage tank capacity and operational constraints
+The performance and cost configurations are:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.co2.marine.direct_ocean_capture.DOCPerformanceConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.co2.marine.direct_ocean_capture.DOCCostModelConfig
+   :members:
+   :no-index:
+```
 
 #### DOC Cost Model
 Estimates the capital expenditure (CapEx) and annual operating expenditure (OpEx) for a given system configuration.
@@ -94,11 +100,21 @@ time steps.
 - Mass and value of co-products (e.g., acid, recovered carbonate aggregate)
 - Acid handling volumes and disposal costs
 
-**Key configuration parameters:**
-- Alkalinity addition rate and flow fractions
-- Electrodialysis system capacity
-- Seawater temperature, salinity, and carbonate chemistry
-- Acid disposal method and storage capacity
+The performance, cost, and cost-and-financial configurations are:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAEPerformanceConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostModelConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostAndFinancialModelConfig
+   :members:
+   :no-index:
+```
 
 #### OAE Cost Model
 Computes capital (CapEx) and operational (OpEx) costs based on plant design and operating profile.

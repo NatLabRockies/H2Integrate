@@ -68,24 +68,19 @@ ng_feedstock:
             start_up_cost: 100000. #cost in USD
 ```
 
-### Performance Model Parameters
+### Model configuration references
 
-- `commodity` (str): Identifier for the feedstock type (e.g., "natural_gas", "water", "electricity")
-- `commodity_rate_units` (str): commodity_rate_units for feedstock consumption (e.g., "MMBtu/h", "kg/h", "galUS/h", or "MW")
-- `rated_capacity` (float): Maximum feedstock supply rate in `commodity_rate_units`
+The performance and cost configurations must use the same commodity and rate units.
 
-### Cost Model Parameters
+```{eval-rst}
+.. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockPerformanceConfig
+   :members:
+   :no-index:
 
-- `commodity` (str): Must match the performance model identifier
-- `commodity_rate_units` (str): Must match the performance model commodity_rate_units
-- `price` (float, int, or list): Cost per unit in `USD/commodity_amount_units`. Can be:
-  - Scalar: Constant price for all timesteps and years
-  - List of length `n_timesteps`: Price per timestep, applied uniformly across all years
-  - List of length `plant_life`: Price per year of plant operation
-- `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
-- `start_up_cost` (float, optional): One-time capital cost in USD. Defaults to 0.0
-- `cost_year` (int): Dollar year for cost inputs
-- `commodity_amount_units` (str | None, optional): the amount units of the commodity (i.e., "MMBtu", "kg", "galUS" or "kW*h"). If None, will be set as `commodity_rate_units*h`
+.. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockCostConfig
+   :members:
+   :no-index:
+```
 
 ```{tip}
 The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation is used.
@@ -132,40 +127,17 @@ environment variables or to a file.
 
 ### Configuring the EIA Cost Model
 
-Similar to the standard feedstock model, the following variables are able to be set by the user
+The EIA cost model uses the configuration below instead of the standard feedstock cost
+configuration. If the API key is stored in a file, define it on its own line as
+`EIA_API_KEY: xxxx`; alternatively set the `EIA_API_KEY` environment variable.
 
-- `cost_year` (int): Dollar year for cost inputs
-- `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
-- `start_up_cost` (float, optional): One-time capital cost in USD. Defaults to 0.0
-
-Additionally, there are a few other settings that users will need to provide for the model to work
-that differ from the standard cost model.
+```{eval-rst}
+.. autoclass:: h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockConfig
+   :members:
+   :no-index:
+```
 
 :::{important}
 If relying on site coordinate data (`latitude` and `longitude`), then the `reverse_geocoder` package
 is required, which can be pip installed directly or through the `gis` library extras.
 :::
-
-- `resource_year` (int): Which year to obtain the data from, between 2001 and the current year.
-- `monthly` (bool): If True, the monthly data are retrieved, otherwise the annual price is used.
-- location data options 1) use `state` or 2) use `latitude` and `longitude`:
-  - `state` (str): Full name of the state or two-letter state abbreviation, such as "United States" or
-    "US". Only the "US" or all 50 states will produce valid results. When `state` is provided, the
-    site coordinate data will be ignored.
-  - `latitude` (float): Latitude of the natural gas plant site. Only used when `state` is not
-    provided, and will be filled from the plant configuration's site data if not provided.
-  - `longitude` (float): Longitude of the natural gas plant site. Only used when `state` is not
-    provided, and will be filled from the plant configuration's site data if not provided.
-
-- `price_category` (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
-  "industrial", "electrical_power", or "exports". Note that not all categories will return
-  state-level data.
-- `api_key_file` (str, optional): The file where the user's API key is stored. If storing in a file,
-  define it on its own line using the convention "EIA_API_KEY: xxxx", or have the API key defined as
-  an environment variable set as "EIA_API_KEY".
-- `filename` (str, optional): Filename where the data should be loaded from if it exists or saved
-  to once it is downloaded.
-
-- `commodity`: Set to "natural_gas" internally.
-- `commodity_rate_units`: Set to "MMBtu/h" internally.
-- `commodity_amount_units`: Set to "MMBtu" internally.

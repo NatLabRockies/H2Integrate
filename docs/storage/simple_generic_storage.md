@@ -13,11 +13,13 @@ The performance model is
 {py:class}`~h2integrate.storage.storage_performance_model.StoragePerformanceModel`, configured by
 {py:class}`~h2integrate.storage.storage_performance_model.StoragePerformanceModelConfig`.
 It supports time steps from 1 second to 1 hour and can be used in time-marching simulations.
-Configure the commodity and rate/amount units, capacity, charge rate, minimum, maximum and
-initial state-of-charge fractions, and demand profile. Either provide a round-trip efficiency
-or both charge and discharge efficiencies. By default the discharge rate equals the charge
-rate; set `charge_equals_discharge` to `false` and supply `max_discharge_rate` to use a
-different rate.
+The configuration reference is embedded below:
+
+```{eval-rst}
+.. autoclass:: h2integrate.storage.storage_performance_model.StoragePerformanceModelConfig
+   :members:
+   :no-index:
+```
 
 The model receives `{commodity}_in`, `max_charge_rate`, `storage_capacity`, and, when rates
 differ, `max_discharge_rate`. With open-loop control it also receives
@@ -39,6 +41,12 @@ as capacity divided by charge rate, then calculates
 `CapEx = (duration * capacity_capex + charge_capex) * max_charge_rate` and
 `OpEx = opex_fraction * CapEx`. Its supported time step is one hour. Cost rate units are
 restricted to the units listed in its configuration reference.
+
+```{eval-rst}
+.. autoclass:: h2integrate.storage.generic_storage_cost.GenericStorageCostConfig
+   :members:
+   :no-index:
+```
 
 ## Example Applications
 

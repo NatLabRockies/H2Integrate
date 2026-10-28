@@ -15,9 +15,16 @@ class GenericStorageCostConfig(CostModelBaseConfig):
         This could be expanded to allow for different types of commodity units in the future.
         Currently only supports electrical, mass, and some thermal units.
 
-    Fields include `capacity_capex`, `charge_capex`, `opex_fraction`, `max_capacity`,
-    `max_charge_rate`, and `commodity_rate_units`. The `cost_year` field is inherited
-    from `CostModelBaseConfig`.
+    Attributes:
+        capacity_capex (float | int): Capital cost per unit of storage capacity.
+        charge_capex (float | int): Capital cost per unit of charge rate.
+        opex_fraction (float): Annual fixed operating cost as a fraction of capital cost.
+        max_capacity (float): Storage capacity in ``commodity_amount_units``.
+        max_charge_rate (float): Charge rate in ``commodity_rate_units``.
+        commodity_rate_units (str): Supported electrical, mass, or thermal rate unit.
+        commodity_amount_units (str | None): Unit of stored commodity. If not provided,
+            defaults to the rate unit multiplied by hours.
+        cost_year (int): Dollar year of input costs, inherited from ``CostModelBaseConfig``.
 
     See :class:`GenericStorageCostModel` and :doc:`/storage/simple_generic_storage`.
     """

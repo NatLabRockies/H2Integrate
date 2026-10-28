@@ -47,14 +47,13 @@ The demand component computes each value per timestep:
 This provides a simple baseline for understanding supply–demand balance.
 
 #### Configuration
-The demand is defined within the `tech_config` and requires these inputs.
+Define demand in `tech_config` using the following configuration:
 
-| Field             | Type           | Description                           |
-| ----------------- | -------------- | ------------------------------------- |
-| `commodity`  | `str`          | Commodity name (e.g., `"hydrogen"`).  |
-| `commodity_rate_units` | `str`          | Rate units (e.g., `"kg/h"`).               |
-| `demand_profile`  | scalar or list | Timeseries demand or constant demand. |
-| `commodity_amount_units` | `str` | Optional amount units; defaults to rate units times hours. |
+```{eval-rst}
+.. autoclass:: h2integrate.demand.demand_baseclass.DemandComponentBaseConfig
+   :members:
+   :no-index:
+```
 
 ```yaml
 performance_model:
@@ -101,18 +100,13 @@ The axes are unlabeled to allow for generalization to any commodity and unit typ
 
 
 #### Configuration
-The flexible demand component is defined within the `tech_config` with the following parameters:
+Flexible demand extends the [generic demand configuration](#generic-demand-component):
 
-| Field               | Type           | Description                                  |
-| ------------------- | -------------- | -------------------------------------------- |
-| `commodity`          | `str`          | Commodity name.                              |
-| `commodity_rate_units`         | `str`          | Rate units for the demand and supply.        |
-| `demand_profile`          | scalar or list | Default (nominal) demand profile.            |
-| `rated_demand` | float | Required nonnegative configuration field; see the input-default caveat above. |
-| `turndown_ratio`          | float          | Minimum fraction of rated demand allowed. |
-| `ramp_down_rate_fraction` | float          | Maximum ramp-down rate per timestep as a fraction of rated demand. |
-| `ramp_up_rate_fraction` | float          | Maximum ramp-up rate per timestep as a fraction of rated demand. |
-| `min_utilization` | float          | Minimum utilization target as a fraction of rated demand over the simulation. |
+```{eval-rst}
+.. autoclass:: h2integrate.demand.flexible_demand.FlexibleDemandComponentConfig
+   :members:
+   :no-index:
+```
 
 ```yaml
 model_inputs:

@@ -5,7 +5,8 @@ configured by {py:class}`~h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2
 is an electrochemical model that simulates the conversion of hydrogen and oxygen into electricity
 and water. It uses a polynomial fit of an I-V curve to determine the operating point based on
 `electricity_command_value`, then reports `hydrogen_consumed`, `oxygen_consumed`, `water_out`,
-`heat_out`, and `electricity_out` for each timestep.
+`heat_out`, and `electricity_out` for each timestep. Its [configuration reference](#pem-fuel-cell-config-reference)
+is embedded below.
 
 The IV curve was extracted from the data in this GitHub repository [1](https://github.com/ECSIM/pem-dataset1). The model uses chemical reaction equations to calculate the consumed and produced commodities from the fuel cell reaction ([3](https://www.sciencedirect.com/science/article/pii/S0360319906005726), [4](https://www.sciencedirect.com/science/article/pii/S0360319924051577)).
 
@@ -21,6 +22,7 @@ and total and annual electricity production.
 The I-V curve is currently internally defined in the model and not adjustable.
 ```
 
+(pem-fuel-cell-config-reference)=
 ## Performance Model
 
 ```{eval-rst}

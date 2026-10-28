@@ -14,24 +14,14 @@ By convention:
 - Investments and costs (CAPEX, OPEX, refurbishments) are negative cash flows.
 - Revenues (commodity sales) are positive cash flows.
 
-## Model Inputs
-### `NumpyFinancialNPVConfig`
-**Description**
-Configuration class defining financial parameters for the NPV calculation.
-Implements validation and default handling using the `attrs` library.
-| Attribute                         | Type             | Description                                           | Default     |
-| --------------------------------- | ---------------- | ----------------------------------------------------- | ----------- |
-| `plant_life`                      | `int`            | Operating life of the plant in years. Must be ≥ 0.    | —           |
-| `real_discount_rate`              | `float`          | Real equity rate / cost of equity (0-1). Can be either a real or nominal rate depending on how `inflation_rate` is specified. A pre-computed WACC can be supplied here directly by leaving `debt_equity_ratio` and `inflation_rate` at 0. | -           |
-| `debt_rate`                       | `float`          | Real debt rate / cost of debt (0-1). Converted to nominal via the Fisher equation when `inflation_rate` is provided. | `0.0`       |
-| `debt_equity_ratio`               | `float`          | Ratio of debt to equity (`D/E`, ≥ 0) used to weight the debt and equity contributions to the WACC. When 0, the WACC reduces to the equity rate. | `0.0`       |
-| `inflation_rate`                  | `float`          | Inflation rate (0-1). Combined with the real equity and debt rates via the Fisher equation `(1 + nominal) = (1 + real) * (1 + inflation_rate)` before they are weighted into the WACC. Set to 0 if the rates are already nominal. This matches how ProFAST combines its real rates and `general_inflation` inputs. | `0.0`       |
-| `commodity_sell_price`            | `int` or `float` | Sale price of the commodity (USD/unit).               | `0.0`       |
-| `commodity_sell_price_units`      | `str`            | OpenMDAO unit string for `commodity_sell_price` (e.g. `"USD/(kW*h)"` for electricity or `"USD/kg"` for hydrogen). | —           |
-| `save_cost_breakdown`             | `bool`           | Whether to save annual cost breakdowns to CSV.        | `False`     |
-| `save_npv_breakdown`              | `bool`           | Whether to save per-technology NPV breakdowns to CSV. | `False`     |
-| `cost_breakdown_file_description` | `str`            | Descriptor appended to output filenames.              | `'default'` |
+## Model configuration
+The finance group uses the following configuration:
 
+```{eval-rst}
+.. autoclass:: h2integrate.finances.numpy_financial_npv.NumpyFinancialNPVConfig
+   :members:
+   :no-index:
+```
 
 An example of what to include in the `plant_config` to use the `NPVFinance` model. This is included in `["finance_parameters"]["finance_groups"]`, where `npv` is the specific `finance_group` name.
 

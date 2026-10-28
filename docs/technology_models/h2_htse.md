@@ -11,10 +11,8 @@ The performance model converts electricity and heat into hydrogen, water demand,
 
 ## Model Overview
 
-This is a simplified HTSE representation with constant nominal specific energy requirements:
-
-- `nominal_electricity_required` in `kWh/kg`
-- `nominal_heat_required` in `kWh/kg`
+This is a simplified HTSE representation with constant nominal specific energy requirements;
+see the [configuration reference](#htse-configuration-reference).
 
 At each timestep, hydrogen production is determined from:
 
@@ -100,6 +98,19 @@ The current implementation is intentionally simple and should be interpreted as 
 
 ### API details
 For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documentation](../_autosummary/h2integrate.converters.hydrogen.htse_electrolyzer).
+
+(htse-configuration-reference)=
+## Configuration reference
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModelConfig
+   :members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModelConfig
+   :members:
+   :no-index:
+```
 
 The nuclear heat and electricity integration is demonstrated in
 [Example 36: Nuclear Reactor and HTSE](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/36_nuclear_reactor_htse).

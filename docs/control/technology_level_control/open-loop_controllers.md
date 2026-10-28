@@ -100,6 +100,14 @@ See
 and
 {py:class}`~h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageControllerConfig`.
 
+The controller's configuration is:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageControllerConfig
+   :members:
+   :no-index:
+```
+
 ```{note}
 The algorithm currently only supports daily cycles, but could be adjusted to accommodate alternate cycle rates.
 ```
@@ -148,7 +156,13 @@ The command at each timestep is determined by three limits:
 
 Because the controller reads the performance model's `rated_{commodity}_production` output as its command ceiling, a solver is automatically added at the technology group level to converge the controller/performance-model coupling.
 
-**Configuration parameters**
+The controller's configuration is:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterControllerConfig
+   :members:
+   :no-index:
+```
 
 For an example of how to use the `PLMHeuristicOpenLoopConverterController`, see:
 - `examples/33_peak_load_management_heuristics/plm_converter/`

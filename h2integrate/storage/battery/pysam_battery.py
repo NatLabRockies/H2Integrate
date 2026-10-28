@@ -22,9 +22,9 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
     Attributes:
         max_capacity (float): Maximum battery energy capacity in kilowatt-hours (kWh).
-            Must be greater than zero.
+            Must be nonnegative. Zero capacity produces zero flow.
         max_charge_rate (float): Rated power capacity of the battery in kilowatts (kW).
-            Must be greater than zero.
+            Must be nonnegative. Zero charge rate produces zero flow.
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.

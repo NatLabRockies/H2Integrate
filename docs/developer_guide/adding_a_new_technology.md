@@ -61,10 +61,12 @@ relationship and ensure the model's own setup path remains unambiguous.
 ### Documenting a model
 
 Add a user guide page for the model, link it from the table of contents, and link from it to
-each relevant model and configuration API entry using `{py:class}`. Explain the model's
-capabilities and limitations, configuration and defaults, OpenMDAO inputs and outputs (including
-units and inherited variables), and any supported time-step or control restrictions. Distinguish
-configuration values from similarly named OpenMDAO inputs if the model uses them differently.
+each relevant model and configuration API entry using `{py:class}`. Embed configuration class
+documentation with an `autoclass` directive and `:no-index:` rather than maintaining a separate
+list of configuration fields and defaults in the guide. Explain the model's capabilities and
+limitations, usage, OpenMDAO inputs and outputs (including units and inherited variables), and any
+supported time-step or control restrictions. Distinguish configuration values from similarly
+named OpenMDAO inputs if the model uses them differently.
 Add reciprocal `:class:` and `:doc:` links to the model and configuration docstrings so API
 readers can find the related reference and guide. See the
 [reverse osmosis guide](../technology_models/desalination.md) for an example.
