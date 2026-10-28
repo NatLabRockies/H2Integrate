@@ -257,14 +257,28 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
           each simulated plant year (the last may be partial) and are extended to plant life
           with the selected extrapolation method. No replacements occur.
         - With SOH, the simulation is split into replacement cycles. A cycle ends at an upward
-          SOH jump greater than 1e-9 (a reset). The final cycle is extended using the SOH loss
-          between its last two samples until SOH reaches ``eol_soh`` or plant life is covered.
-          Projected CF is the last timestep CF scaled by projected SOH over last observed SOH.
+          SOH jump greater than 1e-9 (a reset). The final cycle is extended by projecting SOH
+          forward at its average loss per timestep over the last year of that cycle (or the
+          whole cycle if shorter), until SOH reaches ``eol_soh`` or plant life is covered.
+          Projected CF is the average CF over the same samples, reduced in proportion to
+          projected SOH over last observed SOH.
           EOL is checked at timestep boundaries without interpolation, and nothing is inferred
           from fewer than two post-reset samples or from stalled degradation.
         - Completed cycles are then repeated per ``soh_cycle_repetition`` and averaged into
           fixed 365-day plant years. Replacements are integer counts binned into
           ``[year, year + 1)``; initial installation and retirement are not counted.
+
+        Projection beyond the simulated horizon has two limitations:
+
+        - Reducing CF with SOH assumes output is capacity-limited. When dispatch is set by a
+          controller with spare capacity (e.g. a battery that never uses its full energy
+          range), CF stays nearly constant as SOH falls, so the projection understates CF.
+        - SOH fade that slows over time (e.g. square-root-of-time calendar aging) is
+          overestimated by a constant average loss rate, so projected replacements occur
+          too early.
+
+        Neither assumption affects simulated years. When either limitation matters,
+        simulate the full plant life so no projection is needed.
 
         Args:
             performance_timeseries (array-like): timestep-level performance values used
