@@ -17,8 +17,8 @@ technologies:
         commodity_amount_units: kW*h  # amount units for the commodity (defaults to <rate>*h)
         max_charge_rate: 2000.0  # kW
         max_capacity: 3854.0  # kWh (usable, 10-90 % of the 4817 kWh nominal pack)
-        max_soc_fraction: 0.9  # fraction (0-1)
-        min_soc_fraction: 0.1  # fraction (0-1)
+        max_soc_fraction: 1.0 # 0.9  # fraction (0-1)
+        min_soc_fraction: 0.0 # 0.1  # fraction (0-1)
         init_soc_fraction: 0.9  # fraction (0-1)
         charge_efficiency: 1.0  # fraction (0-1)
         discharge_efficiency: 1.0  # fraction (0-1)
@@ -30,7 +30,7 @@ technologies:
         battery_temperature_c: 25.0
         converter_efficiency: 0.96
         converter_max_power: 2400.0  # kW
-        deg_scale: 0.115  # degradation scaling (notebook-calibrated for the container+HVAC thermal model)
+        deg_scale: 0.7 # 0.115  # degradation scaling (notebook-calibrated for the container+HVAC thermal model)
         eol_soh_capacity: 0.8  # capacity SOH at which the battery is replaced (0.8 = 20 % fade)
         azimuth: 0.0  # container orientation, compass bearing of the north face (0 = North)
         # latitude/longitude come from site_to_tech_connections in plant_config.yaml,

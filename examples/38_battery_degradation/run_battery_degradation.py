@@ -22,6 +22,8 @@ The default example runs for two years at 15-minute resolution (``n_timesteps = 
 manageable. The horizon is configurable for longer studies up to the plant life.
 """
 
+import argparse
+from types import SimpleNamespace
 from pathlib import Path
 
 import numpy as np
@@ -35,9 +37,21 @@ import matplotlib.pyplot as plt
 from h2integrate import H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
 from h2integrate.core.file_utils import load_yaml
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
 
 
 HERE = Path(__file__).parent
+
+parser = argparse.ArgumentParser(description="Run the Example 38 battery degradation study.")
+parser.add_argument("--years", type=int, help="Override the simulation horizon in plant years.")
+parser.add_argument(
+    "--output-dir",
+    type=Path,
+    help="Write plots, CSVs, and H2Integrate outputs to this directory.",
+)
+args = parser.parse_args()
+output_dir = args.output_dir.resolve() if args.output_dir else HERE
+output_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Load the standard component configs and build control forecasts for the plant horizon.
@@ -47,9 +61,31 @@ for config_key in ("driver_config", "technology_config", "plant_config"):
 
 driver_config = config["driver_config"]
 driver_config.setdefault("general", {})["create_om_reports"] = False
+if args.output_dir:
+    driver_config["general"]["folder_output"] = str(output_dir / "h2integrate")
 plant_config = config["plant_config"]
 technology_config = config["technology_config"]
 sim_config = plant_config["plant"]["simulation"]
+if args.years is not None:
+    if args.years <= 0:
+        parser.error("--years must be greater than zero.")
+    dt_seconds = float(sim_config["dt"])
+    requested_steps = args.years * 365 * 24 * 3600 / dt_seconds
+    if not np.isclose(requested_steps, round(requested_steps)):
+        parser.error("The requested horizon must contain a whole number of timesteps.")
+    sim_config["n_timesteps"] = round(requested_steps)
+
+    resource_parameters = plant_config["sites"]["site"]["resources"]["solar_resource"]
+    resource_parameters = resource_parameters["resource_parameters"]
+    resource_years = resource_parameters.get("resource_year_order")
+    resource_year = resource_years[0] if resource_years else resource_parameters["resource_year"]
+    resource_filenames = resource_parameters["resource_filename"]
+    resource_filename = (
+        resource_filenames[0] if isinstance(resource_filenames, list) else resource_filenames
+    )
+    resource_parameters["resource_year_order"] = [resource_year] * args.years
+    resource_parameters["resource_filename"] = [resource_filename] * args.years
+
 n_steps = int(sim_config["n_timesteps"])
 time_index = pd.DatetimeIndex(build_time_series_from_plant_config(plant_config))
 hours = time_index.hour
@@ -127,6 +163,7 @@ df = pd.DataFrame(
         "heat": model.prob.get_val("battery.battery_heat", units="W"),
         "soh_Q": model.prob.get_val("battery.soh_capacity"),
         "soh_R": model.prob.get_val("battery.soh_resistance"),
+        "system_derated": model.prob.get_val("battery.system_derated"),
         "power_ac": model.prob.get_val("battery.power_ac", units="W"),
         "power_dc": model.prob.get_val("battery.power_dc", units="W"),
         "conv_loss": model.prob.get_val("battery.converter_loss", units="W"),
@@ -135,6 +172,89 @@ df = pd.DataFrame(
     },
     index=index,
 )
+
+seconds_per_plant_year = 365 * 24 * 3600
+plant_year_indices = np.floor(
+    np.arange(n_steps, dtype=float) * dt / seconds_per_plant_year + 1e-12
+).astype(int)
+min_soc_fraction = float(shared["min_soc_fraction"])
+rated_discharge_kw = float(
+    model.prob.get_val("battery.rated_electricity_production", units="kW")[0]
+)
+annual_diagnostics = []
+for plant_year in np.unique(plant_year_indices):
+    year_data = df.iloc[plant_year_indices == plant_year]
+    duration_hours = len(year_data) * dt / 3600
+    actual_discharge_kwh = year_data["actual_discharge"].sum() * dt / 3600
+    commanded_discharge_kwh = year_data["commanded_discharge"].sum() * dt / 3600
+    soh_loss = -np.minimum(np.diff(year_data["soh_Q"].to_numpy()), 0.0).sum() * 100
+    annual_diagnostics.append(
+        {
+            "Plant year": plant_year + 1,
+            "Discharge CF [%]": actual_discharge_kwh / (rated_discharge_kw * duration_hours) * 100,
+            "Discharge [MWh]": actual_discharge_kwh / 1000,
+            "Command delivered [%]": (
+                actual_discharge_kwh / commanded_discharge_kwh * 100
+                if commanded_discharge_kwh > 0
+                else np.nan
+            ),
+            "Hours below min SOC": (year_data["soc"] <= min_soc_fraction + 0.005).sum() * dt / 3600,
+            "Min SOC [%]": year_data["soc"].min() * 100,
+            "Derated hours": year_data["system_derated"].sum() * dt / 3600,
+            "SOH fade [pp]": soh_loss,
+            "Temperature min [degC]": year_data["T"].min(),
+            "Temperature max [degC]": year_data["T"].max(),
+        }
+    )
+
+print("\nPer-year physical dispatch diagnostics:")
+annual_diagnostics_df = pd.DataFrame(annual_diagnostics)
+print(annual_diagnostics_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
+
+plant_life = int(model.plant_config["plant"]["plant_life"])
+forecast_years = min(4, int(n_steps * dt // seconds_per_plant_year))
+forecast_steps = round(forecast_years * seconds_per_plant_year / dt)
+projection_context = SimpleNamespace(
+    dt=dt,
+    plant_life=plant_life,
+    annual_extrapolation_method=sim.get("annual_extrapolation_method"),
+)
+projected_capacity_factor, projected_replacements = (
+    PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule(
+        projection_context,
+        performance_timeseries=df["actual_discharge"].to_numpy()[:forecast_steps],
+        rated_performance=rated_discharge_kw,
+        state_of_health_timeseries=df["soh_Q"].to_numpy()[:forecast_steps],
+        eol_soh=float(performance.get("eol_soh_capacity", 0.8)),
+    )
+)
+
+simulated_capacity_factor = np.full(plant_life, np.nan)
+observed_years = min(plant_life, len(annual_diagnostics_df))
+simulated_capacity_factor[:observed_years] = annual_diagnostics_df["Discharge CF [%]"].to_numpy()[
+    :observed_years
+]
+simulated_replacements = np.asarray(model.prob.get_val("battery.replacement_schedule"))
+capacity_factor_comparison = pd.DataFrame(
+    {
+        "Plant year": np.arange(1, plant_life + 1),
+        "Simulated discharge CF [%]": simulated_capacity_factor,
+        "Projected from first four years [%]": projected_capacity_factor * 100,
+        "Difference [percentage points]": simulated_capacity_factor
+        - projected_capacity_factor * 100,
+        "Simulated replacements": simulated_replacements,
+        "Projected replacements from first four years": projected_replacements,
+    }
+)
+print(f"\nProjection uses the first {forecast_years} simulated plant years.")
+print(
+    capacity_factor_comparison.to_string(
+        index=False, float_format=lambda x: f"{x:.2f}" if np.isfinite(x) else "nan"
+    )
+)
+if args.output_dir:
+    annual_diagnostics_df.to_csv(output_dir / "annual_physical_diagnostics.csv", index=False)
+    capacity_factor_comparison.to_csv(output_dir / "annual_cf_comparison.csv", index=False)
 
 fade_pct = (1 - df["soh_Q"].iloc[-1]) * 100
 growth_pct = (df["soh_R"].iloc[-1] - 1) * 100
@@ -152,7 +272,7 @@ ax.set_ylabel("Power [MW]")
 ax.axhline(0, color="gray", linewidth=0.5)
 ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x / 1e6:.2f}"))
 fig.tight_layout()
-fig.savefig(HERE / "plot_power.png", dpi=150)
+fig.savefig(output_dir / "plot_power.png", dpi=150)
 print("Saved plot_power.png")
 
 # ---------------------------------------------------------------------------
@@ -166,7 +286,7 @@ ax.set_ylabel("Discharge power [kW]")
 ax.axhline(0, color="gray", linewidth=0.5)
 ax.legend()
 fig.tight_layout()
-fig.savefig(HERE / "plot_discharge_tracking.png", dpi=150)
+fig.savefig(output_dir / "plot_discharge_tracking.png", dpi=150)
 print("Saved plot_discharge_tracking.png")
 
 # ---------------------------------------------------------------------------
@@ -176,7 +296,7 @@ fig, ax = plt.subplots(figsize=(12, 3))
 df["soc"].resample("1h").mean().plot(ax=ax, title="State of charge -- hourly mean")
 ax.set_ylabel("SOC [p.u.]")
 fig.tight_layout()
-fig.savefig(HERE / "plot_soc.png", dpi=150)
+fig.savefig(output_dir / "plot_soc.png", dpi=150)
 print("Saved plot_soc.png")
 
 # ---------------------------------------------------------------------------
@@ -188,7 +308,7 @@ ax.set_ylabel("Temperature [degC]")
 ax.axhline(25.0, color="gray", linewidth=0.8, linestyle="--", label="T_ambient = 25 degC")
 ax.legend()
 fig.tight_layout()
-fig.savefig(HERE / "plot_temperature_7days.png", dpi=150)
+fig.savefig(output_dir / "plot_temperature_7days.png", dpi=150)
 print("Saved plot_temperature_7days.png")
 
 # ---------------------------------------------------------------------------
@@ -198,7 +318,7 @@ fig, ax = plt.subplots(figsize=(12, 3))
 df["v"].iloc[:week].plot(ax=ax, title="Terminal voltage -- first 7 days [V]")
 ax.set_ylabel("Voltage [V]")
 fig.tight_layout()
-fig.savefig(HERE / "plot_voltage_7days.png", dpi=150)
+fig.savefig(output_dir / "plot_voltage_7days.png", dpi=150)
 print("Saved plot_voltage_7days.png")
 
 # ---------------------------------------------------------------------------
@@ -208,7 +328,7 @@ fig, ax = plt.subplots(figsize=(12, 3))
 df["v"].resample("1D").mean().plot(ax=ax, title="Terminal voltage -- daily mean [V]")
 ax.set_ylabel("Voltage [V]")
 fig.tight_layout()
-fig.savefig(HERE / "plot_voltage.png", dpi=150)
+fig.savefig(output_dir / "plot_voltage.png", dpi=150)
 print("Saved plot_voltage.png")
 
 # ---------------------------------------------------------------------------
@@ -247,7 +367,7 @@ lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left")
 fig.tight_layout()
-fig.savefig(HERE / "plot_degradation.png", dpi=150)
+fig.savefig(output_dir / "plot_degradation.png", dpi=150)
 print("Saved plot_degradation.png")
 
 # ---------------------------------------------------------------------------
@@ -259,7 +379,7 @@ df[["loss", "heat", "conv_loss"]].resample("1D").mean().plot(
 )
 ax.set_ylabel("Power [W]")
 fig.tight_layout()
-fig.savefig(HERE / "plot_losses.png", dpi=150)
+fig.savefig(output_dir / "plot_losses.png", dpi=150)
 print("Saved plot_losses.png")
 
 # ---------------------------------------------------------------------------
@@ -270,16 +390,16 @@ print("Saved plot_losses.png")
 # in tech_config.yaml), the battery is replaced and the capacity-factor cycle
 # repeats from a fresh unit; each replacement is charged as new CapEx in ProFAST.
 # ---------------------------------------------------------------------------
-lcoe = model.prob.get_val("finance_subgroup_battery.LCOE", units="USD/(MW*h)")[0]
-capacity_factor_by_year = model.prob.get_val("battery.capacity_factor")
+# lcoe = model.prob.get_val("finance_subgroup_battery.LCOE", units="USD/(MW*h)")[0]
+standard_capacity_factor_by_year = model.prob.get_val("battery.standard_capacity_factor")
 replacement_schedule = model.prob.get_val("battery.replacement_schedule")
 replacement_years = [int(y) for y in np.flatnonzero(replacement_schedule) + 1]
-print(f"LCOE (levelized cost of storage): {lcoe:.2f} $/MWh")
+# print(f"LCOE (levelized cost of storage): {lcoe:.2f} $/MWh")
 print(
     "Discharge capacity factor - year 1: "
-    f"{capacity_factor_by_year[0] * 100:.2f} %, "
-    f"year 15: {capacity_factor_by_year[14] * 100:.2f} %, "
-    f"year 30: {capacity_factor_by_year[29] * 100:.2f} %"
+    f"{standard_capacity_factor_by_year[0] * 100:.2f} %, "
+    f"year 15: {standard_capacity_factor_by_year[14] * 100:.2f} %, "
+    f"year 30: {standard_capacity_factor_by_year[29] * 100:.2f} %"
 )
 if replacement_years:
     print(f"Battery reaches EOL SOH and is replaced in plant year(s): {replacement_years}")
@@ -287,14 +407,12 @@ else:
     print("Battery does not reach EOL SOH within the plant life (no replacement scheduled).")
 
 # ---------------------------------------------------------------------------
-# Plot 7: Per-year capacity factor used by the finance model (ProFAST)
-# This is the exact per-year capacity factor fed to ProFAST: actual values over
-# the simulated years, scaled with the projected SOH beyond the simulation, and
-# reset to a fresh battery at each end-of-life replacement.
+# Plot 7: Per-year discharge-only capacity factor from the degradation projection.
+# ProFAST receives the separate net ``capacity_factor`` output.
 # ---------------------------------------------------------------------------
-plant_years = np.arange(1, len(capacity_factor_by_year) + 1)
+plant_years = np.arange(1, len(standard_capacity_factor_by_year) + 1)
 fig, ax = plt.subplots(figsize=(12, 3))
-ax.step(plant_years, capacity_factor_by_year * 100, where="mid", color="teal")
+ax.step(plant_years, standard_capacity_factor_by_year * 100, where="mid", color="teal")
 for i, yr in enumerate(replacement_years):
     ax.axvline(
         yr,
@@ -303,15 +421,38 @@ for i, yr in enumerate(replacement_years):
         linewidth=0.8,
         label="Battery replacement" if i == 0 else None,
     )
-ax.set_title("Per-year discharge capacity factor used by ProFAST")
+ax.set_title("Per-year discharge capacity factor")
 ax.set_xlabel("Plant year")
 ax.set_ylabel("Capacity factor [%]")
-ax.set_xlim(1, len(capacity_factor_by_year))
+ax.set_xlim(1, len(standard_capacity_factor_by_year))
 if replacement_years:
     ax.legend(loc="lower left")
 fig.tight_layout()
-fig.savefig(HERE / "plot_capacity_factor.png", dpi=150)
+fig.savefig(output_dir / "plot_capacity_factor.png", dpi=150)
 print("Saved plot_capacity_factor.png")
+
+fig, ax = plt.subplots(figsize=(12, 3))
+ax.step(
+    capacity_factor_comparison["Plant year"],
+    capacity_factor_comparison["Simulated discharge CF [%]"],
+    where="mid",
+    label="Simulated 30-year discharge CF",
+)
+ax.step(
+    capacity_factor_comparison["Plant year"],
+    capacity_factor_comparison["Projected from first four years [%]"],
+    where="mid",
+    linestyle="--",
+    label=f"Projection from first {forecast_years} years",
+)
+ax.set_title("Simulated vs. projected annual discharge capacity factor")
+ax.set_xlabel("Plant year")
+ax.set_ylabel("Capacity factor [%]")
+ax.set_xlim(1, plant_life)
+ax.legend()
+fig.tight_layout()
+fig.savefig(output_dir / "plot_simulated_vs_projected_capacity_factor.png", dpi=150)
+print("Saved plot_simulated_vs_projected_capacity_factor.png")
 
 # ---------------------------------------------------------------------------
 # Plot 8: State of health over the full simulation
@@ -342,5 +483,5 @@ lines1, labels1 = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()
 ax1.legend(lines1 + lines2, labels1 + labels2, loc="lower left")
 fig.tight_layout()
-fig.savefig(HERE / "plot_soh.png", dpi=150)
+fig.savefig(output_dir / "plot_soh.png", dpi=150)
 print("Saved plot_soh.png")
