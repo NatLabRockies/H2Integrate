@@ -328,9 +328,15 @@ def test_eol_replaces_battery_and_updates_finance_schedule(subtests, monkeypatch
         assert component._sim_state["thermal"]._components == [component._sim_state["battery"]]
     with subtests.test("finance schedule spans the full plant life"):
         assert replacement_schedule.shape == (30,)
-    with subtests.test("annual schedule repeats the five-hour degradation cycle"):
-        assert replacement_schedule[0] == 1751
-        np.testing.assert_array_equal(replacement_schedule[1:], np.full(29, 1752))
+    with subtests.test("annual schedule repeats the observed and projected cycles"):
+        # Observed 4/5/5 h cycles; linear SOH extrapolation completes the 4-sample tail in 1 h.
+        event_hours = [
+            19 * k + offset for k in range(30 * 8760 // 19 + 1) for offset in (4, 9, 14, 19)
+        ]
+        expected_schedule = np.bincount(
+            [hour // 8760 for hour in event_hours if hour < 30 * 8760], minlength=30
+        )
+        np.testing.assert_array_equal(replacement_schedule, expected_schedule)
     with subtests.test("replacement counts are integer-valued"):
         np.testing.assert_array_equal(replacement_schedule, np.floor(replacement_schedule))
 
