@@ -777,6 +777,45 @@ def seasonal_config():
 
 
 @pytest.mark.unit
+def test_exclusive_control_budget_resets_each_year(subtests, seasonal_config):
+    """The same exclusive month in different years each receives a full monthly budget."""
+    budget_kwh = 10.0
+    config = attrs.evolve(
+        seasonal_config,
+        lmp_signal=np.ones(48).tolist(),
+        demand_signal=np.ones(48).tolist(),
+        max_cycles_per_day=budget_kwh / (31 * seasonal_config.max_capacity),
+    )
+    controller = _make_controller_with_config(config, n_timesteps=48)
+    controller.n_timesteps = 48
+    controller.time_index = pd.DatetimeIndex(
+        list(pd.date_range("2025-01-01", periods=24, freq="h"))
+        + list(pd.date_range("2026-01-01", periods=24, freq="h"))
+    )
+    controller.in_peak_window = controller._compute_peak_window_mask()
+    controller.month_ids = controller._compute_month_ids()
+    controller.in_exclusive_control_month = controller._compute_exclusive_control_mask()
+    controller.days_in_month_lookup = controller._compute_days_in_month_lookup()
+    controller.in_demand_charge_window = controller._compute_demand_charge_window_mask()
+
+    def hold_full_soc(commands, sim_start_index, sim_end_index):
+        return np.asarray(commands), np.full(sim_end_index - sim_start_index, 100.0)
+
+    dispatch_solver = controller.pyomo_setup(
+        {}, {"max_charge_rate": [config.max_charge_rate], "storage_capacity": [40.0]}
+    )
+    dispatch_solver(hold_full_soc, {}, {})
+    discharge_kwh = (
+        (controller.p_discharge_upstream_history + controller.p_discharge_local_history)
+        .reshape(2, 24)
+        .sum(axis=1)
+    )
+
+    with subtests.test("each January discharges its full monthly budget"):
+        np.testing.assert_allclose(discharge_kwh, [budget_kwh, budget_kwh], atol=1e-6)
+
+
+@pytest.mark.unit
 def test_exclusive_control_months_requires_bill_min_fields(seasonal_config):
     """exclusive_control_months without energy_rate/demand_charge_rate/demand_charge_window
     must raise."""
