@@ -232,18 +232,21 @@ def _degraded_replacement_cycles(
     Reaching the end-of-life (EOL) threshold in observed data is not itself a
     replacement; the trailing observed cycle always remains open initially.
 
-    Extend that trailing cycle using the nonnegative SOH loss between its last
-    two samples. Project at timestep resolution until EOL is reached, within a
+    Average the SOH loss per timestep over the trailing year of the current cycle,
+    or over the full observed cycle when it is shorter than a year, and project
+    that loss forward at timestep resolution until EOL is reached, within a
     tolerance of 1e-12, or the remaining plant life is covered. A projected
     replacement requires at least one future timestep, even if the last observed
     SOH is already at or below EOL. Without measurable loss, extend by one step
     only when the last observed SOH is already at or below EOL; otherwise leave
     the cycle incomplete. No extension is made if no plant life remains.
 
-    Projected CF scales the last observed timestep's CF by projected SOH divided
-    by the last observed SOH. Negative projected SOH and CF projected from zero
-    observed SOH give zero CF. The extension uses whole timesteps, so its final
-    timestep may extend past retirement; downstream projection clips that excess.
+    Projected CF is the average CF over the same samples, reduced in proportion
+    to projected SOH divided by the last observed SOH. This assumes output is
+    capacity-limited; dispatch-limited output with spare capacity is understated.
+    Negative projected SOH and CF projected from zero observed SOH give zero CF.
+    The extension uses whole timesteps, so its final timestep may extend past
+    retirement; downstream projection clips that excess.
 
     Aggregate each cycle's CF into time-weighted means, splitting at fixed
     365-day plant-year boundaries and retaining partial-year segment durations.
@@ -275,12 +278,25 @@ def _degraded_replacement_cycles(
     reset_indices = np.flatnonzero(np.diff(state_of_health_timeseries) > 1e-9) + 1
     trailing_start_index = int(reset_indices[-1]) if reset_indices.size else 0
 
-    # Estimate future SOH loss from the last two samples of the current unit only.
-    # A single sample or a nondecreasing SOH cannot establish a degradation rate.
+    # Average SOH loss per step over the unit's last year, or its full cycle if shorter.
     trailing_soh = state_of_health_timeseries[trailing_start_index:]
-    degradation_per_step = (
-        max(float(trailing_soh[-2] - trailing_soh[-1]), 0.0) if trailing_soh.size >= 2 else 0.0
+    trend_steps = min(
+        trailing_soh.size,
+        max(2, math.ceil(SECONDS_PER_PLANT_YEAR / dt)),
     )
+    trend_soh = trailing_soh[-trend_steps:]
+    if trend_soh.size >= 2:
+        timestep_offsets = np.arange(trend_soh.size, dtype=float)
+        centered_offsets = timestep_offsets - timestep_offsets.mean()
+        centered_soh = trend_soh - trend_soh.mean()
+        degradation_per_step = max(
+            float(
+                -np.dot(centered_offsets, centered_soh) / np.dot(centered_offsets, centered_offsets)
+            ),
+            0.0,
+        )
+    else:
+        degradation_per_step = 0.0
     last_observed_soh = float(trailing_soh[-1])
     trailing_has_replacement = False
     if degradation_per_step > 0.0 or last_observed_soh <= eol_soh:
@@ -297,13 +313,11 @@ def _degraded_replacement_cycles(
         projected_soh = last_observed_soh - degradation_per_step * np.arange(
             1, projection_steps + 1
         )
-        # Scale the last observed CF by the fraction of its SOH remaining at each step.
-        # Clip negative SOH to zero; zero starting SOH gives zero CF without division.
+        # Baseline CF is averaged over the same window as the SOH loss rate.
         extrapolated_cf = np.zeros(projection_steps)
         if last_observed_soh > 0.0:
-            extrapolated_cf = (
-                timestep_capacity_factors[-1] * np.maximum(projected_soh, 0.0) / last_observed_soh
-            )
+            baseline_cf = timestep_capacity_factors[trailing_start_index:][-trend_steps:].mean()
+            extrapolated_cf = baseline_cf * np.maximum(projected_soh, 0.0) / last_observed_soh
         timestep_capacity_factors = np.concatenate((timestep_capacity_factors, extrapolated_cf))
         # Mark a predicted replacement only if a future step actually reaches EOL.
         # A projection cut short by plant life can leave the cycle incomplete.

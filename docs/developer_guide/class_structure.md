@@ -103,6 +103,20 @@ timestep-level completion of the trailing cycle and integer replacement counts p
 extrapolation options, and boundary behavior, see
 {py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
 and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.
+
+When SOH is given, the final (incomplete) cycle is extended beyond the simulation by projecting
+SOH forward at its average loss per timestep over the last year of that cycle (or the whole cycle
+if shorter) until it reaches the end-of-life threshold. Projected CF is the average CF over the
+same samples, reduced in proportion to the projected SOH. This projection has two limitations:
+
+- Reducing CF with SOH assumes output is capacity-limited. For dispatch-limited technologies, such
+  as a controlled battery with spare energy capacity, CF stays nearly constant as SOH falls, so
+  projected CF is understated.
+- A constant average loss rate overestimates fade that slows over time (e.g. calendar aging), so
+  projected replacements occur too early.
+
+Simulated years are not affected. When either limitation matters, simulate the full plant life.
+
 The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
 or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
 remaining plant life. Technology implementations can override it per call using
