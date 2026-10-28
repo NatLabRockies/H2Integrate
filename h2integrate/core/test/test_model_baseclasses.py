@@ -38,7 +38,7 @@ def test_resets_on_replacement():
         eol=0.8,
     )
 
-    projected_cf = 0.84 * 0.71 / 0.8
+    projected_cf = np.mean([0.92, 0.84]) * 0.71 / 0.8
     np.testing.assert_allclose(cf_values, [1.0, 0.92, 0.84, projected_cf, 1.0, 0.92])
     np.testing.assert_allclose(replacement_schedule, [0, 0, 0, 0, 1, 0])
 
@@ -298,7 +298,7 @@ def test_extrapolates_incomplete_trailing_cycle_then_tiles():
         eol=0.8,
     )
 
-    extrapolated_cf = 0.8 * 0.80 / 0.85
+    extrapolated_cf = np.mean([0.9, 0.8]) * 0.80 / 0.85
     np.testing.assert_allclose(
         cf_values,
         [1.0, 0.9, 0.8, extrapolated_cf, 1.0, 0.9, 0.8, extrapolated_cf],
@@ -307,9 +307,76 @@ def test_extrapolates_incomplete_trailing_cycle_then_tiles():
 
 
 @pytest.mark.unit
+def test_projected_soh_cycle_uses_trailing_year_mean_when_final_step_is_idle(subtests):
+    dt = 31_536_000 / 4
+    performance = [0.8, 0.8, 0.4, 0.0, 0.8, 0.8, 0.4, 0.0]
+    soh = [0.99, 0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.93]
+
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=6, dt=dt),
+        performance_timeseries=performance,
+        rated=1.0,
+        soh=soh,
+        eol=0.92,
+    )
+
+    with subtests.test("simulated years retain their observed mean capacity factor"):
+        np.testing.assert_allclose(capacity_factors[:2], [0.5, 0.5])
+    with subtests.test("projected years remain positive after an idle final timestep"):
+        assert performance[-1] == 0.0
+        assert np.all(capacity_factors[2:] > 0.0)
+    with subtests.test("completed degradation cycle repeats replacements"):
+        np.testing.assert_array_equal(replacement_schedule, [0, 0, 1, 0, 0, 1])
+
+
+@pytest.mark.unit
+def test_short_soh_cycle_uses_all_available_samples_for_projection(subtests):
+    dt = 31_536_000 / 8
+    performance = [0.8, 0.4, 0.8, 0.0]
+    soh = [0.99, 0.98, 0.97, 0.97]
+
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=performance,
+        rated=1.0,
+        soh=soh,
+        eol=0.96,
+    )
+
+    with subtests.test("projection uses the sub-year cycle despite an idle final sample"):
+        assert performance[-1] == 0.0
+        assert np.all(capacity_factors > 0.0)
+    with subtests.test("the completed short cycle repeats replacement events"):
+        np.testing.assert_array_equal(replacement_schedule, [1, 1, 1, 2])
+
+
+@pytest.mark.unit
+def test_projected_cf_ignores_idle_partial_year_at_cycle_end(subtests):
+    dt = 31_536_000 / 4
+    performance = [0.8, 0.8, 0.8, 0.8, 0.0]
+    soh = [0.99, 0.98, 0.97, 0.96, 0.95]
+
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=4, dt=dt),
+        performance_timeseries=performance,
+        rated=1.0,
+        soh=soh,
+        eol=0.935,
+    )
+
+    baseline_cf = np.mean(performance[-4:])
+    expected_year_two_cf = (0.0 + baseline_cf * (0.94 + 0.93) / 0.95 + 0.8) / 4
+    with subtests.test("projection uses the extrapolation-window mean, not the idle segment"):
+        np.testing.assert_allclose(capacity_factors[:2], [0.8, expected_year_two_cf])
+    with subtests.test("projected cycle repeats replacements"):
+        np.testing.assert_array_equal(replacement_schedule, [0, 1, 0, 1])
+
+
+@pytest.mark.unit
 def test_final_soh_cycle_vs_all_soh_cycles():
     performance_timeseries = [1.0, 0.95, 0.9, 0.85, 0.8]
     soh = [0.85, 0.80, 0.90, 0.85, 0.80]
+    projected_cf = np.mean([0.85, 0.8]) * 0.75 / 0.8
 
     final_cf, final_repl = _run(
         _DummyPerformanceModel(plant_life=8),
@@ -319,7 +386,7 @@ def test_final_soh_cycle_vs_all_soh_cycles():
         eol=0.8,
         soh_cycle_repetition="final_soh_cycle",
     )
-    np.testing.assert_allclose(final_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.9, 0.85])
+    np.testing.assert_allclose(final_cf, [1.0, 0.95, 0.9, 0.85, 0.8, projected_cf, 0.9, 0.85])
     np.testing.assert_allclose(final_repl, [0, 0, 1, 0, 0, 0, 1, 0])
 
     all_cf, all_repl = _run(
@@ -330,7 +397,7 @@ def test_final_soh_cycle_vs_all_soh_cycles():
         eol=0.8,
         soh_cycle_repetition="all_soh_cycles",
     )
-    np.testing.assert_allclose(all_cf, [1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 1.0, 0.95])
+    np.testing.assert_allclose(all_cf, [1.0, 0.95, 0.9, 0.85, 0.8, projected_cf, 1.0, 0.95])
     np.testing.assert_allclose(all_repl, [0, 0, 1, 0, 0, 0, 1, 0])
 
 
@@ -346,7 +413,7 @@ def test_detects_reset_via_upward_soh_jump():
         eol=0.8,
     )
 
-    extrapolated_cf = 0.8 * 0.74 / 0.82
+    extrapolated_cf = np.mean([0.85, 0.8]) * 0.74 / 0.82
     np.testing.assert_allclose(cf_values, [1.0, 0.95, 0.9, 0.85, 0.8, extrapolated_cf])
     np.testing.assert_allclose(replacement_schedule, [0, 0, 1, 0, 0, 0])
 
@@ -391,8 +458,8 @@ def test_invalid_soh_cycle_repetition_raises():
 @pytest.mark.parametrize(
     "mode,expected_cf,expected_schedule",
     [
-        ("all_soh_cycles", [0.8, 0.65125, 0.767083333333, 0.684166666667], [1, 1, 1, 1]),
-        ("final_soh_cycle", [0.8, 0.67625, 0.67625, 0.734166666667], [1, 1, 0, 1]),
+        ("all_soh_cycles", [0.8, 0.686640625, 0.778880208333, 0.707760416667], [1, 1, 1, 1]),
+        ("final_soh_cycle", [0.8, 0.711640625, 0.711640625, 0.757760416667], [1, 1, 0, 1]),
     ],
 )
 def test_subyear_cycles_project_cf_and_replacements_together(
@@ -431,8 +498,14 @@ def test_incomplete_and_observed_eol_cycles_project_future_replacements(subtests
         eol=0.8,
     )
     with subtests.test("observed EOL requires its own future timestep before replacement"):
-        np.testing.assert_allclose(incomplete_cf, np.full(3, 0.9))
-        np.testing.assert_allclose(observed_eol_cf, np.full(3, 0.85))
+        incomplete_projected_cf = np.mean([1.0, 0.9]) * 0.8 / 0.9
+        observed_eol_projected_cf = np.mean([1.0, 0.9, 0.8]) * 0.7 / 0.8
+        np.testing.assert_allclose(
+            incomplete_cf, np.full(3, (1.0 + 0.9 + incomplete_projected_cf) / 3)
+        )
+        np.testing.assert_allclose(
+            observed_eol_cf, np.full(3, (1.0 + 0.9 + 0.8 + observed_eol_projected_cf) / 4)
+        )
     with subtests.test("multiple replacements per year remain whole counts"):
         np.testing.assert_array_equal(incomplete_schedule, np.full(3, 3))
         np.testing.assert_array_equal(observed_eol_schedule, [2, 2, 3])
@@ -500,7 +573,7 @@ def test_partial_year_cycle_projects_future_replacements(subtests):
         eol=0.8,
     )
     with subtests.test("partial-year cycle fills the entire projected lifetime"):
-        projected_cf = 0.5 * 0.7 / 0.8
+        projected_cf = np.mean([1.0, 0.5]) * 0.7 / 0.8
         np.testing.assert_allclose(cf_values, np.full(3, (1.0 + 0.5 + projected_cf) / 3))
     with subtests.test("events at 0.75, 1.5, and 2.25 remain whole replacement counts"):
         np.testing.assert_array_equal(schedule, [1, 1, 1])
@@ -510,8 +583,8 @@ def test_partial_year_cycle_projects_future_replacements(subtests):
 @pytest.mark.parametrize(
     "mode,expected_cf,expected_schedule",
     [
-        ("all_soh_cycles", [0.8, 0.54375, 0.8, 0.54375], [1, 1, 2, 1]),
-        ("final_soh_cycle", [0.8, 0.54375, 0.491666666667, 0.491666666667], [1, 1, 2, 1]),
+        ("all_soh_cycles", [0.8, 0.553125, 0.8, 0.553125], [1, 1, 2, 1]),
+        ("final_soh_cycle", [0.8, 0.553125, 0.504166666667, 0.504166666667], [1, 1, 2, 1]),
     ],
 )
 def test_midyear_resets_preserve_trailing_cycle_phase(
@@ -682,7 +755,7 @@ def test_annual_means_weight_timesteps_crossing_fixed_year_boundaries(subtests):
         eol=0.8,
     )
     with subtests.test("projected 1.5-year cycles share the same projection clock"):
-        np.testing.assert_allclose(cf_values, [0.44, 0.604, 0.604])
+        np.testing.assert_allclose(cf_values, [0.44, 0.52, 0.52])
     with subtests.test("replacement at 1.5 is counted and retirement at 3.0 is excluded"):
         np.testing.assert_array_equal(schedule, [0, 1, 0])
 
