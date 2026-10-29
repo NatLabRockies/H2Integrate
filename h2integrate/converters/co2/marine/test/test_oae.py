@@ -300,8 +300,8 @@ def test_oae_cost_model_from_performance_outputs(prob, plant_config, driver_conf
 @pytest.mark.parametrize(
     "lcoe,capex,opex,carbon_credit",
     [
-        (0.0, 10367737.167808551, 1302278.7821029117, 217.66508529363426), # free energy scenario
-        (0.05, 59929737.167808555, 50864278.78210291, 5803.756528678582), # paid energy scenario
+        (0.0, 10367737.167808551, 1302278.7821029117, 217.66508529363426),  # free energy scenario
+        (0.05, 59929737.167808555, 50864278.78210291, 5803.756528678582),  # paid energy scenario
     ],
 )
 def test_oae_cost_and_financial_model_values(
