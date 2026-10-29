@@ -1,0 +1,3 @@
+,iron_transport.destination_latitude (deg),iron_transport.destination_longitude (deg),dri_site.latitude (deg),dri_site.longitude (deg),iron_transport.iron_transport_cost (USD/t)
+0,41.902367,-87.624086,41.902367,-87.624086,24.716794751129818
+1,42.883378,-78.8838,42.883378,-78.8838,28.441260439529152
