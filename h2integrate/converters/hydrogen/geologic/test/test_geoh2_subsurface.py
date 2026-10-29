@@ -91,7 +91,6 @@ def run_component(component_class, plant_config, tech_config, **values):
 
 
 @pytest.mark.unit
-@pytest.mark.regression
 def test_stimulated_geoh2_performance_outputs(subtests, stimulated_tech_config):
     prob = run_component(
         StimulatedGeoH2PerformanceModel, make_plant_config(), stimulated_tech_config

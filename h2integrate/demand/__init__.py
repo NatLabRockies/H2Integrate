@@ -1,2 +1,4 @@
-from h2integrate.demand.flexible_demand import FlexibleDemandComponent
-from h2integrate.demand.generic_demand import GenericDemandComponent
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(__name__, globals())

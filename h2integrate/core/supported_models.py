@@ -5,6 +5,7 @@ classes are found by scanning the package source as text, and each model's modul
 the first time that model is looked up.
 """
 
+import os
 import re
 import importlib
 from pathlib import Path
@@ -53,19 +54,35 @@ class _ModelRegistry(dict):
 supported_models = _ModelRegistry()
 no_cost_models = set()
 no_replacement_schedule_models = set()
+_model_exports = {}
 
-for path in _PACKAGE_DIR.rglob("*.py"):
-    text = path.read_text(encoding="utf-8")
-    if "@register" not in text or "test" in path.relative_to(_PACKAGE_DIR).parts:
-        continue
-    module = ".".join(path.relative_to(_PACKAGE_DIR.parent).with_suffix("").parts)
+
+def _find_model_sources():
+    """Yield ``(module_name, source_text)`` for every non-test module that uses ``@register``."""
+    for directory, subdirectories, filenames in os.walk(_PACKAGE_DIR):
+        subdirectories[:] = [d for d in subdirectories if d not in ("test", "__pycache__")]
+        for filename in filenames:
+            if not filename.endswith(".py"):
+                continue
+            path = Path(directory, filename)
+            source = path.read_bytes()
+            if b"@register" in source:
+                module = ".".join(path.relative_to(_PACKAGE_DIR.parent).with_suffix("").parts)
+                yield module, source.decode("utf-8")
+
+
+for module, text in _find_model_sources():
     for match in _DECORATED_CLASS.finditer(text):
         args = match["args"] or ""
         name_match = _NAME_ARG.search(args)
         name = name_match[1] if name_match else match["cls"]
         if name in supported_models:
             raise ValueError(f"Model name '{name}' is registered more than once.")
-        supported_models[name] = f"{module.removesuffix('.__init__')}:{match['cls']}"
+        target_module = module.removesuffix(".__init__")
+        supported_models[name] = f"{target_module}:{match['cls']}"
+        if not module.endswith(".__init__"):
+            package, _, _ = module.rpartition(".")
+            _model_exports.setdefault(package, {}).setdefault(match["cls"], []).append(module)
         if "no_cost=True" in args:
             no_cost_models.add(name)
         if "no_replacement_schedule=True" in args:
