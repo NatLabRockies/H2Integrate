@@ -23,6 +23,8 @@
   - Removed `11_hybrid_energy_plant`, which is covered by examples 01 and 33, and moved its demand metric checks into the demand component unit tests.
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
+- Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
+- Moved resource resampling into `resample_tools.py`, used `contains_leap_day()` for leap-day detection in `time_tools.py` (fixing a malformed leap-day error message), and made the leap-day-excluded calendar regeneration exact instead of using an upper bound. [PR 964](https://github.com/NatLabRockies/H2Integrate/pull/964)
 
 
 ## 0.10.0 [October 12, 2026]

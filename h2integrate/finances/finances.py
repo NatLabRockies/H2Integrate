@@ -2,6 +2,8 @@ import numpy as np
 import openmdao.api as om
 import numpy_financial as npf
 
+from h2integrate.core.annualization import extrapolate_annual_values, time_weighted_annual_means
+
 
 class AdjustedCapexOpexComp(om.ExplicitComponent):
     """
@@ -90,17 +92,27 @@ class AdjustedCapexOpexComp(om.ExplicitComponent):
 class AdjustedCapacityFactorComp(om.ExplicitComponent):
     """OpenMDAO component to compute an adjusted capacity factor for a given commodity.
 
-    This component takes in a timeseries of commodity production values and computes
-    the rated (mean) production and a capacity factor for each year of the plant's
-    lifetime. Currently, the capacity factor is set to 1.0 by default.
+    This component takes a timeseries of commodity production values and splits it into
+    365-day plant-year segments (the last may be partial). The rated production is the largest
+    segment mean, and each simulated year's capacity factor is its mean production divided by
+    the rated production. Capacity factors for plant years beyond the simulated horizon follow
+    ``annual_extrapolation_method``, which is only required when more than one simulated year
+    segment must be extended.
+
+    Options:
+        annual_extrapolation_method (str | None): ``"tile"``, ``"final_sim_value"``, or
+            ``"time_averaged_sim_value"``. Defaults to the plant-level
+            ``plant.simulation.annual_extrapolation_method``. An override should generally match
+            the simulation setting: the finance model divides variable costs by production, so
+            mixing methods between capacity factor and variable costs distorts unit costs.
 
     Inputs:
         {commodity}_produced (array): Timeseries of commodity production values
             with shape ``(n_timesteps,)``. Units are determined by connection.
 
     Outputs:
-        rated_{commodity}_production (float): Mean commodity production across all
-            timesteps. Units are copied from the input.
+        rated_{commodity}_production (float): Largest annual mean commodity production
+            across the simulated year segments. Units are copied from the input.
         capacity_factor (array): Capacity factor for each year of plant life,
             with shape ``(plant_life,)``. Unitless.
     """
@@ -108,11 +120,19 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
     def initialize(self):
         self.options.declare("plant_config", types=dict)
         self.options.declare("commodity_type", types=str)
+        self.options.declare("annual_extrapolation_method", default=None, allow_none=True)
 
     def setup(self):
         self.commodity = self.options["commodity_type"]
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # Integer dt matches the base classes and plant validation, so the horizon agrees.
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
+        self.annual_extrapolation_method = self.options["annual_extrapolation_method"]
+        if self.annual_extrapolation_method is None:
+            self.annual_extrapolation_method = self.options["plant_config"]["plant"][
+                "simulation"
+            ].get("annual_extrapolation_method")
 
         self.add_input(
             f"{self.commodity}_produced",
@@ -136,10 +156,22 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
-        # Take the average of the timeseries profile
-        outputs[f"rated_{self.commodity}_production"] = np.mean(
-            inputs[f"{self.commodity}_produced"]
+        production_timeseries = inputs[f"{self.commodity}_produced"]
+        annual_mean_production, annual_durations = time_weighted_annual_means(
+            production_timeseries, self.dt
         )
+        rated_production = float(np.max(annual_mean_production))
+        outputs[f"rated_{self.commodity}_production"] = rated_production
 
-        # Set capacity factor equal to one
-        outputs["capacity_factor"] = 1.0
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        if rated_production == 0.0:
+            annual_capacity_factors = np.ones(annual_mean_production.size)
+        else:
+            annual_capacity_factors = annual_mean_production / rated_production
+
+        outputs["capacity_factor"] = extrapolate_annual_values(
+            annual_capacity_factors,
+            plant_life,
+            self.annual_extrapolation_method,
+            simulated_durations_years=annual_durations,
+        )

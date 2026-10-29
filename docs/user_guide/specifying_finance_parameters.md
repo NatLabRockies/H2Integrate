@@ -49,6 +49,18 @@ Within this framework, there are two distinct layers, **finance groups** and **f
     - `use_commodity_stream_timeseries` (optional): A boolean that defaults to False. If True, then flags to use a timeseries profile for the finance calculation rather than the capacity factor and rated commodity production of the `commodity_stream` technology.
     - `commodity_stream_output`: The name of timeseries profile output variable from `commodity_stream` to use for the finance calculation(s). This parameter is required if `use_commodity_stream_timeseries` is True.
 
+  For this timeseries path, a subgroup may set `annual_extrapolation_method` to override the
+  plant-level setting. If omitted, the plant-level value is used. See
+  {ref}`Plant lifetime and simulation <plant-simulation-settings>` for the available methods and
+  when a method is required.
+
+  ```{note}
+  A subgroup `annual_extrapolation_method` should generally match
+  `plant.simulation.annual_extrapolation_method`. The finance model divides variable costs by
+  production, so a different method for the capacity factor than for variable operating costs
+  distorts the resulting unit costs.
+  ```
+
 ```{important}
 If no subgroups are defined, a **default subgroup** is created that contains *all technologies* and references the default finance model and commodity defined in `finance_groups`.
 ```
