@@ -1,7 +1,10 @@
 name: plant_config
-description: This plant is located in MN, USA...
+description: Iron ore + DRI + EAF plant configuration.
 sites:
-  site:
+  ore_site:  # Northshore (initial starting point, other sites are read from test_inputs.csv)
+    latitude: 47.29
+    longitude: -91.25
+  dri_site:  # Chicago
     latitude: 41.717
     longitude: -88.398
 technology_interconnections:
@@ -25,6 +28,11 @@ technology_interconnections:
   - [eaf_water_feedstock, steel_plant, water, pipe]
   - [eaf_natural_gas_feedstock, steel_plant, natural_gas, pipe]
   - [iron_plant, steel_plant, sponge_iron, sponge_iron_transport]
+site_to_tech_connections:
+  - [ore_site, iron_transport, [latitude, origin_latitude]]
+  - [ore_site, iron_transport, [longitude, origin_longitude]]
+  - [dri_site, iron_transport, [latitude, destination_latitude]]
+  - [dri_site, iron_transport, [longitude, destination_longitude]]
 plant:
   plant_life: 30
   simulation:
