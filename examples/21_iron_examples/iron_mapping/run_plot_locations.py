@@ -1,3 +1,5 @@
+"""Plot labeled mine, dock, and iron plant locations."""
+
 from pathlib import Path
 
 from h2integrate.postprocess.mapping import plot_geospatial_point_heat_map
