@@ -23,7 +23,7 @@ jobs:
           - ubuntu-latest
           # - windows-latest  # Temporarily disabled
         python-version:
-          - '3.11'
+          - '3.12'
           - '3.13'
         test-type:
           - unit
@@ -32,15 +32,15 @@ jobs:
         optional:
           - true
         include:
-          - python-version: '3.11'
+          - python-version: '3.12'
             optional: false
             os: ubuntu-latest
             test-type: unit
-          - python-version: '3.11'
+          - python-version: '3.12'
             optional: false
             os: ubuntu-latest
             test-type: regression
-          - python-version: '3.11'
+          - python-version: '3.12'
             optional: false
             os: ubuntu-latest
             test-type: integration

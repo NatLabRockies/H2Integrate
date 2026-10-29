@@ -26,6 +26,7 @@
 - Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 - Moved resource resampling into `resample_tools.py`, used `contains_leap_day()` for leap-day detection in `time_tools.py` (fixing a malformed leap-day error message), and made the leap-day-excluded calendar regeneration exact instead of using an upper bound. [PR 964](https://github.com/NatLabRockies/H2Integrate/pull/964)
 - Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR 936](https://github.com/NatLabRockies/H2Integrate/pull/936)
+- Add SimSES battery model including degradation and thermal modeling. [PR 937](https://github.com/NatLabRockies/H2Integrate/pull/937)
 
 
 ## 0.10.0 [October 12, 2026]
