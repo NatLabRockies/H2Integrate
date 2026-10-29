@@ -15,7 +15,7 @@ model reports zero flow and retains the configured initial SOC.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.storage.battery.pysam_battery.PySAMBatteryPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

@@ -26,6 +26,14 @@ Outputs include `electricity_out`, `rated_electricity_production`,
 With system-level control, the output profile is curtailed after production summaries are
 calculated, so summaries remain uncurtailed.
 
+### Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.wave_pysam.PySAMWavePerformanceConfig
+   :no-members:
+   :no-index:
+```
+
 (pysam-options-wave)=
 #### PySAM Options
 

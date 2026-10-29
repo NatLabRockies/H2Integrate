@@ -8,8 +8,10 @@ There are two datasets that use the [NSRDB Meteosat Prime Meridian PSM v4 API](h
 
 API and configuration references:
 
-- {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPIConfig`
-- {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPIConfig`
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPIConfig` |
 
 These datasets allow for resource data to be downloaded for **locations** within Africa and Europe.
 

@@ -16,9 +16,21 @@ kernelspec:
 
 ## Open-Loop Storage Controllers
 The open-loop storage controllers can be attached as the control strategy in the `tech_config` for various storage components (e.g., battery or hydrogen storage). There are three controller types for storage:
-1. [Simple Open-Loop Storage Controller](#pass-through-controller) — commands the difference between demand and incoming commodity.
+1. [Simple Open-Loop Storage Controller](#pass-through-controller) — sets a storage charge or discharge command from the difference between demand and incoming commodity.
 2. [Demand Open-Loop Storage Controller](#demand-open-loop-storage-controller) — uses simple logic to attempt to meet demand using the storage technology.
 3. [Peak Load Management Open-Loop Storage Controller](#peak-load-management-open-loop-storage-controller) — computes a peak-shaving dispatch schedule to reduce demand peaks, supporting one or two demand profiles with configurable event limits and time windows.
+
+### Shared Configuration
+
+These controllers inherit common commodity and storage parameters from
+{py:class}`~h2integrate.control.control_strategies.openloop_control_baseclass.OpenLoopControlBaseConfig`.
+The peak-load controller requires the storage sizing and efficiency parameters described there.
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.openloop_control_baseclass.OpenLoopControlBaseConfig
+   :no-members:
+   :no-index:
+```
 
 (pass-through-controller)=
 ### Simple Open-Loop Storage Controller
@@ -28,6 +40,12 @@ configured by
 sets `{commodity}_command_value` to `{commodity}_set_point` minus `{commodity}_in`. Negative
 commands charge storage and positive commands discharge it. When configured to use average input
 as demand, it substitutes the mean of `{commodity}_in` for the set-point.
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.storage.simple_openloop_controller.SimpleStorageOpenLoopControllerConfig
+   :no-members:
+   :no-index:
+```
 
 For examples of how to use the `SimpleStorageOpenLoopController` open-loop control framework, see the following:
 - `examples/01_onshore_steel_mn`
@@ -44,6 +62,12 @@ It takes `{commodity}_in`, `{commodity}_set_point`, and storage capacity and rat
 outputs `{commodity}_command_value`. Its state of charge is estimated in the controller and is not
 fed back from the storage performance model. Both the simple and demand controllers require
 one-hour time steps.
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.storage.demand_openloop_storage_controller.DemandOpenLoopStorageControllerConfig
+   :no-members:
+   :no-index:
+```
 
 An interactive example of an N2 diagram for a system using the open-loop control framework for hydrogen storage and dispatch is shown below.
 
@@ -104,10 +128,8 @@ The controller's configuration is:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageControllerConfig
-   :members:
+   :no-members:
    :no-index:
-   :inherited-members: OpenLoopControlBaseConfig, BaseConfig
-   :exclude-members: require_storage_parameters, demand_profile_upstream, dispatch_priority_demand_profile, n_override_events, override_events_period, peak_range, advance_discharge_period, delay_charge_period, allow_charge_in_peak_range, min_peak_proximity
 ```
 
 ```{note}
@@ -162,7 +184,7 @@ The controller's configuration is:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.control.control_strategies.converters.plm_openloop_converter_controller.PLMHeuristicOpenLoopConverterControllerConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

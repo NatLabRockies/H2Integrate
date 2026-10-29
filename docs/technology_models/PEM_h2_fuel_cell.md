@@ -27,16 +27,6 @@ The I-V curve is currently internally defined in the model and not adjustable.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellPerformanceConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.PEM_h2_fuel_cell.PEMH2FuelCellPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```

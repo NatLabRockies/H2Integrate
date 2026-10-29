@@ -17,7 +17,7 @@ The configuration reference is embedded below:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.storage.storage_performance_model.StoragePerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -44,7 +44,7 @@ restricted to the units listed in its configuration reference.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.storage.generic_storage_cost.GenericStorageCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

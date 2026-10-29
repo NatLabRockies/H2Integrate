@@ -31,7 +31,7 @@ as the common storage performance outputs. In average-demand mode a nonzero conf
 
 ```{eval-rst}
 .. autoclass:: h2integrate.storage.simple_storage_auto_sizing.StorageSizingModelConfig
-    :members:
+    :no-members:
     :no-index:
 ```
 
@@ -104,6 +104,6 @@ The available storage cost models are:
 
     ```{eval-rst}
     .. autoclass:: h2integrate.storage.battery.atb_battery_cost.ATBBatteryCostConfig
-        :members:
+        :no-members:
         :no-index:
     ```

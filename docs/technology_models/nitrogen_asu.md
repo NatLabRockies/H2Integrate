@@ -27,10 +27,10 @@ and reports `CapEx` and `OpEx`.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.nitrogen.simple_ASU.SimpleASUPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.nitrogen.simple_ASU.SimpleASUCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```

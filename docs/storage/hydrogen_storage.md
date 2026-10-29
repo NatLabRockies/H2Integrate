@@ -35,6 +35,21 @@ estimate costs for a toluene/methylcyclohexane system in 2024 dollars. Its input
 `max_charge_rate`, `max_discharge_rate`, `max_capacity`, and the `hydrogen_soc` time series;
 it reports `CapEx`, `OpEx`, and `VarOpEx`. It supports one-hour time steps.
 
+## Configuration
+
+The first configuration is shared by the four bulk storage cost models; the second configures
+the TOL/MCH model.
+
+```{eval-rst}
+.. autoclass:: h2integrate.storage.hydrogen.h2_storage_cost.HydrogenStorageBaseCostModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.storage.hydrogen.mch_storage.MCHTOLStorageCostModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## Cost Correlations - Options 1-3
 
 For the first three options (underground pipe, lined rock caverns, and salt caverns), cost correlations from [Papadias and Ahluwalia](https://doi.org/10.1016/j.ijhydene.2021.08.028) are used for capital cost calculation.

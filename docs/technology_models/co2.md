@@ -39,11 +39,11 @@ The performance and cost configurations are:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.co2.marine.direct_ocean_capture.DOCPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.co2.marine.direct_ocean_capture.DOCCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -104,15 +104,15 @@ The performance, cost, and cost-and-financial configurations are:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAEPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.co2.marine.ocean_alkalinity_enhancement.OAECostAndFinancialModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

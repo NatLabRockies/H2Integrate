@@ -21,6 +21,24 @@ factor. Both hydro models support one-hour time steps. With system-level control
 output is curtailed after production summaries are calculated, so those summaries reflect
 uncurtailed production.
 
+## Configuration
+
+The model and resource configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.resource.river.RiverResourceConfig
+   :no-members:
+   :no-index:
+```
+
 ```{note}
 This process is quite manual and not as automated as obtaining other resource information.
 This is because river information is available at discrete station locations along waterways and each station has different sensor information reported.

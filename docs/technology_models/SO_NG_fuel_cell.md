@@ -23,16 +23,6 @@ The I-V curve is currently internally defined in the model and not adjustable.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellPerformanceConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.natural_gas.SO_NG_fuel_cell.SONGFuelCellPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```

@@ -23,6 +23,24 @@ and feedstock availability, and report consumption and production summaries. The
 checks `rated_steel_production` against `rated_steel_capacity`, then uses rated capacity to
 calculate both capital and labor costs. All three components require one-hour time steps.
 
+## Configuration
+
+The scrap-only, DRI, and shared cost models use the following configurations:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.steel.cmu_electric_arc_furnace_scrap.CMUElectricArcFurnaceScrapOnlyPerformanceComponentConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.steel.cmu_electric_arc_furnace_dri.CMUElectricArcFurnaceDRIPerformanceComponentConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.steel.cmu_eaf_cost.CMUElectricArcFurnaceCostConfig
+   :no-members:
+   :no-index:
+```
+
 ```{note}
 These models are distinct from the existing LBNL-based EAF models (`NaturalGasEAFPlantPerformanceComponent`, `HydrogenEAFPlantPerformanceComponent`).
 The CMU models offer a more detailed energy and mass balance with explicit slag chemistry and are calibrated to the decarbSTEEL v5 dataset.

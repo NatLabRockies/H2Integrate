@@ -39,3 +39,17 @@ configuration permits zero electricity intensity, the calculation divides by thi
 The cost model receives annual hydrogen production, the equivalent rated electrical capacity, and
 the total energy conversion ratio. It reports `CapEx`, fixed annual `OpEx`, and annual `VarOpEx`;
 the variable cost scales with hydrogen production converted to an energy-equivalent basis.
+
+## Configuration
+
+The performance and cost configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerPerformanceConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.hydrogen.steam_methane_reformer.SteamMethaneReformerCostModelConfig
+   :no-members:
+   :no-index:
+```

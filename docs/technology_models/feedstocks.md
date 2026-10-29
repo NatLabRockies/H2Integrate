@@ -74,11 +74,11 @@ The performance and cost configurations must use the same commodity and rate uni
 
 ```{eval-rst}
 .. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -133,7 +133,7 @@ configuration. If the API key is stored in a file, define it on its own line as
 
 ```{eval-rst}
 .. autoclass:: h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

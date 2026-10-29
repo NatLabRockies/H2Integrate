@@ -44,10 +44,10 @@ The inherited `capacity_factor`, `rated_water_production`, `total_water_produced
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```

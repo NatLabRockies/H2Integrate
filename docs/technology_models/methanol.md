@@ -45,26 +45,26 @@ Configuration API references:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.methanol.smr_methanol_plant.SMRMethanolPlantPerformanceModelConfig
-    :members:
+    :no-members:
     :no-index:
 
 .. autoclass:: h2integrate.converters.methanol.smr_methanol_plant.SMRMethanolPlantCostModelConfig
-    :members:
+    :no-members:
     :no-index:
 
 .. autoclass:: h2integrate.converters.methanol.smr_methanol_plant.SMRMethanolPlantFinanceModelConfig
-    :members:
+    :no-members:
     :no-index:
 
 .. autoclass:: h2integrate.converters.methanol.co2h_methanol_plant.CO2HMethanolPlantPerformanceModelConfig
-    :members:
+    :no-members:
     :no-index:
 
 .. autoclass:: h2integrate.converters.methanol.co2h_methanol_plant.CO2HMethanolPlantCostModelConfig
-    :members:
+    :no-members:
     :no-index:
 
 .. autoclass:: h2integrate.converters.methanol.co2h_methanol_plant.CO2HMethanolPlantFinanceModelConfig
-    :members:
+    :no-members:
     :no-index:
 ```

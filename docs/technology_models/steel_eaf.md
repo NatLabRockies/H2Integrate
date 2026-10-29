@@ -24,6 +24,18 @@ The performance components take `steel_command_value`, `system_capacity`, and th
 profiles above, and report `steel_out`, consumption, and production summaries. The cost components
 report `CapEx`, fixed `OpEx`, and `VarOpEx`. All require one-hour time steps.
 
+The natural-gas and hydrogen EAF routes share these configurations:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnacePerformanceBaseConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnaceCostBaseConfig
+   :no-members:
+   :no-index:
+```
+
 ## Simple steel plant
 
 The separate {py:class}`~h2integrate.converters.steel.steel.SteelPerformanceModel` represents
@@ -42,11 +54,11 @@ simple models' configuration APIs.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.steel.steel.SteelPerformanceModelConfig
-  :members:
+  :no-members:
   :no-index:
 
 .. autoclass:: h2integrate.converters.steel.steel.SteelCostAndFinancialModelConfig
-  :members:
+  :no-members:
   :no-index:
 ```
 

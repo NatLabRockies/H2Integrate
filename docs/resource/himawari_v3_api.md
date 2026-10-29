@@ -9,9 +9,11 @@ There are three datasets that use the [NSRDB Himawari PSM v3 API](https://develo
 
 API and configuration references:
 
-- {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPIConfig`
-- {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPIConfig`
-- {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI` and {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPIConfig`
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPIConfig` |
 
 These datasets allow for resource data to be downloaded for **locations** within Asia, Australia, and the Pacific.
 

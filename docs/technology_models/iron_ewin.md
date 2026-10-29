@@ -44,9 +44,21 @@ For API details, see:
 - {py:class}`~h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponentConfig`
 - {py:class}`~h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponent`
 
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_ewin_perf.HumbertEwinPerformanceComponentConfig
+   :no-members:
+   :no-index:
+```
+
 ## Cost Model
 
 For API details, see:
 
 - {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponentConfig`
 - {py:class}`~h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponent`
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.humbert_stinn_ewin_cost.HumbertStinnEwinCostComponentConfig
+   :no-members:
+   :no-index:
+```

@@ -37,7 +37,7 @@ performance configuration below. By default, no dynamic constraints are imposed.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_performance.AmmoniaSynLoopPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

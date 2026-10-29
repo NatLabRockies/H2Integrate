@@ -25,6 +25,16 @@ See {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerform
 and {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModel` and
 {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModelConfig`.
 
+```{eval-rst}
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModelConfig
+   :no-members:
+   :no-index:
+```
+
 (references)=
 ### References
 - Quinn, J. et al., 2023. Small modular reactor light water reactor techno-economic analysis. Applied Energy 120669. https://doi.org/10.1016/j.apenergy.2023.120669
@@ -94,6 +104,16 @@ Its cost model declares `rated_capacity` in MW and unit costs in USD/MW, USD/(MW
 USD/(MW h), but declares `electricity_out` in kW. The cost calculation currently multiplies the
 kW profile directly by the per-MWh variable cost before annualizing it; account for this unit
 inconsistency when interpreting `VarOpEx`. Both components require one-hour time steps.
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 ## Integrated nuclear and HTSE example
 

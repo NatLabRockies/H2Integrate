@@ -187,15 +187,15 @@ All three components support time steps from 1 second to $10^9$ seconds.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.transporters.generic_combiner.GenericCombinerPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.transporters.generic_splitter.GenericSplitterPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.transporters.gas_stream_combiner.GasStreamCombinerPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

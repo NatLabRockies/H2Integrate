@@ -10,6 +10,14 @@ the optional Ard package and one-hour time steps. It reports an `electricity_out
 production summaries, `CapEx`, and `OpEx`. Curtailment is applied to `electricity_out` after
 the production summaries are calculated.
 
+## Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.wind.wind_plant_ard.ArdWindPlantModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## Required input files and information unique to using Ard in H2Integrate
 
 ### WindIO input file

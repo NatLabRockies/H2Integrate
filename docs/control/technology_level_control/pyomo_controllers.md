@@ -80,6 +80,15 @@ model executes the callable and reports storage and commodity results. The heuri
 components expose Pyomo block-rule functions; the optimized load-following rules are constructed
 internally and do not have separate YAML configuration classes.
 
+The storage controllers inherit common parameters from
+{py:class}`~h2integrate.control.control_strategies.pyomo_storage_controller_baseclass.PyomoStorageControllerBaseConfig`:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.pyomo_storage_controller_baseclass.PyomoStorageControllerBaseConfig
+   :no-members:
+   :no-index:
+```
+
 (heuristic-load-following-controller)=
 ## Heuristic Load Following Controller
 
@@ -178,7 +187,7 @@ The controller's configuration is:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.control.control_strategies.storage.plm_optimized_storage_controller.PeakLoadManagementOptimizedStorageControllerConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

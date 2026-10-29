@@ -29,7 +29,7 @@ factor, and grid connection costs. The model accepts these costs through:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -60,7 +60,7 @@ the cost categories are the same as for utility PV. Configure the model using:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

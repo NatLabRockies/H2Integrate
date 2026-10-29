@@ -20,6 +20,20 @@ route-specific `*_in` feedstocks. It reports `sponge_iron_out`, feedstock consum
 production summaries. The cost model uses the plant capacity and cost coefficients to report
 `CapEx`, fixed `OpEx`, and `VarOpEx`. Both components require one-hour time steps.
 
+## Configuration
+
+The natural-gas and hydrogen routes share the following performance and cost configurations:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.iron_dri_baseclass.IronReductionPerformanceBaseConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.iron.iron_dri_baseclass.IronReductionCostBaseConfig
+   :no-members:
+   :no-index:
+```
+
 ```{note}
 The DRI model outputs sponge iron, which is low in carbon content. The LBNL model calls the outputs pig iron, but that's typically produced using a blast furnace rather than through the DRI process and has higher carbon impurities.
 ```

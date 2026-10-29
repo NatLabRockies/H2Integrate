@@ -51,7 +51,7 @@ for a worked example that exports a turbine, updates the `tech_config`, and runs
    :no-index:
 
 .. autoclass:: h2integrate.preprocess.wind_turbine_file_tools.FlorisTurbineDefaults
-   :members:
+   :no-members:
    :no-index:
 
 .. autofunction:: h2integrate.preprocess.wind_turbine_file_tools.export_turbine_to_pysam_format
@@ -60,6 +60,6 @@ for a worked example that exports a turbine, updates the `tech_config`, and runs
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.floris.FlorisWindPlantPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```

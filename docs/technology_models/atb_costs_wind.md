@@ -27,7 +27,7 @@ Configure the model using:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

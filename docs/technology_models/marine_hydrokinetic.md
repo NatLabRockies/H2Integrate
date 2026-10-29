@@ -36,6 +36,12 @@ The OpenMDAO inputs `device_rating` and `num_devices` default to their configura
 The outputs are `CapEx` and `OpEx`; the cost year is restricted to 2022 and the model supports
 one-hour time steps.
 
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.pysam_marine_cost.PySAMMarineCostConfig
+   :no-members:
+   :no-index:
+```
+
 The model supports several reference technologies from the DOE Reference Model Project. Each reference model corresponds to cost relationships embedded in the PySAM cost library.
 
 | Reference Model | Technology               |

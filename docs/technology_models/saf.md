@@ -65,6 +65,20 @@ The {py:class}`~h2integrate.converters.saf.saf.SAFCostModel` uses
 drives `CapEx`, `OpEx`, and `VarOpEx`. Variable costs scale with nameplate capacity rather than
 the actual SAF output, so they do not decrease when lignin availability limits production.
 
+## Configuration
+
+The performance and cost configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.saf.saf.SAFPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.saf.saf.SAFCostModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## Connection to a Paper Mill
 
 The SAF model can receive lignin produced by a paper mill through the following

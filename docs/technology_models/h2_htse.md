@@ -104,11 +104,11 @@ For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documen
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

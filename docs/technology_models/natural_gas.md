@@ -27,6 +27,18 @@ It accepts `rated_electricity_production`, `electricity_out`, `capex_per_kw`,
 simulation; the variable term is not annualized for a partial-year simulation. Fuel costs are
 handled separately by a feedstock model. The cost model supports one-hour time steps.
 
+### Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasPerformanceConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.natural_gas.natural_gas_cc_ct.NaturalGasCostModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## Simple-cycle turbine
 
 The {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel`
@@ -45,3 +57,11 @@ temperature in degrees Celsius and pressure in hPa. The model reports `electrici
 and inherited production metrics. It supports 5-minute to one-hour time steps. Optional
 reliability modeling samples availability independently for each turbine; see the
 [reliability guide](../reliability/reliability_guide.md).
+
+### Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceConfig
+   :no-members:
+   :no-index:
+```

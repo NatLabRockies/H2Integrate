@@ -42,7 +42,7 @@ The configuration reference is generated from the class used by the model:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

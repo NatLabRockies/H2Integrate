@@ -68,6 +68,20 @@ The {py:class}`~h2integrate.converters.paper_mill.paper_mill.PaperMillCostModel`
 `plant_capacity_mtpy` input drives `CapEx`, `OpEx`, and `VarOpEx`. Variable costs scale with
 nameplate capacity, not the actual paper output or capacity factor.
 
+## Configuration
+
+The performance and cost configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.paper_mill.paper_mill.PaperMillPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.paper_mill.paper_mill.PaperMillCostModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## Lignin Output
 
 The paper mill exposes lignin as an hourly commodity stream named `lignin_out`, with

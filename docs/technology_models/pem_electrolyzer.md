@@ -49,19 +49,19 @@ API references:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.pem_electrolyzer.ECOElectrolyzerPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.hydrogen.basic_cost_model.BasicElectrolyzerCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.hydrogen.singlitico_cost_model.SingliticoCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.hydrogen.custom_electrolyzer_cost_model.CustomElectrolyzerCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

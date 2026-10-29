@@ -55,15 +55,15 @@ Both cost models receive source and destination latitude and longitude and repor
 
 ```{eval-rst}
 .. autoclass:: h2integrate.transporters.generic_transporter.GenericTransporterPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.transporters.linear_transport_cost.LinearTransportCostConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.transporters.linear_mass_transport_cost.LinearMassTransportCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

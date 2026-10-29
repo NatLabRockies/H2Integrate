@@ -11,8 +11,16 @@ from h2integrate.core.supported_models import register
 class MCHTOLStorageCostModelConfig(BaseConfig):
     """Config class for MCHTOLStorageCostModel
 
-    Fields include `max_capacity`, `max_charge_rate`, `max_discharge_rate`,
-    `charge_equals_discharge`, `commodity_name`, `commodity_units`, and `cost_year`.
+    Attributes:
+        max_capacity (float): Maximum storage capacity, in commodity units times hours.
+        max_charge_rate (float): Maximum charging rate, in ``commodity_units``.
+        max_discharge_rate (float, optional): Maximum discharging rate, in ``commodity_units``.
+            When ``charge_equals_discharge`` is true, this must be omitted or equal the charge rate.
+        charge_equals_discharge (bool): Use the charge rate as the discharge rate when true.
+        commodity_name (str): Stored commodity name.
+        commodity_units (str): Commodity rate units: ``kg/h``, ``g/h``, or ``t/h``.
+        cost_year (int): Cost dollar year; currently only 2024 is supported.
+        marginal_cost (float): Marginal cost parameter.
 
     See :class:`MCHTOLStorageCostModel` and :doc:`/storage/hydrogen_storage`.
     """

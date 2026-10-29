@@ -9,7 +9,7 @@ The model's configuration is:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.generic_converter_cost.GenericConverterCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

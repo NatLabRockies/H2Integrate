@@ -19,7 +19,7 @@ The finance group uses the following configuration:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.finances.numpy_financial_npv.NumpyFinancialNPVConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

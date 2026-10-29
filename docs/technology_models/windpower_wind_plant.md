@@ -58,7 +58,7 @@ The configuration reference is generated from the class used by the model:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -71,7 +71,7 @@ The `layout` dictionary selects `layout_mode: basicgrid` and provides `layout_op
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.layout.simple_grid_layout.BasicGridLayoutConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -81,7 +81,7 @@ The `powercurve_calc_config` section uses:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.wind.wind_pysam.PySAMPowerCurveCalculationInputs
-   :members:
+   :no-members:
    :no-index:
 ```
 

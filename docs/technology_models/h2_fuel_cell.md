@@ -22,17 +22,7 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.LinearH2FuelCellPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```
 
@@ -40,15 +30,6 @@ To ensure the hydrogen fuel cell is appropriately connected with other electrici
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellCostConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.hydrogen.h2_fuel_cell.H2FuelCellCostModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:

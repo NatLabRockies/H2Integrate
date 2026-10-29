@@ -48,11 +48,11 @@ port-to-destination land leg.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

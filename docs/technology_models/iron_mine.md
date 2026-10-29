@@ -16,6 +16,28 @@ The NRRI APIs are
 {py:class}`~h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponentConfig`.
 All four support one-hour time steps.
 
+## Configuration
+
+The simple and NRRI mine models use the following performance and cost configurations:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.iron.simple_mine_perf_model.SimpleIronMinePerformanceComponentConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.iron.simple_mine_cost_model.SimpleIronMineCostComponentConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.iron.nrri_iron_mine.NRRIIronMinePerformanceComponentConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.iron.nrri_iron_mine.NRRIIronMineCostComponentConfig
+   :no-members:
+   :no-index:
+```
+
 ## SimpleIronMine
 The main input feedstock is `crude_ore`, i.e. the unprocessed ore in the earth containing iron oxide.
 The output commodity is `iron_ore` in the form of pellets that can be shipped to other plants (e.g. `iron_plant`) for further processing.

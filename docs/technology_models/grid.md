@@ -91,17 +91,7 @@ cost_parameters:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.grid.grid.GridPerformanceModelConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.grid.grid.GridPerformanceModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```
 
@@ -109,16 +99,6 @@ cost_parameters:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.grid.grid.GridCostModelConfig
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-```
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.grid.grid.GridCostModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :no-members:
    :no-index:
 ```

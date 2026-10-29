@@ -40,11 +40,11 @@ Both models use one-hour time steps and are demonstrated in
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.ammonia.simple_ammonia_model.SimpleAmmoniaPerformanceModelConfig
-  :members:
+  :no-members:
   :no-index:
 
 .. autoclass:: h2integrate.converters.ammonia.simple_ammonia_model.SimpleAmmoniaCostModelConfig
-  :members:
+  :no-members:
   :no-index:
 ```
 
@@ -72,11 +72,11 @@ OpenMDAO inputs are `rated_ammonia_production` and `annual_ammonia_produced`; it
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_performance.AmmoniaSynLoopPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_cost.AmmoniaSynLoopCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

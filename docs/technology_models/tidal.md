@@ -19,6 +19,14 @@ The inputs are `tidal_velocity`, `num_devices`, and `device_rating`. The model r
 and `capacity_factor`, and supports one-hour time steps. With system-level control, the output
 profile is curtailed after production summaries are calculated, so summaries remain uncurtailed.
 
+### Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.tidal_pysam.PySAMTidalPerformanceConfig
+   :no-members:
+   :no-index:
+```
+
 ### Model Overview
 
 The model represents an array of tidal energy devices operating in a tidal current resource. Electricity production is calculated by mapping the instantaneous tidal velocity to the device power curve, scaling by the number of devices, and integrating over time.

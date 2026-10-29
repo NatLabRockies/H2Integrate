@@ -51,7 +51,7 @@ Define demand in `tech_config` using the following configuration:
 
 ```{eval-rst}
 .. autoclass:: h2integrate.demand.demand_baseclass.DemandComponentBaseConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 
@@ -104,7 +104,7 @@ Flexible demand extends the [generic demand configuration](#generic-demand-compo
 
 ```{eval-rst}
 .. autoclass:: h2integrate.demand.flexible_demand.FlexibleDemandComponentConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

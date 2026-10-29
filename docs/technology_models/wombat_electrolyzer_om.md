@@ -6,6 +6,14 @@ See {py:class}`~h2integrate.converters.hydrogen.wombat_model.WOMBATElectrolyzerM
 {py:class}`~h2integrate.converters.hydrogen.wombat_model.WOMBATElectrolyzerModelConfig`, which
 extends the [PEM electrolyzer configuration](pem_electrolyzer.md).
 
+## Configuration
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.hydrogen.wombat_model.WOMBATElectrolyzerModelConfig
+   :no-members:
+   :no-index:
+```
+
 ## What is WOMBAT?
 
 WOMBAT is a discrete-event simulation tool designed to model the full lifecycle of O&M activities for energy systems. It tracks maintenance events, failures, repairs, and resource constraints, providing a realistic estimate of downtime, lost production, and O&M costs. By simulating both scheduled and unscheduled maintenance, WOMBAT captures the complexity of real-world operations, including compounding failures and limited servicing capacity.
