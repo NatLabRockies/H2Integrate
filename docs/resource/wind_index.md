@@ -5,6 +5,21 @@
     - "WTKNLRDeveloperAPIWindResource"
     - "HRRRMETToolkitWindAPI"
 - [**"OpenMeteoHistoricalWindResource"**](wind_resource:openmeteo_archive)
+- `WTKHRRRMETDatasetH5` reads the HRRR MET HDF5 dataset through HPC or HSDS access.
+
+## Model and configuration APIs
+
+The models use configured location, resource year, time, and file or dataset settings to produce
+the `wind_resource_data` dictionary. The available years, heights, and variables depend on the
+dataset.
+
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource` | {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResourceConfig` |
+| {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI` | {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPIConfig` |
+| {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource` | {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResourceConfig` |
+| {py:class}`~h2integrate.resource.wind.nlr_hrrr_met_toolkit_dataset_model.WTKHRRRMETDatasetH5` | {py:class}`~h2integrate.resource.wind.nlr_hrrr_met_toolkit_dataset_model.WTKHRRRMETDatasetH5Config` |
+
 
 Some API resource models support multi-year simulations when the requested resource data covers
 the configured time range. See the [Resource Model Index](resource_index.md) for details on

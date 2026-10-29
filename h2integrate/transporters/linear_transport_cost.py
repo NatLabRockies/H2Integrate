@@ -14,7 +14,9 @@ class LinearTransportCostConfig(CostModelBaseConfig):
         capex_per_km (float): Capital cost in USD/km.
         fixed_opex_per_km (float): Annual operating cost in USD/km/year
         circuity_ratio (float): Ratio of actual travel distance to straight-line distance.
-        Default is 1.0.
+            Default is 1.0.
+
+    See :class:`LinearDistanceCostModel` and :doc:`/technology_models/transport`.
     """
 
     capex_per_km: float = field(validator=validators.ge(0))
@@ -25,10 +27,10 @@ class LinearTransportCostConfig(CostModelBaseConfig):
 @register
 class LinearDistanceCostModel(CostModelBaseClass):
     """
-    Combine any commodity or resource from multiple sources into one output without losses.
+    Estimate capital and fixed operating costs from geodesic transport distance.
 
-    This component is purposefully simple; a more realistic case might include
-    losses or other considerations from system components.
+    See :class:`LinearTransportCostConfig` and :doc:`/technology_models/transport` for
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (1, 1e9)

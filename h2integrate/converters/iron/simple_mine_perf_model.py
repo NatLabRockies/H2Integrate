@@ -47,6 +47,8 @@ class SimpleIronMinePerformanceComponentConfig(BaseConfig):
             based on the mine name.
         longitude (float): longitude of the mine location. If not provided, it will be set
             based on the mine name.
+
+    See :class:`SimpleIronMinePerformanceComponent` and :doc:`/technology_models/iron_mine`.
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
@@ -85,6 +87,11 @@ class SimpleIronMinePerformanceComponentConfig(BaseConfig):
 
 @register
 class SimpleIronMinePerformanceComponent(PerformanceModelBaseClass):
+    """Model pellet production from crude ore and electricity supply.
+
+    See :class:`SimpleIronMinePerformanceComponentConfig` and :doc:`/technology_models/iron_mine`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

@@ -20,6 +20,9 @@ if TYPE_CHECKING:  # to avoid circular imports
 class HeuristicLoadFollowingStorageControllerConfig(PyomoStorageControllerBaseConfig):
     """Configuration class for the HeuristicLoadFollowingStorageController.
 
+    See :class:`HeuristicLoadFollowingStorageController` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+
     Attributes:
         charge_efficiency (float | None, optional): Efficiency of charging the storage, represented
             as a decimal between 0 and 1 (e.g., 0.9 for 90% efficiency). Must be `None` if
@@ -74,6 +77,9 @@ class HeuristicLoadFollowingStorageController(PyomoStorageControllerBaseClass):
 
     Currently, enforces available generation and system interface limit assuming no
     storage charging from external sources.
+
+    See :class:`HeuristicLoadFollowingStorageControllerConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
 
     """
 

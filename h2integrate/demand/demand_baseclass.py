@@ -14,13 +14,16 @@ class DemandComponentBaseConfig(BaseConfig):
 
     Attributes:
         commodity (str): Name of the commodity being demanded
-            (e.g., "hydrogen"). Converted to lowercase and stripped of whitespace.
+            (e.g., "hydrogen"). Leading and trailing whitespace is stripped.
         commodity_rate_units (str): Units of the commodity (e.g., "kg/h").
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
+
+    See :class:`~h2integrate.demand.generic_demand.GenericDemandComponent` and
+    :doc:`/demand/demand_components`.
     """
 
     commodity: str = field(converter=str.strip)

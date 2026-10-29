@@ -1,37 +1,41 @@
 # Diesel Generator Model
 
-The diesel generator model simulates electricity generation from diesel combustion. The model calculates electricity output based on diesel input and plant heat rate, along with comprehensive cost modeling that includes capital expenses, operating expenses, and fuel costs.
+The {py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorPerformanceModel`
+converts diesel fuel to electricity, bounded by the generator rating and requested output. The
+{py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorCostModel` calculates
+capital and operating costs. Both models support one-hour time steps.
 
-To use this model, specify `"DieselGeneratorPerformanceModel"` as the performance model and `"DieselGeneratorCostModel"` as the cost model.
+## Performance
 
-## Performance Parameters
+{py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorPerformanceConfig`
+provides the defaults for the capacity and heat-rate OpenMDAO inputs. The other inputs are
+`diesel_in` (US gallons/hour) and
+`electricity_command_value` (kW), which defaults to the configured capacity. The model caps the
+requested electricity and available fuel at the generator rating, then converts the smaller
+available fuel amount to electricity using the heat rate.
 
-The performance model requires the following parameters:
+The primary outputs are `electricity_out` and `unmet_electricity_demand` (kW), and
+`diesel_consumed` (US gallons/hour). Inherited outputs include rated, total and annual electricity
+production, capacity factor, operational life, and replacement schedule.
 
-- `system_capacity_kw` (required): Rated capacity of the natural gas plant in kW.
-- `heat_rate_gal_per_mwh` (required): Heat rate of the diesel generator in gallons/MWh. This represents the amount of fuel energy required to produce one MWh of electricity. Lower values indicate higher efficiency.
+```{eval-rst}
+.. autoclass:: h2integrate.converters.diesel.diesel_generator.DieselGeneratorPerformanceConfig
+   :no-members:
+   :no-index:
+```
 
-Optional parameter:
-- `electricity_set_point` (optional): Defaults to the `system_capacity` but can be set to a particular set point profile.
+## Cost
 
-The model implements the relationship:
+{py:class}`~h2integrate.converters.diesel.diesel_generator.DieselGeneratorCostModelConfig`
+provides capacity and per-unit costs as defaults for OpenMDAO inputs, alongside the performance
+model's `electricity_out` profile.
+The cost model reports `CapEx` as generator capacity times `capex_per_kw`, plus the configured
+`capex_battery_total`. It reports `OpEx` as fixed O&M plus variable O&M on electricity generated
+during the simulation; it does not annualize that variable term for partial-year simulations.
+Fuel costs are supplied separately by a diesel feedstock component.
 
-$$
-\text{Electricity Output (MW)} = \frac{\text{Diesel Input (gals/h)}}{\text{Heat Rate (gals/MWh)}}
-$$
-
-The `electricity_out` is limited by the system capacity and the available diesel fuel feedstock.
-
-## Cost Parameters
-
-The cost model calculates capital and operating costs based on the following parameters:
-
-- `capex` (required): Capital cost per unit capacity in $/kW. This includes all equipment, installation, and construction costs.
-
-- `fopex` (required): Fixed operating expenses per unit capacity in \$/kW/year. This includes fixed O&M costs that don't vary with generation.
-
-- `vopex` (required): Variable operating expenses per unit generation in \$/MWh. This includes variable O&M costs that scale with electricity generation.
-
-- `heat_rate` (required): Heat rate in gallons/MWh, used for fuel cost calculations.
-
-- `cost_year` (required): Dollar year corresponding to input costs.
+```{eval-rst}
+.. autoclass:: h2integrate.converters.diesel.diesel_generator.DieselGeneratorCostModelConfig
+   :no-members:
+   :no-index:
+```

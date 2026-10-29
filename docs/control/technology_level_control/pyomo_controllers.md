@@ -62,6 +62,33 @@ display(
 
 The Pyomo control framework currently supports both a simple heuristic method and an optimized dispatch method for load following control.
 
+## Controller and rule APIs
+
+| Controller or rule | Configuration |
+|---|---|
+| {py:class}`~h2integrate.control.control_strategies.storage.heuristic_pyomo_controller.HeuristicLoadFollowingStorageController` | {py:class}`~h2integrate.control.control_strategies.storage.heuristic_pyomo_controller.HeuristicLoadFollowingStorageControllerConfig` |
+| {py:class}`~h2integrate.control.control_strategies.storage.optimized_pyomo_controller.OptimizedDispatchStorageController` | {py:class}`~h2integrate.control.control_strategies.storage.optimized_pyomo_controller.OptimizedDispatchStorageControllerConfig` |
+| {py:class}`~h2integrate.control.control_strategies.storage.plm_optimized_storage_controller.PeakLoadManagementOptimizedStorageController` | {py:class}`~h2integrate.control.control_strategies.storage.plm_optimized_storage_controller.PeakLoadManagementOptimizedStorageControllerConfig` |
+| {py:class}`~h2integrate.control.control_rules.converters.generic_converter.PyomoDispatchGenericConverter` | {py:class}`~h2integrate.control.control_rules.converters.generic_converter.PyomoDispatchGenericConverterConfig` |
+| {py:class}`~h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass.PyomoRuleStorageBaseclass` | {py:class}`~h2integrate.control.control_rules.storage.pyomo_storage_rule_baseclass.PyomoRuleStorageBaseclassConfig` |
+| {py:class}`~h2integrate.control.control_rules.converters.generic_converter_min_operating_cost.PyomoDispatchGenericConverterMinOperatingCosts` | Constructed internally by optimized dispatch |
+| {py:class}`~h2integrate.control.control_rules.storage.pyomo_storage_rule_min_operating_cost.PyomoRuleStorageMinOperatingCosts` | Constructed internally by optimized dispatch |
+
+Storage controllers use commodity inflow and set-point profiles, configured storage limits, and
+controller-specific forecasts or costs to construct a dispatch callable. The storage performance
+model executes the callable and reports storage and commodity results. The heuristic rule
+components expose Pyomo block-rule functions; the optimized load-following rules are constructed
+internally and do not have separate YAML configuration classes.
+
+The storage controllers inherit common parameters from
+{py:class}`~h2integrate.control.control_strategies.pyomo_storage_controller_baseclass.PyomoStorageControllerBaseConfig`:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.pyomo_storage_controller_baseclass.PyomoStorageControllerBaseConfig
+   :no-members:
+   :no-index:
+```
+
 (heuristic-load-following-controller)=
 ## Heuristic Load Following Controller
 
@@ -155,6 +182,14 @@ Set `control_strategy` to `PeakLoadManagementOptimizedStorageController` to use 
 Given a price signal (`lmp_signal`) and the local party's demand (`demand_signal`), the controller picks a dispatch schedule that earns as much incentive revenue as possible while keeping the local party's cost low, without exceeding the monthly dispatch limit or the battery's state-of-charge limits.
 
 The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
+
+The controller's configuration is:
+
+```{eval-rst}
+.. autoclass:: h2integrate.control.control_strategies.storage.plm_optimized_storage_controller.PeakLoadManagementOptimizedStorageControllerConfig
+   :no-members:
+   :no-index:
+```
 
 ### Definitions
 

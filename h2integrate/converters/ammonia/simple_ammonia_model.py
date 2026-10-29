@@ -18,6 +18,8 @@ class SimpleAmmoniaPerformanceModelConfig(BaseConfig):
         plant_capacity_kgpy (float): Annual production capacity of the plant in kg.
         plant_capacity_factor (float): The ratio of actual production to maximum
             possible production over a year.
+
+    See :class:`SimpleAmmoniaPerformanceModel` and :doc:`/technology_models/ammonia`.
     """
 
     plant_capacity_kgpy: float = field()
@@ -29,6 +31,10 @@ class SimpleAmmoniaPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of an ammonia plant.
     Computes annual ammonia production based on plant capacity and capacity factor.
+
+    The ``hydrogen_in`` profile determines the number of hourly output values but does not
+    limit production. See :class:`SimpleAmmoniaPerformanceModelConfig` and
+    :doc:`/technology_models/ammonia` for configuration, outputs, and simulation limitations.
     """
 
     _time_step_bounds = (
@@ -91,6 +97,8 @@ class SimpleAmmoniaCostModelConfig(CostModelBaseConfig):
         capex_scaling_exponent (float): Power applied to ratio of capacities when calculating CAPEX
             from a baseline value at a different capacity.
         cost_year (int): dollar year for costs.
+
+    See :class:`SimpleAmmoniaCostModel` and :doc:`/technology_models/ammonia`.
     """
 
     plant_capacity_kgpy: float = field()
@@ -113,6 +121,9 @@ class SimpleAmmoniaCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with ammonia production.
     Includes CapEx, OpEx, and byproduct credits, and exposes all detailed cost outputs.
+
+    See :class:`SimpleAmmoniaCostModelConfig` and :doc:`/technology_models/ammonia` for
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (

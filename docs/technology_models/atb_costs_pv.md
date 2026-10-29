@@ -11,10 +11,27 @@ As mentioned on the [Utility-Scale PV ATB page](https://atb.nlr.gov/electricity/
 - The `"ATBUtilityPVCostModel"` model has costs input in `$/kW-AC` to match the ATB and the outputted capacity in kW-AC from the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#utility-scale-pv-cost-model).
 - The `"ATBResComPVCostModel"` model has costs input in `$/kW-DC` and the PV capacity is input in kW-DC from the **shared input parameter** of the PV performance model. Example usage of this cost model in the `tech_config.yaml` file is shown [in the second section below](#commercial-and-residential-pv-cost-model).
 
+The APIs are {py:class}`~h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModel`
+and {py:class}`~h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModelConfig`, and
+{py:class}`~h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModel` and
+{py:class}`~h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModelConfig`.
+Both support one-hour time steps and multiply their capacity input by the configured cost rates to
+produce `CapEx` and annual `OpEx`. The inputs are `system_capacity_AC` for utility PV and
+`system_capacity_DC` for residential and commercial PV.
+
 (utility-scale-pv-cost-model)=
 ## Utility-Scale PV Cost Model
 
-The inputs for `cost_parameters` are `capex_per_kWac` and `opex_per_kWac_per_year`. From the ATB workbook, a value for `capex_per_kWac` can be found on the `Solar - Utility PV` sheet under the "Overnight Capital Cost" section or the "CAPEX" section. The values in the "CAPEX" section include overnight capital costs, construction finance factor, and grid connection costs. A value for `opex_per_kWac_per_year` can be found on the `Solar - Utility PV` sheet under the "Fixed Operation and Maintenance Expenses" section.
+From the ATB workbook, capital and fixed operating costs can be found on the `Solar - Utility PV`
+sheet under the "Overnight Capital Cost" or "CAPEX" and "Fixed Operation and Maintenance
+Expenses" sections. The "CAPEX" values include overnight capital costs, construction finance
+factor, and grid connection costs. The model accepts these costs through:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.solar.atb_utility_pv_cost.ATBUtilityPVCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 Here is an example of how to use the `ATBUtilityPVCostModel` model in the `tech_config.yaml` file:
 
@@ -38,7 +55,14 @@ technologies:
 (commercial-and-residential-pv-cost-model)=
 ## Commercial and Residential PV Cost Model
 
-The inputs for `cost_parameters` are `capex_per_kWdc` and `opex_per_kWdc_per_year`. From the ATB workbook, a value for `capex_per_kWdc` can be found on the `Solar - PV Dist. Comm` or `Solar - PV Dist. Res` sheet under the "Overnight Capital Cost" section or the "CAPEX" section. The values in the "CAPEX" section include overnight capital costs, construction finance factor, and grid connection costs. A value for `opex_per_kWdc_per_year` can be found on the `Solar - PV Dist. Comm` or `Solar - PV Dist. Res` sheet under the "Fixed Operation and Maintenance Expenses" section.
+The corresponding ATB workbook sheets are `Solar - PV Dist. Comm` and `Solar - PV Dist. Res`;
+the cost categories are the same as for utility PV. Configure the model using:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.solar.atb_res_com_pv_cost.ATBResComPVCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 ```{note}
 Since the commercial and residential PV values in the ATB are in kW-DC the parameter `pv_capacity_kWdc` should be included in the `shared_parameters` when using the `PYSAMSolarPlantPerformanceModel` and `ATBResComPVCostModel` models.

@@ -13,9 +13,27 @@ Use this model by setting:
 - cost model: `QuinnNuclearCostModel`
 
 This model produces electricity only and clips commanded output to rated plant capacity.
+It accepts `electricity_command_value` and `system_capacity` in kW, and reports
+`electricity_out`, total and annual production, and capacity factor. The cost model uses
+capacity and the electricity profile to calculate `CapEx`, fixed `OpEx`, and `VarOpEx`;
+the variable cost is based on simulated-period production and is repeated over plant life
+without annualization. Both models require one-hour time steps.
 
 ### API details
-For API details, see the [`QuinnNuclearPerformanceModel` and `QuinnNuclearCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant).
+See {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerformanceModel` and
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerformanceModelConfig`,
+and {py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModel` and
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModelConfig`.
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant.QuinnNuclearCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 (references)=
 ### References
@@ -34,7 +52,9 @@ This model represents a reactor with:
 - a low-pressure electric conversion stage
 - an extractable process heat stream, extracted upstream of the low-pressure turbine stages (dashed red arrow in the figure)
 
-The model was developed to provide both heat and electricity for high-temperature steam electrolysis as modeled in `HTSEPerformanceModel` and `HTSEPerformanceModel`. The integrated thermal-nuclear and HTSE system is shown in the figure below. However, the models were implemented in such a way as to allow integration with other technologies.
+The model was developed to provide both heat and electricity for high-temperature steam
+electrolysis as modeled in [HTSEPerformanceModel](h2_htse.md). The integrated thermal-nuclear
+and HTSE system is shown in the figure below. The models can also integrate with other technologies.
 
 ```{figure} images/nuclear_htse_system_diagram.png
 :alt: System diagram showing a thermal nuclear reactor with integrated high-temperature steam electrolysis.
@@ -69,7 +89,31 @@ P_{thermal} = \frac{P_{electric,rated}}{\eta_{combined}}
 $$
 
 ### API details
-For API details, see the [`SimpleThermalNuclearReactorPerformanceModel` and `SimpleThermalNuclearReactorCostModel` API documentation](../_autosummary/h2integrate.converters.nuclear.nuclear_plant_thermal).
+See
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorPerformanceModel`
+and
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorPerformanceModelConfig`,
+and
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorCostModel`
+and
+{py:class}`~h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorCostModelConfig`.
+
+The performance model declares its electrical and thermal power inputs and outputs in MW,
+including `electricity_command_value`, `heat_command_value`, `electricity_out`, and `heat_out`.
+Its cost model declares `rated_capacity` in MW and unit costs in USD/MW, USD/(MW year), and
+USD/(MW h), but declares `electricity_out` in kW. The cost calculation currently multiplies the
+kW profile directly by the per-MWh variable cost before annualizing it; account for this unit
+inconsistency when interpreting `VarOpEx`. Both components require one-hour time steps.
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.nuclear.nuclear_plant_thermal.SimpleThermalNuclearReactorCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 ## Integrated nuclear and HTSE example
 

@@ -14,6 +14,8 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
     This dataset covers regions covered by the Himawari-7 satellite (Asia, Australia & Pacific)
     at a spatial resolution of 4 km.
 
+    See :class:`Himawari7SolarAPI` and :doc:`/resource/himawari_v3_api`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2011 and 2015 (inclusive).
@@ -45,6 +47,11 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class Himawari7SolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Himawari-7 data using :class:`Himawari7SolarAPIConfig`.
+
+    See :doc:`/resource/himawari_v3_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -63,6 +70,8 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
     `Himawari 2016-2020: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari-download/>`_.
     This dataset covers regions covered by the Himawari-8 satellite (Asia, Australia & Pacific)
     at a spatial resolution of 2 km.
+
+    See :class:`Himawari8SolarAPI` and :doc:`/resource/himawari_v3_api`.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -95,6 +104,11 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class Himawari8SolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Himawari-8 data using :class:`Himawari8SolarAPIConfig`.
+
+    See :doc:`/resource/himawari_v3_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -112,6 +126,8 @@ class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Himawari TMY: PSM v3 <https://developer.nlr.gov/docs/solar/nsrdb/himawari-tmy-download/>`_.
     This dataset covers regions within Asia, Australia & Pacific at a spatial resolution of 4 km.
+
+    See :class:`HimawariTMYSolarAPI` and :doc:`/resource/himawari_v3_api`.
 
     Args:
         resource_year (str): Year to use for resource data. Can be any of the following:
@@ -161,6 +177,11 @@ class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class HimawariTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Himawari typical-year data using :class:`HimawariTMYSolarAPIConfig`.
+
+    See :doc:`/resource/himawari_v3_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 

@@ -39,6 +39,8 @@ class ReverseOsmosisPerformanceModelConfig(BaseConfig):
             freshwater capacity [kg/(m**3/h)]. Defaults to 346.7.
         footprint_per_capacity (float, optional): Footprint of the desalination system per unit
             of freshwater capacity [m**2/(m**3/h)]. Defaults to 0.467.
+
+    See :class:`ReverseOsmosisPerformanceModel` and :doc:`/technology_models/desalination`.
     """
 
     freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
@@ -78,6 +80,8 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
         feedwater_consumed (ndarray): Feedwater consumed [m**3/h] at each timestep.
         mass (float): Mass of the desalination system [kg].
         footprint (float): Footprint of the desalination system [m**2].
+
+    See :class:`ReverseOsmosisPerformanceModelConfig` and :doc:`/technology_models/desalination`.
     """
 
     _time_step_bounds = (
@@ -184,6 +188,8 @@ class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
         freshwater_capacity_kg_per_hr (float): Desalination plant capacity, represented as
             the maximum freshwater production rate [kg/h].
         cost_year (int): Dollar year of the costs. Only 2013 is supported.
+
+    See :class:`ReverseOsmosisCostModel` and :doc:`/technology_models/desalination`.
     """
 
     freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
@@ -200,6 +206,8 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
     Outputs:
         CapEx (float): Capital expenditure [USD].
         OpEx (float): Fixed operating expenditure [USD/year].
+
+    See :class:`ReverseOsmosisCostModelConfig` and :doc:`/technology_models/desalination`.
     """
 
     _time_step_bounds = (

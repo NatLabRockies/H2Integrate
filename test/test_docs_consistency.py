@@ -22,6 +22,8 @@ MODEL_KEYS = {"model", "resource_model", "finance_model", "control_strategy"}
 MODEL_FENCE_RE = re.compile(r"(?ms)^```(?:yaml|yml)\s*\n(.*?)^```")
 REPOSITORY_PATH_RE = re.compile(r"\b(?:examples|h2integrate|library)/[A-Za-z0-9_./*{}-]+")
 URL_RE = re.compile(r"https?://\S+")
+AUTOCLASS_RE = re.compile(r"(?m)^[ \t]*\.\. autoclass::[ \t]+(\S+)[ \t]*\n((?:[ \t]+:[^\n]*\n)*)")
+CONFIGURATION_CLASS_NAMES = {"FlorisTurbineDefaults", "PySAMPowerCurveCalculationInputs"}
 
 # Keep these lists current as model pages and example references are added.
 UNDOCUMENTED_MODELS = {
@@ -146,6 +148,28 @@ def test_repository_paths_in_docs_exist():
         "Update the docs or repository-path allowlist: "
         f"unexpected={sorted(set(missing) - KNOWN_MISSING_PATHS)}, "
         f"resolved={sorted(KNOWN_MISSING_PATHS - set(missing))}"
+    )
+
+
+def test_configuration_autoclass_embeds_override_member_defaults():
+    """Keep guide embeds from duplicating attrs fields through autodoc defaults."""
+    embeds = []
+    invalid = []
+    for page in _markdown_pages():
+        for match in AUTOCLASS_RE.finditer(_page_text(page)):
+            name, options = match.groups()
+            if not (
+                name.endswith("Config") or name.rsplit(".", 1)[-1] in CONFIGURATION_CLASS_NAMES
+            ):
+                continue
+            embeds.append(name)
+            option_names = {line.strip().split(":", 2)[1] for line in options.splitlines()}
+            if not {"no-index", "no-members"} <= option_names or "members" in option_names:
+                invalid.append(f"{page.relative_to(REPO_ROOT)}: {name}")
+
+    assert embeds, "No configuration autoclass embeds were found."
+    assert not invalid, "Configuration embeds need :no-index: and :no-members::\n" + "\n".join(
+        invalid
     )
 
 

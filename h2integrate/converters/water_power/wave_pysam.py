@@ -36,6 +36,8 @@ class PySAMWavePerformanceConfig(BaseConfig):
             top-level keys corresponding to the different MhkWave variable groups.
             Refer to the MhkWave documentation
             `here <https://nrel-pysam.readthedocs.io/en/main/modules/MhkWave.html>`__.
+
+    See :class:`PySAMWavePerformanceModel` and :doc:`/technology_models/wave`.
     """
 
     device_rating_kw: float = field(validator=validators.gt(0))
@@ -131,6 +133,9 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
     It takes wave resource parameters as input and outputs power generation data.
     This model operates in time-series mode (wave_resource_model_choice = 1),
     accepting arrays of significant wave height and energy period at each timestep.
+
+    See :class:`PySAMWavePerformanceConfig`, :class:`~h2integrate.resource.wave.WaveResource`,
+    and :doc:`/technology_models/wave`.
     """
 
     _time_step_bounds = (

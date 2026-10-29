@@ -10,6 +10,11 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 
 @define(kw_only=True)
 class ProfitMaximizationControlConfig(BaseConfig):
+    """Configure the sell price and per-technology marginal cost settings.
+
+    See :class:`ProfitMaximizationControl` and :doc:`/control/system_level_control/slc_profit_max`.
+    """
+
     commodity_sell_price: float = field(default=0.0)
     cost_per_tech: dict = field(default={})
 
@@ -52,6 +57,10 @@ class ProfitMaximizationControl(SystemLevelControlBase):
       ``technology_interconnections`` (using graph ancestors, so feedstocks
       behind intermediate components like combiners are included), and
       divide by the dispatchable tech's annualized total production.
+
+    See :class:`ProfitMaximizationControlConfig`,
+    :class:`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`,
+    and :doc:`/control/system_level_control/slc_profit_max`.
     """
 
     def _resolve_sell_price(self, config):

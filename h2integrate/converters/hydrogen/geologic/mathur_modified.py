@@ -19,6 +19,8 @@ class GeoH2SubsurfaceCostConfig(GeoH2SubsurfaceCostConfig):
     components used in geologic hydrogen systems. It supports either the use of
     a built-in drilling cost curve or a manually specified constant drilling cost.
 
+    See :class:`GeoH2SubsurfaceCostModel` and :doc:`/technology_models/geologic_hydrogen`.
+
     Attributes:
         test_drill_cost (float):
             Capital cost (CAPEX) of conducting a test drill for a potential GeoH2 well,
@@ -111,6 +113,8 @@ class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
 
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
         - NETL Quality Guidelines: https://doi.org/10.2172/1567736
+
+    See :class:`GeoH2SubsurfaceCostConfig` and :doc:`/technology_models/geologic_hydrogen`.
 
     Attributes:
         config (GeoH2SubsurfaceCostConfig): Configuration object containing cost parameters.

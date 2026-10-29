@@ -29,6 +29,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
         run_recalculate_power_curve (bool, optional): If True, the tidal device power curve will be
             recalculated based on the device_rating_kw and original power_curve. Defaults to False.
 
+    See :class:`PySAMTidalPerformanceModel` and :doc:`/technology_models/tidal`.
     """
 
     device_rating_kw: float = field(validator=validators.gt(0))
@@ -120,6 +121,9 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
     """An OpenMDAO component that wraps the PySAM MhkTidal model.
     It takes tidal parameters as input and outputs power generation data.
+
+    See :class:`PySAMTidalPerformanceConfig`, :class:`~h2integrate.resource.tidal.TidalResource`,
+    and :doc:`/technology_models/tidal`.
     """
 
     _time_step_bounds = (

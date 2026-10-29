@@ -4,11 +4,13 @@ The U.S. has developed an infrastructure for transporting iron ore from the nort
 No other significant practical waterway shipping routes exist for the massive amounts of iron ore required for industrial applications in the inland USA, and rail is the only practicable means of transport over long distances otherwise.
 Therefore, our transport model was developed to model shipping cost via domestic water transportation through the Great Lakes between selected port cities, and via class 1 rail between all other points.
 
-`IronTransportPerformanceComponent` estimates the land and water distances needed to ship iron ore
-to a Great Lakes port. It reads the mine location from `plant_config.sites.site` and uses built-in
-port coordinates and shipping waypoints. Set `find_closest_ship_site: true` and
-`shipment_site: "None"` to select the shortest modeled route, or set `find_closest_ship_site: false`
-and choose `Duluth`, `Chicago`, `Cleveland`, or `Buffalo` explicitly.
+`IronTransportPerformanceComponent` estimates overland and Great Lakes route distances between
+the connected origin and destination coordinates, using built-in port coordinates and shipping
+waypoints. Set `find_closest_ship_site: true` and `shipment_site: "None"` to select the modeled
+port closest to the destination by land, or set `find_closest_ship_site: false` and choose
+`Duluth`, `Chicago`, `Cleveland`, or `Buffalo` explicitly.
+See {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceComponent` and
+{py:class}`~h2integrate.converters.iron.iron_transport.IronTransportPerformanceConfig`.
 
 
 For the water transportation portion of the model, selected port cities with relevant iron ore infrastructure were selected and waypoints plotted in between to calculate a shipping distance through the Great Lakes.
@@ -26,24 +28,31 @@ Roads in the continental U.S. have an average circuity factor of [1.20](https://
 This is unsurprisingly slightly higher than the average European country given the relatively low density of rail networks in the US.
 
 
-The performance component reports `land_transport_distance`, `water_transport_distance`, and
-`total_transport_distance` in kilometers. `IronTransportCostComponent` uses these distances and the
+The performance component reports `land_transport_distance_overland`,
+`land_transport_distance_great_lakes`, and `water_transport_distance_great_lakes` in kilometers.
+`IronTransportCostComponent` uses these distances and the
 `iron_ore_in` profile to calculate transport cost outputs. To calculate the final iron ore transport cost, two potential costs are calculated: a rail-only cost and a rail+water cost.
 Whichever cost is lower is used as the final transportation cost, with the rail+water cost being generally lower in the Eastern US and the rail-only cost being lower in the West.
-Its `transport_year` and `marginal_cost`
-inputs are configured in the technology's cost parameters; the cost year is set from the plant's
-`target_dollar_year`.
+The cost year is set from the plant's `target_dollar_year`. The cost configuration declares
+`transport_year` and `marginal_cost`, but the current cost calculation does not use either value.
+See {py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostComponent` and
+{py:class}`~h2integrate.converters.iron.iron_transport.IronTransportCostConfig`.
+The cost component passes `iron_ore_in` through as `iron_ore_out` and reports
+`iron_transport_cost` and `VarOpEx`. It divides by total input ore when
+computing the unit cost, so a zero-throughput profile leads to division by zero.
 
-
-
+Both models require hourly time steps.
+For automatically selected ports, the Great Lakes land distance includes the origin-to-Duluth
+leg. For an explicitly selected port, the current calculation includes only the
+port-to-destination land leg.
 
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportPerformanceConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.iron.iron_transport.IronTransportCostConfig
-   :members:
+   :no-members:
    :no-index:
 ```
 

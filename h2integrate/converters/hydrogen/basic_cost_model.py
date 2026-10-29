@@ -16,6 +16,8 @@ class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
     `HFTO Program Record 19009 <https://www.hydrogen.energy.gov/pdfs/19009_h2_production_cost_pem_electrolysis_2019.pdf>`_
     which provides costs in 2016 USD.
 
+    See :class:`BasicElectrolyzerCostModel` and :doc:`/technology_models/pem_electrolyzer`.
+
     Args:
         location (str): The location of the electrolyzer; options include "onshore" or "offshore".
         electrolyzer_capex (int): $/kW overnight installed capital costs for a 1 MW system in
@@ -34,6 +36,8 @@ class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
 class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a PEM electrolyzer.
+
+    See :class:`BasicElectrolyzerCostModelConfig` and :doc:`/technology_models/pem_electrolyzer`.
     """
 
     _time_step_bounds = (

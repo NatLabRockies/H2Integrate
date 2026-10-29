@@ -22,6 +22,8 @@ class DieselGeneratorPerformanceConfig(BaseConfig):
             This represents the volume of diesel fuel required to produce one MWh of
             electricity. Lower values indicate higher efficiency. Typical values for
             modern diesel generators are 65-85 gal/MWh (roughly 30-40% efficient at HHV).
+
+    See :class:`DieselGeneratorPerformanceModel` and :doc:`/technology_models/diesel`.
     """
 
     system_capacity_kw: float = field(validator=validators.ge(0))
@@ -45,12 +47,14 @@ class DieselGeneratorPerformanceModel(PerformanceModelBaseClass):
         system_capacity_kw (float): Diesel generator rated capacity in kW
         diesel_in (array): Diesel fuel input in galUS/h
         heat_rate_gal_per_mwh (float): Generator heat rate in galUS/MWh
-        electricity_command_value (array): Electricity command value in MW for each timestep
+        electricity_command_value (array): Electricity command value in kW for each timestep
 
     Outputs:
-        electricity_out (array): Electricity output in MW for each timestep
+        electricity_out (array): Electricity output in kW for each timestep
         diesel_consumed (array): Diesel fuel consumed in galUS/h
-        unmet_electricity_demand (array): Unmet portion of the electricity command in MW
+        unmet_electricity_demand (array): Unmet portion of the electricity command in kW
+
+    See :class:`DieselGeneratorPerformanceConfig` and :doc:`/technology_models/diesel`.
     """
 
     _time_step_bounds = (
@@ -181,11 +185,14 @@ class DieselGeneratorCostModelConfig(CostModelBaseConfig):
         system_capacity_kw (float | int): Generator capacity in kW.
         capex_per_kw (float | int): Capital cost per unit capacity in $/kW.
             Typical values: 500-1500 $/kW.
+        capex_battery_total (float | int): Additional battery capital cost in dollars.
         fixed_opex_per_kw_per_year (float | int): Fixed operating expenses per unit
             capacity in $/kW/year. Typical values: 15-35 $/kW/year.
         variable_opex_per_kwh (float | int): Variable operating expenses per unit
             generation in $/kWh (excluding fuel). Typical values: 0.005-0.015 $/kWh.
         cost_year (int): Dollar year corresponding to input costs.
+
+    See :class:`DieselGeneratorCostModel` and :doc:`/technology_models/diesel`.
     """
 
     system_capacity_kw: float | int = field(validator=validators.ge(0))
@@ -201,11 +208,14 @@ class DieselGeneratorCostModel(CostModelBaseClass):
     Cost model for diesel generators.
 
     Calculates:
-        - CapEx: capex_per_kw * generator_capacity_kW
+        - CapEx: capex_per_kw * generator_capacity_kW + capex_battery_total
         - OpEx: fixed_opex_per_kw_per_year * generator_capacity_kW
             + variable_opex_per_kwh * delivered_electricity_kWh
 
     Fuel costs are handled externally through the diesel feedstock component.
+    Variable O&M is calculated from simulated electricity and is not annualized for a
+    partial-year simulation. See :class:`DieselGeneratorCostModelConfig` and
+    :doc:`/technology_models/diesel`.
 
     Inputs:
         system_capacity_kw (float): Diesel generator capacity in kW

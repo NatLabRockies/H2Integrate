@@ -12,13 +12,22 @@ from h2integrate.control.control_rules.pyomo_rule_baseclass import (
 
 @define(kw_only=True)
 class PyomoDispatchGenericConverterConfig(PyomoRuleBaseConfig):
-    """Configuration for the generic converter dispatch rule."""
+    """Configuration for :class:`PyomoDispatchGenericConverter`.
+
+    See :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
 
     pass
 
 
 @register
 class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
+    """Build generic converter blocks for heuristic Pyomo dispatch.
+
+    See :class:`PyomoDispatchGenericConverterConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

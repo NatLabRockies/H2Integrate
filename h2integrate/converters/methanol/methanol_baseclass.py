@@ -17,8 +17,8 @@ class MethanolPerformanceConfig(BaseConfig):
 class MethanolPerformanceBaseClass(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a methanol plant.
-    Computes annual methanol and co-product production, feedstock consumption, and emissions
-    based on plant capacity and capacity factor.
+    Declares shared capacity and commodity inputs and outputs for methanol plant models.
+    See :doc:`/technology_models/methanol` for implementation details and limitations.
 
     Inputs:
         - plant_capacity_kgpy: (float) plant capacity in kg/year
