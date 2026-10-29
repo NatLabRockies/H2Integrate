@@ -270,3 +270,56 @@ def test_oae_cost_and_financial_model_energy_cost(plant_config, driver_config, s
 def test_oae_cost_and_financial_model_requires_electricity(plant_config, driver_config):
     with pytest.raises(AttributeError, match="annual_input_electricity needs to be connected"):
         run_oae_cost_model(OAECostAndFinancialModel, plant_config, driver_config)
+
+
+@pytest.mark.regression
+def test_oae_cost_model_values(plant_config, driver_config, subtests):
+    prob = run_oae_cost_model(OAECostModel, plant_config, driver_config)
+    with subtests.test("CapEx"):
+        assert prob.get_val("CapEx", units="USD")[0] == pytest.approx(10367737.167808551, rel=1e-6)
+    with subtests.test("OpEx"):
+        assert prob.get_val("OpEx", units="USD/year")[0] == pytest.approx(
+            1302278.7821029117, rel=1e-6
+        )
+
+
+@pytest.mark.regression
+def test_oae_cost_model_from_performance_outputs(prob, plant_config, driver_config, subtests):
+    units = {name: u for name, (_, u) in OAE_COST_INPUTS.items()}
+    perf_outputs = {name: (prob.get_val(name, units=u), u) for name, u in units.items()}
+    cost = run_oae_cost_model(OAECostModel, plant_config, driver_config, **perf_outputs)
+    with subtests.test("CapEx"):
+        assert cost.get_val("CapEx", units="USD")[0] == pytest.approx(10081969.902826248, rel=1e-6)
+    with subtests.test("OpEx"):
+        assert cost.get_val("OpEx", units="USD/year")[0] == pytest.approx(
+            1266383.905546671, rel=1e-6
+        )
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize(
+    "lcoe,capex,opex,carbon_credit",
+    [
+        (0.0, 10367737.167808551, 1302278.7821029117, 217.66508529363426), # free energy scenario
+        (0.05, 59929737.167808555, 50864278.78210291, 5803.756528678582), # paid energy scenario
+    ],
+)
+def test_oae_cost_and_financial_model_values(
+    plant_config, driver_config, subtests, lcoe, capex, opex, carbon_credit
+):
+    prob = run_oae_cost_model(
+        OAECostAndFinancialModel,
+        plant_config,
+        driver_config,
+        LCOE=(lcoe, "USD/(kW*h)"),
+        annual_input_electricity=(1.0e9, "kW*h/year"),
+        unused_energy=(np.full(8760, 1.0e3), "kW"),
+    )
+    with subtests.test("CapEx (includes one year of energy cost as working capital)"):
+        assert prob.get_val("CapEx", units="USD")[0] == pytest.approx(capex, rel=1e-6)
+    with subtests.test("OpEx"):
+        assert prob.get_val("OpEx", units="USD/year")[0] == pytest.approx(opex, rel=1e-6)
+    with subtests.test("carbon_credit_value"):
+        assert prob.get_val("carbon_credit_value", units="USD/t")[0] == pytest.approx(
+            carbon_credit, rel=1e-6
+        )
