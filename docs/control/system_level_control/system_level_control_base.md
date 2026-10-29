@@ -41,4 +41,5 @@ Helper functions for cost-aware controllers.
    :undoc-members:
    :show-inheritance:
    :no-index:
+   :exclude-members: _is_steppable
 ```

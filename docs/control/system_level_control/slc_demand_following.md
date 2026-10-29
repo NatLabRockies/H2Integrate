@@ -111,4 +111,8 @@ This framework provides a starting point for hybrid energy system control but is
 - No cost awareness: The controller dispatches technologies purely to meet demand without considering operational costs, commodity prices, or economic optimization.
 - Even splitting across storage: When multiple storage technologies produce the demanded commodity, the residual demand is divided evenly among them (`demand / n_storage`), regardless of differences in capacity, state of charge, or efficiency.
 - Even splitting across dispatchable technologies: Similarly, any remaining demand after storage dispatch is split evenly across all dispatchable technologies (`remaining_demand / n_dispatchable`), without accounting for marginal costs or capacity constraints.
-- Fixed priority order: The dispatch order (fixed, flexible, storage, then dispatchable) is fixed in the current implementation.
+- The dispatch order is currently fixed in the following order:
+  1.  fixed
+  2. flexible
+  3. storage
+  4. dispatchable

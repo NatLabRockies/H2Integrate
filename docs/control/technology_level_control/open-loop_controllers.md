@@ -106,6 +106,8 @@ The controller's configuration is:
 .. autoclass:: h2integrate.control.control_strategies.storage.plm_openloop_storage_controller.PeakLoadManagementHeuristicOpenLoopStorageControllerConfig
    :members:
    :no-index:
+   :inherited-members: OpenLoopControlBaseConfig, BaseConfig
+   :exclude-members: require_storage_parameters, demand_profile_upstream, dispatch_priority_demand_profile, n_override_events, override_events_period, peak_range, advance_discharge_period, delay_charge_period, allow_charge_in_peak_range, min_peak_proximity
 ```
 
 ```{note}
