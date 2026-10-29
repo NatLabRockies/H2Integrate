@@ -21,6 +21,7 @@
   - Merged the `no_battery`, `yes_battery`, and `battery_with_controller` system-level control examples into `35_system_level_control/demand_following`.
   - Merged `09_co2/ocean_alkalinity_enhancement_financials` into `09_co2/ocean_alkalinity_enhancement`.
   - Removed `11_hybrid_energy_plant`, which is covered by examples 01 and 33, and moved its demand metric checks into the demand component unit tests.
+- Added unit tests for code that was previously only exercised by the examples: the paper mill and SAF models, the methanol cost and finance models, the stimulated geologic hydrogen and subsurface well cost models, the ocean alkalinity enhancement cost models, `GenericStorageCostModel`, the time-marching solver, the CSV generator file checker, and the `PoseOptimization` driver setup. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
 
