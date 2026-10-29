@@ -39,9 +39,9 @@ Combiners and splitters are documented separately in
 
 - {py:class}`~h2integrate.transporters.linear_transport_cost.LinearDistanceCostModel`, configured
   by {py:class}`~h2integrate.transporters.linear_transport_cost.LinearTransportCostConfig`,
-  calculates the geodesic distance between source and destination
-  coordinates, then multiplies it by `capex_per_km` and `fixed_opex_per_km`. Connect site latitude
-  and longitude to its `source_*` and `dest_*` inputs.
+  calculates the geodesic distance between source and destination coordinates, applies
+  `circuity_ratio`, then multiplies the adjusted distance by `capex_per_km` and
+  `fixed_opex_per_km`. Connect site latitude and longitude to its `source_*` and `dest_*` inputs.
 - {py:class}`~h2integrate.transporters.linear_mass_transport_cost.LinearMassTransportCostModel`,
   configured by {py:class}`~h2integrate.transporters.linear_mass_transport_cost.LinearMassTransportCostConfig`,
   uses geodesic distance, an optional `circuity_ratio` (default 1), and the commodity input profile

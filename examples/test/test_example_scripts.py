@@ -25,6 +25,7 @@ HELPER_MODULES = {
 # Scripts that need an optional dependency, mapped to the module that must be importable
 OPTIONAL_DEPENDENCIES = {
     "21_iron_examples/iron_mapping/run_iron.py": "geopandas",
+    "21_iron_examples/iron_mapping/run_plot_locations.py": "geopandas",
     "29_wind_ard/run_windard_pv_battery.py": "ard",
 }
 

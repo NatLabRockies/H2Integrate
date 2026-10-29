@@ -1,5 +1,6 @@
 import copy
 
+import numpy as np
 import pandas as pd
 from attrs import field, define, validators
 from openmdao.utils import units
@@ -9,6 +10,30 @@ from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.core.model_baseclass import CostModelBaseClass
 from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi
+
+
+MINE_LOCATIONS = {
+    "Hibbing": {"latitude": 47.53, "longitude": -92.91},
+    "Northshore": {"latitude": 47.29, "longitude": -91.25},
+    "United": {"latitude": 47.34, "longitude": -92.58},
+    "Minorca": {"latitude": 47.55, "longitude": -92.52},
+    "Tilden": {"latitude": 46.48, "longitude": -87.66},
+}
+
+
+def get_mine_from_coordinates(latitude, longitude):
+    """Return the mine matching the provided latitude and longitude."""
+    for mine, location in MINE_LOCATIONS.items():
+        if np.isclose(latitude, location["latitude"]) and np.isclose(
+            longitude, location["longitude"]
+        ):
+            return mine
+
+    raise ValueError(
+        f"Latitude and longitude inputs do not match any known mine locations. "
+        f"Please check the inputs. Provided latitude: {latitude}, "
+        f"longitude: {longitude}."
+    )
 
 
 @define(kw_only=True)
@@ -23,6 +48,10 @@ class SimpleIronMineCostComponentConfig(BaseConfig):
             in units of metric tonnes of pellets produced per hour.
         cost_year (int): target dollar year to convert costs to.
             Cannot be input under `cost_parameters`.
+        latitude (float): latitude of the mine location. If not provided, it will be set
+            based on the mine name.
+        longitude (float): longitude of the mine location. If not provided, it will be set
+            based on the mine name.
 
     See :class:`SimpleIronMineCostComponent` and :doc:`/technology_models/iron_mine`.
     """
@@ -40,6 +69,28 @@ class SimpleIronMineCostComponentConfig(BaseConfig):
     # the cost model is based on costs from 2021 and can be adjusted to another cost year
     # using CPI adjustment.
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
+    latitude: float = field(default=None)
+    longitude: float = field(default=None)
+
+    def __attrs_post_init__(self):
+        if self.latitude is not None or self.longitude is not None:
+            # check if the latitude and longitude are correct for the mine location
+            correct_latitude = MINE_LOCATIONS[self.mine]["latitude"]
+            correct_longitude = MINE_LOCATIONS[self.mine]["longitude"]
+            if (
+                self.latitude is None
+                or self.longitude is None
+                or not np.isclose(self.latitude, correct_latitude)
+                or not np.isclose(self.longitude, correct_longitude)
+            ):
+                raise ValueError(
+                    f"Incorrect latitude and/or longitude for mine {self.mine}. "
+                    f"Expected ({correct_latitude}, {correct_longitude}), got "
+                    f"({self.latitude}, {self.longitude})."
+                )
+
+        self.latitude = MINE_LOCATIONS[self.mine]["latitude"]
+        self.longitude = MINE_LOCATIONS[self.mine]["longitude"]
 
 
 @register
@@ -108,10 +159,22 @@ class SimpleIronMineCostComponent(CostModelBaseClass):
             desc="Iron ore pellets produced",
         )
 
+        self.add_input(
+            "latitude",
+            val=self.config.latitude,
+            units="deg",
+            desc="Latitude of the mine location",
+        )
+        self.add_input(
+            "longitude",
+            val=self.config.longitude,
+            units="deg",
+            desc="Longitude of the mine location",
+        )
+
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "simple_ore" / "cost_coeffs.csv"
         # martin ore performance model
-        coeff_df = pd.read_csv(coeff_fpath, index_col=0)
-        self.coeff_df = self.format_coeff_df(coeff_df, self.config.mine)
+        self.coeff_dataframe = pd.read_csv(coeff_fpath, index_col=0)
 
     def format_coeff_df(self, coeff_df, mine):
         """Update the coefficient dataframe such that values are adjusted to standard units
@@ -185,6 +248,11 @@ class SimpleIronMineCostComponent(CostModelBaseClass):
         return coeff_df
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        # get mine location based on latitude and longitude inputs
+        mine_location = get_mine_from_coordinates(inputs["latitude"], inputs["longitude"])
+
+        self.coeff_df = self.format_coeff_df(self.coeff_dataframe, mine_location)
+
         ref_Oreproduced = self.coeff_df[self.coeff_df["Name"] == "Ore pellets produced"][
             "Value"
         ].values

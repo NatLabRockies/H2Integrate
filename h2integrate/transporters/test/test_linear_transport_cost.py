@@ -103,3 +103,30 @@ def test_linear_distance_cost(plant_config, subtests):
         assert (
             approx(prob.model.get_val("transport.OpEx", units="USD/yr"), rel=1e-6) == expected_opx
         )
+
+    # Run with >1 circuity ratio
+    cr = 1.25
+    prob.set_val("transport.circuity_ratio", cr, units="unitless")
+    prob.run_model()
+
+    with subtests.test("Distance between sites with circuity ratio (#3)"):
+        assert (
+            approx(prob.model.get_val("transport.transport_distance", units="km")[0], rel=1e-6)
+            == 299.4637107845708 * cr
+        )
+
+    expected_cpx = (
+        prob.model.get_val("transport.transport_distance", units="km") * cost_config["capex_per_km"]
+    )
+    expected_opx = (
+        prob.model.get_val("transport.transport_distance", units="km")
+        * cost_config["fixed_opex_per_km"]
+    )
+
+    with subtests.test("Expected CapEx with circuity ratio (#3)"):
+        assert approx(prob.model.get_val("transport.CapEx", units="USD"), rel=1e-6) == expected_cpx
+
+    with subtests.test("Expected OpEx with circuity ratio(#3)"):
+        assert (
+            approx(prob.model.get_val("transport.OpEx", units="USD/yr"), rel=1e-6) == expected_opx
+        )
