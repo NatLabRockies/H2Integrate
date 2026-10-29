@@ -1,6 +1,9 @@
 name: plant_config
 description: Configures an iron electrowinning system.
 sites:
+  ore_site:  # Northshore (initial starting point, other sites are read from test_inputs.csv)
+    latitude: 47.29
+    longitude: -91.25
   ewin_site:
     latitude: 41.717
     longitude: -88.398
@@ -18,6 +21,11 @@ technology_interconnections:
   - [ewin_grid_feedstock, iron_plant, electricity, cable]
   - [ewin_NaOH_feedstock, iron_plant, NaOH, NaOH_transport]
   - [ewin_CaCl2_feedstock, iron_plant, CaCl2, CaCl2_transport]
+site_to_tech_connections:
+  - [ore_site, iron_transport, [latitude, origin_latitude]]
+  - [ore_site, iron_transport, [longitude, origin_longitude]]
+  - [ewin_site, iron_transport, [latitude, destination_latitude]]
+  - [ewin_site, iron_transport, [longitude, destination_longitude]]
 plant:
   plant_life: 30
 finance_parameters:
