@@ -146,7 +146,7 @@ def _notebook_weather_year_inputs(dt):
     return n_timesteps, weather, _notebook_power_profile(n_timesteps, dt)
 
 
-def _assert_notebook_weather_year_outputs(prob, dt, subtests):
+def _assert_notebook_weather_year_outputs(prob, dt, subtests, container_count: int = 1) -> None:
     final_soh_capacity = prob.get_val("battery.soh_capacity")[-1]
     final_soh_resistance = prob.get_val("battery.soh_resistance")[-1]
     with subtests.test("final capacity SOH matches notebook"):
@@ -196,7 +196,9 @@ def _assert_notebook_weather_year_outputs(prob, dt, subtests):
     }
     for name, expected in notebook_energy_mwh.items():
         with subtests.test(f"{name} energy matches notebook"):
-            assert energy_mwh[name] == pytest.approx(expected, abs=0.5)
+            assert energy_mwh[name] == pytest.approx(
+                expected * container_count, abs=0.5 * container_count
+            )
 
 
 @pytest.mark.unit
@@ -508,10 +510,11 @@ def test_notebook_weather_year_regression(subtests):
 
 
 @pytest.mark.integration
-def test_notebook_weather_year_full_h2i_system(subtests):
+@pytest.mark.parametrize("container_count", [1, 2, 3])
+def test_notebook_weather_year_full_h2i_system(subtests, container_count: int) -> None:
     dt = 60
     n_timesteps = 365 * 24 * 3600 // dt
-    power_profile_kw = _notebook_power_profile(n_timesteps, dt)
+    power_profile_kw = _notebook_power_profile(n_timesteps, dt) * container_count
     example_dir = Path(__file__).resolve().parents[5] / "examples" / "38_battery_degradation"
     config = load_yaml(example_dir / "38_battery_degradation.yaml")
     for key in ("driver_config", "technology_config", "plant_config"):
@@ -519,10 +522,14 @@ def test_notebook_weather_year_full_h2i_system(subtests):
 
     config["driver_config"].setdefault("general", {})["create_om_reports"] = False
     plant_config = config["plant_config"]
-    plant_config.pop("finance_parameters")
     battery_tech = config["technology_config"]["technologies"]["battery"]
     battery_tech.pop("control_strategy")
     battery_tech["model_inputs"].pop("control_parameters")
+    shared_parameters = battery_tech["model_inputs"]["shared_parameters"]
+    shared_parameters["max_capacity"] *= container_count
+    shared_parameters["max_charge_rate"] *= container_count
+    battery_tech["model_inputs"]["performance_parameters"]["max_discharge_rate"] *= container_count
+    battery_tech["model_inputs"]["performance_parameters"]["deg_scale"] = 0.115
     plant_config.pop("tech_to_dispatch_connections")
     plant_config["plant"]["simulation"].update(
         {
@@ -550,4 +557,4 @@ def test_notebook_weather_year_full_h2i_system(subtests):
     h2i.prob.set_val("battery.electricity_set_point", power_profile_kw, units="kW")
     h2i.run()
 
-    _assert_notebook_weather_year_outputs(h2i.prob, dt, subtests)
+    _assert_notebook_weather_year_outputs(h2i.prob, dt, subtests, container_count=container_count)

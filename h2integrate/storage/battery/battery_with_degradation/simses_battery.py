@@ -211,8 +211,9 @@ class SimSESBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
-        max_capacity (float):  Maximum storage energy capacity in commodity_amount_units.
-            Must be greater than zero.
+        max_capacity (float): Total usable storage capacity in commodity_amount_units.
+            Must be a positive integer multiple of 3854 kWh after unit conversion.
+            Each container holds one fixed 336s x 16p pack.
         max_charge_rate (float): Rated commodity capacity of the storage  in commodity_rate_units.
             Must be greater than zero.
         min_soc_fraction (float): Minimum allowable state of charge as a fraction (0 to 1).
@@ -347,7 +348,16 @@ class SimSESBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
 @register
 class SimSESBatteryPerformanceModel(StoragePerformanceBase):
-    """OpenMDAO component for a storage component."""
+    """Simulate identical battery containers operating in tandem.
+
+    Capacity is specified in 3854 kWh usable increments per container, with
+    4816.896 kWh nominal physical energy per pack/container. Dispatch and charge/discharge
+    ratings are system totals (all containers together). Converter and HVAC ratings
+    apply per container. Power, energy, current, losses, heat, and auxiliary demand
+    are system totals; voltage, SOC, SOH, temperatures, and replacement timing describe
+    both one pack and the full system. A replacement event represents replacement of all
+    packs together.
+    """
 
     _time_step_bounds = (
         60,
@@ -355,6 +365,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     _simulation_duration_bounds = (0.0, float("inf"))
+    _FIXED_USABLE_CAPACITY_KWH = 3854.0  # Usable capacity per container
 
     def initialize(self):
         super().initialize()
@@ -593,6 +604,28 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         else:
             discharge_rate = charge_rate
         storage_capacity = inputs["storage_capacity"][0]
+        capacity_kwh = float(
+            om_units.convert_units(storage_capacity, self.commodity_amount_units, "kW*h")
+        )
+        container_ratio = capacity_kwh / self._FIXED_USABLE_CAPACITY_KWH
+        if (
+            not np.isfinite(container_ratio)
+            or container_ratio < 1.0
+            or not np.isclose(container_ratio, round(container_ratio), rtol=0.0, atol=1e-8)
+        ):
+            raise ValueError(
+                f"storage_capacity must be a positive integer multiple of "
+                f"{self._FIXED_USABLE_CAPACITY_KWH} kWh usable "
+                f"per container; got {capacity_kwh} kWh."
+            )
+        container_count = round(container_ratio)
+        if (self.config.series_count, self.config.parallel_count) != (336, 16):
+            raise ValueError(
+                "This SimSES battery model requires that each container has "
+                "series_count=336 and parallel_count=16; "
+                f"change storage_capacity in tranches of "
+                f"{self._FIXED_USABLE_CAPACITY_KWH} kWh to size the system."
+            )
 
         # ---------------------------------------------------------------------------
         # Battery pack + inverter (fixed Megapack-style topology, from config)
@@ -678,6 +711,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         hvac_power_el = np.empty(self.n_timesteps)
         system_derated = np.zeros(self.n_timesteps)
         self._sim_state = {
+            "container_count": container_count,
             "battery": battery,
             "converter": converter,
             "thermal": thermal,
@@ -713,22 +747,22 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         # Expose the full SimSES timeseries as OpenMDAO outputs for downstream
         # diagnostics/plotting
         outputs["voltage"] = log["v"]
-        outputs["current"] = log["i"]
+        outputs["current"] = log["i"] * container_count
         outputs["temperature"] = log["T"]
-        outputs["battery_loss"] = log["loss"]
-        outputs["battery_heat"] = log["heat"]
+        outputs["battery_loss"] = log["loss"] * container_count
+        outputs["battery_heat"] = log["heat"] * container_count
         outputs["soh_capacity"] = log["soh_Q"]
         outputs["soh_resistance"] = log["soh_R"]
-        outputs["power_ac"] = power_ac
-        outputs["power_dc"] = power_dc
-        outputs["converter_loss"] = conv_loss
+        outputs["power_ac"] = power_ac * container_count
+        outputs["power_dc"] = power_dc * container_count
+        outputs["converter_loss"] = conv_loss * container_count
         outputs["container_air_temperature"] = container_T_air
         outputs["container_wall_temperature_inner"] = container_T_in
         outputs["container_wall_temperature_mid"] = container_T_mid
         outputs["container_wall_temperature_outer"] = container_T_out
-        outputs["solar_heat_gain"] = q_solar
-        outputs["hvac_thermal_power"] = hvac_power_th
-        outputs["hvac_electrical_power"] = hvac_power_el
+        outputs["solar_heat_gain"] = q_solar * container_count
+        outputs["hvac_thermal_power"] = hvac_power_th * container_count
+        outputs["hvac_electrical_power"] = hvac_power_el * container_count
         outputs["system_derated"] = system_derated
 
         # Populate all OpenMDAO outputs defined in this class and its parent classes.
@@ -737,7 +771,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         soc_ts = log["soc"]
         # --- SimSESBatteryPerformanceModel outputs ---
         outputs[f"{self.commodity}_auxiliary_demand"] = om_units.convert_units(
-            hvac_power_el, "W", self.commodity_rate_units
+            hvac_power_el * container_count, "W", self.commodity_rate_units
         )
 
         # --- StoragePerformanceBase outputs ---
@@ -801,10 +835,13 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         sim_start_index: int = 0,
         sim_end_index: int | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Advance the SimSES battery over one controller window.
+        """Advance one representative SimSES battery pack and container over one controller window.
 
         ``commodity_available`` is accepted for the storage-controller interface; grid
-        purchases are metered from the actual charge output after the battery simulation.
+        purchases are meetered from the actual charge output, available charging power,
+        and rate limits are system totals. Equal power sharing determines the representative
+        pack's dispatch; returned power is scaled to the system total while SOC remains a percentage
+        and so does not need to be scaled.
 
         Args:
             sim_start_index: Starting index of the simulation window.
@@ -813,6 +850,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
         """
         del storage_capacity
         state = self._sim_state
+        container_count = state["container_count"]
         battery = state["battery"]
         converter = state["converter"]
         thermal = state["thermal"]
@@ -862,7 +900,8 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
                 command = min(float(command), discharge_rate)
 
             converter.step(
-                -om_units.convert_units(command, self.commodity_rate_units, "W"), self.dt
+                -om_units.convert_units(command / container_count, self.commodity_rate_units, "W"),
+                self.dt,
             )
             thermal.T_ambient = float(state["ambient_temperature"][index])
             thermal.Q_solar = float(state["q_solar"][index])
@@ -881,7 +920,7 @@ class SimSESBatteryPerformanceModel(StoragePerformanceBase):
             state["hvac_thermal_power"][index] = thermal.state.power_th
             state["hvac_electrical_power"][index] = thermal.state.power_el
 
-            storage_power[local_index] = -om_units.convert_units(
+            storage_power[local_index] = -container_count * om_units.convert_units(
                 converter.state.power, "W", self.commodity_rate_units
             )
             soc[local_index] = battery.state.soc * 100.0
