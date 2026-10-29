@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
