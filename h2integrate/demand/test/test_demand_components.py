@@ -83,6 +83,12 @@ def test_demand_converter_controller(subtests):
             [5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         )
 
+    with subtests.test("Check percent load missed"):
+        assert prob.get_val("percent_load_missed") == pytest.approx(100.0 * 15.0 / 50.0)
+
+    with subtests.test("Check curtailment percent"):
+        assert prob.get_val("curtailment_percent") == pytest.approx(100.0 * 10.0 / 45.0)
+
 
 @pytest.mark.unit
 def test_flexible_demand_converter_controller(subtests, variable_h2_production_profile):

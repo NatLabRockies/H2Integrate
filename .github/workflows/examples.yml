@@ -1,0 +1,92 @@
+name: Examples
+on:
+  schedule:
+    # Nightly at 09:00 UTC (3 AM MDT, 2 AM MST) on the default branch (develop)
+    - cron: 0 9 * * *
+  workflow_dispatch: null
+  pull_request:
+    branches:
+      - main
+      - develop
+    types:
+      - opened
+      - ready_for_review
+      - review_requested
+      - enqueued
+      - auto_merge_enabled
+    paths:
+      - examples/**
+      - h2integrate/control/control_strategies/system_level/test/test_slc_examples.py
+      - .github/workflows/examples.yml
+permissions:
+  contents: read
+concurrency:
+  group: examples-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  examples:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.11'
+          - '3.13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          miniconda-version: latest
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          channels: conda-forge,defaults
+          auto-activate: true
+          activate-environment: h2integrate
+      - name: Install conda dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge glpk highspy "coin-or-cbc>=2.10.12" wisdem
+      - name: Install H2Integrate
+        shell: bash -el {0}
+        env:
+          SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: true
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[develop,extras]"
+      - name: Create env file
+        run: touch .env
+      - name: Run example tests
+        shell: bash -el {0}
+        run: pytest . -m examples --durations=30
+  report:
+    needs: examples
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update, or close the nightly failure issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.examples.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |-
+          label="nightly-examples"
+          issue=$(gh issue list --state open --label "$label" --json number --jq '.[0].number // empty')
+          if [ "$RESULT" = "success" ]; then
+            if [ -n "$issue" ]; then
+              gh issue close "$issue" --comment "The nightly examples workflow passed again: $RUN_URL"
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "Still failing ($RESULT) at $GITHUB_SHA: $RUN_URL"
+          else
+            body=$(printf 'The nightly examples workflow failed (%s) on develop at %s.\n\nRun: %s\n\n%s\n' \
+              "$RESULT" "$GITHUB_SHA" "$RUN_URL" \
+              "Reproduce locally with \`pytest . -m examples\`. Each failing nightly run comments here, and this issue closes automatically when the workflow passes again.")
+            gh label create "$label" --color B60205 --force \
+              --description "Failures reported by the nightly examples workflow"
+            gh issue create --label "$label" \
+              --title "Nightly examples workflow is failing on develop" --body "$body"
+          fi

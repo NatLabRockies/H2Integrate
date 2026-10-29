@@ -14,7 +14,6 @@ import pandas as pd
 
 from h2integrate import (
     ROOT_DIR,
-    EXAMPLE_DIR,
     H2IntegrateModel,
     load_tech_yaml,
     load_plant_yaml,
@@ -38,8 +37,8 @@ from h2integrate.postprocess.mapping import (
 rerun_model = True
 
 # Define filepaths
-ex_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
-ex_out_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping/ex_out"
+ex_dir = Path(__file__).parent
+ex_out_dir = ex_dir / "ex_out"
 save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
 ore_prices_filepath = ex_dir / "example_ore_prices.csv"
