@@ -228,13 +228,6 @@ def test_geoh2_subsurface_cost_curve(subtests, subsurface_cost_tech_config):
         )
         return prob.get_val("bare_capital_cost", units="USD")[0] - cost_per_successful_well
 
-    with subtests.test("Vertical small well matches the 2010 cost curve"):
-        depth = 300.0
-        curve_cost_2010 = 0.224997743 * depth**2 + 389.2448848 * depth + 745141.2795
-        assert completion_cost("vertical", "small", depth) == pytest.approx(
-            inflate_cepci(curve_cost_2010, 2010, 2022)
-        )
-
     for geometry in ["vertical", "horizontal"]:
         with subtests.test(f"{geometry} large wells cost more than small wells"):
             assert completion_cost(geometry, "large", 3000.0) > completion_cost(
@@ -245,6 +238,36 @@ def test_geoh2_subsurface_cost_curve(subtests, subsurface_cost_tech_config):
             assert completion_cost(geometry, "small", 4000.0) > completion_cost(
                 geometry, "small", 1000.0
             )
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize(
+    "geometry,diameter,expected_completion_cost",
+    [
+        ("vertical", "small", 5674514.270407623),
+        ("vertical", "large", 7688273.749162976),
+        ("horizontal", "small", 6133736.187186934),
+        ("horizontal", "large", 8429032.084494736),
+    ],
+)
+def test_geoh2_subsurface_cost_curve_values(
+    subsurface_cost_tech_config, geometry, diameter, expected_completion_cost
+):
+    """Pin each drilling cost curve so a change to any coefficient is caught."""
+    model_inputs = subsurface_cost_tech_config["model_inputs"]
+    model_inputs["shared_parameters"].update({"well_geometry": geometry, "well_diameter": diameter})
+    model_inputs["cost_parameters"]["use_cost_curve"] = True
+    model_inputs["cost_parameters"].pop("constant_drill_cost")
+    prob = run_component(
+        GeoH2SubsurfaceCostModel,
+        make_plant_config(target_dollar_year=2022),
+        subsurface_cost_tech_config,
+        borehole_depth=3000.0,
+    )
+    cost_per_successful_well = (500000 + 905 + 500 * 3) / 0.20
+
+    completion_cost = prob.get_val("bare_capital_cost", units="USD")[0] - cost_per_successful_well
+    assert completion_cost == pytest.approx(expected_completion_cost, rel=1e-6)
 
 
 @pytest.mark.unit
