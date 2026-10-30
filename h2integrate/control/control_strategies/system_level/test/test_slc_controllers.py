@@ -145,63 +145,6 @@ def _build_problem(slc_cls, plant_config, slc_topology, demand=50000, tech_confi
 
 
 # ---------------------------------------------------------------------------
-# SystemLevelControlBase
-# ---------------------------------------------------------------------------
-@pytest.mark.unit
-class TestSystemLevelControlBase:
-    """Tests for the abstract base class setup logic."""
-
-    def test_base_creates_flexible_io(self):
-        tech_connections = [["wind", "demand", "electricity", "cable"]]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = _build_technology_graph(tech_connections)
-        tech_control_classifiers = _build_tech_control_classifiers(flexible=["wind"])
-        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
-        # Use DemandFollowingControl since base is abstract
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
-        # _var_rel2meta uses relative names (no "slc." prefix)
-        assert "wind_electricity_out" in prob.model.slc._var_rel2meta
-        assert "wind_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "wind_electricity_set_point" in prob.model.slc._var_rel2meta
-
-    def test_base_creates_dispatchable_io(self):
-        tech_connections = [["ng", "demand", "electricity", "cable"]]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = _build_technology_graph(tech_connections)
-        tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
-        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
-        assert "ng_electricity_out" in prob.model.slc._var_rel2meta
-        assert "ng_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "ng_electricity_set_point" in prob.model.slc._var_rel2meta
-
-    def test_base_creates_storage_io(self):
-        tech_connections = [["battery", "demand", "electricity", "cable"]]
-        plant_config = _build_plant_config(tech_connections)
-        tech_graph = _build_technology_graph(tech_connections)
-        tech_control_classifiers = _build_tech_control_classifiers(storage=["battery"])
-        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
-
-        assert "battery_electricity_out" in prob.model.slc._var_rel2meta
-        assert "battery_rated_electricity_production" in prob.model.slc._var_rel2meta
-        assert "battery_electricity_set_point" in prob.model.slc._var_rel2meta
-
-    def test_base_creates_demand_input(self):
-        plant_config = _build_plant_config([])
-        tech_graph = _build_technology_graph([])
-        tech_control_classifiers = _build_tech_control_classifiers()
-        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
-        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
-
-        assert "electricity_demand" in prob.model.slc._var_rel2meta
-
-    def test_backward_compat_alias(self):
-        """DemandFollowingControl should be an alias for DemandFollowingControl."""
-        assert DemandFollowingControl is DemandFollowingControl
-
-
-# ---------------------------------------------------------------------------
 # DemandFollowingControl
 # ---------------------------------------------------------------------------
 @pytest.mark.unit
@@ -269,6 +212,14 @@ class TestDemandFollowingControl:
         slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
         prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
+        for tech in ("wind", "battery", "ng"):
+            assert {
+                f"{tech}_electricity_out",
+                f"{tech}_rated_electricity_production",
+                f"{tech}_electricity_set_point",
+            } <= prob.model.slc._var_rel2meta.keys()
+        assert "electricity_demand" in prob.model.slc._var_rel2meta
+
         prob.set_val("slc.wind_electricity_out", [70000, 30000, 50000, 50000])
         prob.set_val("slc.wind_rated_electricity_production", 120000)
         prob.set_val("slc.battery_electricity_out", [0, 0, 0, 0])
@@ -289,6 +240,7 @@ class TestDemandFollowingControl:
         slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
         prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
 
+        assert "electricity_demand" in prob.model.slc._var_rel2meta
         prob.run_model()  # should not raise
 
 

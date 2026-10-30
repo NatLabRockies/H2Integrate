@@ -1,6 +1,5 @@
 import os
 import shutil
-from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
@@ -68,8 +67,9 @@ def test_combiner_naming_dependency(temp_copy_of_example):
     combiner_tech_names = [
         k
         for k, v in tech_config["technologies"].items()
-        if v.get("performance_model", "model") == "GenericCombinerPerformanceModel"
+        if v.get("performance_model", {}).get("model") == "GenericCombinerPerformanceModel"
     ]
+    assert combiner_tech_names
     combiner_tech_renames = {k: k.replace("combiner", "unnamed") for k in combiner_tech_names}
 
     # rename combiners in technology_interconnections
@@ -118,6 +118,12 @@ def test_combiner_naming_dependency(temp_copy_of_example):
     h2i = H2IntegrateModel(top_level_config)
     h2i.setup()
     h2i.run()
+    for original, renamed in combiner_tech_renames.items():
+        inputs = tech_config["technologies"][original]["model_inputs"]
+        commodity = (
+            inputs.get("performance_parameters", {}) | inputs.get("shared_parameters", {})
+        )["commodity"]
+        assert np.any(h2i.prob.get_val(f"{renamed}.{commodity}_out") > 0)
 
 
 @pytest.mark.integration
@@ -802,90 +808,6 @@ def test_custom_model_name_clash(temp_dir, subtests):
         with pytest.raises(ValueError, match=error_msg):
             H2IntegrateModel(temp_highlevel_yaml)
 
-    with subtests.test(
-        "custom models must use different model names for different class definitions"
-    ):
-        # Load the tech_config YAML content
-        tech_config_data = load_tech_yaml(temp_tech_config)
-
-        tech_config_data["technologies"]["electrolyzer"]["cost_model"] = {
-            "model": "DummyClass",
-            "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
-        }
-
-        tech_config_data["technologies"]["electrolyzer2"] = deepcopy(
-            tech_config_data["technologies"]["electrolyzer"]
-        )
-        tech_config_data["technologies"]["electrolyzer2"]["cost_model"] = {
-            "model": "DummyClass",
-            "model_location": "dummy_path",  # path doesn't matter; `model_location` must exist
-        }
-        # Save the modified tech_config YAML back
-        with temp_tech_config.open("w") as f:
-            yaml.safe_dump(tech_config_data, f)
-
-        # Load the high-level YAML content
-        with temp_highlevel_yaml.open() as f:
-            highlevel_data = yaml.safe_load(f)
-
-        # Modify the high-level YAML to point to the temp tech_config file
-        highlevel_data["technology_config"] = str(temp_tech_config.name)
-
-        # Save the modified high-level YAML back
-        with temp_highlevel_yaml.open("w") as f:
-            yaml.safe_dump(highlevel_data, f)
-
-        # Assert that a ValueError is raised with the expected message when running the model
-        error_msg = (
-            r"User has specified two custom models using the same model"
-            r"name ('new_electrolyzer_cost'), but with different model classes\. "
-            r"Technologies defined with different"
-            r"classes must have different technology names\."
-        )
-
-
-@pytest.mark.unit
-def test_custom_financial_model_grouping(temp_dir, subtests):
-    orig_tech_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "tech_config.yaml"
-    temp_tech_config = temp_dir / "temp_tech_config.yaml"
-    orig_highlevel_yaml = EXAMPLE_DIR / "01_onshore_steel_mn" / "01_onshore_steel_mn.yaml"
-    temp_highlevel_yaml = temp_dir / "temp_01_onshore_steel_mn.yaml"
-
-    driver_config = load_driver_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "driver_config.yaml")
-    plant_config = load_plant_yaml(EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml")
-
-    # Copy the original tech_config.yaml and high-level yaml to temp files
-    shutil.copy(orig_tech_config, temp_tech_config)
-    shutil.copy(orig_highlevel_yaml, temp_highlevel_yaml)
-
-    # Load the tech_config YAML content
-    tech_config_data = load_tech_yaml(temp_tech_config)
-
-    # Modify the financial_model entry for one of the technologies
-    tech_config_data["technologies"]["steel"]["finance_model"]["group"] = "test_financial_group"
-    tech_config_data["technologies"]["electrolyzer"].pop("financial_model", None)
-
-    # Save the modified tech_config YAML back
-    with temp_tech_config.open("w") as f:
-        yaml.safe_dump(tech_config_data, f)
-
-    # Load the high-level YAML content
-    with temp_highlevel_yaml.open() as f:
-        highlevel_data = yaml.safe_load(f)
-        highlevel_data["driver_config"] = driver_config
-        highlevel_data["plant_config"] = plant_config
-
-    # Modify the high-level YAML to point to the temp tech_config file
-    highlevel_data["technology_config"] = str(temp_tech_config)
-
-    # Save the modified high-level YAML back
-    with temp_highlevel_yaml.open("w") as f:
-        yaml.safe_dump(highlevel_data, f)
-
-    # Run the model and check that it does not raise an error
-    # (assuming custom financial_model is allowed)
-    H2IntegrateModel(temp_highlevel_yaml)
-
 
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
@@ -1117,7 +1039,7 @@ def test_resource_connection_error_missing_connection(temp_dir):
 
     with pytest.raises(ValueError) as excinfo:
         H2IntegrateModel(temp_highlevel_yaml)
-        assert "Resource models ['wind_resource'] are not in" in str(excinfo.value)
+    assert "Resource models ['site.wind_resource'] are not included" in str(excinfo.value)
 
 
 @pytest.mark.unit

@@ -1,237 +1,76 @@
-"""Unit tests for h2integrate.postprocess.sql_to_csv module.
+"""Tests for scalar summaries of a real OpenMDAO recorder file."""
 
-These tests follow the same pattern as test_sql_timeseries_to_csv.py:
-run example 19 (simple dispatch) to produce a real SQL recorder file,
-then exercise convert_sql_to_csv_summary and summarize_case against it.
-"""
-
+import numpy as np
 import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import EXAMPLE_DIR, H2IntegrateModel, load_yaml, load_tech_yaml, load_driver_yaml
+from h2integrate import H2IntegrateModel, load_yaml, load_tech_yaml, load_driver_yaml
 from h2integrate.postprocess.sql_to_csv import summarize_case, convert_sql_to_csv_summary
 
 
-# ---------------------------------------------------------------------------
-# Fixtures — mirror the pattern from test_sql_timeseries_to_csv.py but
-#             targeting example 19_simple_dispatch.
-# ---------------------------------------------------------------------------
-
-EXAMPLE_19_DIR = EXAMPLE_DIR / "19_simple_dispatch"
-
-
-def run_example_19_sql_fpath(example_folder):
-    """Load and patch the example-19 configuration, then run the example and return the path to the
-    SQL file.
-    """
-    config = load_yaml(example_folder / "wind_battery_dispatch.yaml")
-
-    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
-    driver_config["general"]["folder_output"] = str(example_folder)
-    # Add a recorder so that an SQL file is produced
-    driver_config["recorder"] = {
-        "flag": True,
-        "file": "cases.sql",
-        "overwrite_recorder": True,
-        "recorder_attachment": "model",
-        "includes": ["*"],
-        "excludes": ["*resource_data*"],
-    }
-    config["driver_config"] = driver_config
-
-    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
-    config["technology_config"] = tech_config
-
-    sql_fpath = example_folder / "cases.sql"
-    if sql_fpath.exists():
-        return sql_fpath
-
-    h2i = H2IntegrateModel(config)
-    h2i.run()
-
-    return h2i.recorder_path.absolute()
-
-
-# ---------------------------------------------------------------------------
-# Tests for summarize_case
-# ---------------------------------------------------------------------------
+@pytest.fixture
+def recorded_case(temp_copy_of_example_module_scope):
+    example_folder = temp_copy_of_example_module_scope
+    sql_path = example_folder / "cases.sql"
+    if not sql_path.exists():
+        config = load_yaml(example_folder / "wind_battery_dispatch.yaml")
+        driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+        driver_config["general"]["folder_output"] = str(example_folder)
+        driver_config["recorder"] = {
+            "flag": True,
+            "file": "cases.sql",
+            "overwrite_recorder": True,
+            "recorder_attachment": "model",
+            "includes": ["*"],
+            "excludes": ["*resource_data*"],
+        }
+        config["driver_config"] = driver_config
+        config["technology_config"] = load_tech_yaml(example_folder / "tech_config.yaml")
+        model = H2IntegrateModel(config)
+        model.run()
+        sql_path = model.recorder_path.absolute()
+    return sql_path
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_returns_dict(temp_copy_of_example_module_scope):
-    """summarize_case should return a dictionary of scalar results."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    cr = om.CaseReader(str(sql_path))
-    case = list(cr.get_cases())[0]
-
-    result = summarize_case(case)
-
-    assert isinstance(result, dict)
-    assert len(result) > 0
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_return_units(temp_copy_of_example_module_scope):
-    """When return_units=True, summarize_case should return (values, units)."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    cr = om.CaseReader(str(sql_path))
-    case = list(cr.get_cases())[0]
-
+def test_summarize_case(recorded_case, subtests):
+    case = list(om.CaseReader(str(recorded_case)).get_cases())[0]
     values, units = summarize_case(case, return_units=True)
 
-    assert isinstance(values, dict)
-    assert isinstance(units, dict)
-    assert len(values) > 0
-    assert len(units) > 0
-
-    # Every key in units should also be in values
-    for key in units:
-        assert key in values, f"Unit key '{key}' missing from values dict"
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_scalar_only(temp_copy_of_example_module_scope):
-    """summarize_case should only contain scalar (single-element) values, not timeseries."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    cr = om.CaseReader(str(sql_path))
-    case = list(cr.get_cases())[0]
-
-    result = summarize_case(case)
-
-    for var, val in result.items():
-        # discrete values (str, bool, int, float) are fine
-        if isinstance(val, str | bool):
-            continue
-        # numeric scalars should not be arrays with multiple elements
-        assert not hasattr(val, "__len__") or len([val]) == 1, (
-            f"Variable '{var}' is not scalar: {val}"
-        )
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_summarize_case_known_variables(temp_copy_of_example_module_scope):
-    """Expected variables from example 19 should appear in the summary."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    cr = om.CaseReader(str(sql_path))
-    case = list(cr.get_cases())[0]
-
-    result = summarize_case(case)
-
-    # Example 19 has wind + battery, so we expect CapEx for both
-    expected_vars = ["wind.CapEx", "battery.CapEx"]
-    for var in expected_vars:
-        assert var in result, f"Expected '{var}' in summary, got keys: {list(result.keys())}"
-
-
-# ---------------------------------------------------------------------------
-# Tests for convert_sql_to_csv_summary
-# ---------------------------------------------------------------------------
+    with subtests.test("summary and units"):
+        assert values == summarize_case(case)
+        assert values
+        assert units
+        assert units.keys() <= values.keys()
+        assert {"wind.CapEx", "battery.CapEx"} <= values.keys()
+    with subtests.test("timeseries are excluded"):
+        assert "wind.electricity_out" not in values
+        assert all(np.isscalar(value) for value in values.values())
 
 
 @pytest.mark.unit
 def test_file_not_found(tmp_path):
-    """Should raise FileNotFoundError when the SQL file does not exist."""
-    fake_path = tmp_path / "nonexistent.sql"
     with pytest.raises(FileNotFoundError, match="does not exist"):
-        convert_sql_to_csv_summary(fake_path)
+        convert_sql_to_csv_summary(tmp_path / "nonexistent.sql")
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_returns_dataframe(temp_copy_of_example_module_scope):
-    """convert_sql_to_csv_summary should return a pandas DataFrame."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
+def test_convert_summary(recorded_case, subtests):
+    csv_path = recorded_case.with_suffix(".csv")
+    result = convert_sql_to_csv_summary(str(recorded_case), save_to_file=False)
 
-    assert isinstance(result, pd.DataFrame)
-    assert len(result) == 1  # single run → one row
+    with subtests.test("single case with named scalar columns and units"):
+        assert isinstance(result, pd.DataFrame)
+        assert result.index.to_list() == [0]
+        assert {"wind.CapEx", "battery.CapEx"} <= {name.split(" (")[0] for name in result.columns}
+        assert any(" (" in name and name.endswith(")") for name in result.columns)
+        assert not csv_path.exists()
 
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_column_names_include_units(temp_copy_of_example_module_scope):
-    """Columns for continuous variables should include units in parentheses."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
-
-    cols = result.columns.to_list()
-    cols_with_units = [c for c in cols if "(" in c and ")" in c]
-    assert len(cols_with_units) > 0, f"Expected columns with units, got: {cols}"
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_save_to_file_creates_csv(subtests, temp_copy_of_example_module_scope):
-    """When save_to_file=True, a CSV file should be written next to the SQL file."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(sql_path, save_to_file=True)
-
-    expected_csv = sql_path.parent / f"{sql_path.stem}.csv"
-
-    with subtests.test("CSV file exists"):
-        assert expected_csv.exists(), "CSV file should have been created"
-
-    with subtests.test("CSV is readable and matches DataFrame"):
-        df = pd.read_csv(expected_csv, index_col=0)
-        assert len(df) == len(result)
-        assert list(df.columns) == list(result.columns)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_save_to_file_false_no_csv(temp_copy_of_example_module_scope):
-    """When save_to_file=False, no CSV file should be written."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    csv_path = sql_path.parent / f"{sql_path.stem}.csv"
-    # Remove any pre-existing CSV from earlier tests
-    if csv_path.exists():
-        csv_path.unlink()
-
-    convert_sql_to_csv_summary(sql_path, save_to_file=False)
-
-    assert not csv_path.exists(), "No CSV file should be created when save_to_file=False"
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_accepts_string_path(temp_copy_of_example_module_scope):
-    """The function should accept a plain string path."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(str(sql_path), save_to_file=False)
-
-    assert isinstance(result, pd.DataFrame)
-    assert len(result) == 1
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_result_contains_expected_columns(temp_copy_of_example_module_scope):
-    """The summary should contain known scalar outputs from example 19."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
-
-    cols = result.columns.to_list()
-    # Strip units from column names for easier matching
-    col_names_no_units = [c.split(" (")[0] for c in cols]
-
-    expected_vars = ["wind.CapEx", "battery.CapEx"]
-    for var in expected_vars:
-        assert var in col_names_no_units, (
-            f"Expected '{var}' in summary columns, got: {col_names_no_units}"
-        )
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
-def test_result_has_single_row(temp_copy_of_example_module_scope):
-    """A single run should produce exactly one row in the summary."""
-    sql_path = run_example_19_sql_fpath(temp_copy_of_example_module_scope)
-    result = convert_sql_to_csv_summary(sql_path, save_to_file=False)
-
-    assert len(result) == 1
-    assert result.index.to_list() == [0]
+    saved = convert_sql_to_csv_summary(recorded_case, save_to_file=True)
+    with subtests.test("CSV matches the returned values"):
+        pd.testing.assert_frame_equal(saved, result)
+        assert csv_path.exists()
+        pd.testing.assert_frame_equal(pd.read_csv(csv_path, index_col=0), result, check_dtype=False)

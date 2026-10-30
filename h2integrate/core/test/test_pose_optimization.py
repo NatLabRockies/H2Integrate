@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 import openmdao.api as om
 from openmdao.core.driver import Driver
@@ -108,8 +110,14 @@ def test_scipy_optimization_driver(subtests):
         "max_iter": 50,
         "rhobeg": 2.0,
         "debug_print": True,
+        "step_calc": "None",
+        "form": "forward",
     }
-    prob = set_driver({"optimization": optimization})
+    prob = om.Problem()
+    optimizer = PoseOptimization(make_config({"optimization": optimization}))
+    with patch.object(prob.model, "approx_totals", wraps=prob.model.approx_totals) as approx_totals:
+        optimizer.set_driver(prob)
+    approx_totals.assert_called_once_with(method="fd", step=1.0e-4, form="forward", step_calc=None)
 
     with subtests.test("Driver and optimizer"):
         assert isinstance(prob.driver, om.ScipyOptimizeDriver)
@@ -122,6 +130,17 @@ def test_scipy_optimization_driver(subtests):
 
     with subtests.test("Debug print includes totals for optimization"):
         assert "totals" in prob.driver.options["debug_print"]
+
+    with subtests.test("Design variable is registered with its bounds"):
+        optimizer.config["design_variables"] = {
+            "electrolyzer": {"n_clusters": {"flag": True, "lower": 2.0, "upper": 40.0}}
+        }
+        prob.model.add_subsystem("electrolyzer", om.IndepVarComp("n_clusters", 5.0))
+        optimizer.set_design_variables(prob)
+        prob.setup()
+        design_var = prob.model.get_design_vars()["electrolyzer.n_clusters"]
+        assert design_var["lower"] == 2.0
+        assert design_var["upper"] == 40.0
 
 
 @pytest.mark.unit

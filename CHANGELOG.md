@@ -24,6 +24,7 @@
 - Added unit tests for code that was previously only exercised by the examples: the paper mill and SAF models, the methanol cost and finance models, the stimulated geologic hydrogen and subsurface well cost models, the ocean alkalinity enhancement cost models, `GenericStorageCostModel`, the time-marching solver, the CSV generator file checker, and the `PoseOptimization` driver setup. [PR 954](https://github.com/NatLabRockies/H2Integrate/pull/954)
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
+- Consolidate redundant tests, strengthen weak assertions, and replace expensive recorder setups with a small grid model. [PR 974](https://github.com/NatLabRockies/H2Integrate/pull/974)
 
 
 ## 0.10.0 [October 12, 2026]

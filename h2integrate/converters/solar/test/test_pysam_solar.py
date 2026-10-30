@@ -35,8 +35,6 @@ class TestCalcTiltAngle:
             (30.0, 30.0),
             (-30.0, 30.0),
             (0.0, 0.0),
-            (45.0, 45.0),
-            (-45.0, 45.0),
             (90.0, 90.0),
             (-90.0, 90.0),
         ],
@@ -64,8 +62,6 @@ class TestCalcTiltAngle:
             # |lat| > 50: tilt = |lat|
             (60.0, 60.0),
             (-60.0, 60.0),
-            (80.0, 80.0),
-            (-80.0, 80.0),
         ],
     )
     def test_lat_func_mode(self, latitude, expected_tilt):
