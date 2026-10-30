@@ -140,15 +140,6 @@ class TestExtractModelInputs:
 class TestOrganizeModelParameters:
     """Tests for organize_model_parameters function."""
 
-    def test_organize_single_model(self):
-        """Test organizing parameters from a single model."""
-        tech_info = {
-            "performance_model": {"model": "GenericCombinerPerformanceModel"},
-        }
-
-        organized = organize_model_parameters(tech_info)
-        assert "performance_parameters" in organized or len(organized) > 0
-
     def test_organize_model_definitions_only(self):
         """Test organizing parameters from model definitions alone."""
         tech_info = {
@@ -168,8 +159,8 @@ class TestOrganizeModelParameters:
 
         organized = organize_model_parameters(tech_info)
 
-        # Should have cost_parameters and performance_parameters
-        assert "performance_parameters" in organized or "cost_parameters" in organized
+        assert "num_turbines" in organized["performance_parameters"]
+        assert "capex_per_kW" in organized["cost_parameters"]
 
     def test_shared_parameters_detected(self):
         """Test that shared parameters are correctly identified."""
@@ -181,9 +172,7 @@ class TestOrganizeModelParameters:
 
         organized = organize_model_parameters(tech_info)
 
-        # Should have shared_parameters (e.g., commodity, max_capacity)
-        if "shared_parameters" in organized:
-            assert len(organized["shared_parameters"]) > 0
+        assert {"commodity", "max_capacity"} <= organized["shared_parameters"].keys()
 
 
 @pytest.mark.unit
@@ -236,22 +225,6 @@ class TestPopulateTechConfig:
         assert "battery" in populated["technologies"]
         assert len(populated["technologies"]["wind"]["model_inputs"]) > 0
         assert len(populated["technologies"]["battery"]["model_inputs"]) > 0
-
-    def test_populate_from_model_definitions_only(self):
-        """Test that model definitions alone produce model_inputs."""
-        config = {
-            "name": "test",
-            "technologies": {
-                "wind": {
-                    "performance_model": {"model": "PYSAMWindPlantPerformanceModel"},
-                    "cost_model": {"model": "ATBWindPlantCostModel"},
-                }
-            },
-        }
-
-        populated = populate_tech_yaml(config)
-
-        assert populated["technologies"]["wind"]["model_inputs"]
 
     def test_populate_demand_component(self):
         """Test populating a technology that uses a demand component."""
