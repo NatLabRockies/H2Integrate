@@ -1,6 +1,10 @@
+from unittest.mock import patch
+
+import yaml
 import numpy as np
 import pytest
 import openmdao.api as om
+from openmdao.utils.om_warnings import UnitsWarning, PromotionWarning
 
 from h2integrate import H2IntegrateModel
 from h2integrate.statistical import ThresholdStatisticsPerformanceModel
@@ -131,18 +135,10 @@ def test_threshold_stats_amount_units(
     )
 
 
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "demand_profile",
-    [
-        pytest.param(10.0 * np.ones(8760), id="scalar_demand"),
-        pytest.param((np.arange(8760) % 24 + 1.0).tolist(), id="demand_array"),
-    ],
-)
-def test_threshold_from_demand_component(demand_profile, subtests):
-    """The threshold is shared with a demand component through an input-to-input connection."""
+@pytest.fixture
+def demand_threshold_config():
     n_timesteps = 8760
-    h2i_config = {
+    return {
         "name": "H2I",
         "system_summary": "",
         "driver_config": {"name": "driver_config", "description": "", "general": {}},
@@ -156,7 +152,7 @@ def test_threshold_from_demand_component(demand_profile, subtests):
                         "performance_parameters": {
                             "commodity": "electricity",
                             "commodity_rate_units": "MW",
-                            "demand_profile": demand_profile,
+                            "demand_profile": 10.0,
                         },
                     },
                 },
@@ -167,6 +163,16 @@ def test_threshold_from_demand_component(demand_profile, subtests):
                             "commodity": "electricity",
                             "commodity_rate_units": "MW",
                             "commodity_amount_units": "MW*h",
+                        },
+                    },
+                },
+                "second_threshold_stats": {
+                    "performance_model": {"model": "ThresholdStatisticsPerformanceModel"},
+                    "model_inputs": {
+                        "performance_parameters": {
+                            "commodity": "electricity",
+                            "commodity_rate_units": "kW",
+                            "commodity_amount_units": "kW*h",
                         },
                     },
                 },
@@ -182,19 +188,48 @@ def test_threshold_from_demand_component(demand_profile, subtests):
                     "threshold_stats",
                     ["electricity_demand", "electricity_threshold"],
                 ],
+                [
+                    "electrical_load_demand",
+                    "second_threshold_stats",
+                    ["electricity_demand", "electricity_threshold"],
+                ],
             ],
         },
     }
 
-    h2i = H2IntegrateModel(h2i_config)
-    h2i.model.connect(
-        "electrical_load_demand.electricity_demand", "threshold_stats.electricity_threshold"
-    )  # DEBUG!!!!! HOTFIX!!!!!
-    h2i.model.set_input_defaults(
-        "electrical_load_demand.electricity_demand",
-        demand_profile,
-        units="MW",
-    )  # DEBUG!!!!! HOTFIX!!!!!
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "demand_profile",
+    [
+        pytest.param(10.0, id="scalar"),
+        pytest.param(10, id="integer_scalar"),
+        pytest.param(10.0 * np.ones(8760), id="array"),
+        pytest.param((np.arange(8760) % 24 + 1.0).tolist(), id="list"),
+    ],
+)
+@pytest.mark.parametrize("demand_model", ["GenericDemandComponent", "FlexibleDemandComponent"])
+def test_threshold_from_demand_component(
+    demand_threshold_config, demand_profile, demand_model, subtests
+):
+    """Demand inputs share their configured default and runtime updates with thresholds."""
+    n_timesteps = 8760
+    demand = demand_threshold_config["technology_config"]["technologies"]["electrical_load_demand"]
+    demand["performance_model"]["model"] = demand_model
+    parameters = demand["model_inputs"].pop("performance_parameters")
+    parameters["demand_profile"] = demand_profile
+    demand["model_inputs"]["shared_parameters"] = parameters
+    demand["model_inputs"]["performance_parameters"] = {}
+    if demand_model == "FlexibleDemandComponent":
+        demand["model_inputs"]["performance_parameters"].update(
+            rated_demand=30.0,
+            turndown_ratio=0.1,
+            ramp_down_rate_fraction=1.0,
+            ramp_up_rate_fraction=1.0,
+            min_utilization=0.0,
+        )
+
+    h2i = H2IntegrateModel(demand_threshold_config)
     h2i.setup()
 
     expected_demand = np.broadcast_to(np.asarray(demand_profile, dtype=float), n_timesteps)
@@ -205,6 +240,9 @@ def test_threshold_from_demand_component(demand_profile, subtests):
     with subtests.test("threshold defaults to the demand profile"):
         assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
             pytest.approx(expected_demand)
+        )
+        assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="kW") == (
+            pytest.approx(expected_demand * 1000)
         )
 
     with subtests.test("statistics use the demand profile as the threshold"):
@@ -219,6 +257,274 @@ def test_threshold_from_demand_component(demand_profile, subtests):
         assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
             pytest.approx(new_demand)
         )
+        assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="kW") == (
+            pytest.approx(new_demand * 1000)
+        )
         assert h2i.prob.get_val("threshold_stats.net_electricity_deficit", units="MW*h") == (
             pytest.approx(0.0)
         )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "tech_name,parameter,expected",
+    [
+        ("electrical_load_demand", "electricity_demand", True),
+        ("electrical_load_demand", "electricity_in", False),
+        ("electrical_load_demand", "unmet_electricity_demand_out", False),
+        ("threshold_stats", "electricity_threshold", False),
+        ("missing_technology", "electricity_demand", False),
+    ],
+)
+def test_is_demand_input_profile(demand_threshold_config, tech_name, parameter, expected):
+    """Only demand-profile inputs receive automatic shared defaults."""
+    h2i = H2IntegrateModel(demand_threshold_config)
+    assert h2i._is_demand_input_profile(tech_name, parameter) is expected
+
+
+@pytest.mark.unit
+def test_demand_default_is_registered_once_on_source(demand_threshold_config):
+    """One source default initializes multiple destinations with different input defaults."""
+    with patch.object(
+        om.Group, "set_input_defaults", autospec=True, side_effect=om.Group.set_input_defaults
+    ) as set_defaults:
+        h2i = H2IntegrateModel(demand_threshold_config)
+
+    top_level_calls = [call for call in set_defaults.call_args_list if call.args[0] is h2i.model]
+    assert len(top_level_calls) == 1
+    assert top_level_calls[0].args[1] == "electrical_load_demand.electricity_demand"
+    assert top_level_calls[0].kwargs["val"] == pytest.approx(np.full(8760, 10.0))
+    assert top_level_calls[0].kwargs["units"] == "MW"
+
+    h2i.run()
+    assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.full(8760, 10.0))
+    )
+    assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="kW") == (
+        pytest.approx(np.full(8760, 10000.0))
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("update_before_first_run", [True, False])
+def test_shared_demand_can_be_updated_through_destination(
+    demand_threshold_config, update_before_first_run, subtests
+):
+    """A destination assignment updates the shared source, not an independent threshold."""
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.setup()
+    if not update_before_first_run:
+        h2i.run()
+
+    h2i.prob.set_val(
+        "second_threshold_stats.electricity_threshold", np.full(8760, 8000.0), units="kW"
+    )
+    h2i.run()
+
+    with subtests.test("all inputs share the same Auto-IVC output"):
+        demand_source = h2i.model.get_source("electrical_load_demand.electricity_demand")
+        assert demand_source.startswith("_auto_ivc.")
+        assert h2i.model.get_source("threshold_stats.electricity_threshold") == demand_source
+        assert h2i.model.get_source("second_threshold_stats.electricity_threshold") == demand_source
+
+    with subtests.test("destination updates reach demand and both thresholds"):
+        for variable in (
+            "electrical_load_demand.electricity_demand",
+            "threshold_stats.electricity_threshold",
+            "second_threshold_stats.electricity_threshold",
+        ):
+            assert h2i.prob.get_val(variable, units="MW") == pytest.approx(np.full(8760, 8.0))
+
+
+@pytest.mark.unit
+def test_threshold_from_connected_demand_input(demand_threshold_config, subtests):
+    """An output driving demand takes precedence over the configured default."""
+    technologies = demand_threshold_config["technology_config"]["technologies"]
+    technologies["upstream_demand"] = {
+        "performance_model": {"model": "GenericDemandComponent"},
+        "model_inputs": {
+            "performance_parameters": {
+                "commodity": "electricity",
+                "commodity_rate_units": "MW",
+                "demand_profile": [4.0] + [12.0] * 8759,
+            },
+        },
+    }
+    demand_threshold_config["plant_config"]["technology_interconnections"].insert(
+        0,
+        [
+            "upstream_demand",
+            "electrical_load_demand",
+            ["unmet_electricity_demand_out[0]", "electricity_demand[0:8760]"],
+        ],
+    )
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.run()
+
+    with subtests.test("the upstream output drives the demand and both thresholds"):
+        for variable in (
+            "electrical_load_demand.electricity_demand",
+            "threshold_stats.electricity_threshold",
+            "second_threshold_stats.electricity_threshold",
+        ):
+            assert h2i.prob.get_val(variable, units="MW") == pytest.approx(np.full(8760, 4.0))
+
+
+@pytest.mark.unit
+def test_non_demand_input_connection_requires_shared_defaults(demand_threshold_config, subtests):
+    """Other input-to-input connections use explicitly configured OpenMDAO defaults."""
+    connections = demand_threshold_config["plant_config"]["technology_interconnections"]
+    connections[1] = [
+        "threshold_stats",
+        "second_threshold_stats",
+        ["electricity_in", "electricity_threshold"],
+    ]
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    with subtests.test("different units require an explicit shared default"):
+        with pytest.warns(UnitsWarning), pytest.raises(RuntimeError, match="different units"):
+            h2i.run()
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.model.set_input_defaults(
+        "threshold_stats.electricity_in", val=np.full(8760, 7.0), units="MW"
+    )
+    h2i.run()
+    with subtests.test("the explicit default is shared"):
+        assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="MW") == (
+            pytest.approx(np.full(8760, 7.0))
+        )
+
+    h2i.prob.set_val("threshold_stats.electricity_in", 4.0, units="MW")
+    h2i.prob.run_model()
+    with subtests.test("runtime updates are shared"):
+        assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="MW") == (
+            pytest.approx(np.full(8760, 4.0))
+        )
+
+
+@pytest.mark.unit
+def test_shared_demand_default_can_be_overridden(demand_threshold_config):
+    """Users can override the default before setup without changing the configured profile."""
+    h2i = H2IntegrateModel(demand_threshold_config)
+    with pytest.warns(PromotionWarning, match="override previously set defaults"):
+        h2i.model.set_input_defaults(
+            "electrical_load_demand.electricity_demand", val=np.full(8760, 8.0), units="MW"
+        )
+    h2i.run()
+    assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.full(8760, 8.0))
+    )
+
+
+@pytest.mark.unit
+def test_hydrogen_demand_shared_default(demand_threshold_config):
+    """The demand default works for commodities other than electricity."""
+    technologies = demand_threshold_config["technology_config"]["technologies"]
+    for tech in technologies.values():
+        params = tech["model_inputs"]["performance_parameters"]
+        params["commodity"] = "hydrogen"
+        params["commodity_rate_units"] = "(kg/h)"
+        if "commodity_amount_units" in params:
+            params["commodity_amount_units"] = "kg"
+    for connection in demand_threshold_config["plant_config"]["technology_interconnections"]:
+        connection[2] = ["hydrogen_demand", "hydrogen_threshold"]
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.run()
+    assert h2i.prob.get_val("threshold_stats.hydrogen_threshold", units="kg/h") == (
+        pytest.approx(np.full(8760, 10.0))
+    )
+
+
+@pytest.mark.unit
+def test_sliced_demand_input_connection(demand_threshold_config):
+    """Source indices select the configured demand profile for a connected input."""
+    demand = demand_threshold_config["technology_config"]["technologies"]["electrical_load_demand"]
+    demand["model_inputs"]["performance_parameters"]["demand_profile"] = list(range(1, 8761))
+    demand_threshold_config["plant_config"]["technology_interconnections"][0][2] = [
+        "electricity_demand[0]",
+        "electricity_threshold[0:8760]",
+    ]
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.run()
+    assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.ones(8760))
+    )
+    assert h2i.prob.get_val("second_threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.arange(1, 8761))
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("reverse_connections", [False, True])
+def test_chained_demand_inputs(demand_threshold_config, reverse_connections):
+    """The upstream demand owns the shared default regardless of connection order."""
+    technologies = demand_threshold_config["technology_config"]["technologies"]
+    technologies["intermediate_demand"] = {
+        "performance_model": {"model": "GenericDemandComponent"},
+        "model_inputs": {
+            "performance_parameters": {
+                "commodity": "electricity",
+                "commodity_rate_units": "MW",
+                "demand_profile": 20.0,
+            },
+        },
+    }
+    connections = [
+        [
+            "electrical_load_demand",
+            "intermediate_demand",
+            ["electricity_demand", "electricity_demand"],
+        ],
+        ["intermediate_demand", "threshold_stats", ["electricity_demand", "electricity_threshold"]],
+        [
+            "intermediate_demand",
+            "second_threshold_stats",
+            ["electricity_demand", "electricity_threshold"],
+        ],
+    ]
+    if reverse_connections:
+        connections.reverse()
+    demand_threshold_config["plant_config"]["technology_interconnections"] = connections
+
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.run()
+    for variable in (
+        "intermediate_demand.electricity_demand",
+        "threshold_stats.electricity_threshold",
+        "second_threshold_stats.electricity_threshold",
+    ):
+        assert h2i.prob.get_val(variable, units="MW") == pytest.approx(np.full(8760, 10.0))
+
+    h2i.prob.set_val("electrical_load_demand.electricity_demand", 3.0, units="MW")
+    h2i.prob.run_model()
+    assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.full(8760, 3.0))
+    )
+
+
+@pytest.mark.unit
+def test_shared_demand_profile_from_yaml(demand_threshold_config, tmp_path):
+    """YAML time-series profiles initialize all connected inputs."""
+    demand = demand_threshold_config["technology_config"]["technologies"]["electrical_load_demand"]
+    demand["model_inputs"]["performance_parameters"]["demand_profile"] = list(range(1, 8761))
+    config_path = tmp_path / "h2i_config.yaml"
+    config_path.write_text(yaml.safe_dump(demand_threshold_config), encoding="utf-8")
+
+    h2i = H2IntegrateModel(config_path)
+    h2i.run()
+    assert h2i.prob.get_val("threshold_stats.electricity_threshold", units="MW") == (
+        pytest.approx(np.arange(1, 8761))
+    )
+
+
+@pytest.mark.unit
+def test_invalid_shared_demand_profile_shape(demand_threshold_config):
+    """A profile with the wrong length is rejected instead of silently reshaped."""
+    demand = demand_threshold_config["technology_config"]["technologies"]["electrical_load_demand"]
+    demand["model_inputs"]["performance_parameters"]["demand_profile"] = [1.0, 2.0]
+    with pytest.raises(ValueError, match="broadcast"):
+        H2IntegrateModel(demand_threshold_config)

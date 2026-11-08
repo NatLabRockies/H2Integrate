@@ -30,16 +30,16 @@ def test_steel_example(subtests, temp_copy_of_example):
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "01_onshore_steel_mn.yaml")
     # docs fencepost end: DO NOT REMOVE
-    # Set battery demand profile to electrolyzer capacity
-    demand_profile = np.ones(8760) * 720.0
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-
     # Run the model
     model.run()
 
     model.post_process()
     # Subtests for checking specific values
+    with subtests.test("Battery uses the configured set-point"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 720.0)
+        )
+
     with subtests.test("Check total electricity produced"):
         assert (
             pytest.approx(
@@ -142,17 +142,17 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "02_texas_ammonia.yaml")
 
-    # Set battery demand profile to electrolyzer capacity
-    demand_profile = np.ones(8760) * 640.0
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-
     # Run the model
     model.run()
 
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Battery uses the configured set-point"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 640.0)
+        )
+
     with subtests.test("Check Wind+PV CapEx"):
         wind_pv_capex = (
             model.prob.get_val("wind.CapEx", units="USD")[0]
@@ -275,17 +275,17 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "12_ammonia_synloop.yaml")
 
-    # Set battery demand profile to electrolyzer capacity
-    demand_profile = np.ones(8760) * 640.0
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-
     # Run the model
     model.run()
 
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Battery uses the configured set-point"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 640.0)
+        )
+
     with subtests.test("Check renewable plant CapEx"):
         wind_pv_capex = (
             model.prob.get_val("wind.CapEx", units="USD")[0]
@@ -617,16 +617,17 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
 
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "offshore_plant_doc.yaml")
-    # Set battery demand profile
-    demand_profile = np.ones(8760) * 340.0
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
     # Run the model
     model.run()
 
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Battery uses the configured set-point"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 340.0)
+        )
+
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(
@@ -857,15 +858,17 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
 
     h2i = H2IntegrateModel(input_config)
 
-    h2i.setup()
-
     electrolyzer_capacity_MW = 60
 
-    # Set the battery demand as 10% of the electrolyzer capacity
-    h2i.prob.set_val("battery.electricity_set_point", 0.1 * electrolyzer_capacity_MW, units="MW")
-    h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
-
     h2i.run()
+
+    with subtests.test("Configured demand profiles are used"):
+        assert h2i.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 0.1 * electrolyzer_capacity_MW)
+        )
+        assert h2i.prob.get_val("elec_load_demand.electricity_demand", units="MW") == pytest.approx(
+            np.full(8760, electrolyzer_capacity_MW)
+        )
 
     lcoe_gen = h2i.prob.get_val("finance_subgroup_generated_electricity.LCOE", units="USD/(MW*h)")[
         0
@@ -900,7 +903,6 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     # Re-run where we set the battery demand equal to the electrolyzer capacity
 
     h2i.prob.set_val("battery.electricity_set_point", electrolyzer_capacity_MW, units="MW")
-    h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
     h2i.run()
 
@@ -1026,17 +1028,17 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "offshore_plant_oae.yaml")
 
-    # Set battery demand profile
-    demand_profile = np.ones(8760) * 330.0
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-
     # Run the model
     model.run()
 
     model.post_process()
 
     # Subtests for checking specific values
+    with subtests.test("Battery uses the configured set-point"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 330.0)
+        )
+
     with subtests.test("Check LCOC"):
         assert (
             pytest.approx(
@@ -2776,17 +2778,18 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
     # Create a H2Integrate model
     model = H2IntegrateModel(example_folder / "pyomo_optimized_dispatch.yaml")
 
-    demand_profile = np.ones(8760) * 100.0
-
-    # TODO: Update with demand module once it is developed
-    model.setup()
-    model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-    model.prob.set_val("electrical_load_demand.electricity_demand", demand_profile, units="MW")
-
     # Run the model
     model.run()
 
     model.post_process()
+
+    with subtests.test("Configured demand profiles are used"):
+        assert model.prob.get_val("battery.electricity_set_point", units="MW") == pytest.approx(
+            np.full(8760, 100.0)
+        )
+        assert model.prob.get_val(
+            "electrical_load_demand.electricity_demand", units="MW"
+        ) == pytest.approx(np.full(8760, 100.0))
 
     with subtests.test("Check wind total electricity produced"):
         wind_total = model.prob.get_val("wind.total_electricity_produced", units="kW*h")[0]

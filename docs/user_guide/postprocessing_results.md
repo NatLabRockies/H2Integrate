@@ -269,7 +269,6 @@ import os
 from copy import deepcopy
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from h2integrate import EXAMPLE_DIR, H2IntegrateModel, load_yaml
@@ -278,10 +277,6 @@ from h2integrate.tools.profast_tools import run_profast, create_and_populate_pro
 os.chdir(EXAMPLE_DIR / "02_texas_ammonia")
 
 model = H2IntegrateModel("02_texas_ammonia.yaml")
-model.setup()
-
-# Set the battery set point to the electrolyzer capacity, as in the Example 2 run script
-model.prob.set_val("battery.electricity_set_point", np.ones(8760) * 640.0, units="MW")
 model.run()
 
 lcoa_h2i = model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")[0]
