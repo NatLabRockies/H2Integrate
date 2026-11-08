@@ -100,6 +100,9 @@ technology_interconnections: [
 ```
 
 No additional `connect` or `set_input_defaults` call is needed for this connection.
+The default is registered on the source demand input at the top-level model; OpenMDAO shares that value with every connected destination.
+Destination inputs do not need matching configured defaults.
+Each source default is registered once, even when it feeds multiple destinations, avoiding duplicate-default warnings.
 When the demand input is not driven by an output, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected threshold receives the updated value.
 If an output drives the demand input, that output supplies the shared value instead of the configured default.
 Connected inputs may use compatible but different units; OpenMDAO converts between them.

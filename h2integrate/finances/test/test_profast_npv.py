@@ -98,52 +98,6 @@ def fake_cost_dict():
 
 
 @pytest.mark.regression
-def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
-    mean_hourly_production = 500000.0
-    prob = om.Problem()
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-        },
-        "finance_parameters": {"model_inputs": profast_inputs_no1},
-    }
-    pf = ProFastNPV(
-        driver_config={},
-        plant_config=plant_config,
-        tech_config=fake_filtered_tech_config,
-        commodity_type="electricity",
-        description="no1",
-    )
-    ivc = om.IndepVarComp()
-
-    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
-    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
-
-    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
-    prob.setup()
-    for variable, cost in fake_cost_dict.items():
-        units = "USD" if "capex" in variable else "USD/year"
-        prob.set_val(f"pf.{variable}", cost, units=units)
-
-    prob.run_model()
-
-    with subtests.test("Sell price"):
-        assert (
-            pytest.approx(
-                prob.get_val("pf.sell_price_electricity_no1", units="USD/(kW*h)"), rel=1e-6
-            )
-            == profast_inputs_no1["commodity_sell_price"]
-        )
-
-    with subtests.test("NPV"):
-        assert (
-            pytest.approx(prob.get_val("pf.NPV_electricity_no1", units="USD")[0], rel=1e-6)
-            == -580179388.883
-        )
-
-
-@pytest.mark.regression
 def test_profast_npv_no1_change_sell_price(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):

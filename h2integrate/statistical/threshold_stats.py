@@ -71,10 +71,12 @@ class ThresholdStatisticsPerformanceModel(om.ExplicitComponent):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        # This is later used to convert summed rates over timesteps to the appropriate commodity
+        # amount units
         self._rate_hours_to_amount_factor = convert_units(
             1.0,
             "h",
-            f"{self.config.commodity_amount_units}/{self.config.commodity_rate_units}",
+            f"({self.config.commodity_amount_units})/({self.config.commodity_rate_units})",
         )
 
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
@@ -139,6 +141,8 @@ class ThresholdStatisticsPerformanceModel(om.ExplicitComponent):
             commodity_difference >= 0.0
         )
 
+        # the timestep converts summed rates to rate-hours; the factor converts rate-hours
+        # to commodity_amount_units for both deficit and surplus
         hours_per_timestep = self.options["plant_config"]["plant"]["simulation"]["dt"] / 3600
         outputs[f"net_{self.config.commodity}_deficit"] = (
             np.sum(deficit) * hours_per_timestep * self._rate_hours_to_amount_factor

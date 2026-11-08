@@ -1724,7 +1724,8 @@ class H2IntegrateModel:
                 optionally with `src_indices` slicing.
             combiner_counts (dict): Tracks the next input index per combiner technology.
             splitter_counts (dict): Tracks the next output index per splitter technology.
-            demand_defaults (set): Demand inputs whose shared defaults have already been set.
+            demand_defaults (set): Source demand inputs already initialized, avoiding repeated
+                defaults and override warnings when one source feeds multiple destinations.
         """
         source_tech, dest_tech, connected_parameter = connection
         src_indices = None
@@ -1755,13 +1756,25 @@ class H2IntegrateModel:
                 src_indices=src_indices,
             )
             source_input = f"{source_tech}.{source_parameter}"
-            if source_input not in demand_defaults and self._set_demand_input_default(
+            if source_input not in demand_defaults and self._is_demand_input_profile(
                 source_tech, source_parameter
             ):
+                profile, units = self._get_demand_input_profile(source_tech)
+                # OpenMDAO shares the source default with all connected destination inputs.
+                self.model.set_input_defaults(source_input, val=profile, units=units)
                 demand_defaults.add(source_input)
 
-    def _set_demand_input_default(self, tech_name: str, parameter: str) -> bool:
-        """Set the shared default for a demand component's demand input."""
+    def _is_demand_input_profile(self, tech_name: str, parameter: str) -> bool:
+        """Check whether a connection source is a demand component's demand input.
+
+        Args:
+            tech_name (str): Source technology name.
+            parameter (str): Source parameter name with any slice notation removed.
+
+        Returns:
+            bool: Whether the source is a DemandComponentBase demand input whose configured
+            profile should initialize the shared input.
+        """
         tech_config = self.technology_config["technologies"].get(tech_name)
         if tech_config is None or self.tech_control_classifiers.get(tech_name) != "demand":
             return False
@@ -1772,15 +1785,26 @@ class H2IntegrateModel:
 
         params = merge_shared_inputs(tech_config["model_inputs"], "performance")
         commodity = params["commodity"].strip()
-        if parameter != f"{commodity}_demand":
-            return False
+        return parameter == f"{commodity}_demand"
 
+    def _get_demand_input_profile(self, tech_name: str) -> tuple[np.ndarray, str]:
+        """Read a demand component's configured profile and units.
+
+        Args:
+            tech_name (str): Demand technology identified by ``_is_demand_input_profile``.
+
+        Returns:
+            tuple[np.ndarray, str]: Full simulation-length demand profile and commodity rate
+            units, including shared parameters and performance-specific overrides.
+
+        Raises:
+            ValueError: If the configured profile cannot broadcast to the simulation length.
+        """
+        tech_config = self.technology_config["technologies"][tech_name]
+        params = merge_shared_inputs(tech_config["model_inputs"], "performance")
         n_timesteps = int(self.plant_config["plant"]["simulation"]["n_timesteps"])
         profile = np.broadcast_to(np.asarray(params["demand_profile"]), (n_timesteps,))
-        self.model.set_input_defaults(
-            f"{tech_name}.{parameter}", val=profile, units=params["commodity_rate_units"].strip()
-        )
-        return True
+        return profile, params["commodity_rate_units"].strip()
 
     def connect_sites_to_techs(self):
         """Connect site resource models to technologies via `site_to_tech_connections`."""

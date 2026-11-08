@@ -1,6 +1,7 @@
-import os
-import itertools
+import json
+from types import SimpleNamespace
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,6 @@ from h2integrate.preprocess import eia
 
 
 DUMMY_KEY = "xxxxxx"
-VALID_API_KEY_EXISTS = os.environ.get("EIA_API_KEY") is not None
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_convert_to_hourly(subtests):
         assert new_df.shape == (8760 * 2, 1)
         assert new_df.index.name == df.index.name
         assert new_df.columns == ["price"]
-        assert (df.price.unique() == np.arange(1, 25)).all()
+        assert (new_df.price.unique() == np.arange(1, 25)).all()
 
     with subtests.test("Check multi index conversion"):
         ix = pd.MultiIndex.from_product(
@@ -122,11 +122,11 @@ def test_validate_resource_year():
     assert eia._validate_resource_year(2005) == (2005, 2005)
     assert eia._validate_resource_year((2010, 2011)) == (2010, 2011)
 
-    with pytest.raises(ValueError):
-        assert eia._validate_resource_year((2010, 2011, 2013))
+    with pytest.raises(ValueError, match="length-2 tuple"):
+        eia._validate_resource_year((2010, 2011, 2013))
 
-    with pytest.raises(TypeError):
-        assert eia._validate_resource_year("2010")
+    with pytest.raises(TypeError, match="length-2 tuple"):
+        eia._validate_resource_year("2010")
 
 
 @pytest.mark.unit
@@ -156,24 +156,25 @@ def test_validate_file_name():
 
 
 @pytest.mark.unit
-def test_get_eia_api_key(subtests, EIA_API_key_file):
+def test_get_eia_api_key(subtests, EIA_API_key_file, monkeypatch):
     """Tests the API Key retrieval."""
     good_api_fn, bad_api_fn = EIA_API_key_file
+    monkeypatch.delenv("EIA_API_KEY", raising=False)
 
     with subtests.test("Use a dummy file"):
         assert eia.get_eia_api_key(good_api_fn) == DUMMY_KEY
 
-    if (api_key := os.environ.get("EIA_API_KEY")) is None:
-        api_key = DUMMY_KEY
-        os.environ["EIA_API_KEY"] = api_key
+    monkeypatch.setenv("EIA_API_KEY", DUMMY_KEY)
     with subtests.test("Use the environment variable"):
-        assert eia.get_eia_api_key(None) == api_key
-        del os.environ["EIA_API_KEY"]
+        assert eia.get_eia_api_key(None) == DUMMY_KEY
 
     with subtests.test("Error is raised for no file nor env variable"):
+        monkeypatch.delenv("EIA_API_KEY")
         msg = "`EIA_API_KEY` has not been set. "
-        with pytest.raises(ValueError, match=msg):
-            eia.get_eia_api_key(None)
+        with monkeypatch.context() as missing_env:
+            missing_env.setattr(eia, "get_environment_variables", lambda *args, **kwargs: {})
+            with pytest.raises(ValueError, match=msg):
+                eia.get_eia_api_key(None)
 
     with subtests.test("Error is raised for file with bad key name"):
         msg = "`EIA_API_KEY` has not been set. "
@@ -184,9 +185,8 @@ def test_get_eia_api_key(subtests, EIA_API_key_file):
 @pytest.mark.unit
 def test_create_eia_ng_api_url(subtests, monkeypatch):
     """Tests API URL generation for basic parameterizations."""
-    if not VALID_API_KEY_EXISTS:
-        api_key = DUMMY_KEY
-        monkeypatch.setenv("EIA_API_KEY", api_key)
+    api_key = DUMMY_KEY
+    monkeypatch.setenv("EIA_API_KEY", api_key)
 
     correct_single_url = (
         "https://api.eia.gov/v2/natural-gas/pri/sum/data/"
@@ -233,51 +233,49 @@ def test_create_eia_ng_api_url(subtests, monkeypatch):
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(
-    VALID_API_KEY_EXISTS, reason="Valid API key found to test data download; skipping"
-)
-def test_failed_get_eia_ng_data():
-    with pytest.raises(ValueError):
-        eia.get_eia_ng_data(
-            state="ak",
-            resource_year=2022,
-            price_category="industrial",
-        )
+def test_failed_get_eia_ng_data(monkeypatch, EIA_API_key_file, subtests):
+    with subtests.test("missing API key"):
+        monkeypatch.delenv("EIA_API_KEY", raising=False)
+        with monkeypatch.context() as missing_env:
+            missing_env.setattr(eia, "get_environment_variables", lambda *args, **kwargs: {})
+            with pytest.raises(ValueError, match="EIA_API_KEY"):
+                eia.get_eia_ng_data(state="ak", resource_year=2022, price_category="industrial")
+
+    with subtests.test("HTTP error is surfaced"):
+        get = Mock(return_value=SimpleNamespace(status_code=401, text='{"error": "invalid key"}'))
+        monkeypatch.setattr(eia.requests, "get", get)
+        with pytest.raises(eia.requests.exceptions.HTTPError, match="invalid key"):
+            eia.get_eia_ng_data(
+                state="ak",
+                resource_year=2022,
+                price_category="industrial",
+                api_key_file=EIA_API_key_file[0],
+            )
+        assert "facets[series][]=N3035AK3" in get.call_args.args[0]
 
 
 @pytest.mark.unit
-@pytest.mark.skipif(not VALID_API_KEY_EXISTS, reason="No valid API key found to test data download")
-def test_get_eia_ng_data():
-    """Check the data for correct dimensionality and extrapolation properties."""
+def test_get_eia_ng_data(monkeypatch, EIA_API_key_file):
+    monkeypatch.setenv("EIA_API_KEY", DUMMY_KEY)
+    response = {
+        "response": {
+            "data": [
+                {"period": "2022", "value": "9.64"},
+                {"period": "2023", "value": "19.28"},
+            ]
+        }
+    }
+    get = Mock(return_value=SimpleNamespace(status_code=200, text=json.dumps(response)))
+    monkeypatch.setattr(eia.requests, "get", get)
 
-    df = eia.create_eia_ng_api_url(
-        state=("ak", "CO"),
-        resource_year=(2022, 2024),
-        monthly=True,
-        price_category=["industrial", "wellhead"],
-    )
-    assert df.index.names == ["period", "state", "category"]
-    assert df.columns == ["price"]
-    assert df.shape == (144, 1)  # 2 states x 2 categories x 3 years x 12 months
-    assert df.index.get_level_values("state").unique() == ["AK", "CO"]
-    assert df.index.get_level_values("category").unique() == ["industrial", "wellhead"]
-
-    df = eia.create_eia_ng_api_url(
-        state=("ak", "CO"),
-        resource_year=(2022, 2024),
+    df = eia.get_eia_ng_data(
+        state="ak",
+        resource_year=(2022, 2023),
         monthly=False,
-        price_category=["industrial", "wellhead"],
+        price_category="industrial",
+        api_key_file=EIA_API_key_file[0],
     )
-    assert df.index.names == ["period", "category", "state"]
-    assert df.columns == ["price"]
-    assert df.shape == (144, 1)  # 2 states x 2 categories x 3 years x 12 months
-    assert df.index.get_level_values("state").unique() == ["AK", "CO"]
-    assert df.index.get_level_values("category").unique() == ["industrial", "wellhead"]
-
-    # Ensure an extrapolated annual value is the same value for all 12 months
-    combinations = itertools.product(range(2022, 2025), ("AK", "CO"), ("industrial", "wellhead"))
-    for year, state, category in combinations:
-        dt_ix = df.index.get_level_values("period").year == year
-        st_ix = df.index.get_level_values("state") == state
-        cat_ix = df.index.get_level_values("category") == category
-        assert len(df.loc[dt_ix & st_ix & cat_ix].unique()) == 1
+    assert df.index.equals(pd.date_range("2022-01-01", periods=24, freq="MS", name="period"))
+    assert list(df.columns) == ["price"]
+    np.testing.assert_allclose(df.price, [10.0] * 12 + [20.0] * 12)
+    assert "frequency=annual" in get.call_args.args[0]

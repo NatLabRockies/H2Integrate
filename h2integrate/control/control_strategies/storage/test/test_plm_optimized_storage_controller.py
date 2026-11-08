@@ -180,8 +180,9 @@ def test_compute_eligible_mask_uniform_signal_all_eligible():
 
 
 @pytest.mark.regression
-def test_optimizer_dispatch_only_in_peak_window(subtests, base_config):
-    """Solver must never set 1 outside the peak window."""
+def test_optimizer_dispatch_obeys_peak_window_and_signal_threshold(subtests, base_config):
+    """Discharge must be confined to both the peak window and eligible signals."""
+    base_config = attrs.evolve(base_config, signal_threshold_percentile=50.0)
     controller = _make_controller_with_config(base_config)
     model = controller._build_dr_model(
         window_start=0,
@@ -194,36 +195,13 @@ def test_optimizer_dispatch_only_in_peak_window(subtests, base_config):
 
     PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
 
-    peak_start, peak_end = controller._parse_peak_window()
-    for t in range(24):
-        hour = pd.Timestamp("2024-01-01") + pd.Timedelta(hours=t)
-        in_window = peak_start <= hour.time() <= peak_end
-        if not in_window:
-            with subtests.test(f"No discharge outside peak window at t={t}"):
-                assert pyomo.value(model.discharge_upstream[t]) < 1e-3  # type: ignore[index]
-
-
-@pytest.mark.regression
-def test_optimizer_dispatch_only_on_eligible_timesteps(subtests, base_config):
-    """Solver must never set 1 on ineligible timesteps."""
-    controller = _make_controller_with_config(base_config)
-    model = controller._build_dr_model(
-        window_start=0,
-        window_len=24,
-        init_soc=base_config.init_soc_fraction,
-        remaining_budget={1: base_config.n_max_events},
-        P_max=base_config.max_charge_rate,
-        storage_capacity=base_config.max_capacity,
-    )
-
-    PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
-
-    signal = np.array(controller.config.lmp_signal)
-    eligible_mask = controller._compute_eligible_mask(signal)
-    for t in range(24):
-        if not eligible_mask[t]:
-            with subtests.test(f"No discharge on ineligible timestep at t={t}"):
-                assert pyomo.value(model.discharge_upstream[t]) < 1e-3  # type: ignore[index]
+    discharge = np.array([pyomo.value(model.discharge_upstream[t]) for t in range(24)])
+    with subtests.test("no discharge outside 08:00-18:00"):
+        assert np.all(discharge[:8] < 1e-3)
+        assert np.all(discharge[18:] < 1e-3)
+    with subtests.test("no discharge below the median signal"):
+        assert np.all(discharge[:12] < 1e-3)
+        assert np.any(discharge[12:18] > 1e-3)
 
 
 @pytest.mark.regression

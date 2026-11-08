@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from h2integrate import (
@@ -12,9 +10,10 @@ from h2integrate import (
 
 
 @pytest.fixture
-def input_config(temp_dir):
-    os.chdir(EXAMPLE_DIR / "25_sizing_modes")
+def input_config(temp_dir, monkeypatch):
+    monkeypatch.chdir(EXAMPLE_DIR / "25_sizing_modes")
     driver_config = load_driver_yaml(EXAMPLE_DIR / "25_sizing_modes" / "driver_config.yaml")
+    driver_config["general"]["folder_output"] = str(temp_dir)
     plant_config = load_plant_yaml(EXAMPLE_DIR / "25_sizing_modes" / "plant_config.yaml")
     tech_config = load_tech_yaml(EXAMPLE_DIR / "25_sizing_modes" / "tech_config.yaml")
     input_config = {
