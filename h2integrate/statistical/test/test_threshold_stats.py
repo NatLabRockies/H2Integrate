@@ -306,6 +306,37 @@ def test_demand_default_is_registered_once_on_source(demand_threshold_config):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("update_before_first_run", [True, False])
+def test_shared_demand_can_be_updated_through_destination(
+    demand_threshold_config, update_before_first_run, subtests
+):
+    """A destination assignment updates the shared source, not an independent threshold."""
+    h2i = H2IntegrateModel(demand_threshold_config)
+    h2i.setup()
+    if not update_before_first_run:
+        h2i.run()
+
+    h2i.prob.set_val(
+        "second_threshold_stats.electricity_threshold", np.full(8760, 8000.0), units="kW"
+    )
+    h2i.run()
+
+    with subtests.test("all inputs share the same Auto-IVC output"):
+        demand_source = h2i.model.get_source("electrical_load_demand.electricity_demand")
+        assert demand_source.startswith("_auto_ivc.")
+        assert h2i.model.get_source("threshold_stats.electricity_threshold") == demand_source
+        assert h2i.model.get_source("second_threshold_stats.electricity_threshold") == demand_source
+
+    with subtests.test("destination updates reach demand and both thresholds"):
+        for variable in (
+            "electrical_load_demand.electricity_demand",
+            "threshold_stats.electricity_threshold",
+            "second_threshold_stats.electricity_threshold",
+        ):
+            assert h2i.prob.get_val(variable, units="MW") == pytest.approx(np.full(8760, 8.0))
+
+
+@pytest.mark.unit
 def test_threshold_from_connected_demand_input(demand_threshold_config, subtests):
     """An output driving demand takes precedence over the configured default."""
     technologies = demand_threshold_config["technology_config"]["technologies"]

@@ -1750,6 +1750,7 @@ class H2IntegrateModel:
                 splitter_counts,
             )
         else:
+            # Input-to-input connections share a source; the top-level model owns Auto-IVC.
             self.model.connect(
                 f"{source_tech}.{source_parameter}",
                 f"{dest_tech}.{dest_parameter}",
@@ -1760,7 +1761,9 @@ class H2IntegrateModel:
                 source_tech, source_parameter
             ):
                 profile, units = self._get_demand_input_profile(source_tech)
-                # OpenMDAO shares the source default with all connected destination inputs.
+                # Declare value/units metadata for the shared Auto-IVC output, not an input
+                # assignment. Its value transfers to connected inputs when the model runs.
+                # Register once per source to avoid override warnings for multiple destinations.
                 self.model.set_input_defaults(source_input, val=profile, units=units)
                 demand_defaults.add(source_input)
 

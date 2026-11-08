@@ -100,10 +100,16 @@ technology_interconnections: [
 ```
 
 No additional `connect` or `set_input_defaults` call is needed for this connection.
-The default is registered on the source demand input at the top-level model; OpenMDAO shares that value with every connected destination.
+The default is registered on the source demand input at the top-level model as metadata for the shared Auto-IVC output.
+When no explicit output drives the demand, OpenMDAO connects that Auto-IVC output to the demand and every connected destination.
+`set_input_defaults` declares the default value and units; it does not directly assign values to each component input.
+Those inputs receive the shared source value when the model runs, so listing inputs before running may still show component defaults.
 Destination inputs do not need matching configured defaults.
 Each source default is registered once, even when it feeds multiple destinations, avoiding duplicate-default warnings.
 When the demand input is not driven by an output, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected threshold receives the updated value.
+Setting a connected threshold with `set_val` also updates the shared source, including the demand and other connected thresholds; it does not create an independent threshold.
+Unlike `set_input_defaults`, `set_val` changes the source value rather than declaring default metadata.
+See OpenMDAO's [comparison of `set_input_defaults` and `set_val`](https://openmdao.org/newdocs/versions/latest/features/core_features/running_your_models/set_input_defaults.html#how-the-set-input-defaults-function-differs-from-the-set-val-function).
 If an output drives the demand input, that output supplies the shared value instead of the configured default.
 Connected inputs may use compatible but different units; OpenMDAO converts between them.
 
