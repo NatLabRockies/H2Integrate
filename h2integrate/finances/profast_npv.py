@@ -28,6 +28,8 @@ class ProFastNPV(ProFastBase):
         NPV_<commodity> (float): Net Present Value of the commodity in USD.
     """
 
+    _simulation_duration_bounds = (1.0, float("inf"))
+
     def add_model_specific_outputs(self):
         """Define NPV output variable for the model.
 
