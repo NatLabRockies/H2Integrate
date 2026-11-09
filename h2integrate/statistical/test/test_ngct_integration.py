@@ -288,7 +288,6 @@ def test_ngct_integration(subtests):
     # iterate over reference values and compare with model outputs
     for key, ref_val in {**ref_values_outputs, **ref_values_headroom}.items():
         model_val = h2i.model.get_val(key, units=ref_val["units"])
-        print(f"DEBUG!!!!! {ref_val}, model_val: {model_val}")
         with subtests.test(msg=f"statistics check for {key}"):
             assert np.allclose(model_val, ref_val["value"], rtol=ref_val.get("rtol")), (
                 f"Mismatch for {key}: expected {ref_val['value']}"
