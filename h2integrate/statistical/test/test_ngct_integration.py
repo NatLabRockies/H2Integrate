@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import h2integrate
 
@@ -6,7 +7,8 @@ import h2integrate
 # THIS TEST VALIDATES THAT THE CASE IN EXAMPLE 38 PRODUCES THE EXPECTED STATISTICAL OUTPUTS
 
 
-def test_test_testy(subtests):
+@pytest.mark.integration
+def test_ngct_integration(subtests):
 
     # import the configuration files and create an H2Integrate model
     total_config = {
