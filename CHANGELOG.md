@@ -7,6 +7,7 @@
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
 - Updated the reverse osmosis desalination models to remove the base class, take time-varying `electricity_in` and `feedwater_in` inputs that limit `water_out`, and expose capacity and related config values as OpenMDAO inputs. [PR 941](https://github.com/NatLabRockies/H2Integrate/pull/941)
+- Added summary and threshold statistics models in `h2integrate/statistical`, and made 3-element `technology_interconnections` connect at the top-level model so input-to-input connections work, with the demand profile as the shared default for demand inputs. [PR 859](https://github.com/NatLabRockies/H2Integrate/pull/859)
 - Add data resampling capabilities to resource models via pandas methods. [PR 933](https://github.com/NatLabRockies/H2Integrate/pull/933)
 - Aligned ammonia feed consumption with the final ramped output (including positive ramp-down output below turndown), added SLC command limiting for ammonia, and aligned PEM hydrogen-linked outputs with clipped production. [PR 942](https://github.com/NatLabRockies/H2Integrate/pull/942)
 - Refactored `H2IntegrateModel.connect_technologies()` into separate tech-to-tech, site-to-tech, tech-to-finance, dispatch-rule, and finalization methods with shared helpers. [PR 946](https://github.com/NatLabRockies/H2Integrate/pull/946)
@@ -24,8 +25,11 @@
 - Added unit tests for code that was previously only exercised by the examples: the paper mill and SAF models, the methanol cost and finance models, the stimulated geologic hydrogen and subsurface well cost models, the ocean alkalinity enhancement cost models, `GenericStorageCostModel`, the time-marching solver, the CSV generator file checker, and the `PoseOptimization` driver setup. [PR 954](https://github.com/NatLabRockies/H2Integrate/pull/954)
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
+- Consolidate redundant tests, strengthen weak assertions, and replace expensive recorder setups with a small grid model. [PR 974](https://github.com/NatLabRockies/H2Integrate/pull/974)
+- Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
-
+- Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
+- Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
 
 ## 0.10.0 [October 12, 2026]
 
