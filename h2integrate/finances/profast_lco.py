@@ -57,6 +57,8 @@ class ProFastLCO(ProFastBase):
           ``make_price_breakdown()`` for cost disaggregation.
     """
 
+    _simulation_duration_bounds = (1.0, float("inf"))
+
     def add_model_specific_outputs(self):
         """Define output variables specific to the selected commodity.
 
