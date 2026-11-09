@@ -89,7 +89,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         # clips ``{commodity}_out`` to ``min(uncurtailed, command_value)`` and
         # copies the raw output into ``uncurtailed_{commodity}_out``. It is a
         # no-op when no upstream controller is configured.
-        self.apply_curtailment(outputs)
+        self.apply_curtailment(inputs, outputs)
 ```
 
 See `h2integrate/converters/solar/solar_pysam.py` for the full implementation,

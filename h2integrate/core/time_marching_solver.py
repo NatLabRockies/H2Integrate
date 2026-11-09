@@ -1,9 +1,9 @@
 import numpy as np
 from openmdao.recorders.recording_iteration_stack import Recording
-from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
+from openmdao.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 
 
-class TimeMarchingPlantSolver(NonlinearRunOnce):
+class TimeMarchingPlantSolver(NonlinearBlockGS):
     """
     Custom nonlinear solver to manage running the plant group in a loop.
 
@@ -12,6 +12,10 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
     def __init__(self, plant_config):
         super().__init__()
         self.plant_config = plant_config
+        # iprint is hardcoded to 0 for now to suppress excessive printouts from every time marching
+        # step.
+        # TODO Set allow the use solver options from config files?
+        self.options["iprint"] = 0
 
     def solve(self):
         # Should only be used when system is the plant group
@@ -44,7 +48,7 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
             s.options["skip_compute"] = True
 
         try:
-            with Recording("NLRunOnce", 0, self) as rec:
+            with Recording("NLRunOnce", 0, self):
                 for ss in sim_starts:
                     # Update timestep_index in all subsystems
                     for tk in timestep_keys:
@@ -56,11 +60,14 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
                         for s in skippable_subsystems:
                             s.options["skip_compute"] = False
 
-                    # Run one GS iteration on the plant group
-                    self._gs_iter()
+                    try:
+                        self._solve()
 
-                rec.abs = 0.0
-                rec.rel = 0.0
+                    except Exception as err:
+                        if self.options["debug_print"]:
+                            self._print_exc_debug_info()
+                        raise err
+
         finally:
             # A failed step must not leave cost and finance models skipped on the next run.
             for s in skippable_subsystems:

@@ -210,6 +210,11 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
+    _is_steppable = True
+
+    # Flag to avoid unnecessary re-calculation of PySAM model
+    _PYSAM_model_has_been_executed = False
+
     def setup(self):
         super().setup()
 
@@ -478,105 +483,135 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             outputs["total_electricity_produced"] = 0.0
             outputs["annual_electricity_produced"] = 0.0
             outputs["capacity_factor"] = 0.0
-            self.apply_curtailment(outputs)
+            self.apply_curtailment(inputs, outputs)
             return
 
-        if self.config.create_model_from == "default":
-            system_model = Windpower.default(self.config.config_name)
-        elif self.config.create_model_from == "new":
-            system_model = Windpower.new()
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 
-        design_dict = self.design_dict.copy()
+        if (not self._PYSAM_model_has_been_executed) and (simulation_range.start == 0):
+            # PYSAM model setup and execution should only be done at the start of the simulation.
 
-        if "Lifetime" in design_dict and not hasattr(system_model, "Lifetime"):
-            design_dict.pop("Lifetime")
+            if self.config.create_model_from == "default":
+                system_model = Windpower.default(self.config.config_name)
+            elif self.config.create_model_from == "new":
+                system_model = Windpower.new()
 
-        system_model.assign(design_dict)
+            design_dict = self.design_dict.copy()
 
-        # format resource data and input into model
-        data = self.format_resource_data(
-            inputs["hub_height"][0], discrete_inputs["wind_resource_data"]
-        )
-        system_model.value("wind_resource_data", data)
+            if "Lifetime" in design_dict and not hasattr(system_model, "Lifetime"):
+                design_dict.pop("Lifetime")
 
-        # recalculate power curve based on rotor diameter and turbine rating
-        success = True
-        if self.config.run_recalculate_power_curve:
-            success = self.recalculate_power_curve(system_model, rotor_diameter, turbine_rating_kw)
+            system_model.assign(design_dict)
 
-        # if power-curve could not be adjusted to match input values
-        if not success:
-            msg = (
-                "Could not adjust turbine powercurve to match turbine rating of "
-                f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters"
+            # format resource data and input into model
+            data = self.format_resource_data(
+                inputs["hub_height"][0], discrete_inputs["wind_resource_data"]
             )
-            raise ValueError(msg)
+            system_model.value("wind_resource_data", data)
 
-        # assign new turbine specs to the model
-        turbine_rated_power_kW = max(system_model.value("wind_turbine_powercurve_powerout"))
-        farm_capacity = turbine_rated_power_kW * n_turbs
-        system_model.value("wind_turbine_rotor_diameter", rotor_diameter)
-        system_model.value("wind_turbine_hub_ht", inputs["hub_height"][0])
-        system_model.value("system_capacity", farm_capacity)
-
-        # make layout for number of turbines
-        if self.layout_mode == "basicgrid":
-            x_pos, y_pos = make_basic_grid_turbine_layout(
-                system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
-            )
-
-        # Override the 300-turbine maximum, if needed
-        if n_turbs > 300:
-            system_model.value("max_turbine_override", n_turbs)
-
-        system_model.value("wind_farm_xCoordinates", tuple(x_pos))
-        system_model.value("wind_farm_yCoordinates", tuple(y_pos))
-
-        # run the model
-        system_model.execute(0)
-
-        outputs["rated_electricity_production"] = system_model.Farm.system_capacity
-        generation = np.asarray(system_model.Outputs.gen)
-        time_step_hours = self.dt / 3600
-
-        use_lifetime_output = bool(
-            self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)
-        )
-        native_lifetime_output = hasattr(system_model, "Lifetime")
-
-        if use_lifetime_output:
-            if not native_lifetime_output:
-                degradation = self.design_dict["Lifetime"]["ac_degradation"]
-                generation = apply_non_native_lifetime_degradation(
-                    generation, degradation, self.plant_life
+            # recalculate power curve based on rotor diameter and turbine rating
+            success = True
+            if self.config.run_recalculate_power_curve:
+                success = self.recalculate_power_curve(
+                    system_model, rotor_diameter, turbine_rating_kw
                 )
 
-            generation_per_year = np.split(generation, self.plant_life)
-            annual_energy = np.array(
-                [year_generation.sum() * time_step_hours for year_generation in generation_per_year]
-            )
-            n_timesteps_per_yr = np.array(
-                [len(year_generation) for year_generation in generation_per_year]
-            )
-            max_production = (
-                outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
-            )
-            outputs["electricity_out"] = generation[: self.n_timesteps]
-            outputs["annual_electricity_produced"] = annual_energy
-            outputs["capacity_factor"] = annual_energy / max_production
-        else:
-            outputs["electricity_out"] = generation
-            outputs["annual_electricity_produced"] = system_model.Outputs.annual_energy
-            max_production = (
-                self.n_timesteps * outputs["rated_electricity_production"] * time_step_hours
-            )
+            # if power-curve could not be adjusted to match input values
+            if not success:
+                msg = (
+                    "Could not adjust turbine powercurve to match turbine rating of "
+                    f"{turbine_rating_kw} kW with a rotor diameter of {rotor_diameter} meters"
+                )
+                raise ValueError(msg)
 
-        outputs["total_electricity_produced"] = outputs["electricity_out"].sum() * time_step_hours
-        if not use_lifetime_output:
-            outputs["capacity_factor"] = outputs["total_electricity_produced"] / max_production
+            # assign new turbine specs to the model
+            turbine_rated_power_kW = max(system_model.value("wind_turbine_powercurve_powerout"))
+            farm_capacity = turbine_rated_power_kW * n_turbs
+            system_model.value("wind_turbine_rotor_diameter", rotor_diameter)
+            system_model.value("wind_turbine_hub_ht", inputs["hub_height"][0])
+            system_model.value("system_capacity", farm_capacity)
+
+            # make layout for number of turbines
+            if self.layout_mode == "basicgrid":
+                x_pos, y_pos = make_basic_grid_turbine_layout(
+                    system_model.value("wind_turbine_rotor_diameter"), n_turbs, self.layout_config
+                )
+
+            # Override the 300-turbine maximum, if needed
+            if n_turbs > 300:
+                system_model.value("max_turbine_override", n_turbs)
+
+            system_model.value("wind_farm_xCoordinates", tuple(x_pos))
+            system_model.value("wind_farm_yCoordinates", tuple(y_pos))
+
+            # run the model
+            system_model.execute(0)
+
+            self.system_model = system_model
+
+            outputs["uncurtailed_electricity_out"] = self.system_model.Outputs.gen
+            outputs["rated_electricity_production"] = self.system_model.Farm.system_capacity
+
+            time_step_hours = self.dt / 3600
+
+            generation = np.asarray(self.system_model.Outputs.gen)
+
+            self.use_lifetime_output = bool(
+                self.design_dict.get("Lifetime", {}).get("system_use_lifetime_output", 0)
+            )
+            native_lifetime_output = hasattr(self.system_model, "Lifetime")
+
+            if self.use_lifetime_output:
+                if not native_lifetime_output:
+                    degradation = self.design_dict["Lifetime"]["ac_degradation"]
+                    generation = apply_non_native_lifetime_degradation(
+                        generation, degradation, self.plant_life
+                    )
+
+                generation_per_year = np.split(generation, self.plant_life)
+                annual_energy = np.array(
+                    [
+                        year_generation.sum() * time_step_hours
+                        for year_generation in generation_per_year
+                    ]
+                )
+                n_timesteps_per_yr = np.array(
+                    [len(year_generation) for year_generation in generation_per_year]
+                )
+                self.generation = generation
+                self.max_production = (
+                    outputs["rated_electricity_production"] * n_timesteps_per_yr * time_step_hours
+                )
+                outputs["annual_electricity_produced"] = annual_energy
+                outputs["capacity_factor"] = annual_energy / self.max_production
+            else:
+                self.generation = generation
+                self.max_production = (
+                    self.n_timesteps * outputs["rated_electricity_production"] * time_step_hours
+                )
+                outputs["annual_electricity_produced"] = self.system_model.Outputs.annual_energy
+
+            self._PYSAM_model_has_been_executed = True
+
+        # Re-set model execution flag at the end of the simulation
+        if simulation_range.stop >= self.n_timesteps:
+            self._PYSAM_model_has_been_executed = False
+
+        # Use this calculation for total_electricity_produced for LCOE to
+        # reflect total electricity generated
+        outputs["total_electricity_produced"] = outputs["uncurtailed_electricity_out"].sum() * (
+            self.dt / 3600
+        )
+
+        outputs["electricity_out"][simulation_range] = self.generation[: self.n_timesteps][
+            simulation_range
+        ]
+
+        if not self.use_lifetime_output:
+            outputs["capacity_factor"] = outputs["total_electricity_produced"] / self.max_production
 
         # Apply curtailment based on set_point
-        self.apply_curtailment(outputs)
+        self.apply_curtailment(inputs, outputs)
 
     def post_process(self, show_plots=False):
         def plot_turbine_points(

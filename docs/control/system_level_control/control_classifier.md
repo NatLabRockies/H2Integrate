@@ -46,7 +46,7 @@ To simplify the implementation of applying this curtailment we added a method, `
 ### Apply curtailment based on set_point
 Within the `compute()` method in the performance model you can apply the curtailment using the `apply_curtailment()` method.
 ```
-self.apply_curtailment(outputs)
+self.apply_curtailment(inputs, outputs)
 ```
 which applies curtailment to `{commodity}_out` based on `{commodity}_set_point`. This adds `uncurtailed_{commodity}_out` and `{commodity}_out` as outputs from the performance model.
 

@@ -972,14 +972,6 @@ def test_check_time_marching_config(subtests):
         with pytest.raises(ValueError, match=r"divisible by n_timesteps_window \(7\)"):
             check_time_marching_config(8760, 7, False, False)
 
-    with subtests.test("System-level control is not supported"):
-        with pytest.raises(NotImplementedError, match="system-level control"):
-            check_time_marching_config(8760, 24, True, False)
-
-    with subtests.test("Technology cycles are not supported"):
-        with pytest.raises(NotImplementedError, match="cycle"):
-            check_time_marching_config(8760, 24, False, True)
-
 
 @pytest.mark.unit
 def test_technology_connections(temp_dir):

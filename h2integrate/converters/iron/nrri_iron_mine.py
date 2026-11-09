@@ -443,7 +443,7 @@ class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
         outputs["diesel_consumed"] = sum(diesel_per_process.values()) * processed_ore_production
 
         # Apply curtailment based on set_point
-        self.apply_curtailment(outputs)
+        self.apply_curtailment(inputs, outputs)
 
 
 @define(kw_only=True)

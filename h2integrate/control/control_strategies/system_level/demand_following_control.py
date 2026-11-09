@@ -36,6 +36,8 @@ class DemandFollowingControl(SystemLevelControlBase):
     """
 
     def compute(self, inputs, outputs):
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         commodity = self.commodity
         demand = inputs[self.demand_input_name].copy()
 
@@ -84,6 +86,6 @@ class DemandFollowingControl(SystemLevelControlBase):
         for dispatchable_tech in self.dispatchable_techs:
             commodity_from_tech = self._get_commodity_for_tech(dispatchable_tech)
             if commodity in commodity_from_tech:
-                outputs[f"{dispatchable_tech}_{commodity}_set_point"] = (
-                    remaining_demand / n_dispatchable
+                outputs[f"{dispatchable_tech}_{commodity}_set_point"][simulation_range] = (
+                    remaining_demand[simulation_range] / n_dispatchable
                 )

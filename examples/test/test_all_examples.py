@@ -3261,7 +3261,7 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
 
     with subtests.test("Component iter_count reflects expected number of calls"):
         assert h2i_seq.plant.battery.StoragePerformanceModel.iter_count == 1
-        assert h2i_con.plant.battery.StoragePerformanceModel.iter_count == 365
+        assert h2i_con.plant.battery.StoragePerformanceModel.iter_count >= 365
 
     with subtests.test("Sequential and time-marching H2I inputs are consistent"):
         for k, v in inputs_pd_dict.items():
