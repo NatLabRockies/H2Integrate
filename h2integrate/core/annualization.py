@@ -1,9 +1,13 @@
-"""Annual capacity-factor projection and replacement-cycle calculations.
+"""Annual capacity-factor, variable-cost, and replacement calculations.
 
-The public names (``VALID_ANNUAL_EXTRAPOLATION_METHODS``,
-``time_weighted_annual_means``, ``extrapolate_annual_values``) are shared with the finance
-components. Underscore-prefixed helpers implement the degradation and replacement logic and are
-meant to be called through
+Simulations covering one year or the full plant life are annualized directly. The public
+names (``classify_simulation_horizon``, ``time_weighted_annual_means``) are shared with the
+finance components and input validation.
+
+Simulations covering any other horizon are projected across plant life. The public
+names ``VALID_ANNUAL_EXTRAPOLATION_METHODS`` and ``extrapolate_annual_values`` are shared with
+the finance components. Underscore-prefixed helpers implement the degradation and replacement
+logic and are meant to be called through
 ``PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule``.
 """
 
@@ -18,70 +22,79 @@ from h2integrate.tools.constants import SECONDS_PER_YEAR
 VALID_ANNUAL_EXTRAPOLATION_METHODS = ("tile", "final_sim_value", "time_averaged_sim_value")
 
 
-def extrapolate_annual_values(
-    simulated_values: np.ndarray,
-    plant_life: int,
-    method: str | None,
-    simulated_durations_years: np.ndarray | None = None,
-) -> np.ndarray:
-    """Extend or truncate simulated annual values to the plant lifetime.
-
-    Preserve the simulated values first, then fill any remaining plant years
-    using the selected method. The average method weights each supplied value
-    by the duration it represents, so a partial year contributes proportionally.
+def classify_simulation_horizon(n_timesteps: int, dt: float, plant_life: int) -> str:
+    """Classify the simulated horizon relative to one year and the plant life.
 
     Args:
-        simulated_values (np.ndarray): Nonempty, one-dimensional array with one
-            value per full or partial simulated year.
-        plant_life (int): Positive integer number of plant years to return.
-        method (str | None): ``"tile"`` to repeat the values cyclically,
-            ``"final_sim_value"`` to hold the last value, or
-            ``"time_averaged_sim_value"`` to hold their time-weighted mean. If None,
-            a method is required only when multiple simulated segments need to
-            be extended to cover plant life; a single segment repeats naturally.
-        simulated_durations_years (np.ndarray | None): Positive elapsed duration
-            in years for each supplied value. Used only by the average method.
-            Defaults to ``None``, treating all values as equal-duration years.
+        n_timesteps (int): Number of simulated timesteps.
+        dt (float): Positive duration of each timestep in seconds.
+        plant_life (int): Positive integer number of plant years.
 
     Returns:
-        np.ndarray: One value for each of the ``plant_life`` years, in the
-        same units as the supplied values.
+        str: ``"full_life"`` when the horizon equals the plant life, ``"single_year"`` when it
+        equals one year, and ``"partial"`` otherwise. ``"full_life"`` takes precedence when
+        the plant life is one year.
+    """
+    years_simulated = n_timesteps * dt / SECONDS_PER_YEAR
+    if math.isclose(years_simulated, plant_life, rel_tol=1e-9):
+        return "full_life"
+    if math.isclose(years_simulated, 1.0, rel_tol=1e-9):
+        return "single_year"
+    return "partial"
+
+
+def _expand_to_plant_life(simulated_values: np.ndarray, plant_life: int) -> np.ndarray:
+    """Expand annual values from a single-year or full-life simulation to the plant life.
+
+    Args:
+        simulated_values (np.ndarray): One value for a single simulated year, or one value per
+            plant year for a full-life simulation.
+        plant_life (int): Positive integer number of plant years to return.
+
+    Returns:
+        np.ndarray: One value for each of the ``plant_life`` years.
 
     Raises:
-        ValueError: If ``method`` is unsupported or needed but not provided.
+        ValueError: If the values cover neither one year nor the full plant life.
     """
-    if method is not None and method not in VALID_ANNUAL_EXTRAPOLATION_METHODS:
-        raise ValueError(
-            f"extrapolation method must be one of {VALID_ANNUAL_EXTRAPOLATION_METHODS}; "
-            f"got {method!r}."
-        )
-
-    n_sim_years = simulated_values.size
-    if n_sim_years >= plant_life:
-        return simulated_values[:plant_life].copy()
-
-    if method is None:
-        if n_sim_years == 1:
-            method = "tile"
-        else:
-            raise ValueError(
-                "An annual_extrapolation_method is required to extrapolate multiple simulated "
-                "annual values across the remaining plant life. Set it in "
-                "plant_config['plant']['simulation']['annual_extrapolation_method']."
-            )
-
-    if method == "tile":
-        n_tiles = math.ceil(plant_life / n_sim_years)
-        return np.tile(simulated_values, n_tiles)[:plant_life]
-
-    fill_value = (
-        simulated_values[-1]
-        if method == "final_sim_value"
-        else float(np.average(simulated_values, weights=simulated_durations_years))
+    if simulated_values.size == plant_life:
+        return simulated_values.copy()
+    if simulated_values.size == 1:
+        return np.full(plant_life, simulated_values[0], dtype=float)
+    raise ValueError(
+        f"Expected 1 or {plant_life} annual values, got {simulated_values.size}. Simulations "
+        "must cover either one year or the full plant life."
     )
-    projected = np.full(plant_life, fill_value, dtype=float)
-    projected[:n_sim_years] = simulated_values[:plant_life]
-    return projected
+
+
+def _observed_replacement_schedule(
+    state_of_health_timeseries: np.ndarray, dt: float, plant_life: int
+) -> np.ndarray:
+    """Count observed state-of-health resets in each plant year.
+
+    An upward state-of-health (SOH) jump greater than 1e-9 marks a replacement at the first
+    sample with reset SOH. Events are binned into intervals ``[year, year + 1)``. Times within
+    1e-10 years of an integer year are treated as exactly on that boundary to absorb
+    floating-point error.
+
+    Args:
+        state_of_health_timeseries (np.ndarray): One-dimensional SOH fractions in [0, 1].
+        dt (float): Positive duration of each simulation timestep in seconds.
+        plant_life (int): Positive integer number of plant years to return.
+
+    Returns:
+        np.ndarray: Integer replacement counts for each plant year.
+    """
+    reset_indices = np.flatnonzero(np.diff(state_of_health_timeseries) > 1e-9) + 1
+    replacement_schedule = np.zeros(plant_life, dtype=int)
+    for reset_index in reset_indices:
+        event_time = reset_index * dt / SECONDS_PER_YEAR
+        nearest_year = round(event_time)
+        if math.isclose(event_time, nearest_year, rel_tol=0.0, abs_tol=1e-10):
+            event_time = float(nearest_year)
+        if 0.0 < event_time < plant_life:
+            replacement_schedule[math.floor(event_time)] += 1
+    return replacement_schedule
 
 
 def _validate_annualization_inputs(
@@ -215,6 +228,72 @@ def time_weighted_annual_means(
 
     # Divide by each segment's actual duration to get its mean, including for partial years.
     return segment_totals / durations, durations
+
+
+def extrapolate_annual_values(
+    simulated_values: np.ndarray,
+    plant_life: int,
+    method: str | None,
+    simulated_durations_years: np.ndarray | None = None,
+) -> np.ndarray:
+    """Extend or truncate simulated annual values to the plant lifetime.
+
+    Preserve the simulated values first, then fill any remaining plant years
+    using the selected method. The average method weights each supplied value
+    by the duration it represents, so a partial year contributes proportionally.
+
+    Args:
+        simulated_values (np.ndarray): Nonempty, one-dimensional array with one
+            value per full or partial simulated year.
+        plant_life (int): Positive integer number of plant years to return.
+        method (str | None): ``"tile"`` to repeat the values cyclically,
+            ``"final_sim_value"`` to hold the last value, or
+            ``"time_averaged_sim_value"`` to hold their time-weighted mean. If None,
+            a method is required only when multiple simulated segments need to
+            be extended to cover plant life; a single segment repeats naturally.
+        simulated_durations_years (np.ndarray | None): Positive elapsed duration
+            in years for each supplied value. Used only by the average method.
+            Defaults to ``None``, treating all values as equal-duration years.
+
+    Returns:
+        np.ndarray: One value for each of the ``plant_life`` years, in the
+        same units as the supplied values.
+
+    Raises:
+        ValueError: If ``method`` is unsupported or needed but not provided.
+    """
+    if method is not None and method not in VALID_ANNUAL_EXTRAPOLATION_METHODS:
+        raise ValueError(
+            f"extrapolation method must be one of {VALID_ANNUAL_EXTRAPOLATION_METHODS}; "
+            f"got {method!r}."
+        )
+
+    n_sim_years = simulated_values.size
+    if n_sim_years >= plant_life:
+        return simulated_values[:plant_life].copy()
+
+    if method is None:
+        if n_sim_years == 1:
+            method = "tile"
+        else:
+            raise ValueError(
+                "An annual_extrapolation_method is required to extrapolate multiple simulated "
+                "annual values across the remaining plant life. Set it in "
+                "plant_config['plant']['simulation']['annual_extrapolation_method']."
+            )
+
+    if method == "tile":
+        n_tiles = math.ceil(plant_life / n_sim_years)
+        return np.tile(simulated_values, n_tiles)[:plant_life]
+
+    fill_value = (
+        simulated_values[-1]
+        if method == "final_sim_value"
+        else float(np.average(simulated_values, weights=simulated_durations_years))
+    )
+    projected = np.full(plant_life, fill_value, dtype=float)
+    projected[:n_sim_years] = simulated_values[:plant_life]
+    return projected
 
 
 def _degraded_replacement_cycles(

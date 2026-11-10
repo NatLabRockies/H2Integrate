@@ -117,12 +117,12 @@ same samples, reduced in proportion to the projected SOH. This projection has tw
 
 Simulated years are not affected. When either limitation matters, simulate the full plant life.
 
-The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
-or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
-remaining plant life. Technology implementations can override it per call using
-`no_degradation_extrapolation` for capacity-factor projection or `annual_extrapolation_method`
-for variable OpEx projection. A finance subgroup using a custom timeseries may also override the
-plant setting; otherwise, it inherits the plant-level value. See
+The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`,
+`final_sim_value`, or `time_averaged_sim_value` when multiple simulated year segments must be
+extended across the remaining plant life. Technology implementations can override it per call
+using `no_degradation_extrapolation` for capacity-factor projection or
+`annual_extrapolation_method` for variable OpEx projection. A finance subgroup using a custom
+timeseries may also override the plant setting; otherwise, it inherits the plant-level value. See
 {ref}`Plant lifetime and simulation <plant-simulation-settings>`.
 
 ### Multiple layers of inheritance

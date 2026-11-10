@@ -12,11 +12,14 @@ from h2integrate.core.utilities import BaseConfig
 from h2integrate.tools.constants import SECONDS_PER_YEAR
 from h2integrate.core.annualization import (
     VALID_ANNUAL_EXTRAPOLATION_METHODS,
+    _expand_to_plant_life,
     _project_capacity_factors,
     extrapolate_annual_values,
     time_weighted_annual_means,
     _build_replacement_schedule,
+    classify_simulation_horizon,
     _degraded_replacement_cycles,
+    _observed_replacement_schedule,
     _validate_annualization_inputs,
 )
 
@@ -253,6 +256,15 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
         The simulated horizon can be any positive length up to plant life. Behavior:
 
+        - When the simulation covers one year without ``state_of_health_timeseries``, its
+          capacity factor is repeated across plant life and no replacements occur.
+        - When the simulation covers the full plant life, capacity factors are time-weighted
+          means of each plant year. With SOH, replacements are counted at each upward SOH
+          jump greater than 1e-9 (a reset), binned into ``[year, year + 1)``.
+
+        One-year simulations with SOH, and simulations covering any other horizon, are
+        projected across plant life:
+
         - Without ``state_of_health_timeseries``, capacity factors are time-weighted means of
           each simulated plant year (the last may be partial) and are extended to plant life
           with the selected extrapolation method. No replacements occur.
@@ -330,7 +342,23 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         )
 
         plant_life = self.plant_life
+        horizon = classify_simulation_horizon(performance_timeseries.size, self.dt, plant_life)
 
+        # Full-life simulations, and single-year simulations without SOH, are annualized
+        # directly from simulated data.
+        if horizon == "full_life" or (horizon == "single_year" and not use_degradation):
+            annual_capacity_factors, _ = time_weighted_annual_means(
+                performance_timeseries / rated_performance, self.dt
+            )
+            annual_capacity_factors = _expand_to_plant_life(annual_capacity_factors, plant_life)
+            replacement_schedule = np.zeros(plant_life, dtype=int)
+            if use_degradation:
+                replacement_schedule = _observed_replacement_schedule(
+                    state_of_health_timeseries, self.dt, plant_life
+                )
+            return annual_capacity_factors, replacement_schedule
+
+        # Single-year simulations with SOH and all other horizons are projected across plant life.
         # Without degradation, no replacements occur and capacity factors are simply
         # extrapolated across the plant life.
         if not use_degradation:
@@ -496,6 +524,10 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
             varopex_timeseries, self.dt
         )
         simulated_annual_varopex = mean_timestep_costs * (SECONDS_PER_YEAR / self.dt)
+
+        horizon = classify_simulation_horizon(varopex_timeseries.size, self.dt, self.plant_life)
+        if horizon != "partial":
+            return _expand_to_plant_life(simulated_annual_varopex, self.plant_life)
 
         return extrapolate_annual_values(
             simulated_annual_varopex,

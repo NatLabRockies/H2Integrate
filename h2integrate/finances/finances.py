@@ -2,7 +2,12 @@ import numpy as np
 import openmdao.api as om
 import numpy_financial as npf
 
-from h2integrate.core.annualization import extrapolate_annual_values, time_weighted_annual_means
+from h2integrate.core.annualization import (
+    _expand_to_plant_life,
+    extrapolate_annual_values,
+    time_weighted_annual_means,
+    classify_simulation_horizon,
+)
 
 
 class AdjustedCapexOpexComp(om.ExplicitComponent):
@@ -168,6 +173,11 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
             annual_capacity_factors = np.ones(annual_mean_production.size)
         else:
             annual_capacity_factors = annual_mean_production / rated_production
+
+        horizon = classify_simulation_horizon(production_timeseries.size, self.dt, plant_life)
+        if horizon != "partial":
+            outputs["capacity_factor"] = _expand_to_plant_life(annual_capacity_factors, plant_life)
+            return
 
         outputs["capacity_factor"] = extrapolate_annual_values(
             annual_capacity_factors,

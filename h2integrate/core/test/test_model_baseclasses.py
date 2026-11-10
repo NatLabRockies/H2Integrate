@@ -30,6 +30,33 @@ def _run(dummy, performance_timeseries, rated, soh, eol, **kwargs):
 
 
 @pytest.mark.unit
+def test_full_life_with_soh_uses_observed_values_without_projection(subtests) -> None:
+    capacity_factors, replacement_schedule = _run(
+        _DummyPerformanceModel(plant_life=3, dt=SECONDS_PER_YEAR / 2),
+        performance_timeseries=[1.0, 0.8, 1.0, 0.6, 0.4, 0.2],
+        rated=1.0,
+        soh=[0.95, 0.85, 1.0, 0.9, 0.82, 0.81],
+        eol=0.8,
+    )
+
+    with subtests.test("capacity factors are simulated annual means"):
+        np.testing.assert_allclose(capacity_factors, [0.9, 0.8, 0.3])
+    with subtests.test("only the observed reset is counted"):
+        np.testing.assert_array_equal(replacement_schedule, [0, 1, 0])
+
+
+@pytest.mark.unit
+def test_full_life_varopex_uses_simulated_annual_values() -> None:
+    cost_model = CostModelBaseClass()
+    cost_model.dt = SECONDS_PER_YEAR / 2
+    cost_model.plant_life = 3
+    np.testing.assert_allclose(
+        cost_model.calculate_annual_varopex(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])),
+        [3.0, 7.0, 11.0],
+    )
+
+
+@pytest.mark.unit
 def test_resets_on_replacement():
     cf_values, replacement_schedule = _run(
         _DummyPerformanceModel(plant_life=6),
