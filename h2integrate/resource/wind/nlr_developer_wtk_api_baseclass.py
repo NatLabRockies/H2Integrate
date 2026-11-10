@@ -17,7 +17,7 @@ class WTKNLRDeveloperAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download wind resource data from
     `Wind Toolkit Data V2 <https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/>`_.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2007 and 2014 (inclusive).
 

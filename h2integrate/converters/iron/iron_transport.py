@@ -20,7 +20,7 @@ from h2integrate.core.supported_models import register
 class IronTransportPerformanceConfig(BaseConfig):
     """Configuration class for IronTransportPerformanceComponent.
 
-    Args:
+    Attributes:
         find_closest_ship_site (bool): Whether to find the closest shipping site automatically.
         shipment_site (str): The specific shipping site to use if not finding the closest one.
             Allowed sites are "None", "Duluth", "Chicago", "Cleveland", and "Buffalo". Defaults
@@ -321,7 +321,7 @@ class IronTransportPerformanceComponent(om.ExplicitComponent):
 class IronTransportCostConfig(BaseConfig):
     """Configuration for calculating iron ore pellet transportation costs.
 
-    Args:
+    Attributes:
         transport_year (int): Transport year; currently not used by the calculation.
         cost_year (int): Target cost year, supplied from the plant configuration.
         land_shipping_cost (float): Cost of land shipping in $/tonne-mi. Default is 0.0522

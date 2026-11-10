@@ -17,7 +17,7 @@ class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     See :class:`MeteosatPrimeMeridianSolarAPI` and
     :doc:`/resource/meteosat_prime_meridian_v4_api`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2005 and 2022 (inclusive).
         resource_data (dict | object, optional): Dictionary of user-input resource data.
@@ -78,7 +78,7 @@ class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
     See :class:`MeteosatPrimeMeridianTMYSolarAPI` and
     :doc:`/resource/meteosat_prime_meridian_v4_api`.
 
-    Args:
+    Attributes:
         resource_year (str): Year to use for resource data. Can be any of the following:
             tmy-2014, tdy-2014, tgy-2014, tmy-2022, tdy-2022, or tgy-2022
         resource_data (dict | object, optional): Dictionary of user-input resource data.

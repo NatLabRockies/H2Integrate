@@ -14,7 +14,7 @@ class WTKNLRDeveloperAPIWindResourceConfig(ResourceBaseAPIConfig):
 
     See :class:`WTKNLRDeveloperAPIWindResource` and :doc:`/resource/wind_toolkit_v2_api`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2007 and 2014 (inclusive).
 
@@ -63,7 +63,7 @@ class HRRRMETToolkitWindAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`HRRRMETToolkitWindAPI` and :doc:`/resource/wind_toolkit_v2_api`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2015 and 2025 (inclusive).
 

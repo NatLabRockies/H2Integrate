@@ -16,7 +16,7 @@ class Himawari7SolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`Himawari7SolarAPI` and :doc:`/resource/himawari_v3_api`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2011 and 2015 (inclusive).
         resource_data (dict | object, optional): Dictionary of user-input resource data.
@@ -73,7 +73,7 @@ class Himawari8SolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`Himawari8SolarAPI` and :doc:`/resource/himawari_v3_api`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2016 and 2020 (inclusive).
         resource_data (dict | object, optional): Dictionary of user-input resource data.
@@ -129,7 +129,7 @@ class HimawariTMYSolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`HimawariTMYSolarAPI` and :doc:`/resource/himawari_v3_api`.
 
-    Args:
+    Attributes:
         resource_year (str): Year to use for resource data. Can be any of the following:
             tmy-2020, tdy-2020, or tgy-2020
         resource_data (dict | object, optional): Dictionary of user-input resource data.

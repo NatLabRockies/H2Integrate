@@ -13,7 +13,7 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`GOESAggregatedSolarAPI` and :doc:`/resource/solar_index`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 1998 and 2024 (inclusive).
 
@@ -61,7 +61,7 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`GOESConusSolarAPI` and :doc:`/resource/solar_index`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
 
@@ -110,7 +110,7 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`GOESFullDiscSolarAPI` and :doc:`/resource/solar_index`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2018 and 2024 (inclusive).
 
@@ -159,7 +159,7 @@ class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
 
     See :class:`GOESTMYSolarAPI` and :doc:`/resource/solar_index`.
 
-    Args:
+    Attributes:
         resource_year (str): Year to use for resource data. Can be any of the following:
             tmy-2022, tdy-2022, tgy-2022, tmy-2023, tdy-2023, tgy-2023, tmy-2024, tdy-2024,
             or tgy-2024.

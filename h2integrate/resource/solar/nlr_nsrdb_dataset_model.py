@@ -18,7 +18,7 @@ class NSRDBDatasetH5Config(ResourceBaseH5Config):
 
     See :class:`NSRDBDatasetH5` and :doc:`/resource/solar_index`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 1998 and 2025 (inclusive).
 

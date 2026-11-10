@@ -34,7 +34,7 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
     `SI spreadsheet of the Humbert Opex model <https://link.springer.com/article/10.1007/s40831-024-00878-3#Sec31>`_
     and were adjusted to 2018 dollars using CPI.
 
-    Args:
+    Attributes:
         electrolysis_type (str): The type of electrowinning being performed. Options:
             "ahe": Aqueous Hydroxide Electrolysis (AHE)
             "mse": Molten Salt Electrolysis (MSE)

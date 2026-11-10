@@ -10,8 +10,15 @@ from h2integrate.core.supported_models import register
 class GenericSplitterPerformanceConfig(BaseConfig):
     """Configuration class for the GenericSplitterPerformanceModel.
 
-    Fields include `split_mode`, `commodity`, `commodity_rate_units`,
-    `fraction_to_priority_tech`, and `prescribed_commodity_to_priority_tech`.
+    Attributes:
+        split_mode (str): Splitting method: ``"fraction"`` or ``"prescribed_commodity"``.
+        commodity (str): Name of the commodity to split.
+        commodity_rate_units (str): Rate units for the commodity (e.g., ``"kg/h"``).
+        fraction_to_priority_tech (float | None): Fraction of the input stream assigned
+            to the priority technology when ``split_mode`` is ``"fraction"``.
+        prescribed_commodity_to_priority_tech (float | None): Amount of commodity per
+            timestep assigned to the priority technology when ``split_mode`` is
+            ``"prescribed_commodity"``.
 
     See :class:`GenericSplitterPerformanceModel` and
     :doc:`/technology_models/combiners_and_splitters`.

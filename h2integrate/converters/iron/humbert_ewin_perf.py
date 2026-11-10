@@ -26,7 +26,7 @@ from h2integrate.core.supported_models import register
 class HumbertEwinPerformanceComponentConfig(BaseConfig):
     """Configuration class for the Humbert iron electrowinning performance model.
 
-    Args:
+    Attributes:
         electrolysis_type (str): The type of electrowinning being performed. Options:
             "ahe": Aqueous Hydroxide Electrolysis (AHE)
             "mse": Molten Salt Electrolysis (MSE)
