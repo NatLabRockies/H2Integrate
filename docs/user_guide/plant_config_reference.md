@@ -70,27 +70,9 @@ duration, and the requested period must be compatible with the connected resourc
 of 8,784 hours are not modeled.** Annualization assumes 365-day plant years, so keep resource
 `include_leap_day: false` (the default) for any run that relies on it.
 
-Simulation duration is `n_timesteps * dt / 31_536_000` years and must be positive and no
-longer than `plant_life`. Partial-year and multi-year runs require support from every selected
-model; otherwise models default to annual-only support. At `dt: 3600`, for example, `4380`
-timesteps represent half a year.
-
-`plant.simulation.annual_extrapolation_method` controls how annualized profiles are extended
-beyond the simulated horizon. Choose `tile`, `final_sim_value`, or `time_averaged_sim_value`.
-Set it when multiple simulated year segments must be extended beyond the simulation horizon to
-cover plant life. It can be omitted for a single simulated year segment, where the methods
-produce the same result, or when the simulation covers the plant life. The setting applies to
-capacity factors and variable operating costs. A finance subgroup using a custom timeseries may
-override it with its own `annual_extrapolation_method`; otherwise the plant-level value applies.
-Technology implementations may also pass an explicit method to an annualization call to
-override the plant-level value.
-
-```{note}
-The subgroup override should generally match `plant.simulation.annual_extrapolation_method`.
-The finance model divides variable costs by production, so using different methods for capacity
-factor and variable operating costs distorts the resulting unit costs. Per-call overrides in
-technology implementations should follow the same rule.
-```
+Simulation duration is `n_timesteps * dt / 31_536_000` years and must cover exactly one year or
+exactly `plant_life`. A one-year simulation is repeated across plant life. Full-life runs require
+support from every selected model; otherwise models default to annual-only support.
 
 See the {ref}`model duration requirements <required-class-attributes>` and
 {ref}`annualization guidance <annualization-methods>` for developer details.

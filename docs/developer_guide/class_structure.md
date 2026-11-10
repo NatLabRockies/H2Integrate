@@ -98,32 +98,12 @@ annual_varopex = self.calculate_annual_varopex(varopex_timeseries)
 
 Both results have one entry per plant year (`plant_life` entries).
 
-CF (capacity factor) and variable costs use duration-weighted annual means. Optional SOH supports
-timestep-level completion of the trailing cycle and integer replacement counts per year. For arguments,
-extrapolation options, and boundary behavior, see
+CF (capacity factor) and variable costs use duration-weighted annual means. The simulation must
+cover exactly one year, which is repeated across plant life, or the full plant life. Optional SOH
+requires a full-life simulation; replacements are counted at observed SOH resets. For arguments
+and boundary behavior, see
 {py:meth}`~h2integrate.core.model_baseclass.PerformanceModelBaseClass.calculate_annual_cf_and_replacement_schedule`
 and {py:meth}`~h2integrate.core.model_baseclass.CostModelBaseClass.calculate_annual_varopex`.
-
-When SOH is given, the final (incomplete) cycle is extended beyond the simulation by projecting
-SOH forward at its average loss per timestep over the last year of that cycle (or the whole cycle
-if shorter) until it reaches the end-of-life threshold. Projected CF is the average CF over the
-same samples, reduced in proportion to the projected SOH. This projection has two limitations:
-
-- Reducing CF with SOH assumes output is capacity-limited. For dispatch-limited technologies, such
-  as a controlled battery with spare energy capacity, CF stays nearly constant as SOH falls, so
-  projected CF is understated.
-- A constant average loss rate overestimates fade that slows over time (e.g. calendar aging), so
-  projected replacements occur too early.
-
-Simulated years are not affected. When either limitation matters, simulate the full plant life.
-
-The plant-level `plant.simulation.annual_extrapolation_method` allows the user to select `tile`, `final_sim_value`,
-or `time_averaged_sim_value` when multiple simulated year segments must be extended across the
-remaining plant life. Technology implementations can override it per call using
-`no_degradation_extrapolation` for capacity-factor projection or `annual_extrapolation_method`
-for variable OpEx projection. A finance subgroup using a custom timeseries may also override the
-plant setting; otherwise, it inherits the plant-level value. See
-{ref}`Plant lifetime and simulation <plant-simulation-settings>`.
 
 ### Multiple layers of inheritance
 
