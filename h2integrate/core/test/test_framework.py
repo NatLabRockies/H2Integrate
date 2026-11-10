@@ -845,7 +845,7 @@ def test_custom_financial_model_grouping(temp_dir, subtests):
 
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
-def test_unsupported_simulation_parameters():
+def test_unsupported_simulation_parameters(subtests) -> None:
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
     plant_config_data_ntimesteps = load_plant_yaml(orig_plant_config)
     plant_config_data_dt = deepcopy(plant_config_data_ntimesteps)
@@ -853,25 +853,30 @@ def test_unsupported_simulation_parameters():
 
     plant_life = int(plant_config_data_ntimesteps["plant"]["plant_life"])
 
-    # Sub-year and multi-year horizons are supported when positive and within plant life.
-    plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = 4380  # 0.5 year at 1 h
-    load_plant_yaml(plant_config_data_ntimesteps)
+    for n_timesteps in (4380, 2 * 8760):
+        with subtests.test("partial horizons are rejected", n_timesteps=n_timesteps):
+            plant_config_data_ntimesteps["plant"]["simulation"]["n_timesteps"] = n_timesteps
+            with pytest.raises(ValueError, match="exactly one year or the full plant life"):
+                load_plant_yaml(plant_config_data_ntimesteps)
 
-    # A two-year hourly horizon should also load without error.
-    plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = 2 * 8760
-    load_plant_yaml(plant_config_data_dt)
+    for n_timesteps in (8760, plant_life * 8760):
+        with subtests.test(
+            "one-year and full-life horizons are supported", n_timesteps=n_timesteps
+        ):
+            plant_config_data_dt["plant"]["simulation"]["n_timesteps"] = n_timesteps
+            load_plant_yaml(plant_config_data_dt)
 
-    # A horizon longer than the plant life is not supported and must raise.
-    over_life = deepcopy(plant_config_data_dt)
-    over_life["plant"]["simulation"]["n_timesteps"] = (plant_life + 1) * 8760
-    with pytest.raises(ValueError, match="longer than the plant"):
-        load_plant_yaml(over_life)
+    with subtests.test("a horizon longer than plant life is rejected"):
+        over_life = deepcopy(plant_config_data_dt)
+        over_life["plant"]["simulation"]["n_timesteps"] = (plant_life + 1) * 8760
+        with pytest.raises(ValueError, match="longer than the plant"):
+            load_plant_yaml(over_life)
 
-    # A non-positive horizon is invalid and must raise.
-    non_positive = deepcopy(plant_config_data_dt)
-    non_positive["plant"]["simulation"]["dt"] = 0
-    with pytest.raises(ValueError, match="dt must be finite and greater than zero"):
-        load_plant_yaml(non_positive)
+    with subtests.test("a non-positive timestep is rejected"):
+        non_positive = deepcopy(plant_config_data_dt)
+        non_positive["plant"]["simulation"]["dt"] = 0
+        with pytest.raises(ValueError, match="dt must be finite and greater than zero"):
+            load_plant_yaml(non_positive)
 
 
 @pytest.mark.unit
