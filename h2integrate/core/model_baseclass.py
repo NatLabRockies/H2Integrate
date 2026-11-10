@@ -327,6 +327,9 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             replacement schedule.
         """
 
+        if annual_extrapolation_method is None:
+            annual_extrapolation_method = getattr(self, "annual_extrapolation_method", None)
+
         (
             performance_timeseries,
             rated_performance,
@@ -510,6 +513,9 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
         varopex_timeseries = np.asarray(varopex_timeseries, dtype=float)
         if varopex_timeseries.size == 0:
             raise ValueError("varopex_timeseries must contain at least one value.")
+
+        if annual_extrapolation_method is None:
+            annual_extrapolation_method = getattr(self, "annual_extrapolation_method", None)
 
         if (
             annual_extrapolation_method is not None
