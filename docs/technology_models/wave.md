@@ -17,9 +17,9 @@ The model converts a wave resource timeseries (significant wave height and energ
 
 ### Model Overview
 
-The model represents an array of wave energy converters operating in an ocean wave resource. Electricity production is calculated at each timestep by looking up device power output in the wave power matrix using the instantaneous significant wave height (Hs) and energy period (Te), then scaling by the number of devices.
+The model represents an array of wave energy converters operating in an ocean wave resource. Electricity production is calculated at each timestep by looking up device power output in the wave power matrix using the instantaneous significant wave height (Hs) and energy period, then scaling by the number of devices.
 
-The model operates in timeseries mode (`wave_resource_model_choice = 1`) and requires hourly Hs and Te arrays. Use the {ref}`wave_resource` component to read and interpolate wave data files to the required hourly resolution.
+The model operates in timeseries mode (`wave_resource_model_choice = 1`) and requires hourly significant wave height and energy period arrays. Use the {ref}`wave_resource` component to read and interpolate wave data files to the required hourly resolution.
 Inputs are `significant_wave_height`, `energy_period`, `num_devices`, and `device_rating`.
 Outputs include `electricity_out`, `rated_electricity_production`,
 `total_electricity_produced`, `annual_electricity_produced`, and `capacity_factor`.
@@ -55,10 +55,10 @@ By default all losses are set to zero. Override via `pysam_options` to model rea
 
 #### Wave Power Matrix
 
-The `wave_power_matrix` is a 2-D lookup table of device power output [kW] as a function of significant wave height Hs [m] and energy period Te [s]. It must be provided as a list of rows:
+The `wave_power_matrix` is a 2-D lookup table of device power output [kW] as a function of significant wave height Hs [m] and energy period [s]. It must be provided as a list of rows:
 
-- Row 0: Te bin centers [s] (header row; first element is 0.0)
-- Rows 1+: Each row starts with the Hs bin center [m], followed by the device power output [kW] at each Te bin
+- Row 0: Energy period bin centers [s] (header row; first element is 0.0)
+- Rows 1+: Each row starts with the Hs bin center [m], followed by the device power output [kW] at each energy period bin
 
 Example (3-row excerpt):
 

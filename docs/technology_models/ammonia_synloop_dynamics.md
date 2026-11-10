@@ -216,7 +216,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-The baseline (gray) curve follows the electricity-limited ammonia output directly, without any dynamic operating constraints. For all dynamic cases, the minimum operating point (defined by the 20% turndown) and the maximum operating point (defined as the rated capacity) are shown with red dashed lines. First, the turndown limit is applied. Any production below the minumum threshold of 10 kg/h (or 20% of rated capacity) is set to zero. This is seen at at hours 14-15, where the ammonia output with applied dynamics goes to zero because the operating point (5 kg/h) is below the turndown threshold (minimum operating point). Each panel overlays one dynamic constraint:
+The baseline (gray) curve follows the electricity-limited ammonia output directly, without any dynamic operating constraints. For all dynamic cases, the minimum operating point (defined by the 20% turndown) and the maximum operating point (defined as the rated capacity) are shown with red dashed lines. First, the turndown limit is applied. Any production below the minimum threshold of 10 kg/h (or 20% of rated capacity) is set to zero. This is seen at at hours 14-15, where the ammonia output with applied dynamics goes to zero because the operating point (5 kg/h) is below the turndown threshold (minimum operating point). Each panel overlays one dynamic constraint:
 
 - Ramping caps the per-hour change in production, so step changes in ammonia output
   are spread out over multiple hours. The ramp-up and ramp-down limits are 20 kg/h. The ramping is applied such that the difference in ammonia production between two consecutive hours never exceeds 20 kg/h.

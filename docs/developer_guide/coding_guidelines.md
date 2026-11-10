@@ -55,3 +55,24 @@ assertion. This keeps tests readable while preserving useful failure context.
 - use Google style for docstrings
 - use numpy instead of lists for arrays
 - use type hints for function arguments and return values
+
+## Automated checks
+
+Ruff and the other hooks in `.pre-commit-config.yaml` run on changed files locally and in CI.
+Ruff enforces the configured rule sets in `pyproject.toml`.
+The selected rules include:
+
+- [`C901`](https://docs.astral.sh/ruff/rules/complex-structure/) limits McCabe complexity to 30.
+- [`SIM101`](https://docs.astral.sh/ruff/rules/duplicate-isinstance-call/) combines repeated
+  `isinstance` checks on the same value.
+- [`PIE`](https://docs.astral.sh/ruff/rules/#flake8-pie-pie) and
+  [`PYI`](https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi) enable the respective Ruff rule
+  families for general Python improvements and stub files.
+- [`S110`](https://docs.astral.sh/ruff/rules/try-except-pass/) flags exception handlers that
+  silently discard errors. [`BLE001`](https://docs.astral.sh/ruff/rules/blind-except/) flags broad
+  exception handlers.
+
+See the [Ruff rule reference](https://docs.astral.sh/ruff/rules/) for rule details.
+`codespell` checks Markdown and reStructuredText documentation, and pre-commit rejects added files over 500 KB.
+Pull-request CI also requires a `CHANGELOG.md` update, reports changed-line counts, rejects added files over 500 KB, and prevents adding files matched by `.gitignore` as generated artifacts.
+Unit tests also verify that YAML examples name registered models and that registered model names appear in documentation; explicit allowlists identify existing exceptions.

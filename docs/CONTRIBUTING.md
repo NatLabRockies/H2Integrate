@@ -23,15 +23,22 @@ GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submi
 * Contributions are generally made against the `develop` branch. New models use the
    [`@register` decorator](https://github.com/NatLabRockies/H2Integrate/blob/develop/h2integrate/core/supported_models.py);
    see [Adding a New Technology](developer_guide/adding_a_new_technology.md) for the model requirements.
-* Code formatting is enforced using pre-commit hooks and is required for any code pushed up to the repository. The pre-commit package is included in the developer install of the repository. The pre-commit hooks can be installed by running
-```bash
-pre-commit install
-```
-in the repository directory. This will automatically run the pre-commit formatting hooks when code changes are committed. If you are having difficulty committing code after it has been reformatted by these hooks, try using the commit command
-```bash
-git commit -am "<Your commit message here>"
-```
-which will re-add the reformatted files to the commit.
+* Automated formatting and lint checks run in CI and are available through pre-commit. The
+  pre-commit package is included in the developer install. Install the hooks from the repository
+  directory:
+
+  ```bash
+  pre-commit install
+  ```
+
+  Run checks on changed files before opening a pull request:
+
+  ```bash
+  pre-commit run --files path/to/file.py path/to/other-file.md
+  ```
+
+  To run every hook across the repository, use `pre-commit run --all-files`. Review and stage any
+  changes made by auto-fixing hooks before committing.
 * The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NatLabRockies/H2Integrate/blob/main/LICENSE).
 
 ## Documentation

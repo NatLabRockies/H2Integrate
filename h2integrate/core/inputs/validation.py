@@ -56,7 +56,7 @@ def integrate_defaults(instance: dict, defaults: dict, yaml_schema: dict) -> dic
                     mypath = e.absolute_path.copy()
                     mypath.append(k)
                     v = nested_get(defaults, mypath)
-                    if isinstance(v, dict) or isinstance(v, list) or v in ["name", "material"]:
+                    if isinstance(v, (dict, list)) or v in ["name", "material"]:
                         # Too complicated to just copy over default, so give it back to the user
                         raise (e)
                     print("WARNING: Missing value,", list(mypath), ", so setting to:", v)

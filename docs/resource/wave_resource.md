@@ -1,7 +1,7 @@
 (wave_resource)=
 # Wave Resource: Model Overview
 
-The wave resource model reads and processes ocean wave data for use in the H2I framework. It expects a CSV file containing timeseries significant wave height (Hs) and energy period (Te) data, and outputs hourly arrays suitable for the {ref}`wave_performance` model.
+The wave resource model reads and processes ocean wave data for use in the H2I framework. It expects a CSV file containing timeseries significant wave height (Hs) and energy period data, and outputs hourly arrays suitable for the {ref}`wave_performance` model.
 See {py:class}`~h2integrate.resource.wave.WaveResource` and
 {py:class}`~h2integrate.resource.wave.WaveResourceConfig`. The component declares latitude and
 longitude inputs but reads the specified file rather than using them to select data.

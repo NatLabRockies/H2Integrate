@@ -92,7 +92,6 @@ jobs:
           files: ./${{ matrix.test-type }}-coverage.lcov
           flag-name: ${{ matrix.test-type }}
           parallel: true
-          fail-on-error: false
   coverage-finish:
     needs: build
     if: always()
@@ -103,4 +102,3 @@ jobs:
         with:
           github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
           parallel-finished: true
-          fail-on-error: false

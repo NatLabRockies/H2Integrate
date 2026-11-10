@@ -11,7 +11,7 @@ This page documents two core demand types:
 
 (demand-component-inputs-and-outputs)=
 ## Demand component inputs and outputs
-The inputs to the demand components are the `{commodity}_demand` profile and the `{commodity}_in` profile. The `{commodity}_in` profile is the initial commodity used to satisfy the demand. Suppose the `{commodity}_in` (pink) and `{commodity}_demand` (green) profiles look like whats shown below:
+The inputs to the demand components are the `{commodity}_demand` profile and the `{commodity}_in` profile. The `{commodity}_in` profile is the initial commodity used to satisfy the demand. Suppose the `{commodity}_in` (pink) and `{commodity}_demand` (green) profiles look like what's shown below:
 
 ![](./figures/demand_inputs.png)
 

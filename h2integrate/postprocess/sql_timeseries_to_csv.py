@@ -214,7 +214,7 @@ def save_case_timeseries_as_csv(
 
     # get length of timeseries profiles (n_timesteps)
     timeseries_lengths = list(
-        {len(v) for k, v in var_to_values.items() if k.endswith("_out") or k.endswith("_in")}
+        {len(v) for k, v in var_to_values.items() if k.endswith(("_out", "_in"))}
     )
     if len(timeseries_lengths) != 1:
         msg = (
