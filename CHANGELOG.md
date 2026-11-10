@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Updated the pull request template and contribution guide with AI-use disclosure, author accountability, and reviewer guidance. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)

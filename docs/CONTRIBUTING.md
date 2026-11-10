@@ -34,6 +34,17 @@ git commit -am "<Your commit message here>"
 which will re-add the reformatted files to the commit.
 * The H2Integrate copyright policy is detailed in the [`LICENSE`](https://github.com/NatLabRockies/H2Integrate/blob/main/LICENSE).
 
+### AI-assisted contributions
+
+The use of AI tools is entirely optional. Authors are responsible for every change they submit, regardless of how it was produced.
+If AI was used, complete the PR template's **AI Contributions** section with the extent of use, tools and models, work areas, and a brief contribution statement.
+A contributor should review all AI-generated code and outputs, follow H2Integrate conventions, and be able to explain every line of the diff without AI assistance.
+You do not need to modify reviewed generated code just to show that it was reviewed.
+
+Write the entire PR body, issue text, and review replies yourself; do not use AI to generate them.
+AI may help draft changed-file paths in the **Impacted Areas of the Software** section, but the
+author must verify the list and write why each notable change was needed.
+
 ## Documentation
 
 When contributing new features, or fixing existing capabilities, be sure to add and/or update the
@@ -125,6 +136,10 @@ Here are some guidelines to help with the review process, both as the person sub
 - If you leave several critical suggestions, include positive feedback on aspects you appreciate.
 - Communicate promptly once the PR author has addressed your feedback; aim to complete reviews within 2-3 days barring extenuating circumstances.
 - Remember, communication is key -- maintain a collaborative and respectful tone throughout the process.
+
+Discuss it with the author before pushing directly to their branch. Comments, suggestions, and pull
+requests targeting the original pull request are welcome. Human review is required; AI review is
+optional and does not replace it.
 
 ```{note}
 Code readability and understandability are highly valued, but not at the expense of significant inefficiency. Strive for a balance between clear code and appropriate performance with a slight preference for clear code.

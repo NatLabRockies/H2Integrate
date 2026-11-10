@@ -27,8 +27,8 @@ IMPORTANT NOTES
 
 <!--The title should clearly define your contribution succinctly.-->
 # Add meaningful title here
-<!-- Describe your feature here. Please include any code snippets or examples in this section. -->
-[Add description of feature here]
+<!-- Write the PR description yourself. State the problem, intended outcome, and key design choices. -->
+[Describe the problem, intended outcome, and key design choices in your own words.]
 
 <!-- Required -->
 ## Type of Contribution
@@ -61,13 +61,14 @@ IMPORTANT NOTES
 - [ ] Step 1
 - [ ] Step 2
 
-### Type of Reviewer Feedback Requested (on Draft PR)
-<!-- Outline the feedback that would be helpful from reviewers while it's a draft PR -->
-**Structural feedback**:
+<!-- Optional for draft and ready PRs -->
+## Reviewer Guidance
+<!-- Include this for drafts or whenever specific review input would help. -->
+**Review focus** (design choices, risks, or non-mechanical changes):
 
-**Implementation feedback**:
+**Feedback requested**:
 
-**Other feedback**:
+**Direct edits**: Please discuss with the PR author before pushing directly to this branch. Comments, suggestions, and PRs targeting this PR are welcome.
 
 <!-- Required, when not a draft -->
 ## General PR Checklist
@@ -89,7 +90,23 @@ IMPORTANT NOTES
   - [ ] After the above, a hyperlink has been provided to the PR using the following format:
     "A complete thought. [PR XYZ]((https://github.com/NatLabRockies/H2Integrate/pull/XYZ)", where
     `XYZ` should be replaced with the actual number.
+- [ ] I do not expect further changes to this PR except in response to review.
 
+<!-- Required if AI was used for this contribution -->
+## AI Contributions (Required if AI used)
+<!-- Write N/A if AI was not used. Complete for draft and ready PRs if AI was used. -->
+- [ ] I have read and understood every line of the diff and can explain it without AI assistance.
+- [ ] I have reviewed all AI-generated code and outputs; they follow H2Integrate conventions. I take responsibility for the submitted changes.
+
+**Extent of AI use**: None / autocomplete / chat-assisted / agent-written; describe what AI did.
+
+**Tools and models, and work areas** (code, tests, docs):
+
+**CRediT-style contribution statement**:
+
+<!-- The author writes the entire PR body, issue text, and review replies without AI generation.
+AI may help draft changed-file paths in Impacted Areas only. Verify the list and write the rationale yourself.
+There is no requirement to modify generated code that has been reviewed and is correct. -->
 
 <!-- Required -->
 ## Related Issues
@@ -110,7 +127,8 @@ EXCLUDE: CHANGELOG.md; docs/ files; or batch changes.
 
 Batch changes: do NOT list every individual change when linting, reformatting, or modifying a
 common API component, only list the essential changes, but do provide a high level description
-for appropriate batch edits.
+for appropriate batch edits. AI may help draft file paths in this section; verify the list and
+write the explanation of what changed and why yourself.
 -->
 ### New Files
 - `path/to/file.extension`
