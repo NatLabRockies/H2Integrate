@@ -568,7 +568,12 @@ def _run_non_annual_solar(n_timesteps):
     plant_config = {
         "plant": {
             "plant_life": 30,
-            "simulation": {"dt": 3600, "n_timesteps": n_timesteps, "timezone": 0},
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": n_timesteps,
+                "timezone": 0,
+                "annual_extrapolation_method": "tile",
+            },
         },
         "site": {"latitude": 33.0, "longitude": -101.0, "resources": {}},
     }
