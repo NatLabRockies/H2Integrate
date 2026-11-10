@@ -38,6 +38,16 @@ variants = {
             "downsample_method": "mean",
         },
     },
+    "full_life": {
+        "dt": 10800,  # 3 hours
+        "n_timesteps": 87600,
+        # Thirty years (the full plant life), repeating two native years downsampled to 3-hour.
+        "resource": {
+            "resource_year": 2012,
+            "resource_year_order": [2012, 2013] * 15,
+            "downsample_method": "mean",
+        },
+    },
 }
 
 
