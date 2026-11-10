@@ -16,13 +16,21 @@ from h2integrate.converters.methanol.methanol_baseclass import (
 
 @define(kw_only=True)
 class CO2HMethanolPlantFinanceModelConfig(MethanolFinanceConfig):
-    """Configuration for the CO2 hydrogenation methanol finance model."""
+    """Configuration for :class:`CO2HMethanolPlantFinanceModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
 
     pass
 
 
 @define(kw_only=True)
 class CO2HMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
+    """Configuration for :class:`CO2HMethanolPlantPerformanceModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
+
     meoh_syn_cat_consume_ratio: float = field()
     ng_consume_ratio: float = field()
     co2_consume_ratio: float = field()
@@ -34,8 +42,11 @@ class CO2HMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
 class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of a CO2 Hydrogenation (CO2H) methanol
-    plant. Computes annual methanol and co-product production, feedstock consumption, and emissions
-    based on plant capacity and capacity factor.
+    plant. Computes methanol production and feedstock consumption based on plant capacity and
+    available feedstocks.
+
+    See :class:`CO2HMethanolPlantPerformanceModelConfig`, :class:`CO2HMethanolPlantCostModel`,
+    and :doc:`/technology_models/methanol`.
 
     Inputs:
         - meoh_syn_cat_consume_ratio: ratio of ft^3 methanol synthesis catalyst consumed to
@@ -52,8 +63,8 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     Outputs:
         - meoh_syn_cat_consume: annual consumption of methanol synthesis catalyst (ft**3/yr)
         - ng_consume: hourly consumption of NG (kg/h)
-        - carbon dioxide_consume: co2 consumption in kg/h
-        - hydrogen_consume: h2 consumption in kg/h
+        - co2_consume: co2 consumption in kg/h
+        - hydrogen_consume: h2 consumption, declared in kg/s
         - electricity_consume: electricity consumption in kWh/h
         - methanol_out: methanol produced in kg/h
     """
@@ -148,6 +159,11 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
 @define(kw_only=True)
 class CO2HMethanolPlantCostModelConfig(MethanolCostConfig):
+    """Configuration for :class:`CO2HMethanolPlantCostModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
+
     ng_lhv: float = field()
     meoh_syn_cat_price: float = field()
     ng_price: float = field()
@@ -158,6 +174,9 @@ class CO2HMethanolPlantCostModelConfig(MethanolCostConfig):
 class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
     """
     An OpenMDAO component for modeling the cost of a CO2 hydrogenation (CO2H) methanol plant.
+
+    See :class:`CO2HMethanolPlantCostModelConfig`, :class:`CO2HMethanolPlantPerformanceModel`,
+    :class:`CO2HMethanolPlantFinanceModel`, and :doc:`/technology_models/methanol`.
 
     Inputs:
         ng_lhv: natural gas lower heating value in MJ/kg
@@ -228,6 +247,9 @@ class CO2HMethanolPlantCostModel(MethanolCostBaseClass):
 class CO2HMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
     An OpenMDAO component for modeling the financing of a CO2 Hydrogenation (CO2H) methanol plant.
+
+    See :class:`CO2HMethanolPlantFinanceModelConfig`, :class:`CO2HMethanolPlantCostModel`,
+    and :doc:`/technology_models/methanol`.
 
     Inputs:
         meoh_syn_cat_cost: annual cost of synthesis catalyst in USD/year

@@ -31,6 +31,8 @@ class DemandFollowingControl(SystemLevelControlBase):
        storage. The remaining demand (floored at zero) is split **evenly**
        across all dispatchable techs that produce the demanded commodity
        (each receives ``remaining_demand / n_dispatchable``).
+
+    See :doc:`/control/system_level_control/slc_demand_following` for configuration and I/O.
     """
 
     def compute(self, inputs, outputs):

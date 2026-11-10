@@ -1,11 +1,9 @@
-import shutil
-
 import numpy as np
 import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import ROOT_DIR, H2I_LIBRARY_DIR, load_yaml
+from h2integrate import H2I_LIBRARY_DIR, load_yaml
 from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.floris import FlorisWindPlantPerformanceModel
 from h2integrate.resource.wind.openmeteo_wind import OpenMeteoHistoricalWindResource
@@ -223,12 +221,8 @@ def test_floris_wind_performance(plant_config_openmeteo, floris_config, subtests
 
 
 @pytest.mark.unit
-def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, subtests):
-    cache_dir = ROOT_DIR.parent / "test_cache_floris"
-
-    # delete cache dir if it exists
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)
+def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, subtests, tmp_path):
+    cache_dir = tmp_path / "cache"
 
     floris_config["enable_caching"] = True
     floris_config["cache_dir"] = cache_dir
@@ -296,17 +290,10 @@ def test_floris_caching_changed_config(plant_config_openmeteo, floris_config, su
     with subtests.test("Check two cache files exist"):
         assert len(cache_filenames) == 2
 
-    # Delete cache files and the testing cache dir
-    shutil.rmtree(cache_dir)
-
 
 @pytest.mark.regression
-def test_floris_caching_changed_inputs(plant_config_openmeteo, floris_config, subtests):
-    cache_dir = ROOT_DIR.parent / "test_cache_floris"
-
-    # delete cache dir if it exists
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)
+def test_floris_caching_changed_inputs(plant_config_openmeteo, floris_config, subtests, tmp_path):
+    cache_dir = tmp_path / "cache"
 
     floris_config["enable_caching"] = True
     floris_config["cache_dir"] = cache_dir
@@ -372,9 +359,6 @@ def test_floris_caching_changed_inputs(plant_config_openmeteo, floris_config, su
 
     with subtests.test("Check two cache files exist"):
         assert len(cache_filenames) == 2
-
-    # Delete cache files and the testing cache dir
-    shutil.rmtree(cache_dir)
 
 
 @pytest.mark.regression

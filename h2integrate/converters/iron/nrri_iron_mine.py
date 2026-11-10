@@ -50,6 +50,8 @@ class NRRIIronMinePerformanceComponentConfig(BaseConfig):
             based on the mine name.
         longitude (float): longitude of the mine location. If not provided, it will be set
             based on the mine name.
+
+    See :class:`NRRIIronMinePerformanceComponent` and :doc:`/technology_models/iron_mine`.
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
@@ -82,6 +84,11 @@ class NRRIIronMinePerformanceComponentConfig(BaseConfig):
 
 @register
 class NRRIIronMinePerformanceComponent(PerformanceModelBaseClass):
+    """Model reference-mine material flows and feedstock consumption.
+
+    See :class:`NRRIIronMinePerformanceComponentConfig` and :doc:`/technology_models/iron_mine`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,
@@ -452,6 +459,8 @@ class NRRIIronMineCostComponentConfig(BaseConfig):
             based on the mine name.
         longitude (float): longitude of the mine location. If not provided, it will be set
             based on the mine name.
+
+    See :class:`NRRIIronMineCostComponent` and :doc:`/technology_models/iron_mine`.
     """
 
     mine: str = field(
@@ -489,6 +498,11 @@ class NRRIIronMineCostComponentConfig(BaseConfig):
 
 @register
 class NRRIIronMineCostComponent(CostModelBaseClass):
+    """Estimate pellet mine costs from annual production and reference coefficients.
+
+    See :class:`NRRIIronMineCostComponentConfig` and :doc:`/technology_models/iron_mine`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

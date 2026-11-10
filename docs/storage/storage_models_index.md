@@ -13,7 +13,9 @@ The following sections detail the inputs and outputs of the storage performance 
 
 ### Automatic storage sizing
 
-`StorageAutoSizingModel` calculates the storage capacity and charge/discharge rate required to
+{py:class}`~h2integrate.storage.simple_storage_auto_sizing.StorageAutoSizingModel`, configured by
+{py:class}`~h2integrate.storage.simple_storage_auto_sizing.StorageSizingModelConfig`, calculates the
+storage capacity and charge/discharge rate required to
 balance a commodity production profile against demand, then simulates the storage operation. In the
 `tech_config.yaml` set
 `set_demand_as_avg_commodity_in: true` to use average input as demand, or set it to `false` and
@@ -21,9 +23,15 @@ provide `demand_profile`. The model requires either `round_trip_efficiency`, or 
 `charge_efficiency` and `discharge_efficiency`. `min_soc_fraction` and `max_soc_fraction` bound the
 usable state of charge. It supports one-hour time steps.
 
+The model receives `{commodity}_in` and the normal storage control inputs described below. When
+using an explicit demand profile with open-loop control, it also receives `{commodity}_demand`.
+It reports the calculated `storage_capacity`, `max_charge_rate`, and `max_discharge_rate`, as well
+as the common storage performance outputs. In average-demand mode a nonzero configured
+`demand_profile` is rejected rather than ignored.
+
 ```{eval-rst}
 .. autoclass:: h2integrate.storage.simple_storage_auto_sizing.StorageSizingModelConfig
-    :members:
+    :no-members:
     :no-index:
 ```
 
@@ -43,6 +51,7 @@ If using an **open-loop control strategy**, the control input to the storage per
 
 Some storage models may also have design inputs of `max_charge_rate`, `storage_capacity`, and `max_discharge_rate`.
 
+(storage-performance-outputs)=
 ### Calculations and Outputs
 The storage performance models output timeseries profiles (length of `n_timesteps`):
 - `commodity_out`: storage charge and discharge profile in `commodity_rate_units`, values are negative when charging and positive when discharging. This is equivalent to `storage_commodity_charge + storage_commodity_discharge`
@@ -80,15 +89,21 @@ The available storage cost models are:
 
     ### ATB battery cost model
 
-    `ATBBatteryCostModel` uses separate energy and power capital costs from the [NLR Annual Technology
+    {py:class}`~h2integrate.storage.battery.atb_battery_cost.ATBBatteryCostModel`, configured by
+    {py:class}`~h2integrate.storage.battery.atb_battery_cost.ATBBatteryCostConfig`, uses separate
+    energy and power capital costs from the [NLR Annual Technology
     Baseline utility-scale battery ATB](https://atb.nrel.gov/electricity/2024b/utility-scale_battery_storage).
     It derives storage duration from capacity and charge rate, calculates
     CapEx from the energy and power cost inputs, and calculates annual OpEx as a fraction of CapEx.
     `commodity_rate_units` must be a power unit based on watts; the default amount unit is the rate unit
     multiplied by hours.
 
+    The model takes `storage_capacity` and `max_charge_rate` as OpenMDAO inputs and reports
+    `CapEx` and annual `OpEx`. Energy and power cost coefficients and the operating-cost fraction
+    are read from the configuration. The model supports one-hour time steps.
+
     ```{eval-rst}
     .. autoclass:: h2integrate.storage.battery.atb_battery_cost.ATBBatteryCostConfig
-        :members:
+        :no-members:
         :no-index:
     ```

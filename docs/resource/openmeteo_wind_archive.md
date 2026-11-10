@@ -3,6 +3,9 @@
 
 This resource class downloads wind resource data from the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api)
 
+See {py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResource` and
+{py:class}`~h2integrate.resource.wind.openmeteo_wind.OpenMeteoHistoricalWindResourceConfig`.
+
 This dataset allows for resource data to be downloaded for:
 - **resource years** from 1940 to year before the current calendar year.
 - **locations** across the globe.

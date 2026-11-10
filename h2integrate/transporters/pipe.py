@@ -7,6 +7,8 @@ from h2integrate.core.supported_models import register
 class PipePerformanceModel(om.ExplicitComponent):
     """
     Pass-through pipe with no losses.
+
+    See :doc:`/technology_models/transport` for supported commodities and units.
     """
 
     _time_step_bounds = (

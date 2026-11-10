@@ -15,11 +15,13 @@ class WaveResourceConfig(BaseConfig):
     """
     Args:
         resource_dir (str | Path, optional): Folder to save resource files to or
-            load resource files from. Defaults to "".
+            load resource files from. Defaults to None.
         resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
-        resource_year (int, optional): Year of the resource data. Used to generate
-            timestamps when interpolating sub-hourly data. Defaults to 2010.
+            resource data from. Defaults to "".
+        resource_year (int, optional): Year of the resource data. Defaults to 2010;
+            currently unused by the reader.
+
+    See :class:`WaveResource` and :doc:`/resource/wave_resource`.
     """
 
     resource_dir: Path | str | None = field(default=None)
@@ -35,6 +37,8 @@ class WaveResource(om.ExplicitComponent):
     and outputs hourly significant wave height and energy period values for a full
     year (8760 hours). The input file is expected to follow the DOE WPTO wave dataset
     format, with metadata rows followed by time-series data columns.
+
+    See :class:`WaveResourceConfig` and :doc:`/resource/wave_resource`.
 
     Notes:
         The wave resource data should be in the format:

@@ -21,6 +21,8 @@ from h2integrate.core.model_baseclass import (
 class ArdWindPlantModelConfig(BaseConfig):
     """Configuration container for Ard wind plant model inputs.
 
+    See :class:`ArdWindPlantModel` and :doc:`/technology_models/wind_plant_ard`.
+
     Attributes:
         ard_system (dict): Dictionary of Ard system / layout parameters (turbine specs,
             layout bounds, wake model settings, etc.) passed through to ``set_up_ard_model``.
@@ -124,6 +126,8 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
 
+    See :class:`ArdWindPlantModelConfig` and :doc:`/technology_models/wind_plant_ard`.
+
     **Subsystems:**
 
     - ``ard_sub_prob`` (SubmodelComp): Encapsulated Ard Problem exposing specified
@@ -144,8 +148,7 @@ class ArdWindPlantModel(om.Group):
 
     **Promoted Outputs:**
 
-    - ``electricity_out`` (float): Annual energy production (AEP) in MWh (as provided by
-      ARD/FLORIS).
+    - ``electricity_out`` (array): Electrical output profile in kW.
     - ``CapEx`` (float): Capital expenditure from ARD turbine & balance of plant cost model.
     - ``OpEx`` (float): Operating expenditure from ARD.
     - ``boundary_distances`` (array): Distances from turbines to boundary segments.

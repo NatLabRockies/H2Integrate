@@ -11,16 +11,21 @@ Please see the example `16_natural_gas` in the `examples` directory for a comple
 
 Each feedstock type requires two model components:
 
-1. **Performance Model** (`FeedstockPerformanceModel`):
+1. **Performance Model** ({py:class}`~h2integrate.feedstocks.feedstocks.FeedstockPerformanceModel`,
+   configured by {py:class}`~h2integrate.feedstocks.feedstocks.FeedstockPerformanceConfig`):
    - Generates the feedstock supply profile
    - Outputs `{commodity}_out` variable
    - Located at the beginning of the technology chain
 
-2. **Cost Model** (`FeedstockCostModel`):
+2. **Cost Model** ({py:class}`~h2integrate.feedstocks.feedstocks.FeedstockCostModel`,
+   configured by {py:class}`~h2integrate.feedstocks.feedstocks.FeedstockCostConfig`):
    - Calculates consumption costs based on actual usage
-   - Takes `{commodity}_consumed` as input
+   - Takes `{commodity}_consumed` and `{commodity}_out` as inputs
    - Located after all consuming technologies in the chain
    - Calculates the capacity factor of the consumed feedstock
+
+The performance model takes a scalar `{commodity}_capacity` input, defaulting to `rated_capacity`,
+and outputs a constant supply profile at that rate. Both models support one-hour time steps.
 
 ### Technology Interconnections
 
@@ -63,27 +68,22 @@ ng_feedstock:
             start_up_cost: 100000. #cost in USD
 ```
 
-### Performance Model Parameters
+### Model configuration references
 
-- `commodity` (str): Identifier for the feedstock type (e.g., "natural_gas", "water", "electricity")
-- `commodity_rate_units` (str): commodity_rate_units for feedstock consumption (e.g., "MMBtu/h", "kg/h", "galUS/h", or "MW")
-- `rated_capacity` (float): Maximum feedstock supply rate in `commodity_rate_units`
+The performance and cost configurations must use the same commodity and rate units.
 
-### Cost Model Parameters
+```{eval-rst}
+.. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockPerformanceConfig
+   :no-members:
+   :no-index:
 
-- `commodity` (str): Must match the performance model identifier
-- `commodity_rate_units` (str): Must match the performance model commodity_rate_units
-- `price` (float, int, or list): Cost per unit in `USD/commodity_amount_units`. Can be:
-  - Scalar: Constant price for all timesteps and years
-  - List of length `n_timesteps`: Price per timestep, applied uniformly across all years
-  - List of length `plant_life`: Price per year of plant operation
-- `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
-- `start_up_cost` (float, optional): One-time capital cost in USD. Defaults to 0.0
-- `cost_year` (int): Dollar year for cost inputs
-- `commodity_amount_units` (str | None, optional): the amount units of the commodity (i.e., "MMBtu", "kg", "galUS" or "kW*h"). If None, will be set as `commodity_rate_units*h`
+.. autoclass:: h2integrate.feedstocks.feedstocks.FeedstockCostConfig
+   :no-members:
+   :no-index:
+```
 
 ```{tip}
-The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation will be used and a warning is issued for clarity.
+The `price` parameter is flexible - you can specify constant pricing with a single value, time-varying pricing with an array of length `n_timesteps`, or per-year pricing with an array of length `plant_life`. When `n_timesteps == plant_life`, the per-year interpretation is used.
 ```
 
 ### Consumed Feedstock Outputs
@@ -95,10 +95,16 @@ The feedstock model outputs cost and performance information about the consumed 
 - `rated_{commodity}_production`: this is equal to the the `rated_capacity` of the feedstock model (in `commodity_rate_units`)
 - `capacity_factor`: ratio of the feedstock consumed to the maximum feedstock available
 
+For partial-year simulations, annual consumption is annualized, but `VarOpEx` is based on
+the simulated-period consumption without annualization. `CapEx` and `OpEx` are the configured
+startup and annual fixed costs.
+
 (feedstocks:eia_ng_price)=
 ## EIA Natural Gas Pricing
 
-A special case of the feedstock cost model `EIANaturalGasFeedstockCostModel` exists to enable users
+A special case of the feedstock cost model
+{py:class}`~h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockCostModel`, configured by
+{py:class}`~h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockConfig`, enables users
 to download data from the EIA API's natural gas price
 portal for a single site (see
 [the relevant API docs](https://h2integrate.readthedocs.io/en/latest/_autosummary/h2integrate.feedstocks.eia_ng_price.html)
@@ -121,40 +127,17 @@ environment variables or to a file.
 
 ### Configuring the EIA Cost Model
 
-Similar to the standard feedstock model, the following variables are able to be set by the user
+The EIA cost model uses the configuration below instead of the standard feedstock cost
+configuration. If the API key is stored in a file, define it on its own line as
+`EIA_API_KEY: xxxx`; alternatively set the `EIA_API_KEY` environment variable.
 
-- `cost_year` (int): Dollar year for cost inputs
-- `annual_cost` (float, optional): Fixed cost per year in USD/year. Defaults to 0.0
-- `start_up_cost` (float, optional): One-time capital cost in USD. Defaults to 0.0
-
-Additionally, there are a few other settings that users will need to provide for the model to work
-that differ from the standard cost model.
+```{eval-rst}
+.. autoclass:: h2integrate.feedstocks.eia_ng_price.EIANaturalGasFeedstockConfig
+   :no-members:
+   :no-index:
+```
 
 :::{important}
 If relying on site coordinate data (`latitude` and `longitude`), then the `reverse_geocoder` package
 is required, which can be pip installed directly or through the `gis` library extras.
 :::
-
-- `resource_year` (int): Which year to obtain the data from in the range [2001, 2026].
-- `monthly` (bool): If True, the monthly data are retrieved, otherwise the annual price is used.
-- location data options 1) use `state` or 2) use `latitude` and `longitude`:
-  - `state` (str): Full name of the state or two-letter state abbreviation, such as "United States" or
-    "US". Only the "US" or all 50 states will produce valid results. When `state` is provided, the
-    site coordinate data will be ignored.
-  - `latitude` (float): Latitude of the natural gas plant site. Only used when `state` is not
-    provided, and will be filled from the plant configuration's site data if not provided.
-  - `longitude` (float): Longitude of the natural gas plant site. Only used when `state` is not
-    provided, and will be filled from the plant configuration's site data if not provided.
-
-- `price_category` (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
-  "industrial", "electrical_power", or "exports". Note that not all categories will return
-  state-level data.
-- `api_key_file` (str, optional): The file where the user's API key is stored. If storing in a file,
-  define it on its own line using the convention "EIA_API_KEY: xxxx", or have the API key defined as
-  an environment variable set as "EIA_API_KEY".
-- `filename` (str, optional): Filename where the data should be loaded from if it exists or saved
-  to once it is downloaded.
-
-- `commodity`: Set to "natural_gas" internally.
-- `commodity_rate_units`: Set to "MMBtu/h" internally.
-- `commodity_amount_units`: Set to "MMBtu" internally.

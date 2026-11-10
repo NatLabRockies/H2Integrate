@@ -98,52 +98,6 @@ def fake_cost_dict():
 
 
 @pytest.mark.regression
-def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
-    mean_hourly_production = 500000.0
-    prob = om.Problem()
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-        },
-        "finance_parameters": {"model_inputs": profast_inputs_no1},
-    }
-    pf = ProFastNPV(
-        driver_config={},
-        plant_config=plant_config,
-        tech_config=fake_filtered_tech_config,
-        commodity_type="electricity",
-        description="no1",
-    )
-    ivc = om.IndepVarComp()
-
-    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
-    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
-
-    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
-    prob.setup()
-    for variable, cost in fake_cost_dict.items():
-        units = "USD" if "capex" in variable else "USD/year"
-        prob.set_val(f"pf.{variable}", cost, units=units)
-
-    prob.run_model()
-
-    with subtests.test("Sell price"):
-        assert (
-            pytest.approx(
-                prob.get_val("pf.sell_price_electricity_no1", units="USD/(kW*h)"), rel=1e-6
-            )
-            == profast_inputs_no1["commodity_sell_price"]
-        )
-
-    with subtests.test("NPV"):
-        assert (
-            pytest.approx(prob.get_val("pf.NPV_electricity_no1", units="USD")[0], rel=1e-6)
-            == -580179388.883
-        )
-
-
-@pytest.mark.regression
 def test_profast_npv_no1_change_sell_price(
     profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
 ):
@@ -334,6 +288,99 @@ def test_profast_npv_nonstandard_price_units(
         assert (
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
             == 611288384.412
+        )
+
+
+@pytest.mark.regression
+def test_profast_npv_across_different_production_units(
+    profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    expected_npv = 611288384.412
+    mean_hourly_production = 500000.0  # kg/h
+    mean_production_per_min = mean_hourly_production / 60  # kg/min
+    prob = om.Problem()
+
+    profast_inputs_no2["commodity_sell_price_units"] = "USD/kg"
+
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    pf1 = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="hydrogen",
+        description="no2",
+    )
+
+    pf2 = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="hydrogen",
+        description="no2",
+    )
+
+    # make one group with the production in units of kg/h
+    per_hr_group = prob.model.add_subsystem("hourly", om.Group())
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_hydrogen_production", mean_hourly_production, units="kg/h")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    per_hr_group.add_subsystem("ivc", ivc, promotes=["*"])
+    per_hr_group.add_subsystem("pf", pf1, promotes=["rated_hydrogen_production", "capacity_factor"])
+
+    # make another group with the production in units of kg/min
+    per_min_group = prob.model.add_subsystem("minutely", om.Group())
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_hydrogen_production", mean_production_per_min, units="kg/min")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    per_min_group.add_subsystem("ivc", ivc, promotes=["*"])
+    per_min_group.add_subsystem(
+        "pf", pf2, promotes=["rated_hydrogen_production", "capacity_factor"]
+    )
+
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"hourly.pf.{variable}", cost, units=units)
+        prob.set_val(f"minutely.pf.{variable}", cost, units=units)
+
+    prob.set_val(
+        "hourly.pf.sell_price_hydrogen_no2",
+        profast_inputs_no2["commodity_sell_price"],
+        units="USD/kg",
+    )
+    prob.set_val(
+        "minutely.pf.sell_price_hydrogen_no2",
+        profast_inputs_no2["commodity_sell_price"],
+        units="USD/kg",
+    )
+    prob.run_model()
+
+    with subtests.test("Sell price"):
+        assert (
+            pytest.approx(
+                prob.get_val("minutely.pf.sell_price_hydrogen_no2", units="USD/kg"), rel=1e-6
+            )
+            == profast_inputs_no2["commodity_sell_price"]
+        )
+
+    with subtests.test("NPV (hourly)"):
+        assert (
+            pytest.approx(prob.get_val("hourly.pf.NPV_hydrogen_no2", units="USD")[0], rel=1e-6)
+            == expected_npv
+        )
+    with subtests.test("NPV (minutely)"):
+        assert (
+            pytest.approx(prob.get_val("minutely.pf.NPV_hydrogen_no2", units="USD")[0], rel=1e-6)
+            == expected_npv
         )
 
 

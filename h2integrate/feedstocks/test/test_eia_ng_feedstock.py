@@ -2,12 +2,15 @@ import os
 import importlib
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import Mock
 
+import numpy as np
+import pandas as pd
 import pytest
 import openmdao.api as om
-from requests.exceptions import HTTPError
 
 from h2integrate.feedstocks import FeedstockPerformanceModel
+from h2integrate.preprocess import eia
 from h2integrate.feedstocks.eia_ng_price import (
     CURRENT_YEAR,
     EIANaturalGasFeedstockConfig,
@@ -142,8 +145,11 @@ def test_EIANaturalGasFeedstockConfig_with_coordinates():
 
 
 @pytest.mark.unit
-def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file):
+def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file, monkeypatch):
     """Create a basic feedstock configuration for testing."""
+    get_data = Mock(return_value=pd.DataFrame({"price": np.full(8760, 4.2)}))
+    monkeypatch.setattr(eia, "get_eia_ng_data", get_data)
+    monkeypatch.setattr(eia, "convert_to_hourly", lambda data: data)
     api_key_fn, *_ = EIA_API_key_file
     tech_config = {
         "model_inputs": {
@@ -230,9 +236,9 @@ def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file):
                 "ng_feedstock_source.natural_gas_out",
                 "ng_feedstock.natural_gas_out",
             )
-            with pytest.raises(HTTPError):
-                prob.setup()
-                assert prob.get_val("ng_feedstock.config.state") == "CO"
+            prob.setup()
+            assert prob.model.ng_feedstock.config.state == "CO"
+            assert get_data.call_args.kwargs["state"] == "CO"
 
     with subtests.test("Uses cost configuration's state over site data"):
         prob = om.Problem()
@@ -243,6 +249,6 @@ def test_EIANaturalGasFeedstockCostModel_with_sites(subtests, EIA_API_key_file):
             "ng_feedstock_source.natural_gas_out",
             "ng_feedstock.natural_gas_out",
         )
-        with pytest.raises(HTTPError):
-            prob.setup()
-            assert prob.get_val("ng_feedstock.config.state") == "CT"
+        prob.setup()
+        assert prob.model.ng_feedstock.config.state == "CT"
+        assert get_data.call_args.kwargs["state"] == "CT"

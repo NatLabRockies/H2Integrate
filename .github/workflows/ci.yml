@@ -12,6 +12,10 @@ on:
       - auto_merge_enabled
     paths:
       - h2integrate/**.py
+      - test/**.py
+      - conftest.py
+      - pyproject.toml
+      - .github/workflows/ci.yml
   schedule:
     - cron: 0 0 * * MON
 jobs:
@@ -79,7 +83,7 @@ jobs:
           touch .env
       - name: Run ${{ matrix.test-type }} tests
         shell: bash -el {0}
-        run: pytest . -m ${{ matrix.test-type }} --cov=h2integrate --cov-report=lcov:./${{ matrix.test-type }}-coverage.lcov
+        run: pytest . -m ${{ matrix.test-type }} --maxprocesses=4 --cov=h2integrate --cov-report=lcov:./${{ matrix.test-type }}-coverage.lcov
       - name: Upload test coverage
         uses: coverallsapp/github-action@v2
         if: contains(matrix.os, 'ubuntu') && contains(matrix.python-version, '3.13')

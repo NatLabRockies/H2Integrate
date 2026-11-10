@@ -16,6 +16,8 @@ class NSRDBDatasetH5Config(ResourceBaseH5Config):
     """Configuration class to access solar resource data from NLR datasets.
     Resource data is available from 1998-2025.
 
+    See :class:`NSRDBDatasetH5` and :doc:`/resource/solar_index`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1998 and 2025 (inclusive).
@@ -37,6 +39,11 @@ class NSRDBDatasetH5Config(ResourceBaseH5Config):
 
 @register
 class NSRDBDatasetH5(SolarResourceBase, ResourceBaseH5Model):
+    """Load NSRDB HDF5 data using :class:`NSRDBDatasetH5Config`.
+
+    See :doc:`/resource/solar_index`.
+    """
+
     def setup(self):
         self.units_translation = {
             "Celsius": "degC",

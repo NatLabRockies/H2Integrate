@@ -24,6 +24,8 @@ class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
 
     Common resource fields are inherited from ``ResourceBaseAPIConfig``.
 
+    See :class:`OpenMeteoHistoricalWindResource` and :doc:`/resource/openmeteo_wind_archive`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
@@ -55,6 +57,11 @@ class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
 
 @register
 class OpenMeteoHistoricalWindResource(WindResourceBase, ResourceBaseAPIModel):
+    """Load historical wind data using :class:`OpenMeteoHistoricalWindResourceConfig`.
+
+    See :doc:`/resource/openmeteo_wind_archive`.
+    """
+
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalWindAPIConfig
         resource_specs = self.helper_setup_method()

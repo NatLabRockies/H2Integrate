@@ -44,6 +44,7 @@ def test_iron_transport_performance_chicago(plant_config, subtests):
             "performance_parameters": {
                 "find_closest_ship_site": False,
                 "shipment_site": "Chicago",
+                "land_circuity_ratio": 1,
             }
         }
     }
@@ -56,27 +57,34 @@ def test_iron_transport_performance_chicago(plant_config, subtests):
 
     prob.model.add_subsystem("transport", transport, promotes=["*"])
     prob.setup()
+    # Duluth coordinates
+    prob.set_val("transport.origin_latitude", 46.7565839, units="deg")
+    prob.set_val("transport.origin_longitude", -92.0831726, units="deg")
+    # Just outside Chicago
+    prob.set_val("transport.destination_latitude", 41.717, units="deg")
+    prob.set_val("transport.destination_longitude", -88.398, units="deg")
     prob.run_model()
 
-    with subtests.test("Total transport distance equals land + water"):
+    with subtests.test("Chicago Land vs water+land distance"):
         tot_distance = prob.get_val(
-            "transport.water_transport_distance", units="km"
-        ) + prob.get_val("transport.land_transport_distance", units="km")
-        assert (
-            pytest.approx(prob.get_val("transport.total_transport_distance", units="km"), rel=1e-6)
-            == tot_distance
+            "transport.water_transport_distance_great_lakes", units="km"
+        ) + prob.get_val("transport.land_transport_distance_great_lakes", units="km")
+        assert np.all(
+            prob.get_val("transport.land_transport_distance_overland", units="km") < tot_distance
         )
     with subtests.test("Chicago land transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.land_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.land_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 68.19490223326876
         )
     with subtests.test("Chicago water transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.water_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.water_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 1359.70926331  # 1414.8120870922066
         )
@@ -91,6 +99,7 @@ def test_iron_transport_performance_buffalo(plant_config, subtests):
             "performance_parameters": {
                 "find_closest_ship_site": False,
                 "shipment_site": "Buffalo",
+                "land_circuity_ratio": 1,
             }
         }
     }
@@ -103,27 +112,34 @@ def test_iron_transport_performance_buffalo(plant_config, subtests):
 
     prob.model.add_subsystem("transport", transport, promotes=["*"])
     prob.setup()
+    # Duluth coordinates
+    prob.set_val("transport.origin_latitude", 46.7565839, units="deg")
+    prob.set_val("transport.origin_longitude", -92.0831726, units="deg")
+    # Just outside Chicago
+    prob.set_val("transport.destination_latitude", 41.717, units="deg")
+    prob.set_val("transport.destination_longitude", -88.398, units="deg")
     prob.run_model()
 
-    with subtests.test("Total transport distance equals land + water"):
+    with subtests.test("Buffalo Land vs water+land distance"):
         tot_distance = prob.get_val(
-            "transport.water_transport_distance", units="km"
-        ) + prob.get_val("transport.land_transport_distance", units="km")
-        assert (
-            pytest.approx(prob.get_val("transport.total_transport_distance", units="km"), rel=1e-6)
-            == tot_distance
+            "transport.water_transport_distance_great_lakes", units="km"
+        ) + prob.get_val("transport.land_transport_distance_great_lakes", units="km")
+        assert np.all(
+            prob.get_val("transport.land_transport_distance_overland", units="km") < tot_distance
         )
     with subtests.test("Buffalo land transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.land_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.land_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 794.1713773276688
         )
     with subtests.test("Buffalo water transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.water_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.water_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 1621.9112211308186
         )
@@ -138,6 +154,7 @@ def test_iron_transport_performance_cleveland(plant_config, subtests):
             "performance_parameters": {
                 "find_closest_ship_site": False,
                 "shipment_site": "Cleveland",
+                "land_circuity_ratio": 1,
             }
         }
     }
@@ -150,27 +167,34 @@ def test_iron_transport_performance_cleveland(plant_config, subtests):
 
     prob.model.add_subsystem("transport", transport, promotes=["*"])
     prob.setup()
+    # Duluth coordinates
+    prob.set_val("transport.origin_latitude", 46.7565839, units="deg")
+    prob.set_val("transport.origin_longitude", -92.0831726, units="deg")
+    # Just outside Chicago
+    prob.set_val("transport.destination_latitude", 41.717, units="deg")
+    prob.set_val("transport.destination_longitude", -88.398, units="deg")
     prob.run_model()
 
-    with subtests.test("Total transport distance equals land + water"):
+    with subtests.test("Cleveland Land vs water+land distance"):
         tot_distance = prob.get_val(
-            "transport.water_transport_distance", units="km"
-        ) + prob.get_val("transport.land_transport_distance", units="km")
-        assert (
-            pytest.approx(prob.get_val("transport.total_transport_distance", units="km"), rel=1e-6)
-            == tot_distance
+            "transport.water_transport_distance_great_lakes", units="km"
+        ) + prob.get_val("transport.land_transport_distance_great_lakes", units="km")
+        assert np.all(
+            prob.get_val("transport.land_transport_distance_overland", units="km") < tot_distance
         )
     with subtests.test("Cleveland land transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.land_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.land_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 555.2088919541055
         )
     with subtests.test("Cleveland water transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.water_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.water_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
             == 1341.7141480490504
         )
@@ -183,6 +207,7 @@ def test_iron_transport_performance_closest_loc(plant_config, subtests):
             "performance_parameters": {
                 "find_closest_ship_site": True,
                 "shipment_site": "None",
+                "land_circuity_ratio": 1,
             }
         }
     }
@@ -196,37 +221,42 @@ def test_iron_transport_performance_closest_loc(plant_config, subtests):
 
     prob.model.add_subsystem("transport", transport, promotes=["*"])
     prob.setup()
+    # Duluth coordinates
+    prob.set_val("transport.origin_latitude", 46.7565839, units="deg")
+    prob.set_val("transport.origin_longitude", -92.0831726, units="deg")
+    # Just outside Chicago
+    prob.set_val("transport.destination_latitude", 41.717, units="deg")
+    prob.set_val("transport.destination_longitude", -88.398, units="deg")
     prob.run_model()
 
-    with subtests.test("Total transport distance equals land + water"):
+    with subtests.test("Buffalo Land vs water+land distance"):
         tot_distance = prob.get_val(
-            "transport.water_transport_distance", units="km"
-        ) + prob.get_val("transport.land_transport_distance", units="km")
-        assert (
-            pytest.approx(prob.get_val("transport.total_transport_distance", units="km"), rel=1e-6)
-            == tot_distance
+            "transport.water_transport_distance_great_lakes", units="km"
+        ) + prob.get_val("transport.land_transport_distance_great_lakes", units="km")
+        assert np.all(
+            prob.get_val("transport.land_transport_distance_overland", units="km") < tot_distance
         )
     with subtests.test("Duluth land transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.land_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.land_transport_distance_overland", units="km")[0], rel=1e-6
             )
             == 632.4711909045266
         )
     with subtests.test("Duluth water transport distance"):
         assert (
             pytest.approx(
-                prob.get_val("transport.water_transport_distance", units="km")[0], rel=1e-6
+                prob.get_val("transport.water_transport_distance_great_lakes", units="km")[0],
+                rel=1e-6,
             )
-            == 0
+            == 1359.70926331
         )
 
 
 @pytest.mark.regression
 def test_iron_transport_cost_cleveland(plant_config, subtests):
-    # total cost: 62.94298688675447 USD/tonne
-    # land cost: 38.4320718826894 USD/tonne
-    # water cost: 24.51091500406507 USD/tonne
+    # land cost: 20.51456753 USD/tonne
+    # water cost: 37.60052956 USD/tonne
     annual_ore_production = 12385.195376438356 * 365
     hourly_ore_production = np.ones(8760) * annual_ore_production / 8760
     tech_config_chicago = {
@@ -234,6 +264,7 @@ def test_iron_transport_cost_cleveland(plant_config, subtests):
             "performance_parameters": {
                 "find_closest_ship_site": False,
                 "shipment_site": "Cleveland",
+                "land_circuity_ratio": 1,
             },
             "cost_parameters": {
                 "transport_year": 2022,
@@ -258,18 +289,19 @@ def test_iron_transport_cost_cleveland(plant_config, subtests):
     prob.model.add_subsystem("transport_cost", cost, promotes=["*"])
 
     prob.setup()
+    # Duluth coordinates
+    prob.set_val("transport_perf.origin_latitude", 46.7565839, units="deg")
+    prob.set_val("transport_perf.origin_longitude", -92.0831726, units="deg")
+
+    # Just outside Chicago
+    prob.set_val("transport_perf.destination_latitude", 41.717, units="deg")
+    prob.set_val("transport_perf.destination_longitude", -88.398, units="deg")
 
     prob.set_val("transport_cost.iron_ore_in", hourly_ore_production, units="t/h")
 
     prob.run_model()
 
-    with subtests.test("Ore profit margin"):
-        assert (
-            pytest.approx(prob.get_val("transport_cost.ore_profit_margin", units="USD/t"), rel=1e-6)
-            == 6.0
-        )
-
     with subtests.test("Shipment cost usd/ton"):
         varom = prob.get_val("transport_cost.VarOpEx", units="USD/year")
         cost_per_unit = varom / annual_ore_production
-        assert pytest.approx(cost_per_unit[0], abs=1e-3) == 62.94298688675447
+        assert pytest.approx(cost_per_unit[0], abs=1e-3) == 20.51456753
