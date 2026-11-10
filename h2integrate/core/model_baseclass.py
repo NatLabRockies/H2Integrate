@@ -237,6 +237,12 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
 
 @define(kw_only=True)
 class CostModelBaseConfig(BaseConfig):
+    """Base configuration for cost models.
+
+    Attributes:
+        cost_year (int): Dollar year used for the reported costs.
+    """
+
     cost_year: int = field(converter=int)
 
 
@@ -321,6 +327,19 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
 
 @define(kw_only=True)
 class ResizeablePerformanceModelBaseConfig(BaseConfig):
+    """Configuration for performance-model resizing behavior.
+
+    Attributes:
+        size_mode (str): Sizing method: ``"normal"``, ``"resize_by_max_feedstock"``,
+            or ``"resize_by_max_commodity"``.
+        flow_used_for_sizing (str | None): Feedstock or commodity flow used to determine
+            capacity when ``size_mode`` is not ``"normal"``.
+        max_feedstock_ratio (float): Maximum fraction of available feedstock the model
+            may consume when resizing by feedstock.
+        max_commodity_ratio (float): Maximum fraction of downstream commodity demand
+            the model may produce when resizing by commodity.
+    """
+
     size_mode: str = field(default="normal")
     flow_used_for_sizing: str | None = field(default=None)
     max_feedstock_ratio: float = field(default=1.0)
@@ -410,6 +429,13 @@ class ResizeablePerformanceModelBaseClass(PerformanceModelBaseClass):
 
 @define(kw_only=True)
 class CacheBaseConfig(BaseConfig):
+    """Configuration for model-result caching.
+
+    Attributes:
+        enable_caching (bool): Whether to read and write cached model results.
+        cache_dir (str | Path): Directory used to store and retrieve cached results.
+    """
+
     enable_caching: bool = field()
     cache_dir: str | Path = field()
 

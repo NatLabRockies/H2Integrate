@@ -18,7 +18,7 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
 class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """Configuration class for the HTSE performance model.
 
-    Args:
+    Attributes:
         n_clusters (int): Number of HTSE clusters in the system.
         nominal_heat_required (float): Nominal thermal energy required per kg of hydrogen
             in kWh/kg.
@@ -271,7 +271,7 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
 class HTSECostModelConfig(CostModelBaseConfig):
     """Configuration class for the HTSE cost model.
 
-    Args:
+    Attributes:
         unit_capex (float): Installed capital cost per kW of HTSE electrical size in USD/kW.
         fixed_opex (float, optional): Fixed annual operating cost per kW in USD/(kW*year).
             If omitted, it is populated from ``fixed_capex`` (or ``0.0`` when that is also

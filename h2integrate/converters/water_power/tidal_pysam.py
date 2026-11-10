@@ -11,7 +11,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
     """
     Configuration class for MHKTidalPlant.
 
-    Args:
+    Attributes:
         device_rating_kw (float): Rated power of the MHK device [kW]
         num_devices (int): Number of MHK tidal devices in the system
         tidal_power_curve (List[List[float]]): Power curve of tidal energy device as

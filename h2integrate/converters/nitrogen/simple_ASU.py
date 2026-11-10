@@ -274,6 +274,15 @@ def make_cost_unit_multiplier(unit_str):
 class SimpleASUCostConfig(CostModelBaseConfig):
     """Cost parameters for :class:`SimpleASUCostModel`.
 
+    Attributes:
+        capex_usd_per_unit (float): Capital cost per selected unit of rated output.
+        capex_unit (str): Rated-output basis for capital cost, such as ``"kg/hour"``,
+            ``"kw"``, or ``"tonne/day"``.
+        opex_usd_per_unit_per_year (float): Annual operating cost per selected unit
+            of rated output.
+        opex_unit (str): Rated-output basis for operating cost; use ``"none"`` when
+            operating cost is zero.
+
     See :doc:`/technology_models/nitrogen_asu` for the supported cost bases.
     """
 

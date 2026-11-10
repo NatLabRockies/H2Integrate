@@ -80,6 +80,7 @@ IMPORTANT NOTES
   - [ ] Modified tests have been outlined in the impacted areas section
 - [ ] Documentation
   - [ ] Docstrings are up-to-date
+  - [ ] Attrs configuration docstrings use an `Attributes:` section that documents each declared field; inherited fields link to their base configuration
   - [ ] Related `docs/` files are up-to-date, or added when necessary
   - [ ] Documentation has been rebuilt successfully
   - [ ] Examples have been updated (if applicable)

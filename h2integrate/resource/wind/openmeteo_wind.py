@@ -26,7 +26,7 @@ class OpenMeteoHistoricalWindResourceConfig(ResourceBaseAPIConfig):
 
     See :class:`OpenMeteoHistoricalWindResource` and :doc:`/resource/openmeteo_wind_archive`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
         include_leap_day (bool, optional): If False, remove data from leap day if the

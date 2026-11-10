@@ -10,7 +10,7 @@ from h2integrate.core.supported_models import register
 class PySAMMarineCostConfig(CostModelBaseConfig):
     """Configuration class for the PySAMMarineCostModel.
 
-    Args:
+    Attributes:
         device_rating_kw (float): Rated power of the MHK device [kW]
         num_devices (int): Number of MHK tidal devices in the system
         reference_model_number (int): Reference model number from the
@@ -27,6 +27,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
             (please refer to MhkCosts documentation
             `here <https://nrel-pysam.readthedocs.io/en/main/modules/MhkCosts.html>`__
             )
+        cost_year (int): Dollar year for the PySAM cost output; currently fixed at 2022.
 
     See :class:`PySAMMarineCostModel` and :doc:`/technology_models/marine_hydrokinetic`.
 

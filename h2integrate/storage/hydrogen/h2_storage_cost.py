@@ -30,6 +30,8 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
             Default is $1200 (2013 dollars) from HDSAM, converted to 2018 dollars using CEPCI.
         cg_capex_per_kg_700_bar (float): Capital cost per kg for compressed gas storage at 700 bar
             Default is $1800 (2013 dollars) from HDSAM, converted to 2018 dollars using CEPCI.
+        marginal_cost (float): Marginal production cost used by system-level dispatch, in
+            dollars per commodity unit.
 
     See :class:`LinedRockCavernStorageCostModel`, :class:`SaltCavernStorageCostModel`,
     :class:`PipeStorageCostModel`, :class:`CompressedGasStorageCostModel`, and

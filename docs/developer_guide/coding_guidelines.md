@@ -38,6 +38,21 @@ the model-specific class should still be used when the fields or semantics
 differ. The `populate_tech_yaml` utility recognizes the direct `{ModelName}Config`
 convention and can also discover inherited or explicitly supplied config classes.
 
+Document configuration fields in the class docstring under a Google-style
+`Attributes:` section, not `Args:`. Describe every field declared by the class,
+including its purpose, units, defaults, valid values, and any non-obvious
+constraints. Use `:class:` and `:attr:` cross-references for Python objects and
+double backticks for literal identifiers. For inherited fields, link to or
+embed the base configuration documentation instead of repeating its field
+descriptions; document any additional fields in the derived class.
+
+In API directives, use `:no-members:` when the class signature and docstring
+already describe the configuration. If members are needed, exclude inherited
+members by naming their base class with `:inherited-members:` and use
+`:no-undoc-members:` or `:exclude-members:` to prevent type-only duplicates.
+Check the generated API page to verify that field descriptions and links look
+and operate how you want.
+
 ## Base class file naming
 
 Modules that define base classes should use the `_baseclass.py` suffix, for example

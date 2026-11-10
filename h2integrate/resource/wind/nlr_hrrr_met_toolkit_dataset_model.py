@@ -18,7 +18,7 @@ class WTKHRRRMETDatasetH5Config(ResourceBaseH5Config):
 
     See :class:`WTKHRRRMETDatasetH5` and :doc:`/resource/wind_index`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 2015 and 2025 (inclusive).
 

@@ -50,6 +50,8 @@ class FlorisWindPlantPerformanceModelConfig(CacheBaseConfig):
             - 'average': average the resource data at the heights that most closely bound
                 the hub-height.
             - 'nearest': use the resource data at the height closest to the hub-height.
+        adjust_air_density_for_elevation (bool): If True, adjust air density using the
+            site elevation. Defaults to False.
         enable_caching (bool, optional): if True, checks if the outputs have be saved to a
             cached file or saves outputs to a file. Defaults to True.
         cache_dir (str | Path, optional): folder to use for reading or writing cached results files.
