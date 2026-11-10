@@ -119,7 +119,7 @@ cr = om.CaseReader(fpath)
 
 # get the cases as a list
 cases = list(cr.get_cases())
-# access a variable from the problem, this can be anything thats an
+# access a variable from the problem, this can be anything that's an
 # input or output from the models that were run and not specified
 # as variables to exclude in the driver_config file
 

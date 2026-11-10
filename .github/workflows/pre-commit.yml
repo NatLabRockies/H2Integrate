@@ -9,9 +9,81 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: 3.13
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: >-
+            --from-ref ${{ github.event.pull_request.base.sha || github.event.before }}
+            --to-ref ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Report pull request size
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |-
+          read -r insertions deletions < <(
+            git diff --numstat "${BASE_SHA}...${HEAD_SHA}" |
+              awk '$1 != "-" && $2 != "-" { added += $1; removed += $2 }
+                   END { print added + 0, removed + 0 }'
+          )
+          changed_lines=$((insertions + deletions))
+          added_files="$(git diff --name-only --diff-filter=A "${BASE_SHA}...${HEAD_SHA}")"
+          large_files="$(
+            printf '%s\n' "${added_files}" |
+              while IFS= read -r path; do
+                if [[ -f "${path}" ]]; then
+                  size=$(wc -c < "${path}")
+                  if (( size > 512000 )); then
+                    printf '%s (%s bytes)\n' "${path}" "${size}"
+                  fi
+                fi
+              done
+          )"
+          committed_artifacts=""
+          if [[ -n "${added_files}" ]]; then
+            committed_artifacts="$(
+              printf '%s\n' "${added_files}" |
+                git check-ignore --no-index --stdin || true
+            )"
+          fi
+          failures=0
+          {
+            echo "## Pull request size"
+            echo
+            echo "- Insertions: ${insertions}"
+            echo "- Deletions: ${deletions}"
+            echo "- Changed lines: ${changed_lines} (informational)"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -n "${large_files}" ]]; then
+            {
+              echo
+              echo "## Added files over 500 KB"
+              echo
+              printf '%s\n' "${large_files}"
+            } >> "${GITHUB_STEP_SUMMARY}"
+            failures=1
+          fi
+          if [[ -n "${committed_artifacts}" ]]; then
+            {
+              echo
+              echo "## Added files ignored as generated artifacts"
+              echo
+              printf '%s\n' "${committed_artifacts}"
+            } >> "${GITHUB_STEP_SUMMARY}"
+            failures=1
+          fi
+          if ! git diff --name-only "${BASE_SHA}...${HEAD_SHA}" | grep -Fxq "CHANGELOG.md"; then
+            {
+              echo
+              echo "A CHANGELOG.md update is required for every pull request."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            failures=1
+          fi
+          exit "${failures}"

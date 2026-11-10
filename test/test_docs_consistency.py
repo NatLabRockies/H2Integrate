@@ -25,32 +25,8 @@ URL_RE = re.compile(r"https?://\S+")
 AUTOCLASS_RE = re.compile(r"(?m)^[ \t]*\.\. autoclass::[ \t]+(\S+)[ \t]*\n((?:[ \t]+:[^\n]*\n)*)")
 CONFIGURATION_CLASS_NAMES = {"FlorisTurbineDefaults", "PySAMPowerCurveCalculationInputs"}
 
-# Keep these lists current as model pages and example references are added.
-UNDOCUMENTED_MODELS = {
-    "PyomoDispatchGenericConverterMinOperatingCosts",
-    "PyomoRuleStorageMinOperatingCosts",
-    "SimpleCycleTurbinePerformanceModel",
-    "GenericConverterCostModel",
-    "IronTransportPerformanceComponent",
-    "IronTransportCostComponent",
-    "CO2HMethanolPlantPerformanceModel",
-    "CO2HMethanolPlantCostModel",
-    "CO2HMethanolPlantFinanceModel",
-    "SMRMethanolPlantPerformanceModel",
-    "SMRMethanolPlantFinanceModel",
-    "SteelPerformanceModel",
-    "SimpleASUPerformanceModel",
-    "ReverseOsmosisPerformanceModel",
-    "RiverResource",
-    "TidalResource",
-    "GasStreamCombinerPerformanceModel",
-    "LinearMassTransportCostModel",
-    "StorageAutoSizingModel",
-    "SimpleGasProducerPerformance",
-    "SimpleGasProducerCost",
-    "SimpleGasConsumerPerformance",
-    "SimpleGasConsumerCost",
-}
+# Keep this allowlist current as model documentation is added.
+UNDOCUMENTED_MODELS = {"SummaryStatisticsPerformanceModel"}
 UNREFERENCED_EXAMPLES = set()
 CUSTOM_MODEL_NAMES = {"CustomRiverResource", "SimpleLCOFinance"}
 KNOWN_MISSING_PATHS = set()
@@ -120,6 +96,25 @@ def test_yaml_model_references_are_registered():
                 unknown.append(f"{page.relative_to(REPO_ROOT)}: {key}: {name}")
 
     assert not unknown, "Unregistered model names in YAML fences:\n" + "\n".join(unknown)
+
+
+def test_registered_model_names_appear_in_documentation():
+    """Keep the model documentation allowlist aligned with the registered models."""
+    documentation = "\n".join(_page_text(page) for page in _markdown_pages())
+    undocumented = {
+        name
+        for name in supported_models
+        if not re.search(
+            rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])",
+            documentation,
+        )
+    }
+
+    assert undocumented == UNDOCUMENTED_MODELS, (
+        "Document new registered models or update the undocumented-model allowlist: "
+        f"unexpected={sorted(undocumented - UNDOCUMENTED_MODELS)}, "
+        f"documented={sorted(UNDOCUMENTED_MODELS - undocumented)}"
+    )
 
 
 def test_repository_paths_in_docs_exist():

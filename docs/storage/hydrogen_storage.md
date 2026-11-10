@@ -57,7 +57,7 @@ The bulk hydrogen storage costs are modeled as functions of storage capacity usi
 
 $$Cost = \exp(a(\ln(m))^2 - b\ln(m) + c)$$
 
-where $m$ is the useable amount of H₂ stored in tonnes.
+where $m$ is the usable amount of H₂ stored in tonnes.
 
 Operational costs are calculated using the [HDSAM model](https://hdsam.es.anl.gov/index.php?content=hdsam) from Argonne National Laboratory, which is also used to model all costs for Option 4.
 This method is shown further down this page in the "Cost Correlations - Options 4".
@@ -135,7 +135,7 @@ Besides the main capital costs above, other minor capital costs are shown below:
 
 ![HDSAM CGT Other Capex](images/hdsam_cgt_other_capex.png)
 
-Besides land, these costs are all calculated as a precentage of the main capital costs, in the main cost table as ("Total Capital Investment (Depreciable)").
+Besides land, these costs are all calculated as a percentage of the main capital costs, in the main cost table as ("Total Capital Investment (Depreciable)").
 For land, we used a similar simplification based on capacity as those used for piping/plumbing.
 In our simplified model, we ran HDSAM for multiple terminal capacities and calculated the average ratio of terminal capacity to "GH2 Terminal Land Required (m2)".
 This ratio is the `kg_d_per_land_m2` constant of 4 kg/day per square meter of land.

@@ -149,7 +149,7 @@ example `pytest examples/test/test_all_examples.py -k steel`.
 To test the code coverage of the testing suite, we use the
 [`pytest-cov`](https://pytest-cov.readthedocs.io/en/latest) package. To produce a coverage report in the terminal after the tests complete, simply
 run pytest as you normally would, with the following added to the end:
-`--cov=h2integrate`..
+`--cov=h2integrate`.
 
 Additional helpful options are `--cov-report=html --no-cov-on-fail` will produce a detailed HTML
 report in `htmlcov/` that can be viewed in the browser (open
@@ -157,6 +157,11 @@ report in `htmlcov/` that can be viewed in the browser (open
 More options exist, or the highlighted ones can be modified, for example to create a coverage report
 for a specific folder or file (e.g., `--cov=h2integrate/core/utilities`), which is especially
 helpful when developing tests for a new module.
+
+CI uploads each unit, regression, and integration coverage report to
+[Coveralls](https://coveralls.io/), which reports pull-request coverage changes. Repository
+maintainers must configure the minimum and change-coverage thresholds in Coveralls and require its
+status check in branch protection if a coverage decrease should block merging.
 
 ## Shared Fixtures
 
@@ -189,7 +194,7 @@ the `plant_simulation` fixture.
 
 ## Using temporary directories to avoid saving output data
 
-For tests that utilize caching or non-openmdao ouputs (i.e., plots, data, etc.),
+For tests that utilize caching or non-openmdao outputs (i.e., plots, data, etc.),
 the `temp_dir` fixture should be utilized for 2 reasons.
 
 1. The `temp_dir` fixture successfully removes the temporarily created files after running a module,

@@ -230,6 +230,11 @@ select = [
   "Q",
   "FURB",
   "RUF",
+  "C901",
+  "SIM101",
+  "PIE",
+  "PYI",
+  "S110",
 ]
 
 ignore = [
@@ -268,6 +273,9 @@ ignore-overlong-task-comments = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
 
 [tool.ruff.lint.isort]
 known-third-party = ["pytest"]
