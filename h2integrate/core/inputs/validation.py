@@ -9,7 +9,6 @@ import jsonschema as json
 
 from h2integrate.core.file_utils import load_yaml, write_yaml
 from h2integrate.tools.constants import SECONDS_PER_YEAR
-from h2integrate.core.annualization import classify_simulation_horizon
 
 
 fschema_tech = Path(__file__).parent / "tech_schema.yaml"
@@ -160,7 +159,7 @@ def load_tech_yaml(finput):
 
 
 def load_plant_yaml(finput):
-    """Validate a plant configuration and ensure its simulation horizon is supported.
+    """Validate a plant configuration and ensure its simulation horizon fits the plant life.
 
     Args:
         finput (dict | str | Path): Plant configuration or path to its YAML file.
@@ -170,7 +169,7 @@ def load_plant_yaml(finput):
 
     Raises:
         ValueError: If dt is nonfinite or non-positive, plant life is not a finite positive
-            integer, or the simulation horizon covers neither one year nor the full plant life.
+            integer, or the simulation horizon is non-positive or longer than the plant life.
     """
     plant_config = _validate(finput, fschema_plant)
 
@@ -188,8 +187,10 @@ def load_plant_yaml(finput):
     seconds_simulated = n_timesteps * dt
     years_simulated = seconds_simulated / SECONDS_PER_YEAR
 
-    # The simulation must cover exactly one year, which is repeated across plant life, or the
-    # full plant life (see ``classify_simulation_horizon``).
+    # The simulation may cover any positive duration (a fraction of a year, a single
+    # year, or multiple years). Performance/cost/finance models annualize their results
+    # using ``fraction_of_year_simulated`` (see the model base classes), so an arbitrary
+    # horizon is supported as long as it is positive and does not exceed the plant life.
     if seconds_simulated <= 0:
         msg = (
             "The simulation horizon must be positive. Please ensure that "
@@ -205,15 +206,6 @@ def load_plant_yaml(finput):
             f"(n_timesteps={n_timesteps} * dt={dt} s = {seconds_simulated} s), but "
             f"plant_config['plant']['plant_life'] is {plant_life} years. Either shorten "
             "the simulation horizon or increase plant_life."
-        )
-        raise ValueError(msg)
-
-    if classify_simulation_horizon(n_timesteps, dt, plant_life) == "partial":
-        msg = (
-            "H2Integrate supports simulations that cover exactly one year or the full plant "
-            f"life. The configured simulation covers {years_simulated:.4g} years "
-            f"(n_timesteps={n_timesteps} * dt={dt} s = {seconds_simulated} s), but "
-            f"plant_config['plant']['plant_life'] is {plant_life} years."
         )
         raise ValueError(msg)
 
