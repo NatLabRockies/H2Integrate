@@ -150,64 +150,28 @@ class ProFastLCO(ProFastBase):
         lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
-        # Check whether to export profast object to .yaml file
-        save_results = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_results", False
-        )
-        save_config = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_config", False
-        )
+        if self.profast_options.save_profast_config:
+            # Export profast object to .yaml file
+            self.export_profast_config_to_file(pf)
 
-        if save_results or save_config:
-            # make folder to save output files if it doesnt already exist
-            output_dir = self.options["driver_config"]["general"]["folder_output"]
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
+        if self.profast_options.save_profast_results:
+            # Save results (LCO breakdown and price breakdown)
+            output_dir, fbasename = self.get_output_folder_and_filename_description()
+            price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
+            pf_breakdown_fpath = Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
+            lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
 
-            fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastLCO"
-            )
+            if not self.profast_options.overwrite_results:
+                # make unique filenames to not overwrite previously saved results
+                pf_breakdown_fname = make_unique_case_name(
+                    output_dir, pf_breakdown_fpath.name, pf_breakdown_fpath.suffix
+                )
+                lco_breakdown_fname = make_unique_case_name(
+                    output_dir, lco_breakdown_fpath.name, lco_breakdown_fpath.suffix
+                )
+                pf_breakdown_fpath = output_dir / pf_breakdown_fname
+                lco_breakdown_fpath = output_dir / lco_breakdown_fname
 
-            subgroup_desc = self.pathname.split("finance_subgroup")[-1].strip("_").replace(".", "-")
-            fbasename = f"{fdesc}_{subgroup_desc}_{self.output_txt}"
-
-            pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
-
-            if save_config:
-                overwrite_config = self.options["plant_config"]["finance_parameters"][
-                    "model_inputs"
-                ].get("overwrite_config", False)
-
-                config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
-                if not overwrite_config:
-                    # make a unique filename config to not overwrite any previously saved configs
-                    config_fname = make_unique_case_name(
-                        output_dir, config_fpath.name, config_fpath.suffix
-                    )
-                    config_fpath = output_dir / config_fname
-
-                write_yaml(pf_config_dict, config_fpath)
-
-            if save_results:
-                price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
-                pf_breakdown_fpath = Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
-                lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
-
-                overwrite_results = self.options["plant_config"]["finance_parameters"][
-                    "model_inputs"
-                ].get("overwrite_results", False)
-
-                if not overwrite_results:
-                    # make unique filenames to not overwrite previously saved results
-                    pf_breakdown_fname = make_unique_case_name(
-                        output_dir, pf_breakdown_fpath.name, pf_breakdown_fpath.suffix
-                    )
-                    lco_breakdown_fname = make_unique_case_name(
-                        output_dir, lco_breakdown_fpath.name, lco_breakdown_fpath.suffix
-                    )
-                    pf_breakdown_fpath = output_dir / pf_breakdown_fname
-                    lco_breakdown_fpath = output_dir / lco_breakdown_fname
-
-                price_breakdown_formatted.to_csv(pf_breakdown_fpath)
-                lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
-                write_yaml(lco_breakdown, lco_breakdown_fpath)
+            price_breakdown_formatted.to_csv(pf_breakdown_fpath)
+            lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
+            write_yaml(lco_breakdown, lco_breakdown_fpath)

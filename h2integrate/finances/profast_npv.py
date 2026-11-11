@@ -92,6 +92,13 @@ class ProFastNPV(ProFastBase):
             units=self.commodity_sell_price_units,
         )
 
+        if self.profast_options.save_profast_results:
+            msg = (
+                "The 'ProFastNPV' model does not have saving results enabled. "
+                "To save the ProFAST config, set 'save_profast_config' to True."
+            )
+            warnings.warn(msg, UserWarning, stacklevel=2)
+
     def compute(self, inputs, outputs):
         """Compute the NPV of the commodity using ProFAST cash flows.
 
@@ -153,3 +160,6 @@ class ProFastNPV(ProFastBase):
         sell_profile = np.concatenate([np.full(non_op_Nyears, sell_price[0]), sell_price])
 
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(price=sell_profile)
+
+        if self.profast_options.save_profast_config:
+            self.export_profast_config_to_file()
