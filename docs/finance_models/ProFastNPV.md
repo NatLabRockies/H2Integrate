@@ -43,7 +43,7 @@ The saved file can be reloaded to re-evaluate the cash flow for native ProFAST p
 from h2integrate.tools.profast_tools import load_profast_from_config
 
 pf, results = load_profast_from_config("outputs/default_ProFastNPV_hydrogen_config.yaml")
-# Primary results keys: results["sol"]["lco"], results["summary"], results["price_breakdown"]
+# Primary results keys: results["npv"], results["summary"], results["price_breakdown"]
 pf.plot_cashflow()
 ```
 
