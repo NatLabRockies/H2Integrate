@@ -164,6 +164,8 @@ class OpenLoopControlBase(om.ExplicitComponent):
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
 
     # Flag to indicate steppability. This flag should be overwritten by a subclass when that
     # subclass controller is capable of steppable simulation.

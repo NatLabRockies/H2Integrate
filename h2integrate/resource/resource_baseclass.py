@@ -21,10 +21,10 @@ from h2integrate.resource.utilities.time_tools import (
     check_data_length,
     contains_leap_day,
     add_resource_start_end_times,
-    resample_resource_data_to_dt,
     get_number_of_resource_years_needed,
 )
 from h2integrate.resource.utilities.download_tools import download_from_api
+from h2integrate.resource.utilities.resample_tools import resample_resource_data_to_dt
 
 
 @define(kw_only=True)

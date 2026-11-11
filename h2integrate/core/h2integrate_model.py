@@ -11,6 +11,7 @@ from h2integrate.core.model_checks import (
     check_model_is_steppable,
     check_time_marching_config,
     check_model_control_classifier,
+    check_model_simulation_duration,
 )
 from h2integrate.core.connection_utils import (
     create_technology_graph,
@@ -739,6 +740,13 @@ class H2IntegrateModel:
                 f"Must be a valid model name in supported_models."
             )
 
+        check_model_simulation_duration(
+            strategy_name,
+            slc_cls,
+            self.plant_config["plant"]["simulation"]["n_timesteps"],
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
+
         slc_comp = slc_cls(
             driver_config=self.driver_config,
             plant_config=self.plant_config,
@@ -929,6 +937,12 @@ class H2IntegrateModel:
                     comp,
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
+                check_model_simulation_duration(
+                    perf_model,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["n_timesteps"],
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
                 self.tech_control_classifiers.update({tech_name: "feedstock"})
                 self.plant.add_subsystem(f"{tech_name}_source", comp)
             else:
@@ -971,6 +985,12 @@ class H2IntegrateModel:
                     check_model_time_step(
                         perf_model,
                         comp,
+                        self.plant_config["plant"]["simulation"]["dt"],
+                    )
+                    check_model_simulation_duration(
+                        perf_model,
+                        comp,
+                        self.plant_config["plant"]["simulation"]["n_timesteps"],
                         self.plant_config["plant"]["simulation"]["dt"],
                     )
                     om_model_object = tech_group.add_subsystem(perf_model, comp, promotes=["*"])
@@ -1028,6 +1048,12 @@ class H2IntegrateModel:
                             "model", ""
                         ):
                             finance_object = self.supported_models[finance_name]
+                            check_model_simulation_duration(
+                                finance_name,
+                                finance_object,
+                                self.plant_config["plant"]["simulation"]["n_timesteps"],
+                                self.plant_config["plant"]["simulation"]["dt"],
+                            )
                             tech_group.add_subsystem(
                                 f"{tech_name}_finance",
                                 finance_object(
@@ -1051,6 +1077,12 @@ class H2IntegrateModel:
                 check_model_time_step(
                     tech_name,
                     comp,
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
+                check_model_simulation_duration(
+                    tech_name,
+                    comp,
+                    self.plant_config["plant"]["simulation"]["n_timesteps"],
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
                 self.plant.add_subsystem(tech_name, comp)
@@ -1077,6 +1109,12 @@ class H2IntegrateModel:
         check_model_time_step(
             model_name,
             model_object,
+            self.plant_config["plant"]["simulation"]["dt"],
+        )
+        check_model_simulation_duration(
+            model_name,
+            model_object,
+            self.plant_config["plant"]["simulation"]["n_timesteps"],
             self.plant_config["plant"]["simulation"]["dt"],
         )
 
@@ -1448,6 +1486,13 @@ class H2IntegrateModel:
                 if fin_model is None:
                     raise ValueError(f"finance model '{model_name}' not found.")
 
+                check_model_simulation_duration(
+                    model_name,
+                    fin_model,
+                    self.plant_config["plant"]["simulation"]["n_timesteps"],
+                    self.plant_config["plant"]["simulation"]["dt"],
+                )
+
                 # filter the plant_config so the finance_parameters only includes data for
                 # this finance model group
 
@@ -1663,6 +1708,12 @@ class H2IntegrateModel:
             check_model_time_step(
                 transport_type,
                 connection_component,
+                self.plant_config["plant"]["simulation"]["dt"],
+            )
+            check_model_simulation_duration(
+                transport_type,
+                connection_component,
+                self.plant_config["plant"]["simulation"]["n_timesteps"],
                 self.plant_config["plant"]["simulation"]["dt"],
             )
             self.plant.add_subsystem(connection_name, connection_component)

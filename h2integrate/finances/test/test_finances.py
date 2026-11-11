@@ -50,6 +50,10 @@ def model_configs():
         },
         "plant": {
             "plant_life": 30,
+            "simulation": {
+                "dt": 3600,
+                "n_timesteps": 8760,
+            },
             "grid_connection": True,
             "ppa_price": 0.05,
         },

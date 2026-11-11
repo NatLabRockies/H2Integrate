@@ -8,6 +8,8 @@ import numpy as np
 import jsonschema as json
 
 from h2integrate.core.file_utils import load_yaml, write_yaml
+from h2integrate.tools.constants import SECONDS_PER_YEAR
+from h2integrate.core.annualization import classify_simulation_horizon
 
 
 fschema_tech = Path(__file__).parent / "tech_schema.yaml"
@@ -146,21 +148,72 @@ def _validate(finput, fschema, defaults=True):
 
 # ---------------------
 def load_tech_yaml(finput):
+    """Validate and return a technology configuration.
+
+    Args:
+        finput (dict | str | Path): Technology configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated technology configuration.
+    """
     return _validate(finput, fschema_tech)
 
 
 def load_plant_yaml(finput):
+    """Validate a plant configuration and ensure its simulation horizon is supported.
+
+    Args:
+        finput (dict | str | Path): Plant configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated plant configuration.
+
+    Raises:
+        ValueError: If dt is nonfinite or non-positive, plant life is not a finite positive
+            integer, or the simulation horizon covers neither one year nor the full plant life.
+    """
     plant_config = _validate(finput, fschema_plant)
 
-    n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+    n_timesteps = int(plant_config["plant"]["simulation"]["n_timesteps"])
     dt = plant_config["plant"]["simulation"]["dt"]
+    plant_life = plant_config["plant"]["plant_life"]
 
-    if int(n_timesteps) * int(dt) != 31536000:  # seconds in simulation must be seconds/year
+    if not np.isfinite(dt) or dt <= 0.0:
+        raise ValueError("dt must be finite and greater than zero.")
+    if not np.isfinite(plant_life) or plant_life < 1 or plant_life != int(plant_life):
+        raise ValueError("plant_life must be a positive integer number of years.")
+
+    dt = dt
+    plant_life = plant_life
+    seconds_simulated = n_timesteps * dt
+    years_simulated = seconds_simulated / SECONDS_PER_YEAR
+
+    # The simulation must cover exactly one year, which is repeated across plant life, or the
+    # full plant life (see ``classify_simulation_horizon``).
+    if seconds_simulated <= 0:
         msg = (
-            "H2Integrate does not currently support simulations that are less than or "
-            "greater than 1-year. Please ensure that "
+            "The simulation horizon must be positive. Please ensure that "
             "plant_config['plant']['simulation']['n_timesteps'] times "
-            "plant_config['plant']['simulation']['dt'] equals 31536000 (s)."
+            "plant_config['plant']['simulation']['dt'] is greater than 0 (s)."
+        )
+        raise ValueError(msg)
+
+    if years_simulated > plant_life:
+        msg = (
+            "H2Integrate does not support simulations that are longer than the plant "
+            f"life. The configured simulation covers {years_simulated:.4g} years "
+            f"(n_timesteps={n_timesteps} * dt={dt} s = {seconds_simulated} s), but "
+            f"plant_config['plant']['plant_life'] is {plant_life} years. Either shorten "
+            "the simulation horizon or increase plant_life."
+        )
+        raise ValueError(msg)
+
+    if classify_simulation_horizon(n_timesteps, dt, plant_life) == "partial":
+        msg = (
+            "H2Integrate supports simulations that cover exactly one year or the full plant "
+            f"life. The configured simulation covers {years_simulated:.4g} years "
+            f"(n_timesteps={n_timesteps} * dt={dt} s = {seconds_simulated} s), but "
+            f"plant_config['plant']['plant_life'] is {plant_life} years."
         )
         raise ValueError(msg)
 
@@ -168,6 +221,14 @@ def load_plant_yaml(finput):
 
 
 def load_driver_yaml(finput):
+    """Validate and return a driver configuration.
+
+    Args:
+        finput (dict | str | Path): Driver configuration or path to its YAML file.
+
+    Returns:
+        dict: Validated driver configuration.
+    """
     return _validate(finput, fschema_driver)
 
 

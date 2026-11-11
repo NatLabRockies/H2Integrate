@@ -9,6 +9,14 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.tools.constants import SECONDS_PER_YEAR
+from h2integrate.core.annualization import (
+    _expand_to_plant_life,
+    time_weighted_annual_means,
+    classify_simulation_horizon,
+    _observed_replacement_schedule,
+    _validate_annualization_inputs,
+)
 
 
 class SkippableComputeMixin:
@@ -68,6 +76,8 @@ class SkippableComputeMixin:
 
 
 class PerformanceModelBaseClass(om.ExplicitComponent):
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
     # Flag to indicate steppability. This flag should be overwritten by a subclass when that
     # subclass performance model is capable of steppable simulation.
     _is_steppable = False
@@ -78,13 +88,13 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.options.declare("tech_config", types=dict)
 
     def setup(self):
-        # Below should be done in subclass that produces hydrogen
+        # Below should be done in a subclass that produces hydrogen
         # self.commodity = "hydrogen"
         # self.commodity_rate_units = "kg/h"
         # self.commodity_amount_units = "kg"
         # super().setup()
 
-        # Below should be done in subclass that produces electricity
+        # Below should be done in a subclass that produces electricity
         # self.commodity = "electricity"
         # self.commodity_rate_units = "kW"
         # self.commodity_amount_units = "kW*h"
@@ -104,7 +114,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
         # plant_life is number of years the plant is expected to operate for
-        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        self.plant_life = self.options["plant_config"]["plant"]["plant_life"]
 
         # hours simulated is the number of hours in a simulation
         hours_simulated = (self.dt / 3600) * self.n_timesteps
@@ -225,6 +235,86 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             command_value = self._inputs[command_value_key]
             outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
 
+    def calculate_annual_cf_and_replacement_schedule(
+        self,
+        performance_timeseries,
+        rated_performance,
+        state_of_health_timeseries,
+        eol_soh,
+    ):
+        """Calculate annual capacity factors and replacement counts across plant life.
+
+        The simulation must cover exactly one year or the full plant life:
+
+        - When the simulation covers one year, its capacity factor is repeated across plant
+          life and no replacements occur. Supplying ``state_of_health_timeseries`` for a
+          one-year simulation raises an error because replacements cannot be observed.
+        - When the simulation covers the full plant life, capacity factors are time-weighted
+          means of each plant year. With SOH, replacements are counted at each upward SOH
+          jump greater than 1e-9 (a reset), binned into ``[year, year + 1)``. Initial
+          installation and retirement are not counted.
+
+        Args:
+            performance_timeseries (array-like): timestep-level performance values used
+                to compute annual capacity factors over the simulated horizon.
+            rated_performance (float): rated performance value used in capacity-factor
+                calculation.
+            state_of_health_timeseries (array-like | None): timestep-level state-of-health
+                values. Values should be between 0 and 1. 0 represents a completely degraded
+                state. 1 represents a fully healthy state. These values are absolute, not
+                dependent on eol_soh. If None, no replacements are counted. When provided,
+                SOH resets are used to determine replacement timing.
+            eol_soh (float | None): State-of-health threshold. If state_of_health_timeseries
+                falls below eol_soh the technology is assumed replaced. Only required when
+                ``state_of_health_timeseries`` is provided.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: annual capacity factors and replacement schedule.
+
+        Raises:
+            ValueError: If the simulation covers neither one year nor the full plant life,
+                or if ``state_of_health_timeseries`` is supplied for a one-year simulation.
+        """
+
+        (
+            performance_timeseries,
+            rated_performance,
+            state_of_health_timeseries,
+            use_degradation,
+        ) = _validate_annualization_inputs(
+            performance_timeseries,
+            rated_performance,
+            state_of_health_timeseries,
+            eol_soh,
+        )
+
+        plant_life = self.plant_life
+        horizon = classify_simulation_horizon(performance_timeseries.size, self.dt, plant_life)
+
+        if horizon == "partial":
+            raise ValueError(
+                "The simulation must cover one year or the full plant life. Set "
+                "plant_config['plant']['simulation'] so that n_timesteps * dt covers one year "
+                "or plant_config['plant']['plant_life']."
+            )
+        if horizon == "single_year" and use_degradation:
+            raise ValueError(
+                "Accounting for state of health requires simulating the full plant life. Set "
+                "plant_config['plant']['simulation'] so that n_timesteps * dt covers "
+                "plant_config['plant']['plant_life']."
+            )
+
+        annual_capacity_factors, _ = time_weighted_annual_means(
+            performance_timeseries / rated_performance, self.dt
+        )
+        annual_capacity_factors = _expand_to_plant_life(annual_capacity_factors, plant_life)
+        replacement_schedule = np.zeros(plant_life, dtype=int)
+        if use_degradation:
+            replacement_schedule = _observed_replacement_schedule(
+                state_of_health_timeseries, self.dt, plant_life
+            )
+        return annual_capacity_factors, replacement_schedule
+
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
         Computation for the OM component.
@@ -259,6 +349,8 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
         - skip_compute (bool): see :class:`SkippableComputeMixin`.
     """
 
+    # (min, max) permitted simulation duration in years; default is annual-only.
+    _simulation_duration_bounds = (1.0, 1.0)
     # Flag to indicate steppability. This flag should be overwritten by a subclass when that
     # subclass cost model is capable of steppable simulation.
     _is_steppable = False
@@ -275,7 +367,7 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
         # dt is seconds per timestep
         self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
         # plant_life is number of years the plant is expected to operate for
-        self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        self.plant_life = self.options["plant_config"]["plant"]["plant_life"]
 
         # fraction_of_year_simulated is the ratio of simulation length to length of year
         # and may be used to estimate annual performance from simulation performance
@@ -308,6 +400,35 @@ class CostModelBaseClass(SkippableComputeMixin, om.ExplicitComponent):
             units=f"USD/({commodity_rate_units}*h)",
             desc="Marginal cost of production for dispatch decisions",
         )
+
+    def calculate_annual_varopex(
+        self,
+        varopex_timeseries,
+        **kwargs,
+    ):
+        """Calculate annual variable OpEx across plant life from timestep-level costs.
+
+        The simulation must cover exactly one year, whose annual cost is repeated across plant
+        life, or the full plant life.
+
+        Args:
+            varopex_timeseries (array-like): variable operating cost values per timestep of the
+                simulation in USD/dt (dollars per timestep)
+
+        Returns:
+            np.ndarray: annualized variable OpEx for each year of plant life.
+
+        Raises:
+            ValueError: If the simulation covers neither one year nor the full plant life.
+        """
+        varopex_timeseries = np.asarray(varopex_timeseries, dtype=float)
+        if varopex_timeseries.size == 0:
+            raise ValueError("varopex_timeseries must contain at least one value.")
+
+        mean_timestep_costs, _ = time_weighted_annual_means(varopex_timeseries, self.dt)
+        simulated_annual_varopex = mean_timestep_costs * (SECONDS_PER_YEAR / self.dt)
+
+        return _expand_to_plant_life(simulated_annual_varopex, self.plant_life)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """
