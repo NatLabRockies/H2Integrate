@@ -224,6 +224,7 @@ def test_average_varopex_weights_partial_year() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("use_plant_method", [False, True])
 @pytest.mark.parametrize(
     "annual_extrapolation_method,expected_capacity_factors,expected_varopex",
     [
@@ -232,33 +233,40 @@ def test_average_varopex_weights_partial_year() -> None:
         ("time_averaged_sim_value", [1.0, 0.0, 0.5, 0.5], [10.0, 0.0, 5.0, 5.0]),
     ],
 )
-def test_explicit_annual_extrapolation_method_applies_to_both_base_classes(
+def test_annual_extrapolation_method_applies_to_both_base_classes(
     annual_extrapolation_method: str,
     expected_capacity_factors: list[float],
     expected_varopex: list[float],
+    use_plant_method: bool,
+    subtests,
 ) -> None:
+    plant_method = annual_extrapolation_method if use_plant_method else "tile"
+    method_override = None if use_plant_method else annual_extrapolation_method
     performance_model = _DummyPerformanceModel(
         plant_life=4,
         dt=SECONDS_PER_YEAR,
+        annual_extrapolation_method=plant_method,
     )
-    capacity_factors, _ = _run(
-        performance_model,
-        performance_timeseries=[1.0, 0.0],
-        rated=1.0,
-        soh=None,
-        eol=None,
-        annual_extrapolation_method=annual_extrapolation_method,
-    )
+    with subtests.test("capacity factors use the plant method or explicit override"):
+        capacity_factors, _ = _run(
+            performance_model,
+            performance_timeseries=[1.0, 0.0],
+            rated=1.0,
+            soh=None,
+            eol=None,
+            annual_extrapolation_method=method_override,
+        )
+        np.testing.assert_allclose(capacity_factors, expected_capacity_factors)
 
     cost_model = CostModelBaseClass()
     cost_model.dt = SECONDS_PER_YEAR
     cost_model.plant_life = 4
-    annual_varopex = cost_model.calculate_annual_varopex(
-        np.array([10.0, 0.0]), annual_extrapolation_method=annual_extrapolation_method
-    )
-
-    np.testing.assert_allclose(capacity_factors, expected_capacity_factors)
-    np.testing.assert_allclose(annual_varopex, expected_varopex)
+    cost_model.annual_extrapolation_method = plant_method
+    with subtests.test("variable OPEX uses the plant method or explicit override"):
+        annual_varopex = cost_model.calculate_annual_varopex(
+            np.array([10.0, 0.0]), annual_extrapolation_method=method_override
+        )
+        np.testing.assert_allclose(annual_varopex, expected_varopex)
 
 
 @pytest.mark.regression
@@ -815,13 +823,27 @@ def test_annual_means_weight_timesteps_crossing_fixed_year_boundaries(subtests):
 
 
 @pytest.mark.unit
-def test_invalid_annual_extrapolation_method_raises():
-    with pytest.raises(ValueError):
-        _run(
-            _DummyPerformanceModel(plant_life=6),
-            performance_timeseries=[0.6, 0.5, 0.4],
-            rated=1.0,
-            soh=None,
-            eol=None,
-            annual_extrapolation_method="not_a_mode",
-        )
+@pytest.mark.parametrize("use_plant_method", [False, True])
+def test_invalid_annual_extrapolation_method_raises(subtests, use_plant_method: bool) -> None:
+    plant_method = "not_a_mode" if use_plant_method else "tile"
+    method_override = None if use_plant_method else "not_a_mode"
+    with subtests.test("capacity factors reject an invalid method"):
+        with pytest.raises(ValueError, match="must be one of"):
+            _run(
+                _DummyPerformanceModel(plant_life=6, annual_extrapolation_method=plant_method),
+                performance_timeseries=[0.6, 0.5, 0.4],
+                rated=1.0,
+                soh=None,
+                eol=None,
+                annual_extrapolation_method=method_override,
+            )
+
+    cost_model = CostModelBaseClass()
+    cost_model.dt = SECONDS_PER_YEAR
+    cost_model.plant_life = 6
+    cost_model.annual_extrapolation_method = plant_method
+    with subtests.test("variable OPEX rejects an invalid method"):
+        with pytest.raises(ValueError, match="must be one of"):
+            cost_model.calculate_annual_varopex(
+                np.array([10.0, 0.0]), annual_extrapolation_method=method_override
+            )
