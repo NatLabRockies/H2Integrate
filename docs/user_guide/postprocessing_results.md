@@ -261,7 +261,7 @@ solution, summary, price_breakdown = run_profast(profast_model)
 Setting `save_profast_config: true` in the finance `model_inputs` of the plant config saves the
 ProFAST configuration of each finance subgroup to the driver's `folder_output` after a run.
 [Example 2](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/02_texas_ammonia)
-does this, so running it writes `outputs/profast_output_ammonia_config.yaml` for the ammonia
+does this, so running it writes `outputs/profast_output_ammonia_ammonia_config.yaml` for the ammonia
 subgroup. First, run Example 2:
 
 ```{code-cell} ipython3
