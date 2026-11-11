@@ -16,6 +16,8 @@ class LinearMassTransportCostConfig(CostModelBaseConfig):
         commodity (str): Name of commodity being transported
         circuity_ratio (float, optional): Ratio of actual travel distance to straight-line distance.
         Defaults to 1.0.
+
+    See :class:`LinearMassTransportCostModel` and :doc:`/technology_models/transport`.
     """
 
     capex_per_mton_km: float = field(validator=validators.ge(0))
@@ -30,8 +32,10 @@ class LinearMassTransportCostModel(CostModelBaseClass):
     Calculate capital and annual operating costs for transporting a commodity by mass and distance.
 
     The model calculates the geodesic distance between source and destination coordinates,
-    adjusts it by a circuity ratio, and multiplies it by annual commodity throughput and
-    the configured cost rates.
+    adjusts it by a circuity ratio, and multiplies it by the summed input profile scaled by
+    the simulated fraction of a year and the configured cost rates.
+
+    See :class:`LinearMassTransportCostConfig` and :doc:`/technology_models/transport`.
     """
 
     _time_step_bounds = (1, 1e9)

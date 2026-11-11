@@ -18,6 +18,9 @@ class GenericDemandComponent(DemandComponentBase):
     This component relies on configuration provided through the
     ``tech_config`` dictionary, which must define the demand's
     ``performance_parameters``.
+
+    See :class:`~h2integrate.demand.demand_baseclass.DemandComponentBaseConfig` and
+    :doc:`/demand/demand_components`.
     """
 
     _is_steppable = True

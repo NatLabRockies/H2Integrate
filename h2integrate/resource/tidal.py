@@ -15,9 +15,11 @@ class TidalResourceConfig(BaseConfig):
     """
     Args:
         resource_dir (str | Path, optional): Folder to save resource files to or
-        load resource files from. Defaults to "".
+        load resource files from. Defaults to None.
         resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+            resource data from. Defaults to "".
+
+    See :class:`TidalResource` and :doc:`/resource/tidal_resource`.
     """
 
     resource_dir: Path | str | None = field(default=None)
@@ -46,6 +48,8 @@ class TidalResource(om.ExplicitComponent):
         FileNotFoundError: If the specified file does not exist.
         ValueError: If the file does not contain sufficient data or the required
             speed column is not found.
+
+    See :class:`TidalResourceConfig` and :doc:`/resource/tidal_resource`.
     """
 
     def initialize(self):

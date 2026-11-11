@@ -21,7 +21,8 @@ class RunOfRiverHydroPerformanceConfig(BaseConfig):
         acceleration_gravity (float): Acceleration due to gravity in m/s^2.
         turbine_efficiency (float): Efficiency of the turbine as a decimal.
         head (float): Head of the water in meters.
-        flow_rate (list): Flow rate of water in m^3/s.
+
+    See :class:`RunOfRiverHydroPerformanceModel` and :doc:`/technology_models/run_of_river`.
     """
 
     plant_capacity_mw: float = field()
@@ -36,6 +37,9 @@ class RunOfRiverHydroPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a run-of-river hydropower plant.
     Computes annual electricity production based on water flow rate and turbine efficiency.
+
+    See :class:`RunOfRiverHydroPerformanceConfig`, :class:`RunOfRiverHydroCostModel`, and
+    :doc:`/technology_models/run_of_river`.
     """
 
     _time_step_bounds = (
@@ -103,6 +107,8 @@ class RunOfRiverHydroCostConfig(CostModelBaseConfig):
         operational_cost_usd_per_kw_year (float): Operational cost as a percentage of total
             capacity, expressed in USD/kW/year.
         cost_year (int): dollar-year for input costs
+
+    See :class:`RunOfRiverHydroCostModel` and :doc:`/technology_models/run_of_river`.
     """
 
     plant_capacity_mw: float = field()
@@ -117,6 +123,9 @@ class RunOfRiverHydroCostModel(CostModelBaseClass):
         hydropower plant.
 
     Just a placeholder for now, but can be extended with more detailed cost models.
+
+    See :class:`RunOfRiverHydroCostConfig`, :class:`RunOfRiverHydroPerformanceModel`, and
+    :doc:`/technology_models/run_of_river`.
     """
 
     _time_step_bounds = (

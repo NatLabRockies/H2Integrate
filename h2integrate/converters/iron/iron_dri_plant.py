@@ -10,9 +10,12 @@ class HydrogenIronReductionPlantCostComponent(IronReductionPlantBaseCostComponen
     """Cost component for hydrogen-based direct reduced iron (DRI) plant
     using the Rosner cost model.
 
+    See :class:`~h2integrate.converters.iron.iron_dri_baseclass.IronReductionCostBaseConfig`
+    and :doc:`/technology_models/iron_dri`.
+
     Attributes:
         product (str): 'h2_dri'
-        config (HydrogenIronReductionCostConfig): configuration class
+        config (IronReductionCostBaseConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
         steel_to_iron_ratio (float): steel/sponge iron ratio
     """
@@ -32,9 +35,12 @@ class NaturalGasIronReductionPlantCostComponent(IronReductionPlantBaseCostCompon
     """Cost component for natural gas-based direct reduced iron (DRI) plant
     using the Rosner cost model.
 
+    See :class:`~h2integrate.converters.iron.iron_dri_baseclass.IronReductionCostBaseConfig`
+    and :doc:`/technology_models/iron_dri`.
+
     Attributes:
         product (str): 'ng_dri'
-        config (NaturalGasIronReductionCostConfig): configuration class
+        config (IronReductionCostBaseConfig): configuration class
         coeff_df (pd.DataFrame): cost coefficient dataframe
         steel_to_iron_ratio (float): steel/sponge iron ratio
     """
@@ -54,9 +60,12 @@ class HydrogenIronReductionPlantPerformanceComponent(IronReductionPlantBasePerfo
     """Performance component for hydrogen-based direct reduced iron (DRI) plant
     using the Rosner performance model.
 
+    See :class:`~h2integrate.converters.iron.iron_dri_baseclass.IronReductionPerformanceBaseConfig`
+    and :doc:`/technology_models/iron_dri`.
+
     Attributes:
         product (str): 'h2_dri'
-        config (HydrogenIronReductionPerformanceConfig): configuration class
+        config (IronReductionPerformanceBaseConfig): configuration class
         coeff_df (pd.DataFrame): performance coefficient dataframe
         steel_to_iron_ratio (float): steel/sponge iron ratio
     """
@@ -83,9 +92,12 @@ class NaturalGasIronReductionPlantPerformanceComponent(IronReductionPlantBasePer
     """Performance component for natural gas-based direct reduced iron (DRI) plant
     using the Rosner performance model.
 
+    See :class:`~h2integrate.converters.iron.iron_dri_baseclass.IronReductionPerformanceBaseConfig`
+    and :doc:`/technology_models/iron_dri`.
+
     Attributes:
         product (str): 'ng_dri'
-        config (NaturalGasIronReductionPerformanceConfig): configuration class
+        config (IronReductionPerformanceBaseConfig): configuration class
         coeff_df (pd.DataFrame): performance coefficient dataframe
         steel_to_iron_ratio (float): steel/sponge iron ratio
     """

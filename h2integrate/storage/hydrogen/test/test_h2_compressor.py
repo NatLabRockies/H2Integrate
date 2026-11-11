@@ -13,7 +13,7 @@ class TestH2Compressor:
     n_compressors = 2
 
     @pytest.mark.regression
-    def test_capex(self):
+    def test_costs_and_system_power(self, subtests):
         comp = Compressor(
             self.p_outlet,
             self.flow_rate_kg_d,
@@ -21,32 +21,14 @@ class TestH2Compressor:
             n_compressors=self.n_compressors,
         )
         comp.compressor_power()
-        total_capex, _total_OM = comp.compressor_costs()
-        assert total_capex == approx(680590.3412708649)
-
-    @pytest.mark.regression
-    def test_opex(self):
-        comp = Compressor(
-            self.p_outlet,
-            self.flow_rate_kg_d,
-            p_inlet=self.p_inlet,
-            n_compressors=self.n_compressors,
-        )
-        comp.compressor_power()
-        _total_capex, total_OM = comp.compressor_costs()
-        assert total_OM == approx(200014.00244504173)
-
-    @pytest.mark.regression
-    def test_system_power(self):
-        comp = Compressor(
-            self.p_outlet,
-            self.flow_rate_kg_d,
-            p_inlet=self.p_inlet,
-            n_compressors=self.n_compressors,
-        )
-        comp.compressor_power()
+        total_capex, total_OM = comp.compressor_costs()
         _motor_rating, total_system_power = comp.compressor_system_power()
-        assert total_system_power == approx(246.27314443197918)
+        with subtests.test("capital cost"):
+            assert total_capex == approx(680590.3412708649)
+        with subtests.test("operating cost"):
+            assert total_OM == approx(200014.00244504173)
+        with subtests.test("system power"):
+            assert total_system_power == approx(246.27314443197918)
 
     @pytest.mark.regression
     def test_system_power_report(self):

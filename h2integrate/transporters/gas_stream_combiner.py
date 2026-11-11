@@ -21,6 +21,9 @@ class GasStreamCombinerPerformanceModelConfig(BaseConfig):
     Attributes:
         commodity: Type of multivariable stream (e.g., 'wellhead_gas_mixture')
         in_streams: Number of inflow streams to combine
+
+    See :class:`GasStreamCombinerPerformanceModel` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     commodity: str = field(default="wellhead_gas_mixture")
@@ -41,6 +44,9 @@ class GasStreamCombinerPerformanceModel(om.ExplicitComponent):
 
     Total mass flow is summed. Temperature, pressure, and compositions are
     mass-weighted averages of the input streams.
+
+    See :class:`GasStreamCombinerPerformanceModelConfig` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     _time_step_bounds = (

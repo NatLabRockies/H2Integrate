@@ -1,14 +1,4 @@
-from h2integrate.converters.steel.cmu_eaf_cost import CMUElectricArcFurnaceCostModel
-from h2integrate.converters.steel.cmu_electric_arc_furnace_dri import (
-    CMUElectricArcFurnaceDRIPerformanceComponent,
-)
-from h2integrate.converters.steel.cmu_electric_arc_furnace_scrap import (
-    CMUElectricArcFurnaceScrapOnlyPerformanceComponent,
-)
-from h2integrate.converters.steel.steel import SteelCostAndFinancialModel, SteelPerformanceModel
-from h2integrate.converters.steel.steel_eaf_plant import (
-    HydrogenEAFPlantCostComponent,
-    HydrogenEAFPlantPerformanceComponent,
-    NaturalGasEAFPlantCostComponent,
-    NaturalGasEAFPlantPerformanceComponent,
-)
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(__name__, globals())

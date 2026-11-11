@@ -23,6 +23,8 @@ class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Open-Meteo Weather API <https://open-meteo.com/en/docs/historical-weather-api>`_.
 
+    See :class:`OpenMeteoHistoricalSolarResource` and :doc:`/resource/openmeteo_solar_archive`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
@@ -54,6 +56,11 @@ class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
 
 @register
 class OpenMeteoHistoricalSolarResource(SolarResourceBase, ResourceBaseAPIModel):
+    """Load historical solar data using :class:`OpenMeteoHistoricalSolarResourceConfig`.
+
+    See :doc:`/resource/openmeteo_solar_archive`.
+    """
+
     def setup(self):
         # create the input dictionary for OpenMeteoHistoricalSolarAPIConfig
         resource_specs = self.helper_setup_method()

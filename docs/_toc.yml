@@ -30,6 +30,7 @@ parts:
       - file: user_guide/plotting_geospatial_data_with_geopandas
   - caption: Technology Models
     chapters:
+      - file: technology_models/generic_converter_cost
       - file: technology_models/transport
       - file: technology_models/combiners_and_splitters
       - file: technology_models/feedstocks
@@ -62,7 +63,7 @@ parts:
       - file: technology_models/h2_htse.md
       - file: technology_models/iron_ewin.md
       - file: technology_models/iron_mine.md
-      - file: technology_models/iron_transport
+      - file: technology_models/iron_transport.md
       - file: technology_models/iron_dri.md
       - file: technology_models/steel_eaf.md
       - file: technology_models/steel_eaf_cmu.md

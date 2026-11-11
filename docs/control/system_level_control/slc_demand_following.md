@@ -14,7 +14,12 @@ kernelspec:
 (slc-demand-following)=
 # Demand Following System Level Controller
 
-The demand following controller, `DemandFollowingControl`, aims to fully meet the demand and does not have any inputs related to cost.
+The {py:class}`~h2integrate.control.control_strategies.system_level.demand_following_control.DemandFollowingControl`
+aims to fully meet the demand and does not have any inputs related to cost. It inherits its
+technology and demand interface from
+{py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`.
+Its nonlinear solver settings use
+{py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`.
 
 The N2 diagram below shows an example system using the demand following controller with wind, natural gas, and battery storage technologies.
 The full example in `examples/35_system_level_control/demand_following` runs the same plant with no battery, with a battery, and with a battery that has its own open-loop controller.
@@ -57,14 +62,16 @@ display(
 ```
 ## Dispatch Logic
 
-The demand is satisfied in a fixed three-step priority order, and each step's shortfall or surplus is passed to the next:
+The demand is satisfied in a fixed priority order, and each step's shortfall or surplus is passed to the next:
 
-1. **Curtailable techs** run at their available capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
+1. **Fixed technologies** produce without a set-point; their output is subtracted from demand.
 
-2. **Storage techs** receive the residual demand (which may be positive or negative). When residual demand is positive the storage is commanded to discharge; when negative it is commanded to charge. If multiple storage techs produce the demanded commodity, the residual demand is
+2. **Flexible technologies** run at their available capacity. Their total output is subtracted from the demand, which may drive the residual demand negative (surplus).
+
+3. **Storage technologies** receive the residual demand (which may be positive or negative). When residual demand is positive the storage is commanded to discharge; when negative it is commanded to charge. If multiple storage technologies produce the demanded commodity, the residual demand is
 split **evenly** across them (each receives ``demand / n_storage``).
 
-3. **Dispatchable techs** cover any remaining positive demand after storage. The remaining demand (floored at zero) is split **evenly** across all dispatchable techs that produce the demanded commodity (each receives ``remaining_demand / n_dispatchable``).
+4. **Dispatchable technologies** cover any remaining positive demand after storage. The remaining demand (floored at zero) is split **evenly** across all dispatchable technologies that produce the demanded commodity (each receives ``remaining_demand / n_dispatchable``).
 
 ### Example Configuration
 
@@ -79,7 +86,7 @@ system_level_control:
 
 ## Inputs and Outputs
 
-The inputs for technologies classified as `curtailable`, `dispatchable`, and `storage` are:
+The inputs for technologies classified as `flexible`, `dispatchable`, and `storage` are:
 
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
@@ -87,6 +94,10 @@ The inputs for technologies classified as `curtailable`, `dispatchable`, and `st
 
 The inputs for technologies classified as `feedstock` are:
 - `f"{tech_name}_{commodity}_out"`
+
+The controller emits `{tech_name}_{commodity}_set_point` for each controlled technology.
+The framework derives technology classification and topology from the plant and technology
+configuration; those internal topology options are not authored directly by users.
 
 ## Systems with Heterogeneous Commodities
 
@@ -100,4 +111,8 @@ This framework provides a starting point for hybrid energy system control but is
 - No cost awareness: The controller dispatches technologies purely to meet demand without considering operational costs, commodity prices, or economic optimization.
 - Even splitting across storage: When multiple storage technologies produce the demanded commodity, the residual demand is divided evenly among them (`demand / n_storage`), regardless of differences in capacity, state of charge, or efficiency.
 - Even splitting across dispatchable technologies: Similarly, any remaining demand after storage dispatch is split evenly across all dispatchable technologies (`remaining_demand / n_dispatchable`), without accounting for marginal costs or capacity constraints.
-- Fixed priority order: The dispatch order (curtailable → storage → dispatchable) is fixed in the current implementation.
+- The dispatch order is currently fixed in the following order:
+  1. fixed
+  2. flexible
+  3. storage
+  4. dispatchable

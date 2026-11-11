@@ -13,24 +13,24 @@ class FlexibleDemandComponentConfig(DemandComponentBaseConfig):
     Extends :class:`DemandComponentBaseConfig` with additional parameters
     required for dynamically adjusting demand based on turndown, ramping, and
     minimum utilization constraints. These parameters are expressed as fractions
-    of ``maximum_demand`` and must lie within ``(0, 1)``.
+    of the rated demand input and must lie within ``[0, 1]``.
 
     Attributes:
-        rated_demand (float): maximum demand in the same units as
-            `commodity_rate_units`, used to convert the constraint parameters from
-            fractions to units of `commodity_rate_units`.
+        rated_demand (float): Required nonnegative field. The model currently uses the
+            ``rated_{commodity}_demand`` input instead of this field for its bounds.
         turndown_ratio (float): Minimum allowable operating demand expressed as a
-            fraction of the maximum demand. Must be in the range ``(0, 1)``.
+            fraction of the rated demand input. Must be in the range ``[0, 1]``.
         ramp_down_rate_fraction (float): Maximum allowable ramp-down rate per
             timestep, expressed as a fraction of maximum demand. Must be in
-            ``(0, 1)``.
+            ``[0, 1]``.
         ramp_up_rate_fraction (float): Maximum allowable ramp-up rate per
             timestep, expressed as a fraction of maximum demand. Must be in
-            ``(0, 1)``.
+            ``[0, 1]``.
         min_utilization (float): Minimum total fraction of demand that must be met
-            over the entire simulation. Must be in ``(0, 1)``. Utilization is defined as:
+            over the entire simulation. Must be in ``[0, 1]``. The target is this
+            fraction times the rated demand input times the number of timesteps.
 
-            ``sum({commodity}_flexible_demand_profile)/sum({commodity}_demand)``
+    See :class:`FlexibleDemandComponent` and :doc:`/demand/demand_components`.
     """
 
     rated_demand: float = field(validator=validators.ge(0))
@@ -48,6 +48,8 @@ class FlexibleDemandComponent(DemandComponentBase):
     demand to vary dynamically based on turndown constraints, ramp-rate limits,
     and minimum-utilization requirements. A flexible demand profile is generated
     and used to compute unmet demand, unused commodity, and delivered output.
+
+    See :class:`FlexibleDemandComponentConfig` and :doc:`/demand/demand_components`.
     """
 
     _time_step_bounds = (3600, 3600)  # (min, max) time step lengths compatible with this model

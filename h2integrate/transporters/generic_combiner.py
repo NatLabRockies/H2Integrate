@@ -10,6 +10,9 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     """Configuration class for a generic combiner.
 
     Fields include `commodity`, `commodity_rate_units`, and `in_streams`.
+
+    See :class:`GenericCombinerPerformanceModel` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
@@ -21,6 +24,9 @@ class GenericCombinerPerformanceConfig(BaseConfig):
 class GenericCombinerPerformanceModel(om.ExplicitComponent):
     """
     Combine any commodity or resource from multiple sources into one output without losses.
+
+    See :class:`GenericCombinerPerformanceConfig` and
+    :doc:`/technology_models/combiners_and_splitters`.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.

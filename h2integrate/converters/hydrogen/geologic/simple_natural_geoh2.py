@@ -15,6 +15,8 @@ class NaturalGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     This class defines performance parameters specific to **natural** geologic hydrogen
     systems (as opposed to stimulated systems).
 
+    See :class:`NaturalGeoH2PerformanceModel` and :doc:`/technology_models/geologic_hydrogen`.
+
     Inherits from:
         GeoH2SubsurfacePerformanceConfig
 
@@ -75,6 +77,8 @@ class NaturalGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
 
     This component estimates hydrogen production performance for **naturally occurring**
     geologic hydrogen systems.
+
+    See :class:`NaturalGeoH2PerformanceConfig` and :doc:`/technology_models/geologic_hydrogen`.
 
     The modeling approach is informed by the following studies:
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
