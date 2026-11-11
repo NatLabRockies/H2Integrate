@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
@@ -30,7 +31,7 @@
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
 - Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
-- Add core framework support for non-annual simulation durations, including annual capacity-factor and replacement-count projections across the plant life. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
+- Add core framework support for non-annual simulation equal to plant life, including replacement-count projections across the plant life. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 - Moved resource resampling into `resample_tools.py`, used `contains_leap_day()` for leap-day detection in `time_tools.py` (fixing a malformed leap-day error message), and made the leap-day-excluded calendar regeneration exact instead of using an upper bound. [PR 964](https://github.com/NatLabRockies/H2Integrate/pull/964)
 - Add example for running with simulation lengths less than or greater than a year and with timesteps shorter than and longer than an hour. [PR 936](https://github.com/NatLabRockies/H2Integrate/pull/936)
 
