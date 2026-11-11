@@ -6,6 +6,7 @@ from openmdao.utils.units import simplify_unit
 
 from h2integrate.finances.tools import _compute_price_units
 from h2integrate.core.dict_utils import dict_to_yaml_formatting
+from h2integrate.core.file_utils import make_unique_case_name
 from h2integrate.tools.profast_tools import (
     run_profast,
     convert_pf_to_dict,
@@ -158,26 +159,55 @@ class ProFastLCO(ProFastBase):
         )
 
         if save_results or save_config:
+            # make folder to save output files if it doesnt already exist
             output_dir = self.options["driver_config"]["general"]["folder_output"]
+            output_dir = Path(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
             fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
                 "profast_output_description", "ProFastLCO"
             )
 
-            fbasename = f"{fdesc}_{self.output_txt}"
-
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
+            subgroup_desc = self.pathname.split("finance_subgroup")[-1].strip("_").replace(".", "-")
+            fbasename = f"{fdesc}_{subgroup_desc}_{self.output_txt}"
 
             pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
 
             if save_config:
+                overwrite_config = self.options["plant_config"]["finance_parameters"][
+                    "model_inputs"
+                ].get("overwrite_config", False)
+
                 config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
+                if not overwrite_config:
+                    # make a unique filename config to not overwrite any previously saved configs
+                    config_fname = make_unique_case_name(
+                        output_dir, config_fpath.name, config_fpath.suffix
+                    )
+                    config_fpath = output_dir / config_fname
+
                 write_yaml(pf_config_dict, config_fpath)
 
             if save_results:
                 price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
                 pf_breakdown_fpath = Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
                 lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
+
+                overwrite_results = self.options["plant_config"]["finance_parameters"][
+                    "model_inputs"
+                ].get("overwrite_results", False)
+
+                if not overwrite_results:
+                    # make unique filenames to not overwrite previously saved results
+                    pf_breakdown_fname = make_unique_case_name(
+                        output_dir, pf_breakdown_fpath.name, pf_breakdown_fpath.suffix
+                    )
+                    lco_breakdown_fname = make_unique_case_name(
+                        output_dir, lco_breakdown_fpath.name, lco_breakdown_fpath.suffix
+                    )
+                    pf_breakdown_fpath = output_dir / pf_breakdown_fname
+                    lco_breakdown_fpath = output_dir / lco_breakdown_fname
+
                 price_breakdown_formatted.to_csv(pf_breakdown_fpath)
                 lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
                 write_yaml(lco_breakdown, lco_breakdown_fpath)

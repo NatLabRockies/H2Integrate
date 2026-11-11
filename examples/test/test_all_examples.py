@@ -257,13 +257,13 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
     assert (outputs_dir / "profast_output_ammonia_config.yaml").is_file(), (
-        "profast_output_ammonia.yaml not found"
+        "profast_output_ammonia-ammonia_finance_default_ammonia.yaml not found"
     )
     assert (outputs_dir / "profast_output_electricity_config.yaml").is_file(), (
-        "profast_output_electricity.yaml not found"
+        "profast_output_electricity-electricity_finance_default_electricity.yaml not found"
     )
     assert (outputs_dir / "profast_output_hydrogen_config.yaml").is_file(), (
-        "profast_output_hydrogen.yaml not found"
+        "profast_output_hydrogen-hydrogen_finance_default_hydrogen.yaml not found"
     )
 
 
