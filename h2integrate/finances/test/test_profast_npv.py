@@ -5,6 +5,8 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.core.file_utils import load_yaml
+from h2integrate.tools.profast_tools import run_profast, create_and_populate_profast
 from h2integrate.finances.profast_npv import ProFastNPV
 
 
@@ -190,9 +192,14 @@ def test_profast_npv_no1_change_sell_price(
 
 
 @pytest.mark.regression
-def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests):
+def test_profast_npv_no2(
+    temp_dir, profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
     mean_hourly_production = 500000.0
     prob = om.Problem()
+    profast_inputs_no2["save_profast_config"] = True
+    profast_inputs_no2["profast_outputs_dir"] = temp_dir
+    profast_inputs_no2["overwrite_config"] = True
     plant_config = {
         "plant": {
             "plant_life": 30,
@@ -233,6 +240,31 @@ def test_profast_npv_no2(profast_inputs_no2, fake_filtered_tech_config, fake_cos
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
             == 611288384.412
         )
+
+    expected_config_fpath = temp_dir / "ProFastNPV_pf_electricity_no2_config.yaml"
+    with subtests.test("Config file saved"):
+        assert expected_config_fpath.is_file()
+
+    profast_config = load_yaml(expected_config_fpath)
+
+    with subtests.test("Sell price saved in config"):
+        assert pytest.approx(
+            profast_config["params"]["commodity"]["initial price"][4:], rel=1e-6
+        ) == prob.get_val("pf.sell_price_electricity_no2", units="USD/(kW*h)")
+
+    with subtests.test("Commodity units in config"):
+        assert profast_config["params"]["commodity"]["unit"] == "kW*h"
+
+    pf = create_and_populate_profast(profast_config)
+    npv_from_config = pf.cash_flow(price=profast_config["params"]["commodity"]["initial price"])
+    with subtests.test("NPV from ProFAST ran with saved config"):
+        assert pytest.approx(npv_from_config, rel=1e-6) == 611288384.412
+
+    sol, _, _ = run_profast(pf)
+    with subtests.test("LCO from ProFAST ran with saved config (USD/MWh)"):
+        assert pytest.approx(sol["lco"] * 1e3, rel=1e-6) == 53.37880579248
+    with subtests.test("NPV from run_profast"):
+        assert pytest.approx(sol["NPV"], rel=1e-4, abs=1e-8) == 2.682209014892578e-7
 
 
 @pytest.mark.regression
