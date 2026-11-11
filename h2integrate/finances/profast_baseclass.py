@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import attrs
 import numpy as np
 import openmdao.api as om
@@ -6,7 +8,12 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
 from h2integrate.core.dict_utils import update_defaults
-from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.core.file_utils import write_yaml, make_unique_case_name, dict_to_yaml_formatting
+from h2integrate.tools.profast_tools import (
+    convert_pf_to_dict,
+    create_years_of_operation,
+    create_and_populate_profast,
+)
 from h2integrate.core.model_baseclass import SkippableComputeMixin
 
 
@@ -455,6 +462,35 @@ class ProFASTDefaultIncentive(BaseConfig):
         return self.as_dict()
 
 
+@define(kw_only=True)
+class ProFASTOptions(BaseConfig):
+    """Configuration class to manage options for saving outputs from the ProFAST model.
+
+    Attributes:
+        profast_output_description (str): Description to include in filenames for any
+            results that are saved. Defaults to the name of the finance class
+            ('ProFastLCO' or 'ProFastNPV')
+        save_profast_config (bool, optional): Whether to save the inputs to ProFAST
+            to a .yaml file (which can be used to re-run ProFAST). Defaults to False.
+        save_profast_results (bool, optional): Whether to save ProFAST results
+            Results saved depend on the finance model being used. Defaults to False.
+        overwrite_config (bool, optional): If True, will overwrite any previously saved
+            configuration files with the same filename. Defaults to False.
+        overwrite_results (bool, optional): If True, will overwrite any previously saved
+            results files with the same filename. Defaults to False.
+        profast_outputs_dir (str | Path | None, optional): Folder to save the output files to
+            (if enabled). If None, the 'folder_output' in the driver configuration will be used.
+            Defaults to None.
+    """
+
+    profast_output_description: str = field()
+    save_profast_config: bool = field(default=False)
+    save_profast_results: bool = field(default=False)
+    overwrite_config: bool = field(default=False)
+    overwrite_results: bool = field(default=False)
+    profast_outputs_dir: str | Path | None = field(default=None)
+
+
 class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
     """
     Base component for using the ProFAST financial model within OpenMDAO.
@@ -600,6 +636,15 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         coproduct_cost_params.setdefault("escalation", self.params.inflation_rate)
         coproduct_cost_params.setdefault("unit", self.price_units.replace("USD", "$"))
         self.coproduct_cost_settings = ProFASTDefaultCoproduct.from_dict(coproduct_cost_params)
+
+        # initialize default options for saving results or files
+        profast_options = {
+            k: v
+            for k, v in plant_config["finance_parameters"]["model_inputs"].items()
+            if not isinstance(v, dict)
+        }
+        profast_options.setdefault("profast_output_description", self.__class__.__name__)
+        self.profast_options = ProFASTOptions.from_dict(profast_options)
 
     def populate_profast(self, inputs):
         """Populate and configure the ProFAST financial model for analysis.
@@ -759,6 +804,57 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         # create ProFAST object
         pf = create_and_populate_profast(pf_dict)
         return pf
+
+    def get_output_folder_and_filename_description(self):
+        """Get the output folder to save results to and create the folder if it
+        doesn't already exist. Create a unique filename based on the finance subgroup,
+        commodity description, and finance group or class.
+
+        Returns:
+            tuple[Path, str]: output folder and a filename descriptor unique to the
+                finance subgroup, commodity description, and finance group or class.
+
+        """
+        # If no output dir was provided, use the folder_output from the driver config
+        if (output_dir := self.profast_options.profast_outputs_dir) is None:
+            output_dir = self.options["driver_config"]["general"]["folder_output"]
+
+        output_dir = Path(output_dir)
+        if not output_dir.exists():
+            # make output folder if it doesn't exist
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a base-filename, including the profast_output description
+        subgroup_desc = self.pathname.split("finance_subgroup", 1)[-1].strip("_").replace(".", "-")
+        fbasename = (
+            f"{self.profast_options.profast_output_description}_{subgroup_desc}_{self.output_txt}"
+        )
+        return output_dir, fbasename
+
+    def export_profast_config_to_file(self, pf):
+        """Save ProFAST inputs object to a .yaml file that can be used to re-run ProFAST
+
+        Args:
+            pf (ProFAST): ProFAST object populated with all cost and finance items.
+        """
+        if not self.profast_options.save_profast_config:
+            return
+
+        output_dir, fbasename = self.get_output_folder_and_filename_description()
+
+        config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
+        if not self.profast_options.overwrite_config:
+            # make a unique filename config to not overwrite any previously saved configs
+            config_fname = make_unique_case_name(output_dir, config_fpath.name, config_fpath.suffix)
+            # update the config fpath to use the unique filename
+            config_fpath = output_dir / config_fname
+
+        # make dictionary of ProFAST config
+        pf_config_dict = convert_pf_to_dict(pf)
+        pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
+
+        # save config to a .yaml file
+        write_yaml(pf_config_dict, config_fpath)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Placeholder for the OpenMDAO compute step."""
