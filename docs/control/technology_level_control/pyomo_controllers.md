@@ -181,7 +181,7 @@ Set `control_strategy` to `PeakLoadManagementOptimizedStorageController` to use 
 
 Given a price signal (`lmp_signal`) and the local party's demand (`demand_signal`), the controller picks a dispatch schedule that earns as much incentive revenue as possible while keeping the local party's cost low, without exceeding the monthly dispatch limit or the battery's state-of-charge limits.
 
-The controller works at any simulation timestep resolution (`dt`). All time-based parameters ( `event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
+The controller supports simulation timesteps from 5 minutes to 1 hour (`dt` from 300 to 3600 seconds). All time-based parameters (`event_duration`, `min_peak_separation`) are specified in physical time units (hours, minutes, etc.) and are internally converted to timesteps using `dt`.
 
 The controller's configuration is:
 
@@ -211,10 +211,10 @@ The controller's configuration is:
 - $\text{upstream\_to\_local\_limit}$ := upper limit on power transmitted from the upstream party to the local party.
 - `n_control_window_hours` := rolling horizon length in hours; converted to $T =$ `n_control_window_hours` / $\Delta t$ timesteps
 - $\mathcal{T} := \{0, 1, \ldots, T-1\}$: timesteps in the current rolling window
-- $\mathcal{M}_m$ := set of timesteps in month $m$, for $m = 1, \ldots, 12$
-- $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month
+- $\mathcal{M}_{y,m}$ := set of timesteps in calendar month $m$ of year $y$, for $m = 1, \ldots, 12$
+- $N_{\max}$ := `n_max_events`: maximum number of discharge events per calendar month; the budget is tracked separately for each year and month
 - $\tau$ := `steps_per_event` : number of timesteps per event (1 when `event_duration` is not provided)
-- $B_m$ := remaining event budget for month $m$ = $N_{\max}$ minus events already dispatched in prior windows
+- $B_{y,m}$ := remaining event budget for calendar month $m$ of year $y$ = $N_{\max}$ minus events already dispatched in prior windows in that same year and month
 - $s_t := $ `{commodity}_set_point`$_t$ $-$ `{commodity}_in`$_t$: a net demand signal, positive when the system needs discharge and negative when it has surplus to absorb. The raw `{commodity}_set_point` a system-level controller (SLC) writes for a storage tech with its own controller is a combined *gross* demand signal. Outside SLC, `{commodity}_set_point` defaults to the performance model's static `demand_profile`. Only enforced as a constraint (below) when `constrain_dispatch_to_set_point` is `True` (default `False`).
 
 ### Dispatch Window Construction
@@ -252,7 +252,7 @@ $$
 
 where $f(\lambda_t)$ describes the price the upstream party charges the local party.
 
-The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled at any timestep resolution.
+The factor $\Delta t$ converts power (kW) to energy (kWh), so the objective is correctly scaled for any supported timestep resolution.
 
 ### Constraints
 
@@ -262,13 +262,13 @@ $$
 u_{up,t} = 0 \qquad \forall\, t \notin \mathcal{D}
 $$
 
-- Maximum $N_{\max}$ discharge events per month. Because `event_duration` fixes each event to exactly $\tau$ timesteps, the event cap translates directly into a timestep cap:
+- Maximum $N_{\max}$ discharge events per calendar year and month. Because `event_duration` fixes each event to exactly $\tau$ timesteps, the event cap translates directly into a timestep cap:
 
 $$
-\sum_{t \in \mathcal{M}_m \cap \mathcal{T}} u_{up,t} \leq B_m \cdot \tau \qquad \forall\, m
+\sum_{t \in \mathcal{M}_{y,m} \cap \mathcal{T}} u_{up,t} \leq B_{y,m} \cdot \tau \qquad \forall\, y,m
 $$
 
-After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_{up,t} = 1$ and $u_{up,t-1} = 0$) and $B_m$ is decremented accordingly for subsequent windows.
+After each window is solved, events are counted via rising-edge detection (a new event begins whenever $u_{up,t} = 1$ and $u_{up,t-1} = 0$). Usage is tracked by calendar year and month, so each year and month has its own budget: for example, January's budget resets at the start of each new year. The same year and month reset applies to the cycled-energy budget used during Exclusive Control Months.
 
 - Power is zero when the binary is 0, and at most $P_{\max}$ when it is 1:
 
@@ -355,7 +355,7 @@ Setting `exclusive_control_months` turns on a seasonal split: in listed months, 
 
 Each rolling window is solved one way or the other, but never solved simultaneously - `setup()` raises an error if `n_control_window_hours` spans both the control schemes.
 
-During Exclusive Control Months, the discharge cap switches from a monthly event count (`n_max_events`) to a monthly cycled-energy budget (`max_cycles_per_day`), and `peak_window` switches roles from "eligible to discharge" to "no charging allowed" (e.g. a utility's Class A Peak Period).
+During Exclusive Control Months, the discharge cap switches from a monthly event count (`n_max_events`) to a monthly cycled-energy budget (`max_cycles_per_day`). This energy budget is tracked separately for each calendar month and resets at the start of each new year. The budget uses a 365-day year, so February always has 28 days, including in leap years. `peak_window` switches roles from "eligible to discharge" to "no charging allowed" (e.g. a utility's Class A Peak Period).
 
 #### Local-control bill minimization
 
