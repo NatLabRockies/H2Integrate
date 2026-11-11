@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import openmdao.api as om
+from openmdao.utils.units import convert_units
 
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.simple_openloop_controller import (
@@ -1252,9 +1253,13 @@ def plant_config_non_hourly(n_timesteps):
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [4])
-def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
+@pytest.mark.parametrize("commodity_rate_units", ["kg/h", "kg/s"])
+def test_storage_half_hourly_known_outputs(
+    subtests, plant_config_non_hourly, commodity_rate_units: str
+) -> None:
     """Verify SOC, charge/discharge profiles, and scalar outputs against calculated
-    values for a simple scenario at dt=1800s (30-min dt).
+    values for a simple scenario at dt=1800s (30-min dt), using equivalent
+    kg/h and kg/s model configurations.
 
     Scenario (4 timesteps * 30 min = 2 hours total)::
 
@@ -1274,11 +1279,11 @@ def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
     model_inputs = {
         "shared_parameters": {
             "commodity": "hydrogen",
-            "commodity_rate_units": "kg/h",
+            "commodity_rate_units": commodity_rate_units,
         },
         "performance_parameters": {
             "max_capacity": 40.0,
-            "max_charge_rate": 10.0,
+            "max_charge_rate": convert_units(10.0, "kg/h", commodity_rate_units),
             "min_soc_fraction": 0.1,
             "max_soc_fraction": 1.0,
             "init_soc_fraction": 0.1,
@@ -1340,6 +1345,7 @@ def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
             pytest.approx(prob.get_val("storage.total_hydrogen_produced", units="kg")[0], abs=1e-9)
             == 0.0
         )
+        np.testing.assert_allclose(prob.get_val("storage.capacity_factor"), 0.0, atol=1e-12)
 
     with subtests.test("standard_capacity_factor = 50 %"):
         assert (
@@ -1347,6 +1353,13 @@ def test_storage_half_hourly_known_outputs(subtests, plant_config_non_hourly):
                 prob.get_val("storage.standard_capacity_factor", units="percent")[0], rel=1e-9
             )
             == 50.0
+        )
+
+    with subtests.test("annual discharged mass is independent of the native rate units"):
+        np.testing.assert_allclose(
+            prob.get_val("storage.annual_hydrogen_produced", units="kg/year"),
+            np.full(plant_config_non_hourly["plant"]["plant_life"], 43_800.0),
+            rtol=1e-9,
         )
 
 
