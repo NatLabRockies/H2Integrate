@@ -355,7 +355,7 @@ Setting `exclusive_control_months` turns on a seasonal split: in listed months, 
 
 Each rolling window is solved one way or the other, but never solved simultaneously - `setup()` raises an error if `n_control_window_hours` spans both the control schemes.
 
-During Exclusive Control Months, the discharge cap switches from a monthly event count (`n_max_events`) to a monthly cycled-energy budget (`max_cycles_per_day`). This energy budget is tracked separately for each calendar month and resets at the start of each new year. `peak_window` switches roles from "eligible to discharge" to "no charging allowed" (e.g. a utility's Class A Peak Period).
+During Exclusive Control Months, the discharge cap switches from a monthly event count (`n_max_events`) to a monthly cycled-energy budget (`max_cycles_per_day`). This energy budget is tracked separately for each calendar month and resets at the start of each new year. The budget uses a 365-day year, so February always has 28 days, including in leap years. `peak_window` switches roles from "eligible to discharge" to "no charging allowed" (e.g. a utility's Class A Peak Period).
 
 #### Local-control bill minimization
 
