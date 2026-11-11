@@ -2016,6 +2016,22 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         lcoe_comp = (res_df["LCOE-T"] > res_df["LCOE"]).to_list()
         assert all(k for k in lcoe_comp)
 
+    file_name_ends = ["", "0", "1", "2"]
+    saved_yaml_files = [f.name for f in sql_fpath.parent.glob("*.yaml")]
+    with subtests.test("4 ProFAST config files saved for 'electricity' subgroup"):
+        expected_fnames = [
+            f"ProFastLCO_electricity_electricity__optimistic_config{d}.yaml" for d in file_name_ends
+        ]
+        assert all(fname in saved_yaml_files for fname in expected_fnames)
+
+    with subtests.test("4 ProFAST config files saved for 'transported_electricity' subgroup"):
+        expected_fnames = [
+            f"ProFastLCO_transported_electricity_electricity__optimistic_config{d}.yaml"
+            for d in file_name_ends
+        ]
+        assert all(fname in saved_yaml_files for fname in expected_fnames)
+        pass
+
 
 @pytest.mark.examples
 @pytest.mark.parametrize(
