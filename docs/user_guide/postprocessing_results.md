@@ -293,7 +293,7 @@ without re-running H2I. Here, the discount rate and debt interest rate are chang
 case reproduces the LCOA from the H2I run:
 
 ```{code-cell} ipython3
-pf_config = load_yaml(Path("outputs") / "profast_output_ammonia_config.yaml")
+pf_config = load_yaml(Path("outputs") / "profast_output_ammonia_ammonia_config.yaml")
 
 cases = {
     "baseline": {},
