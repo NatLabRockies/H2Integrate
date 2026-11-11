@@ -1661,6 +1661,18 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
     with subtests.test("Check electricity LCOE"):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
+    expected_pf_results_fbasenames = [
+        "ProFastLCO_wind_electricity_wind_only",
+        "ProFastLCO_battery_electricity_battery_included",
+        "ProFastLCO_electricity_electricity_all_electricity_profast",
+    ]
+
+    for fname_start in expected_pf_results_fbasenames:
+        for fname_end in ["LCO_breakdown.yaml", "profast_price_breakdown.csv"]:
+            with subtests.test(f"{fname_start}_{fname_end} saved"):
+                fpath = example_folder / "wind_plant_run" / f"{fname_start}_{fname_end}"
+                assert fpath.is_file()
+
 
 @pytest.mark.examples
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
