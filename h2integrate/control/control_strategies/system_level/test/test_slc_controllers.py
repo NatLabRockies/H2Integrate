@@ -5,9 +5,7 @@ import pytest
 import networkx as nx
 import openmdao.api as om
 
-from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
-    buy_price_profile,
-    annualized_marginal_cost,
+from h2integrate.control.control_strategies.system_level.marginal_cost_tools import (
     _get_tech_buy_price_input_name,
     _get_buy_price_default_and_shape,
 )
@@ -64,34 +62,6 @@ def test_buy_price_configuration_helpers(subtests):
         }
         assert _get_tech_buy_price_input_name(config, "tech") == "price"
         assert _get_buy_price_default_and_shape(config, "tech", 4, 3) == (0.02, 1)
-
-
-@pytest.mark.unit
-def test_buy_price_profiles(subtests):
-    for price, expected in [
-        (0.04, [0.04] * 4),
-        ([0.04], [0.04] * 4),
-        ([0.01, 0.02, 0.03, 0.04], [0.01, 0.02, 0.03, 0.04]),
-        ([0.04, 0.05, 0.06], [0.04] * 4),
-    ]:
-        with subtests.test(price=price):
-            source = np.asarray(price)
-            actual = buy_price_profile(source, 4, 3)
-            np.testing.assert_array_equal(actual, expected)
-            assert not np.shares_memory(actual, source)
-    with subtests.test("timesteps take precedence over matching plant-life length"):
-        np.testing.assert_array_equal(
-            buy_price_profile([0.01, 0.02, 0.03], 3, 3), [0.01, 0.02, 0.03]
-        )
-
-
-@pytest.mark.unit
-def test_annualized_marginal_cost(subtests):
-    with subtests.test("partial-year and subhourly production"):
-        assert annualized_marginal_cost(876.0, [100.0] * 4, 0.5, 2 / 8760) == pytest.approx(0.001)
-    for production in ([0.0] * 4, [-100.0] * 4):
-        with subtests.test(production=production):
-            assert annualized_marginal_cost(876.0, production, 0.5, 2 / 8760) == 0.0
 
 
 def _build_plant_config(

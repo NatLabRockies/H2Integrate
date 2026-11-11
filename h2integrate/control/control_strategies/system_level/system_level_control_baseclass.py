@@ -5,9 +5,7 @@ import openmdao.api as om
 from h2integrate.control.control_strategies.system_level.solver_options import (
     get_control_rate_reference,
 )
-from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
-    buy_price_profile,
-    annualized_marginal_cost,
+from h2integrate.control.control_strategies.system_level.marginal_cost_tools import (
     _get_buy_price_default_and_shape,
 )
 
@@ -668,7 +666,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             elif marginal_cost_type == "VarOpEx":
                 marginal_cost = self._varopex_marginal_cost(inputs, marginal_cost_data)
             elif marginal_cost_type == "feedstock":
-                marginal_cost = self._feedstock_marginal_cost(inputs, marginal_cost_data)
+                marginal_cost = self._varopex_marginal_cost(inputs, *marginal_cost_data)
             else:
                 marginal_cost = np.zeros(self.n_timesteps)
 
@@ -685,34 +683,40 @@ class SystemLevelControlBase(om.ExplicitComponent):
         per-year (shape ``(plant_life,)``); the value is broadcast or
         repeated as needed to span all simulation timesteps.
         """
-        return buy_price_profile(
-            inputs[f"{tech_name}_buy_price"],
-            self.n_timesteps,
-            int(self.options["plant_config"]["plant"]["plant_life"]),
-        )
+        buy_price = np.asarray(inputs[f"{tech_name}_buy_price"])
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        if buy_price.shape == (self.n_timesteps,) or buy_price.shape == (1,):
+            return np.broadcast_to(buy_price, self.n_timesteps).copy()
+        if buy_price.shape == (plant_life,):
+            return np.full(self.n_timesteps, buy_price[0])
+        return np.broadcast_to(buy_price, self.n_timesteps).copy()
 
-    def _varopex_marginal_cost(self, inputs, tech_name):
+    def _varopex_marginal_cost(self, inputs, tech_name, feedstock_names=None):
         """Compute marginal cost from VarOpEx and commodity output.
 
-        Divides the first-year ``VarOpEx`` (``$/year``) by the
-        annualized total production to obtain an average marginal cost
-        in ``$/(commodity_amount_unit)``.
+        Divides first-year ``VarOpEx`` (``$/year``) by annualized total
+        production. When ``feedstock_names`` is provided, sums the first-year
+        ``VarOpEx`` from the connected feedstocks instead of the technology.
 
         Returns a constant per-timestep array.
         """
-        varopex = inputs[f"{tech_name}_VarOpEx"]  # $/year, shape=plant_life
+        if feedstock_names is not None:
+            total_varopex = sum(inputs[f"{fs}_VarOpEx"][0] for fs in feedstock_names)
+        else:
+            total_varopex = inputs[f"{tech_name}_VarOpEx"][0]
 
         # Use commodity_out already connected for this dispatchable tech
         tech_commodities = self._get_commodity_for_tech(tech_name)
         commodity = tech_commodities[0] if tech_commodities else self.commodity
 
         production = inputs[f"{tech_name}_{commodity}_out"]  # rate units, shape=n_timesteps
-        return np.full(
-            self.n_timesteps,
-            annualized_marginal_cost(
-                varopex[0], production, self.dt_hours, self.fraction_of_year_simulated
-            ),
-        )
+        total_production = production.sum() * self.dt_hours
+        if total_production > 0:
+            annual_production = total_production / self.fraction_of_year_simulated
+            marginal_cost_scalar = total_varopex / annual_production
+        else:
+            marginal_cost_scalar = 0.0
+        return np.full(self.n_timesteps, marginal_cost_scalar)
 
     def _find_feedstock_techs(self, tech_name):
         """Find feedstock technologies upstream of ``tech_name`` at any depth.
@@ -729,38 +733,6 @@ class SystemLevelControlBase(om.ExplicitComponent):
         # All ancestors at any depth, filtered to feedstocks
         ancestors = nx.ancestors(self.technology_graph, tech_name)
         return [tech for tech in ancestors if tech in self.feedstock_comps]
-
-    def _feedstock_marginal_cost(self, inputs, marginal_cost_data):
-        """Compute marginal cost from upstream feedstock VarOpEx values.
-
-        Sums the first-year ``VarOpEx`` from all feedstock technologies
-        connected to the dispatchable tech, then divides by the tech's
-        annualized total production.
-
-        Args:
-            marginal_cost_data (tuple): ``(tech_name, feedstock_names)`` where
-                tech_name is the dispatchable tech and feedstock_names
-                is a list of upstream feedstock technology names.
-
-        Returns:
-            np.ndarray: constant per-timestep marginal cost array.
-        """
-        tech_name, feedstock_names = marginal_cost_data
-
-        # Sum VarOpEx from all connected feedstocks (first year)
-        total_varopex = sum(inputs[f"{fs}_VarOpEx"][0] for fs in feedstock_names)
-
-        # Get the tech's production
-        tech_commodities = self._get_commodity_for_tech(tech_name)
-        commodity = tech_commodities[0] if tech_commodities else self.commodity
-
-        production = inputs[f"{tech_name}_{commodity}_out"]
-        return np.full(
-            self.n_timesteps,
-            annualized_marginal_cost(
-                total_varopex, production, self.dt_hours, self.fraction_of_year_simulated
-            ),
-        )
 
     def get_upstream_techs_for_commodity(
         self, tech_name: str, commodity: str, include_feedstock_sources=True

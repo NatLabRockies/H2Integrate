@@ -29,7 +29,7 @@
 - Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
 - Added an opt-in `scale_control_variables` solver option for system-level control that applies characteristic `ref` and `res_ref` scales to SLC set points, passthrough command values, and the ProFAST levelized-cost output to improve coupled-solver convergence. [PR 957](https://github.com/NatLabRockies/H2Integrate/pull/957)
-- Moved the system-level control purchase-price and marginal-cost helpers into `slc_marginal_costs.py` and added unit tests for them, with no change in behavior. [PR 958](https://github.com/NatLabRockies/H2Integrate/pull/958)
+- Moved system-level control purchase-price configuration helpers into `marginal_cost_tools.py`, kept price expansion inline, and combined VarOpEx and feedstock marginal-cost calculations. [PR 958](https://github.com/NatLabRockies/H2Integrate/pull/958)
 
 
 ## 0.10.0 [October 12, 2026]

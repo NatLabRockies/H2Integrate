@@ -35,7 +35,7 @@ from h2integrate.control.control_strategies.passthrough_controller import Passth
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
 )
-from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
+from h2integrate.control.control_strategies.system_level.marginal_cost_tools import (
     _get_tech_buy_price_input_name,
 )
 
