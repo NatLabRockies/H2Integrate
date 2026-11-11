@@ -1255,6 +1255,7 @@ class H2IntegrateModel:
             return
 
         subgroups = self.plant_config["finance_parameters"].get("finance_subgroups", None)
+        user_defined_subgroups = subgroups is not None
 
         if "finance_groups" not in self.plant_config["finance_parameters"]:
             raise ValueError("plant_config['finance_parameters'] must define 'finance_groups'.")
@@ -1463,6 +1464,11 @@ class H2IntegrateModel:
                         "finance_parameters": {
                             "finance_model": model_name,  # unused by the finance model
                             "model_inputs": fin_model_inputs,  # inputs for finance model
+                            "finance_group_name": finance_group_name,
+                            "finance_subgroup_name": (
+                                subgroup_name if user_defined_subgroups else None
+                            ),
+                            "commodity_desc": subgroup_params.get("commodity_desc", ""),
                         }
                     }
                 )

@@ -1,5 +1,4 @@
 import warnings
-from pathlib import Path
 
 import numpy as np
 from openmdao.utils.units import simplify_unit
@@ -149,35 +148,12 @@ class ProFastLCO(ProFastBase):
         lco_breakdown, _lco_check = make_price_breakdown(price_breakdown, pf_config_dict)
         discrete_outputs[f"{self.LCO_str}_breakdown"] = lco_breakdown
 
-        # Check whether to export profast object to .yaml file
-        save_results = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_results", False
-        )
-        save_config = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-            "save_profast_config", False
-        )
+        if self.save_profast_config:
+            self.write_profast_config(pf)
 
-        if save_results or save_config:
-            output_dir = self.options["driver_config"]["general"]["folder_output"]
-            fdesc = self.options["plant_config"]["finance_parameters"]["model_inputs"].get(
-                "profast_output_description", "ProFastLCO"
-            )
-
-            fbasename = f"{fdesc}_{self.output_txt}"
-
-            output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
-
-            pf_config_dict = dict_to_yaml_formatting(pf_config_dict)
-
-            if save_config:
-                config_fpath = Path(output_dir) / f"{fbasename}_config.yaml"
-                write_yaml(pf_config_dict, config_fpath)
-
-            if save_results:
-                price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
-                pf_breakdown_fpath = Path(output_dir) / f"{fbasename}_profast_price_breakdown.csv"
-                lco_breakdown_fpath = Path(output_dir) / f"{fbasename}_LCO_breakdown.yaml"
-                price_breakdown_formatted.to_csv(pf_breakdown_fpath)
-                lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
-                write_yaml(lco_breakdown, lco_breakdown_fpath)
+        if self.save_profast_results:
+            basepath = self.get_profast_output_basepath()
+            price_breakdown_formatted = format_profast_price_breakdown_per_year(price_breakdown)
+            price_breakdown_formatted.to_csv(f"{basepath}_profast_price_breakdown.csv")
+            lco_breakdown = dict_to_yaml_formatting(lco_breakdown)
+            write_yaml(lco_breakdown, f"{basepath}_LCO_breakdown.yaml")

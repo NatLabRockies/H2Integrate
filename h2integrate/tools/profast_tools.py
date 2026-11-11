@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import ProFAST
 
+from h2integrate.core.file_utils import load_yaml
+
 
 def create_and_populate_profast(pf_config):
     """Create ProFAST object and populate it with inputs.
@@ -93,6 +95,34 @@ def run_profast(pf):
     summary = pf.get_summary_vals()
     price_breakdown = pf.get_cost_breakdown(sorted=False)
     return sol, summary, price_breakdown
+
+
+def load_profast_from_config(config_fpath):
+    """Rebuild and run a ProFAST object from a config file saved with ``save_profast_config``.
+
+    If the config contains a ``sell_price`` profile (saved by ``ProFastNPV``), the cash flow is
+    evaluated at that price. Otherwise the price is solved for (as in ``ProFastLCO``).
+
+    Args:
+        config_fpath (str | Path): path to the ProFAST config .yaml file.
+
+    Returns:
+        2-element tuple containing
+
+        - **pf** (ProFAST object): populated and evaluated ProFAST object
+        - **results** (dict): ``"summary"`` and ``"price_breakdown"`` from ProFAST, plus
+          ``"npv"`` if a ``sell_price`` was saved, otherwise ``"sol"`` (the solved price).
+    """
+    pf_config = load_yaml(config_fpath)
+    pf = create_and_populate_profast(pf_config)
+    if "sell_price" in pf_config:
+        results = {"npv": pf.cash_flow(price=np.array(pf_config["sell_price"]))}
+        results["summary"] = pf.get_summary_vals()
+        results["price_breakdown"] = pf.get_cost_breakdown()
+    else:
+        sol, summary, price_breakdown = run_profast(pf)
+        results = {"sol": sol, "summary": summary, "price_breakdown": price_breakdown}
+    return pf, results
 
 
 def make_price_breakdown(price_breakdown, pf_config):

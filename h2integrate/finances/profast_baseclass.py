@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import attrs
 import numpy as np
 import openmdao.api as om
@@ -5,9 +7,14 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, attr_filter, attr_serializer
 from h2integrate.finances.tools import check_plant_config_and_profast_params
-from h2integrate.core.dict_utils import update_defaults
-from h2integrate.tools.profast_tools import create_years_of_operation, create_and_populate_profast
+from h2integrate.core.dict_utils import update_defaults, dict_to_yaml_formatting
+from h2integrate.tools.profast_tools import (
+    convert_pf_to_dict,
+    create_years_of_operation,
+    create_and_populate_profast,
+)
 from h2integrate.core.model_baseclass import SkippableComputeMixin
+from h2integrate.core.inputs.validation import write_yaml
 
 
 # Mapping between user-facing finance parameters and ProFAST internal parameter names
@@ -480,6 +487,8 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         variable_cost_settings (ProFASTDefaultVariableCost): Default variable operating cost
             parameters.
         coproduct_cost_settings (ProFASTDefaultCoproduct): Default coproduct cost parameters.
+        save_profast_config (bool): Whether to save the ProFAST config.
+        save_profast_results (bool): Whether to save ProFAST results.
 
     Inputs:
         capex_adjusted_{tech} (float): Adjusted capital expenditure for each
@@ -522,6 +531,10 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             else ""
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"
+
+        model_inputs = self.options["plant_config"]["finance_parameters"]["model_inputs"]
+        self.save_profast_config = model_inputs.get("save_profast_config", False)
+        self.save_profast_results = model_inputs.get("save_profast_results", False)
 
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
 
@@ -759,6 +772,59 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         # create ProFAST object
         pf = create_and_populate_profast(pf_dict)
         return pf
+
+    def get_profast_output_basepath(self):
+        """Return the path prefix for saved ProFAST files, creating output directories if needed.
+
+        If finance group and subgroup names are supplied, they are represented by nested
+        directories named ``finance_group_<name>`` and ``finance_subgroup_<name>``, in that order,
+        beneath the output directory. The filename prefix is assembled from the model class name,
+        lowercase commodity name, commodity description, and ``profast_output_description``, in
+        that order. The commodity description comes from ``commodity_desc`` in the finance
+        parameters when present; otherwise, the component's ``description`` option is used.
+        Optional filename parts are omitted, and the remaining parts are joined with underscores.
+        Saved files add a suffix identifying their contents, such as ``_config.yaml`` or
+        ``_LCO_breakdown.yaml``.
+
+        For example, with finance subgroup ``ammonia``, finance group ``default``, model class
+        ``ProFastLCO``, commodity ``ammonia``, component description ``product``, and
+        ``profast_output_description`` set to ``profast_output``, a config file is saved as
+        ``<output>/finance_group_default/finance_subgroup_ammonia/ProFastLCO_ammonia_product_profast_output_config.yaml``.
+
+        Returns:
+            Path: output folder joined with the file prefix.
+        """
+        finance_params = self.options["plant_config"]["finance_parameters"]
+        output_dir = Path(self.options["driver_config"]["general"]["folder_output"])
+        group_name = finance_params.get("finance_group_name")
+        if group_name:
+            output_dir /= f"finance_group_{group_name}"
+        subgroup_name = finance_params.get("finance_subgroup_name")
+        if subgroup_name:
+            output_dir /= f"finance_subgroup_{subgroup_name}"
+        name_parts = [
+            type(self).__name__,
+            self.options["commodity_type"].lower(),
+            finance_params.get("commodity_desc", self.options["description"].strip()),
+            finance_params["model_inputs"].get("profast_output_description"),
+        ]
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir / "_".join(part for part in name_parts if part)
+
+    def write_profast_config(self, pf, sell_price=None):
+        """Write the ProFAST config to ``<basepath>_config.yaml``.
+
+        Args:
+            pf (ProFAST.ProFAST): populated ProFAST object.
+            sell_price (np.ndarray, optional): price profile passed to ``pf.cash_flow``, saved
+                under the ``sell_price`` key so the NPV can be reproduced on reload.
+                Defaults to None.
+        """
+        pf_config = convert_pf_to_dict(pf)
+        if sell_price is not None:
+            pf_config["sell_price"] = sell_price
+        config_fpath = f"{self.get_profast_output_basepath()}_config.yaml"
+        write_yaml(dict_to_yaml_formatting(pf_config), config_fpath)
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """Placeholder for the OpenMDAO compute step."""

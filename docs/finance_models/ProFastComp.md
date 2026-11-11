@@ -25,7 +25,7 @@ finance_parameters:
   model_inputs: #inputs for the finance_model
     save_profast_results: True #optional, will save ProFAST results to .yaml file in the folder specified in the driver_config (`driver_config["general"]["folder_output"]`)
     save_profast_config: True #optional, will save ProFAST the profast config to .yaml file in the folder specified in the driver_config (`driver_config["general"]["folder_output"]`)
-    profast_output_description: "profast_config" #used to name the output file.
+    profast_output_description: "profast_config" #optional, appended to the output file names.
     params: #Financial parameters section
     capital_items: #Required: section for default parameters for capital items
       depr_type: "MACRS" #Required: depreciation method for capital items, can be "MACRS" or "Straight line"
@@ -39,7 +39,19 @@ finance_parameters:
 ```
 
 ```{note}
-If you are setting `save_profast_results` to `True` and are using multiple finance subgroups, use the `commodity_desc` in each unique finance subgroup to ensure the output files get written correctly for each subgroup. See examples/19_simple_dispatch/plant_config.yaml for an example of this.
+Saved files are named `[<finance_subgroup>_]<finance_group>_ProFastLCO_<commodity>[_<commodity_desc>][_<profast_output_description>]`, followed by `_config.yaml`, `_profast_price_breakdown.csv`, or `_LCO_breakdown.yaml`. `<finance_subgroup>` is only included if `finance_subgroups` are defined in the plant config, `<finance_group>` is the key under `finance_groups` (`default` if a single finance model is defined), and `profast_output_description` is optional.
+```
+
+(profastcomp:load_config)=
+### Recreating the ProFAST object after a run
+With `save_profast_config: True`, the saved config file can be used to rebuild and solve the ProFAST object for native ProFAST plotting or post-processing. The file reflects the most recent model evaluation.
+
+```python
+from h2integrate.tools.profast_tools import load_profast_from_config
+
+pf, results = load_profast_from_config("outputs/default_ProFastLCO_electricity_config.yaml")
+# Primary results keys: results["sol"]["lco"], results["summary"], results["price_breakdown"]
+pf.plot_costs()
 ```
 
 (profastcomp:outputs)=

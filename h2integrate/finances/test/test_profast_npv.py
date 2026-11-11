@@ -5,6 +5,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.tools.profast_tools import load_profast_from_config
 from h2integrate.finances.profast_npv import ProFastNPV
 
 
@@ -697,3 +698,48 @@ def test_profast_npv_warnings(
 
     with subtests.test("Test zero capacity factor value"):
         assert prob.get_val("pf.NPV_electricity_no1", units="GUSD")[0] == -1e11
+
+
+@pytest.mark.regression
+def test_profast_npv_save_and_load_config(
+    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, tmp_path
+):
+    plant_config = {
+        "plant": {"plant_life": 30},
+        "finance_parameters": {
+            "model_inputs": profast_inputs_no1 | {"save_profast_config": True},
+            "finance_group_name": "npv_group",
+            "finance_subgroup_name": None,
+        },
+    }
+    prob = om.Problem()
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", 500000.0, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * 30, units="unitless")
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem(
+        "pf",
+        ProFastNPV(
+            driver_config={"general": {"folder_output": str(tmp_path)}},
+            plant_config=plant_config,
+            tech_config=fake_filtered_tech_config,
+            commodity_type="electricity",
+            description="no1",
+        ),
+        promotes=["rated_electricity_production", "capacity_factor"],
+    )
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+    prob.run_model()
+
+    config_fpath = tmp_path / "finance_group_npv_group" / "ProFastNPV_electricity_no1_config.yaml"
+    assert config_fpath.is_file()
+
+    _pf, results = load_profast_from_config(config_fpath)
+    assert "sol" not in results
+    assert (
+        pytest.approx(results["npv"], rel=1e-8)
+        == prob.get_val("pf.NPV_electricity_no1", units="USD")[0]
+    )

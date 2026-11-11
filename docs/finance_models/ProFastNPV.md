@@ -33,6 +33,20 @@ finance_parameters:
 ProFAST will apply the commodity escalation rate to the `commodity_sell_price` in its calculations. The commodity escalation rate will default to the general inflation rate (input under `model_inputs['params']['inflation_rate']`) unless explicity provided as `model_inputs['params']['commodity']['escalation']`
 ```
 
+(profastnpv:load_config)=
+## Saving and recreating the ProFAST object
+Set `save_profast_config: True` under `model_inputs` to write the ProFAST config to `driver_config["general"]["folder_output"]`. The sell price profile used for the NPV (including the pre-operation years) is saved in the same file under the `sell_price` key. Files are named as described for [`ProFastLCO`](profastcomp:overview), with `ProFastNPV` as the class name.
+
+The saved file can be reloaded to re-evaluate the cash flow for native ProFAST plotting or post-processing:
+
+```python
+from h2integrate.tools.profast_tools import load_profast_from_config
+
+pf, results = load_profast_from_config("outputs/default_ProFastNPV_hydrogen_config.yaml")
+# Primary results keys: results["npv"], results["summary"], results["price_breakdown"]
+pf.plot_cashflow()
+```
+
 (profastnpv:outputs)=
 ## Output values and naming convention
 ``ProFastNPV`` outputs the following data following the naming convention detailed below:

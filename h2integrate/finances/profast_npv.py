@@ -26,6 +26,10 @@ class ProFastNPV(ProFastBase):
 
     Outputs:
         NPV_<commodity> (float): Net Present Value of the commodity in USD.
+
+    Notes:
+        If ``save_profast_config`` is True in the finance ``model_inputs``, the ProFAST config
+        and the sell price profile passed to ``pf.cash_flow`` are written to a single .yaml file.
     """
 
     def add_model_specific_outputs(self):
@@ -153,3 +157,6 @@ class ProFastNPV(ProFastBase):
         sell_profile = np.concatenate([np.full(non_op_Nyears, sell_price[0]), sell_price])
 
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(price=sell_profile)
+
+        if self.save_profast_config:
+            self.write_profast_config(pf, sell_price=sell_profile)
