@@ -3182,9 +3182,17 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     annual_htse_electricity = model.prob.get_val("htse.electricity_demand", units="TW*h/year")[0]
     annual_grid_sell = model.prob.get_val("grid_sell.annual_electricity_sold", units="TW*h/year")[0]
     annual_hydrogen = model.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
+    nuclear_lcoe = model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+    nuclear_lcoh = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("Nuclear annual electricity"):
         assert annual_nuclear_electricity == pytest.approx(8.75162086757)
+
+    with subtests.test("Nuclear LCOE is plausible"):
+        assert 50.0 <= nuclear_lcoe <= 400.0
+
+    with subtests.test("Hydrogen LCOH is plausible"):
+        assert 0.0 < nuclear_lcoh < 100.0
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)

@@ -4,7 +4,6 @@ Pytest configuration file.
 
 import os
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -95,24 +94,24 @@ def temp_dir_module(tmp_path_factory):
 
 
 @pytest.fixture(scope="function")
-def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
+def temp_copy_of_example(temp_dir, example_folder, resource_example_folder, monkeypatch):
     original = EXAMPLE_DIR / example_folder
     shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
     if resource_example_folder is not None:
         secondary = EXAMPLE_DIR / resource_example_folder
         shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
-    os.chdir(temp_dir / example_folder)
-    yield temp_dir / example_folder
-    os.chdir(Path(__file__).parent)
+    monkeypatch.chdir(temp_dir / example_folder)
+    return temp_dir / example_folder
 
 
 @pytest.fixture(scope="function")
-def temp_copy_of_example_module_scope(temp_dir_module, example_folder, resource_example_folder):
+def temp_copy_of_example_module_scope(
+    temp_dir_module, example_folder, resource_example_folder, monkeypatch
+):
     original = EXAMPLE_DIR / example_folder
     shutil.copytree(original, temp_dir_module / example_folder, dirs_exist_ok=True)
     if resource_example_folder is not None:
         secondary = EXAMPLE_DIR / resource_example_folder
         shutil.copytree(secondary, temp_dir_module / resource_example_folder, dirs_exist_ok=True)
-    os.chdir(temp_dir_module / example_folder)
-    yield temp_dir_module / example_folder
-    os.chdir(Path(__file__).parent)
+    monkeypatch.chdir(temp_dir_module / example_folder)
+    return temp_dir_module / example_folder

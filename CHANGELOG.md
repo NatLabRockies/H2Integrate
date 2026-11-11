@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
 
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
@@ -26,14 +27,16 @@
 - Integrate the reliability model into the `SimpleCycleTurbinePerformanceModel` with independent
   samples for each turbine and correct multi-turbine fuel consumption. [PR 919](https://github.com/NatLabRockies/H2Integrate/pull/919)
 - Consolidate redundant tests, strengthen weak assertions, and replace expensive recorder setups with a small grid model. [PR 974](https://github.com/NatLabRockies/H2Integrate/pull/974)
+- Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
+- Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
+- Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
 - Fixed `PeakLoadManagementOptimizedStorageController` issues affecting degraded batteries and multi-year simulations. [PR 988](https://github.com/NatLabRockies/H2Integrate/pull/988)
   - Removed a redundant initial-SOC constraint that prevented dispatch on the first step of each control window and made the MILP infeasible when that step required dispatch.
   - Monthly event and energy budgets are now tracked per year and month.
   - `n_control_window_hours` is now limited to 8016 h (334 days) so a control window never contains the same calendar month in two different years.
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
-
 
 ## 0.10.0 [October 12, 2026]
 
