@@ -261,8 +261,9 @@ solution, summary, price_breakdown = run_profast(profast_model)
 Setting `save_profast_config: true` in the finance `model_inputs` of the plant config saves the
 ProFAST configuration of each finance subgroup to the driver's `folder_output` after a run.
 [Example 2](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/02_texas_ammonia)
-does this, so running it writes `outputs/profast_output_ammonia_config.yaml` for the ammonia
-subgroup. First, run Example 2:
+does this, so running it writes
+`outputs/ammonia_default_ProFastLCO_ammonia_profast_output_config.yaml` for the ammonia subgroup.
+First, run Example 2:
 
 ```{code-cell} ipython3
 import os
@@ -293,7 +294,9 @@ without re-running H2I. Here, the discount rate and debt interest rate are chang
 case reproduces the LCOA from the H2I run:
 
 ```{code-cell} ipython3
-pf_config = load_yaml(Path("outputs") / "profast_output_ammonia_config.yaml")
+pf_config = load_yaml(
+    Path("outputs") / "ammonia_default_ProFastLCO_ammonia_profast_output_config.yaml"
+)
 
 cases = {
     "baseline": {},
