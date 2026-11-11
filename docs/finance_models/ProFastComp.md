@@ -50,7 +50,7 @@ With `save_profast_config: True`, the saved config file can be used to rebuild a
 from h2integrate.tools.profast_tools import load_profast_from_config
 
 pf, results = load_profast_from_config("outputs/default_ProFastLCO_electricity_config.yaml")
-results["sol"]["lco"], results["summary"], results["price_breakdown"]
+# Primary results keys: results["sol"]["lco"], results["summary"], results["price_breakdown"]
 pf.plot_costs()
 ```
 

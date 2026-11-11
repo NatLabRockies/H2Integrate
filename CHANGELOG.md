@@ -31,7 +31,7 @@
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
 - Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
-- Added `load_profast_from_config` to rebuild and re-run a ProFAST object from a config saved with `save_profast_config`, added `save_profast_config` support to `ProFastNPV` (including the sell price profile), and made saved ProFAST file names include the finance subgroup and finance group names. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Added `load_profast_from_config` to rebuild and re-run a ProFAST object from a config saved with `save_profast_config`, added `save_profast_config` support to `ProFastNPV` (including the sell price profile), and made saved ProFAST file names include the finance subgroup and finance group names. [PR 1001](https://github.com/NatLabRockies/H2Integrate/pull/1001)
 
 ## 0.10.0 [October 12, 2026]
 

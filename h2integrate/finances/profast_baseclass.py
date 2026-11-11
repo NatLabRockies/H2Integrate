@@ -776,9 +776,19 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
     def get_profast_output_basepath(self):
         """Return the path prefix for saved ProFAST files, creating the output folder if needed.
 
-        The file prefix is ``[<finance_subgroup>_]<finance_group>_<class name>_<commodity>
-        [_<commodity_desc>][_<profast_output_description>]``. The subgroup is only included if
-        finance subgroups are defined in the plant config.
+        The prefix is assembled from the finance subgroup name, finance group name, model class
+        name, lowercase commodity name, commodity description, and ``profast_output_description``,
+        in that order. The commodity description comes from ``commodity_desc`` in the finance
+        parameters when present; otherwise, the component's ``description`` option is used.
+        The resulting prefix is used for each saved ProFAST file, with a suffix identifying the
+        file contents, such as ``_config.yaml`` or ``_LCO_breakdown.yaml``.
+
+        For example, with finance subgroup ``ammonia``, finance group ``default``, model class
+        ``ProFastLCO``, commodity ``ammonia``, component description ``product``, and
+        ``profast_output_description`` set to ``profast_output``, the prefix is
+        ``ammonia_default_ProFastLCO_ammonia_product_profast_output``. A config file saved with
+        this prefix is named
+        ``ammonia_default_ProFastLCO_ammonia_product_profast_output_config.yaml``.
 
         Returns:
             Path: output folder joined with the file prefix.
