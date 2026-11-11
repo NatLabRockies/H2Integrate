@@ -1,4 +1,4 @@
-# Example 23: Solar Battery Grid System
+# Example 24: Solar Battery Grid System
 
 ## Overview
 
@@ -89,3 +89,11 @@ technology_interconnections: [
 - `grid_buy` only sets `electricity_buy_price` (the other is None by default)
 - `grid_sell` only sets `electricity_sell_price` (the other is None by default)
 - Both prices are optional - set only what you need
+
+## Running the Example
+
+- `run_solar_battery_grid.py` runs the plant over all 8760 timesteps at once.
+- `run_time_marching.py` runs the same plant twice: once over all timesteps at once, and once with
+  `n_timesteps_window: 24` so that all technologies advance together one 24-hour window at a time.
+  It then compares the inputs and outputs of the two runs, which match. See the
+  [time-marching simulation guide](../../docs/user_guide/time_marching_simulation.md) for details.

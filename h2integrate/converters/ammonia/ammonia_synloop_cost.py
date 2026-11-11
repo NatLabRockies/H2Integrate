@@ -62,6 +62,8 @@ class AmmoniaSynLoopCostConfig(CostModelBaseConfig):
         cooling_water_cost_base (float): Cost of cooling water [$/gal H2O]. *[Feedstock Costs]*
         catalyst_cost_base (float): Cost of iron-based catalyst [$/kg cat]. *[Feedstock Costs]*
         oxygen_price_base (float): Sales price of oxygen co-product [$/kg O2]. *[Feedstock Costs]*
+
+    See :class:`AmmoniaSynLoopCostModel` and :doc:`/technology_models/ammonia`.
     """
 
     production_capacity: float = field()
@@ -101,6 +103,8 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
     expenditure (OpEx) associated with the synthesis loop, based on provided
     configuration values.
 
+    See :class:`AmmoniaSynLoopCostConfig` and :doc:`/technology_models/ammonia`.
+
     Attributes
     ----------
     config : AmmoniaSynLoopCostConfig
@@ -108,21 +112,18 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
 
     Inputs
     -------
-    total_ammonia_produced : float [kg/year]
-        Total ammonia produced over the modeled period.
-    total_hydrogen_consumed : float [kg/year]
-        Total hydrogen consumed over the modeled period.
-    total_nitrogen_consumed : float [kg/year]
-        Total nitrogen consumed over the modeled period.
-    total_electricity_consumed : float [kg/year]
-        Total electricity consumed over the modeled period.
+    annual_ammonia_produced : array [kg/year]
+        Annual ammonia production over the plant life.
+    rated_ammonia_production : float [kg/h]
+        Rated ammonia production capacity.
 
     Outputs
     -------
     CapEx : float [$]
         Capital expenditure for the synthesis loop.
     OpEx : float [$ per year]
-        Annual operating expenditure (catalyst replacement/rebuild).
+        Annual operating expenditure, including fixed costs, feedstocks, catalyst,
+        rebuild costs, and oxygen sales.
     capex_asu : float [$]
         Capital cost for air separation unit
     capex_synloop : float [$]
@@ -145,6 +146,7 @@ class AmmoniaSynLoopCostModel(CostModelBaseClass):
         Annual property tax and insurance cost",
     maintenance_cost : float [$]
         Annual maintenance cost
+
     """
 
     _time_step_bounds = (

@@ -2,11 +2,9 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
-from h2integrate.control.control_strategies.openloop_control_baseclass import (
-    get_control_rate_reference,
-)
 from h2integrate.control.control_strategies.system_level.solver_options import (
     SLCSolverOptionsConfig,
+    get_control_rate_reference,
 )
 
 

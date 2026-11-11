@@ -29,6 +29,8 @@ class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
             Defaults to ``80000``.
         turndown_ratio (float): Minimum fraction of rated hydrogen production required to
             stay on (unitless). Defaults to ``0.1``.
+
+    See :class:`HTSEPerformanceModel` and :doc:`/technology_models/h2_htse`.
     """
 
     n_clusters: int = field(validator=validators.gt(0))
@@ -49,12 +51,13 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     dispatchable technology with an ``electricity_in`` input and a ``hydrogen_out`` output.
 
     Installed size is inferred from ``n_clusters`` and ``cluster_rating_MW``, and the model
-    also supports the ``resize_by_max_feedstock`` (from electricity) and
+    accepts the ``resize_by_max_feedstock`` (from electricity) and
     ``resize_by_max_commodity`` (from hydrogen) sizing modes inherited from the resizeable
-    performance base class. At each timestep the model uses available heat first, supplies
-    the remaining required energy electrically when possible, and limits hydrogen
-    production by the combined available energy and the turndown threshold. It also exposes
-    operating signals useful for coupled systems, including ``heat_demand``,
+    performance base class. The calculated resized value is currently overwritten by the
+    cluster-based size before outputs are computed. At each timestep the model uses available
+    heat first, supplies the remaining required energy electrically when possible, and limits
+    hydrogen production by the combined available energy and the turndown threshold. It also
+    exposes operating signals useful for coupled systems, including ``heat_demand``,
     ``electricity_demand``, ``electricity_consumed``, and ``water_consumed``.
 
     In the current implementation, ``electricity_demand`` reports installed electrical
@@ -64,6 +67,9 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     The implementation is intentionally simple and should be interpreted as a reduced-order
     plant representation, not a detailed SOEC stack model with thermal transients,
     degradation coupling, startup dynamics, or detailed balance-of-plant behavior.
+
+    See :class:`HTSEPerformanceModelConfig`, :class:`HTSECostModel`, and
+    :doc:`/technology_models/h2_htse`.
     """
 
     def setup(self) -> None:
@@ -273,6 +279,8 @@ class HTSECostModelConfig(CostModelBaseConfig):
         fixed_capex (float, optional): Fallback value used to populate ``fixed_opex`` when
             ``fixed_opex`` is not provided.
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
+
+    See :class:`HTSECostModel` and :doc:`/technology_models/h2_htse`.
     """
 
     unit_capex: float = field(validator=validators.gt(0))
@@ -296,6 +304,9 @@ class HTSECostModel(ElectrolyzerCostBaseClass):
     - ``OpEx`` from ``fixed_opex * electrolyzer_size_kw``
 
     The current model does not set a nonzero variable operating cost.
+
+    See :class:`HTSECostModelConfig`, :class:`HTSEPerformanceModel`, and
+    :doc:`/technology_models/h2_htse`.
     """
 
     def setup(self) -> None:

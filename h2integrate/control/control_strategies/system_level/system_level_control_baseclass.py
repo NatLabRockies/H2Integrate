@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 import openmdao.api as om
 
-from h2integrate.control.control_strategies.openloop_control_baseclass import (
+from h2integrate.control.control_strategies.system_level.solver_options import (
     get_control_rate_reference,
 )
 from h2integrate.control.control_strategies.system_level.slc_marginal_costs import (
@@ -200,17 +200,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
             reference_units = commodity_rate_units
         else:
             unit_kwargs = {"units": None, "copy_units": commodity_reference_var}
+            # Connection-derived units can remain unknown until OpenMDAO finishes setup.
             reference_units = self._var_rel2meta.get(commodity_reference_var, {}).get("units")
 
         # --- Build variable names -------------------------------------
         in_name = f"{tech_name}_{commodity}_out"
         rated_name = f"{tech_name}_rated_{commodity}_production"
         set_point_name = f"{tech_name}_{commodity}_set_point"
-        set_point_reference = (
-            get_control_rate_reference(commodity, reference_units)
-            if self.scale_control_variables
-            else 1.0
-        )
+        if self.scale_control_variables:
+            set_point_reference = get_control_rate_reference(commodity, reference_units)
+            ref_output_kwargs = {"ref": set_point_reference, "res_ref": set_point_reference}
+        else:
+            ref_output_kwargs = {}
 
         # --- Register inputs and output -------------------------------
         if add_in_name:
@@ -233,11 +234,7 @@ class SystemLevelControlBase(om.ExplicitComponent):
             shape=self.n_timesteps,
             desc=f"Set-point sent to {tech_name} for {commodity}",
             **unit_kwargs,
-            **(
-                {"ref": set_point_reference, "res_ref": set_point_reference}
-                if self.scale_control_variables
-                else {}
-            ),
+            **ref_output_kwargs,
         )
 
         return in_name, set_point_name, rated_name

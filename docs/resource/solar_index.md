@@ -15,6 +15,28 @@
     - "MeteosatPrimeMeridianSolarAPI"
     - "MeteosatPrimeMeridianTMYSolarAPI"
 - [OpenMeteo Historical API](#solar_resource:openmeteo_historical)
+- `NSRDBDatasetH5` reads an NLR NSRDB HDF5 dataset through HPC or HSDS access.
+
+## Model and configuration APIs
+
+The API and HDF5 models take location, resource year, time, and file or dataset settings from
+their configuration. They expose the resulting dictionary as `solar_resource_data`. Dataset
+availability, intervals, and variable coverage differ; see the linked dataset guides below.
+
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_meteosat_prime_meridian_models.MeteosatPrimeMeridianTMYSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResource` | {py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResourceConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_nsrdb_dataset_model.NSRDBDatasetH5` | {py:class}`~h2integrate.resource.solar.nlr_nsrdb_dataset_model.NSRDBDatasetH5Config` |
+
 
 Some API resource models support multi-year simulations when the requested resource data covers
 the configured time range. See the [Resource Model Index](resource_index.md) for details on

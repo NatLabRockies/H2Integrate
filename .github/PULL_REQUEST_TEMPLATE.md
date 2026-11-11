@@ -152,7 +152,7 @@ failing test cases.
 - [ ] **Example**: If applicable, a working example demonstrating the new model has been created
   - [ ] Input file comments
   - [ ] Run file comments
-  - [ ] Example has been tested and runs successfully in `test_all_examples.py`
+  - [ ] Example has been tested and runs successfully in `test_all_examples.py`, and its run script is named `run_*.py`
 - [ ] **Documentation**:
   - [ ] Write docstrings using the [Google style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
   - [ ] Model documentation page added to the appropriate `docs/` section
@@ -162,6 +162,7 @@ failing test cases.
 ## Release checklist
 
 - [ ] Update the version in `h2integrate/__init__.py`
+- [ ] Verify the nightly Examples workflow is passing on `develop`
 - [ ] Verify docs builds correctly
 - [ ] Create a tag on the main branch in the NatLabRockies/H2Integrate repository and push
 - [ ] Ensure the Test PyPI build is successful

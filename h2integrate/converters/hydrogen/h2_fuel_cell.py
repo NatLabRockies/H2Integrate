@@ -21,6 +21,8 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
             fuel cell (0 <= efficiency <= 1).
         uptime_hours_until_eol (int): Number of "on" hours until the fuel cell reaches
             end-of-life (EOL).
+
+    See :class:`LinearH2FuelCellPerformanceModel` and :doc:`/technology_models/h2_fuel_cell`.
     """
 
     system_capacity_kw: float = field(validator=validators.ge(0))
@@ -32,6 +34,9 @@ class LinearH2FuelCellPerformanceConfig(BaseConfig):
 class LinearH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a hydrogen fuel cell.
+
+    See :class:`LinearH2FuelCellPerformanceConfig`, :class:`H2FuelCellCostModel`, and
+    :doc:`/technology_models/h2_fuel_cell`.
 
     The model implements the relationship:
     electricity_out = hydrogen_in * fuel_cell_efficiency_hhv * HHV_hydrogen
@@ -215,6 +220,8 @@ class H2FuelCellCostConfig(CostModelBaseConfig):
             in USD/(kW*year).
         variable_opex_per_kwh (float): Variable operating expenses per unit of electricity
             produced in USD/(kW*h).
+
+    See :class:`H2FuelCellCostModel` and :doc:`/technology_models/h2_fuel_cell`.
     """
 
     system_capacity_kw: float = field(validator=validators.ge(0))
@@ -229,7 +236,10 @@ class H2FuelCellCostModel(CostModelBaseClass):
     Cost model for a hydrogen fuel cell system.
 
     The model calculates capital and fixed operating costs based on system capacity and
-    specified cost parameters.
+    specified cost parameters, plus variable operating cost based on production.
+
+    See :class:`H2FuelCellCostConfig`, :class:`LinearH2FuelCellPerformanceModel`, and
+    :doc:`/technology_models/h2_fuel_cell`.
     """
 
     _time_step_bounds = (

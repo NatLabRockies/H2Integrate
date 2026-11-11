@@ -26,6 +26,9 @@ class ProFastLCO(ProFastBase):
     It can output scalar results (LCO, IRR, WACC) and detailed cost breakdowns. Optionally,
     ProFAST inputs, configurations, and results can be exported to YAML and CSV files.
 
+    See :class:`~h2integrate.finances.profast_baseclass.ProFastBase` and
+    :doc:`/finance_models/ProFastComp`.
+
     Attributes:
         LCO_str (str): Name of the primary output variable (e.g., "LCOH").
         output_txt (str): Text label used for output naming, typically based on the commodity type.

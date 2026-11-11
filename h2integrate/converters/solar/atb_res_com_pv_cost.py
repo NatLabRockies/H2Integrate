@@ -22,6 +22,8 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
             system in $/kW-DC/year
         pv_capacity_kWdc (float): capacity of solar-PV system in kW-DC
         cost_year (int): dollar year corresponding to input costs
+
+    See :class:`ATBResComPVCostModel` and :doc:`/technology_models/atb_costs_pv`.
     """
 
     capex_per_kWdc: float | int = field(validator=validators.gt(0))
@@ -31,6 +33,11 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
 
 @register
 class ATBResComPVCostModel(CostModelBaseClass):
+    """Estimate residential or commercial PV costs from DC capacity.
+
+    See :class:`ATBResComPVCostModelConfig` and :doc:`/technology_models/atb_costs_pv`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

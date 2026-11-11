@@ -1,4 +1,0 @@
-name: driver_config
-description: This analysis runs a wind plant connected to a ocean alkalinity enhancement device
-general:
-  folder_output: wind_oae

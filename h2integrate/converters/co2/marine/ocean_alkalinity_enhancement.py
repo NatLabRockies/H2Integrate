@@ -28,6 +28,8 @@ def setup_ocean_alkalinity_enhancement_inputs(config):
 class OAEPerformanceConfig(BaseConfig):
     """Extended configuration for Ocean Alkalinity Enhancement (OAE) performance model.
 
+    See :class:`OAEPerformanceModel` and :doc:`/technology_models/co2`.
+
     Attributes:
         number_ed_min (int): Minimum number of ED units to operate.
         number_ed_max (int): Maximum number of ED units available.
@@ -45,6 +47,7 @@ class OAEPerformanceConfig(BaseConfig):
             "sell acid", "sell rca", "acid disposal".
         save_outputs (bool, optional): If true, save results to .csv files. Defaults to False.
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
+
     """
 
     number_ed_min: int = field(validator=validators.gt(0))
@@ -68,7 +71,10 @@ class OAEPerformanceConfig(BaseConfig):
 
 @register
 class OAEPerformanceModel(PerformanceModelBaseClass):
-    """OpenMDAO component for modeling Ocean Alkalinity Enhancement (OAE) performance."""
+    """OpenMDAO component for modeling Ocean Alkalinity Enhancement (OAE) performance.
+
+    See :class:`OAEPerformanceConfig`, :class:`OAECostModel`, and :doc:`/technology_models/co2`.
+    """
 
     _time_step_bounds = (
         3600,
@@ -250,8 +256,11 @@ class OAEPerformanceModel(PerformanceModelBaseClass):
 class OAECostModelConfig(CostModelBaseConfig):
     """Configuration for the OAE cost model.
 
+    See :class:`OAECostModel` and :doc:`/technology_models/co2`.
+
     Attributes:
         cost_year (int): dollar year corresponding to cost values
+
     """
 
     cost_year: int = field(default=2024, converter=int, validator=validators.in_([2024]))
@@ -259,7 +268,10 @@ class OAECostModelConfig(CostModelBaseConfig):
 
 @define(kw_only=True)
 class OAECostAndFinancialModelConfig(OAECostModelConfig):
-    """Configuration for the combined OAE cost and finance model."""
+    """Configuration for :class:`OAECostAndFinancialModel`.
+
+    See :doc:`/technology_models/co2`.
+    """
 
     pass
 
@@ -268,6 +280,9 @@ class OAECostAndFinancialModelConfig(OAECostModelConfig):
 class OAECostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     ocean alkalinity enhancement (OAE) system.
+
+    See :class:`OAECostModelConfig`, :class:`OAEPerformanceModel`, and
+    :doc:`/technology_models/co2`.
     """
 
     _time_step_bounds = (
@@ -359,6 +374,9 @@ class OAECostAndFinancialModel(CostModelBaseClass):
         Ocean Alkalinity Enhancement (OAE) system.
     The financial model calculates the carbon credit value that would be required to achieve a
         net present value (NPV) of zero for the overall system costs.
+
+    See :class:`OAECostAndFinancialModelConfig`, :class:`OAEPerformanceModel`, and
+    :doc:`/technology_models/co2`.
 
     Computes:
         - CapEx

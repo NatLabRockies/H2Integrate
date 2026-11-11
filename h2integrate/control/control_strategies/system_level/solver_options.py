@@ -6,6 +6,23 @@ from attrs import field, define, validators
 from h2integrate.core.utilities import BaseConfig
 
 
+def get_control_rate_reference(commodity: str, commodity_rate_units: str | None) -> float:
+    """Return a characteristic OpenMDAO scale for a control-rate variable.
+
+    Args:
+        commodity: Commodity name, used as a fallback when units are unknown or unrecognized.
+        commodity_rate_units: Explicit rate units, or None if they are not yet known.
+
+    Returns:
+        float: Reference scale selected by units, then commodity, or 1.0 if neither is recognized.
+    """
+    unit_references = {"kW": 1e5, "kg/h": 1e3}
+    commodity_references = {"electricity": 1e5, "hydrogen": 1e3, "ammonia": 4e3}
+    if commodity_rate_units in unit_references:
+        return unit_references[commodity_rate_units]
+    return commodity_references.get(commodity, 1.0)
+
+
 @define(kw_only=True)
 class SLCSolverOptionsConfig(BaseConfig):
     """Configuration for the nonlinear solver used by the system-level controller.
@@ -27,6 +44,8 @@ class SLCSolverOptionsConfig(BaseConfig):
         iprint: Solver print level (0 = silent, 2 = verbose).
         solver_option_kwargs: Additional keyword arguments passed directly to the
             solver's ``options`` dict.
+
+    See :doc:`/control/system_level_control/system_level_control` for system-level control.
     """
 
     solver_name: str = field(

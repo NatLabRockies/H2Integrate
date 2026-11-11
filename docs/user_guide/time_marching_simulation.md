@@ -46,5 +46,5 @@ The following technology performance models and control strategies are currently
 
 ## Example
 
-[Example 38](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/38_time_marching_simulation) (`examples/38_time_marching_simulation`) simulates a solar, battery, and grid plant both
+[Example 24](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/24_solar_battery_grid) (`examples/24_solar_battery_grid/run_time_marching.py`) simulates a solar, battery, and grid plant both
 at once and in 24-timestep windows, and shows that the results match.

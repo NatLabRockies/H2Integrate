@@ -8,6 +8,11 @@ from h2integrate.core.supported_models import register
 
 @define(kw_only=True)
 class SAFPerformanceModelConfig(BaseConfig):
+    """Configure plant capacity, capacity factor, and lignin consumption.
+
+    See :class:`SAFPerformanceModel` and :doc:`/technology_models/saf`.
+    """
+
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
     lignin_consumption: float = field(default=1650.0)  # kg lignin/t SAF
@@ -18,6 +23,8 @@ class SAFPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a saf plant.
     Computes annual saf production based on plant capacity and capacity factor.
+
+    See :class:`SAFPerformanceModelConfig` and :doc:`/technology_models/saf`.
     """
 
     _time_step_bounds = (
@@ -77,6 +84,11 @@ class SAFPerformanceModel(PerformanceModelBaseClass):
 
 @define(kw_only=True)
 class SAFCostModelConfig(BaseConfig):
+    """Configure capacity, cost year, feedstock consumption, and unit costs.
+
+    See :class:`SAFCostModel` and :doc:`/technology_models/saf`.
+    """
+
     installation_time: int = field()
     inflation_rate: float = field()
     operational_year: int = field()
@@ -108,7 +120,9 @@ class SAFCostModelConfig(BaseConfig):
 class SAFCostModel(CostModelBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with saf production.
-    Includes CapEx, OpEx, and byproduct credits.
+    Reports CapEx, fixed OpEx, and VarOpEx based on nameplate capacity.
+
+    See :class:`SAFCostModelConfig` and :doc:`/technology_models/saf`.
     """
 
     _time_step_bounds = (

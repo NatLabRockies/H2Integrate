@@ -1,6 +1,6 @@
 import openmdao.api as om
 
-from h2integrate.control.control_strategies.openloop_control_baseclass import (
+from h2integrate.control.control_strategies.system_level.solver_options import (
     get_control_rate_reference,
 )
 
@@ -45,14 +45,13 @@ class PassthroughController(om.ExplicitComponent):
         n_timesteps = self.options["n_timesteps"]
         commodity_rate_units = self.options["commodity_rate_units"]
         default_val = 1.0e9
-        scale_output = self.options["scale_output"]
-        command_reference = (
-            get_control_rate_reference(commodity, commodity_rate_units) if scale_output else 1.0
-        )
-        command_initial = 1.0 if scale_output else default_val
-        output_scale_kwargs = (
-            {"ref": command_reference, "res_ref": command_reference} if scale_output else {}
-        )
+        if self.options["scale_output"]:
+            command_reference = get_control_rate_reference(commodity, commodity_rate_units)
+            command_initial = 1.0
+            output_scale_kwargs = {"ref": command_reference, "res_ref": command_reference}
+        else:
+            command_initial = default_val
+            output_scale_kwargs = {}
 
         # Use explicit units on the input when available so that the
         # variable remains valid even when no SLC is connected

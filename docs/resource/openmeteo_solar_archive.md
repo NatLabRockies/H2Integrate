@@ -3,6 +3,9 @@
 
 The resource class `OpenMeteoHistoricalSolarResource` downloads solar resource data from the [OpenMeteo Archive API](https://open-meteo.com/en/docs/historical-weather-api)
 
+See {py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResource` and
+{py:class}`~h2integrate.resource.solar.openmeteo_solar.OpenMeteoHistoricalSolarResourceConfig`.
+
 This dataset allows for solar resource data to be downloaded for:
 - **resource years** from 1940 to year before the current calendar year.
 - **locations** across the globe.

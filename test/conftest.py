@@ -4,7 +4,6 @@ Pytest configuration file.
 
 import os
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -62,10 +61,10 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Enforce the usage marking tests as either unit, regression, or integration tests.
-    This method will need to be imported into all subsequent ``contest.py`` files.
+    """Enforce the usage marking tests as either unit, regression, integration, hpc, or examples
+    tests. This method will need to be imported into all subsequent ``contest.py`` files.
     """
-    test_types = {"unit", "regression", "integration", "hpc"}
+    test_types = {"unit", "regression", "integration", "hpc", "examples"}
     missing_type_mark = [
         f"{item.path}::{item.name}"
         for item in items
@@ -75,7 +74,7 @@ def pytest_collection_modifyitems(config, items):
         errors = "\n".join(missing_type_mark)
         msg = (
             "The following tests must be marked as either 'unit', 'regression', "
-            f"'integration', or 'hpc' tests using `@pytest.mark.<test-type>`:\n{errors}"
+            f"'integration', 'hpc', or 'examples' tests using `@pytest.mark.<test-type>`:\n{errors}"
         )
         raise pytest.UsageError(msg)
 
@@ -95,24 +94,24 @@ def temp_dir_module(tmp_path_factory):
 
 
 @pytest.fixture(scope="function")
-def temp_copy_of_example(temp_dir, example_folder, resource_example_folder):
+def temp_copy_of_example(temp_dir, example_folder, resource_example_folder, monkeypatch):
     original = EXAMPLE_DIR / example_folder
     shutil.copytree(original, temp_dir / example_folder, dirs_exist_ok=True)
     if resource_example_folder is not None:
         secondary = EXAMPLE_DIR / resource_example_folder
         shutil.copytree(secondary, temp_dir / resource_example_folder, dirs_exist_ok=True)
-    os.chdir(temp_dir / example_folder)
-    yield temp_dir / example_folder
-    os.chdir(Path(__file__).parent)
+    monkeypatch.chdir(temp_dir / example_folder)
+    return temp_dir / example_folder
 
 
 @pytest.fixture(scope="function")
-def temp_copy_of_example_module_scope(temp_dir_module, example_folder, resource_example_folder):
+def temp_copy_of_example_module_scope(
+    temp_dir_module, example_folder, resource_example_folder, monkeypatch
+):
     original = EXAMPLE_DIR / example_folder
     shutil.copytree(original, temp_dir_module / example_folder, dirs_exist_ok=True)
     if resource_example_folder is not None:
         secondary = EXAMPLE_DIR / resource_example_folder
         shutil.copytree(secondary, temp_dir_module / resource_example_folder, dirs_exist_ok=True)
-    os.chdir(temp_dir_module / example_folder)
-    yield temp_dir_module / example_folder
-    os.chdir(Path(__file__).parent)
+    monkeypatch.chdir(temp_dir_module / example_folder)
+    return temp_dir_module / example_folder

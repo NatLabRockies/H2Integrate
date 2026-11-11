@@ -10,6 +10,11 @@ from h2integrate.core.supported_models import register
 
 @define(kw_only=True)
 class RiverResourceConfig(BaseConfig):
+    """Configure the discharge file used by :class:`RiverResource`.
+
+    See :doc:`/technology_models/run_of_river` for the expected file format.
+    """
+
     filename: str | Path = field()
 
 
@@ -25,6 +30,8 @@ class RiverResource(om.ExplicitComponent):
 
     CSV files are assumed to have the structure outputted from the USGS Water
     Information System: https://waterdata.usgs.gov/nwis/uv
+
+    See :class:`RiverResourceConfig` and :doc:`/technology_models/run_of_river`.
 
     Raises:
         FileNotFoundError: If the specified file does not exist.

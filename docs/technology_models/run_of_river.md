@@ -1,10 +1,43 @@
 (run_of_river_hydro)=
 # Run-of-river hydropower model
 
-`RunOfRiverHydroPerformanceModel` simulates electricity generation from river flow, accounting for the flow rate and turbine efficiency. `RunOfRiverHydroCostModel` calculates plant capital and operating costs.
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceModel`,
+configured by
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceConfig`,
+simulates electricity generation from river flow. The
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostModel`
+uses {py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostConfig`
+to calculate capital and fixed operating costs.
 The run-of-river model is representative of a canal and/or penstock that produces energy by using the natural decline of the river bed elevation.
 The model uses a simple formula to calculate the power generated based on the flow rate and the height difference between the water source and the turbine.
 This doc page walks you through how to obtain resource information and how to use the model.
+
+The {py:class}`~h2integrate.resource.river.RiverResource` component and its
+{py:class}`~h2integrate.resource.river.RiverResourceConfig` read the discharge file. The resource
+outputs 8,760 hourly `discharge` values in `ft**3/s`. Its latitude and longitude inputs do not
+select the file. The performance model takes `discharge` in `m**3/s`, clips electricity production to the
+configured capacity, and reports `electricity_out`, rated and annual production, and capacity
+factor. Both hydro models support one-hour time steps. With system-level control, electricity
+output is curtailed after production summaries are calculated, so those summaries reflect
+uncurtailed production.
+
+## Configuration
+
+The model and resource configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.resource.river.RiverResourceConfig
+   :no-members:
+   :no-index:
+```
 
 ```{note}
 This process is quite manual and not as automated as obtaining other resource information.

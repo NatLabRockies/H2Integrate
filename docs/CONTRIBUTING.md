@@ -78,14 +78,15 @@ jupytext notebook.md --to .ipynb
 ## Tests
 
 Run tests from the repository root in an environment with the development dependencies installed.
-Every test must use one of the `unit`, `regression`, `integration`, or `hpc` markers. Collection
-fails for unmarked tests. Common commands are:
+Every test must use one of the `unit`, `regression`, `integration`, `hpc`, or `examples` markers.
+Collection fails for unmarked tests. Common commands are:
 
 ```bash
 pytest -m unit
 pytest -m regression
 pytest -m integration
 pytest -m hpc
+pytest -m examples
 ```
 
 To run one test file or test function, provide its path and optional node ID:
@@ -96,9 +97,10 @@ pytest h2integrate/core/test/test_utilities.py::test_function_name
 ```
 
 See the [Testing Guide](developer_guide/testing.md) for test conventions, marker details, and
-additional commands. Pull requests run the automated test suite through
-[GitHub Actions](https://github.com/NatLabRockies/H2Integrate/actions). The documentation build is
-also checked on every pull request by [Read the Docs](https://h2integrate.readthedocs.io/).
+additional commands. Pull requests run the unit, regression, and integration tests through
+[GitHub Actions](https://github.com/NatLabRockies/H2Integrate/actions). The example tests run
+nightly on `develop` and on pull requests that change files in `examples/`. The documentation build
+is also checked on every pull request by [Read the Docs](https://h2integrate.readthedocs.io/).
 
 ## Code Review Process
 

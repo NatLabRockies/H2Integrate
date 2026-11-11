@@ -1,10 +1,4 @@
-from h2integrate.converters.methanol.co2h_methanol_plant import (
-    CO2HMethanolPlantCostModel,
-    CO2HMethanolPlantFinanceModel,
-    CO2HMethanolPlantPerformanceModel,
-)
-from h2integrate.converters.methanol.smr_methanol_plant import (
-    SMRMethanolPlantCostModel,
-    SMRMethanolPlantFinanceModel,
-    SMRMethanolPlantPerformanceModel,
-)
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(__name__, globals())

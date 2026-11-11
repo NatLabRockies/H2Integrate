@@ -26,6 +26,8 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
             methane reforming process in MMBtu/kg.
         electricity_usage_kwh_per_kg (float): Electricity usage for steam methane
             reforming process in kWh/kg.
+
+    See :class:`SteamMethaneReformerPerformanceModel` and :doc:`/technology_models/h2_smr`.
     """
 
     system_capacity_tonnes_per_day: float = field(validator=validators.ge(0))
@@ -37,6 +39,9 @@ class SteamMethaneReformerPerformanceConfig(BaseConfig):
 class SteamMethaneReformerPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for steam methane reforming (SMR) hydrogen production plants.
+
+    See :class:`SteamMethaneReformerPerformanceConfig`, :class:`SteamMethaneReformerCostModel`,
+    and :doc:`/technology_models/h2_smr`.
 
     Outputs:
         hydrogen_out (array): Hydrogen output in kg/h for each timestep
@@ -259,6 +264,8 @@ class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
         variable_opex_per_kwh (float|int): Variable operating expenses per unit generation in $/kWh.
             This includes variable O&M costs that scale with electricity generation.
         cost_year (int): Dollar year corresponding to input costs.
+
+    See :class:`SteamMethaneReformerCostModel` and :doc:`/technology_models/h2_smr`.
     """
 
     capex_per_kw: float | int = field(validator=validators.ge(0))
@@ -270,6 +277,9 @@ class SteamMethaneReformerCostModelConfig(CostModelBaseConfig):
 class SteamMethaneReformerCostModel(CostModelBaseClass):
     """
     Cost model for steam methane reforming hydrogen production plants.
+
+    See :class:`SteamMethaneReformerCostModelConfig`,
+    :class:`SteamMethaneReformerPerformanceModel`, and :doc:`/technology_models/h2_smr`.
 
     Outputs:
         CapEx (float): Total capital expenditure in USD

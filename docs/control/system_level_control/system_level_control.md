@@ -65,7 +65,14 @@ See additional information, which is more developer focused, about the [`SystemL
 ## Solver Options
 The system attempts to converge the system using a solver. The solver is defined in `solver_options`.
 
-Set `scale_control_variables: true` in `solver_options` to give the SLC set points, the auto-injected passthrough command values, and the ProFAST levelized-cost output characteristic OpenMDAO `ref` and `res_ref` scales (`1e5` for `kW`, `1e3` for `kg/h`, and `1e12` for the ProFAST output). Scaling keeps variables with very different magnitudes from dominating the solver's convergence norm in cyclic systems. It is off by default, which leaves existing models unchanged.
+Set `scale_control_variables: true` in `solver_options` to scale SLC set points, automatically inserted passthrough command values, and the ProFAST levelized-cost output. This can prevent variables with large magnitudes from dominating the nonlinear solver's convergence norm in cyclic systems. Scaling is off by default.
+
+OpenMDAO uses `ref` to scale an output internally and `res_ref` to scale its residual, which the solver seeks to drive to 0 during convergence. For the default nonlinear block Gauss-Seidel solver, the residual is normally the change in outputs between iterations. The same characteristic value is used for both scales so that an output and a residual of that magnitude are each approximately one internally. These settings do not change the physical units or directly change reported output values, though scaling can affect solver convergence, and is used here to improve numerical stability.
+
+The rate references are coarse, fixed order-of-magnitude choices rather than values tuned to each plant: `1e5` for `kW` and `1e3` for `kg/h`.
+If units are unavailable or unrecognized, the fallback references are `1e5` for electricity, `1e3` for hydrogen, `4e3` for ammonia, and `1.0` for other commodities. In particular, units inherited from a connection may not be known when the scale is selected during setup; the commodity fallback then remains in use even after OpenMDAO resolves the units. These are numeric scales in the variable's units, not unit conversions, so the fallback may be a poor fit for different units or plant sizes.
+
+The ProFAST reference is `1e12`, matching its sentinel levelized cost when production is zero. This prevents that sentinel from overwhelming the residual norm, but also makes ordinary levelized-cost changes small in that norm. Scaling is a convergence aid, not a guarantee of convergence or accuracy; check the results and solver tolerances for the model.
 
 ```yaml
 system_level_control:

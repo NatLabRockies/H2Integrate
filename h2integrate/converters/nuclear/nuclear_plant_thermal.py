@@ -14,20 +14,23 @@ from h2integrate.core.supported_models import register
 class SimpleThermalNuclearReactorPerformanceModelConfig(BaseConfig):
     """Configuration class for the thermal nuclear reactor performance model.
 
+    See :class:`SimpleThermalNuclearReactorPerformanceModel` and
+    :doc:`/technology_models/nuclear`.
+
     Args:
         operating_mode (str): Dispatch mode of the reactor. Must be ``"heat"`` or
             ``"electricity"``. In ``heat`` mode the reactor satisfies process heat demand
             first and converts the remaining low-pressure heat to electricity; in
             ``electricity`` mode it satisfies the electricity command first and delivers
             the remaining available heat.
-        electricity_command_value (float): Requested electrical output in kW.
+        electricity_command_value (float): Requested electrical output in MW.
         high_pressure_electrical_efficiency (float): Fraction of total thermal input
             converted to electricity in the high-pressure stage (unitless).
         low_pressure_electrical_efficiency (float): Efficiency applied to the remaining
             low-pressure heat when generating electricity (unitless).
-        rated_capacity (float): Rated electrical capacity in kW, used to infer the reactor
+        rated_capacity (float): Rated electrical capacity in MW, used to infer the reactor
             thermal capacity.
-        minimum_heat_extract (float): Minimum process heat reserved for extraction in kW.
+        minimum_heat_extract (float): Minimum process heat reserved for extraction in MW.
             Defaults to ``0.0``.
     """
 
@@ -52,6 +55,9 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
     upstream of the low-pressure turbine stages. It trades off electricity production and
     process heat delivery according to the selected operating mode, making it suitable for
     coupled workflows such as nuclear plus HTSE.
+
+    See :class:`SimpleThermalNuclearReactorPerformanceModelConfig`,
+    :class:`SimpleThermalNuclearReactorCostModel`, and :doc:`/technology_models/nuclear`.
 
     The reactor infers its thermal capacity from the rated electrical capacity using a
     combined electric efficiency and supports two operating modes:
@@ -202,12 +208,14 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 class SimpleThermalNuclearReactorCostModelConfig(CostModelBaseConfig):
     """Configuration class for the thermal nuclear reactor cost model.
 
+    See :class:`SimpleThermalNuclearReactorCostModel` and :doc:`/technology_models/nuclear`.
+
     Args:
-        rated_capacity (float): Rated capacity used for cost calculations in kW.
-        upfront_cost (float): Capital cost per kW in USD/kW.
-        fixed_om_cost (float): Fixed annual O&M in USD/(kW*year).
+        rated_capacity (float): Rated capacity used for cost calculations in MW.
+        upfront_cost (float): Capital cost per MW in USD/MW.
+        fixed_om_cost (float): Fixed annual O&M in USD/(MW*year).
         variable_om_cost (float): Variable O&M applied to the simulated
-            electricity production in USD/(kW*h).
+            electricity production in USD/(MW*h).
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
     """
 
@@ -224,6 +232,10 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
 
     The model applies capacity-based capital and fixed O&M costs and computes variable O&M
     from the delivered electricity:
+
+    See :class:`SimpleThermalNuclearReactorCostModelConfig`,
+    :class:`SimpleThermalNuclearReactorPerformanceModel`, and :doc:`/technology_models/nuclear`
+    for the variable-cost unit limitation.
 
     - ``CapEx`` from ``rated_capacity * upfront_cost``
     - ``OpEx`` from ``rated_capacity * fixed_om_cost``
