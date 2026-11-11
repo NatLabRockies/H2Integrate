@@ -734,7 +734,7 @@ def test_profast_npv_save_and_load_config(
         prob.set_val(f"pf.{variable}", cost, units=units)
     prob.run_model()
 
-    config_fpath = tmp_path / "npv_group_ProFastNPV_electricity_no1_config.yaml"
+    config_fpath = tmp_path / "finance_group_npv_group" / "ProFastNPV_electricity_no1_config.yaml"
     assert config_fpath.is_file()
 
     _pf, results = load_profast_from_config(config_fpath)

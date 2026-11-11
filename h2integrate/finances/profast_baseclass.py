@@ -774,37 +774,42 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         return pf
 
     def get_profast_output_basepath(self):
-        """Return the path prefix for saved ProFAST files, creating the output folder if needed.
+        """Return the path prefix for saved ProFAST files, creating output directories if needed.
 
-        The prefix is assembled from the finance subgroup name, finance group name, model class
-        name, lowercase commodity name, commodity description, and ``profast_output_description``,
-        in that order. The commodity description comes from ``commodity_desc`` in the finance
+        If finance group and subgroup names are supplied, they are represented by nested
+        directories named ``finance_group_<name>`` and ``finance_subgroup_<name>``, in that order,
+        beneath the output directory. The filename prefix is assembled from the model class name,
+        lowercase commodity name, commodity description, and ``profast_output_description``, in
+        that order. The commodity description comes from ``commodity_desc`` in the finance
         parameters when present; otherwise, the component's ``description`` option is used.
-        The resulting prefix is used for each saved ProFAST file, with a suffix identifying the
-        file contents, such as ``_config.yaml`` or ``_LCO_breakdown.yaml``.
+        Optional filename parts are omitted, and the remaining parts are joined with underscores.
+        Saved files add a suffix identifying their contents, such as ``_config.yaml`` or
+        ``_LCO_breakdown.yaml``.
 
         For example, with finance subgroup ``ammonia``, finance group ``default``, model class
         ``ProFastLCO``, commodity ``ammonia``, component description ``product``, and
-        ``profast_output_description`` set to ``profast_output``, the prefix is
-        ``ammonia_default_ProFastLCO_ammonia_product_profast_output``. A config file saved with
-        this prefix is named
-        ``ammonia_default_ProFastLCO_ammonia_product_profast_output_config.yaml``.
+        ``profast_output_description`` set to ``profast_output``, a config file is saved as
+        ``<output>/finance_group_default/finance_subgroup_ammonia/ProFastLCO_ammonia_product_profast_output_config.yaml``.
 
         Returns:
             Path: output folder joined with the file prefix.
         """
         finance_params = self.options["plant_config"]["finance_parameters"]
+        output_dir = Path(self.options["driver_config"]["general"]["folder_output"])
+        group_name = finance_params.get("finance_group_name")
+        if group_name:
+            output_dir /= f"finance_group_{group_name}"
+        subgroup_name = finance_params.get("finance_subgroup_name")
+        if subgroup_name:
+            output_dir /= f"finance_subgroup_{subgroup_name}"
         name_parts = [
-            finance_params.get("finance_subgroup_name"),
-            finance_params.get("finance_group_name"),
             type(self).__name__,
             self.options["commodity_type"].lower(),
             finance_params.get("commodity_desc", self.options["description"].strip()),
             finance_params["model_inputs"].get("profast_output_description"),
         ]
-        output_dir = Path(self.options["driver_config"]["general"]["folder_output"])
         output_dir.mkdir(parents=True, exist_ok=True)
-        return output_dir / "_".join(p for p in name_parts if p)
+        return output_dir / "_".join(part for part in name_parts if part)
 
     def write_profast_config(self, pf, sell_price=None):
         """Write the ProFAST config to ``<basepath>_config.yaml``.

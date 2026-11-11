@@ -508,7 +508,12 @@ def test_profast_lco_save_and_load_config(
         prob.set_val(f"pf.{variable}", cost, units=units)
     prob.run_model()
 
-    config_fpath = tmp_path / "elec_sub_lco_group_ProFastLCO_electricity_no1_config.yaml"
+    config_fpath = (
+        tmp_path
+        / "finance_group_lco_group"
+        / "finance_subgroup_elec_sub"
+        / "ProFastLCO_electricity_no1_config.yaml"
+    )
     assert config_fpath.is_file()
 
     _pf, results = load_profast_from_config(config_fpath)

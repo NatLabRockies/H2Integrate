@@ -257,8 +257,9 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
     for subgroup in ["ammonia", "electricity", "hydrogen"]:
-        fname = f"{subgroup}_default_ProFastLCO_{subgroup}_profast_output_config.yaml"
-        assert (outputs_dir / fname).is_file(), f"{fname} not found"
+        subgroup_output_dir = outputs_dir / "finance_group_default" / f"finance_subgroup_{subgroup}"
+        fname = f"ProFastLCO_{subgroup}_profast_output_config.yaml"
+        assert (subgroup_output_dir / fname).is_file(), f"{fname} not found"
 
 
 @pytest.mark.examples
