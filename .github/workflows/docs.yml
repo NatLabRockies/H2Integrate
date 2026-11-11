@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
-          python-version: '3.11'
+          python-version: '3.12'
           channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate
@@ -45,12 +45,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: conda-incubator/setup-miniconda@v4
         with:
           miniconda-version: latest
           auto-update-conda: true
-          python-version: '3.11'
+          python-version: '3.12'
           channels: conda-forge,defaults
           auto-activate: true
           activate-environment: h2integrate

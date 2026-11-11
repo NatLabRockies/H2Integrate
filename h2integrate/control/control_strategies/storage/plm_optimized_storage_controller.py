@@ -286,7 +286,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
 
     dr_model: Any
     problem_state: DispatchProblemState
-    _time_step_bound = (300, 3600)
+    _time_step_bounds = (300, 3600)
+    _simulation_duration_bounds = (0.0, float("inf"))
 
     def setup(self):
         """Initialize config, register OpenMDAO inputs, and pre-compute static masks.
@@ -296,7 +297,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 ``plant_config`` does not match ``n_timesteps``.
         """
         self.config = PeakLoadManagementOptimizedStorageControllerConfig.from_dict(
-            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control")
+            merge_shared_inputs(self.options["tech_config"]["model_inputs"], "control"),
+            strict=False,
         )
 
         self.add_input(
@@ -427,9 +429,11 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             self.discharge_local_bin_history = np.zeros(self.n_timesteps)
             self.charge_bin_history = np.zeros(self.n_timesteps)
 
-            # Track usage per calendar month so each regime's monthly cap is
-            # respected across window boundaries: when exclusive_control_months is
-            # empty, use events per month, when set use cycled energy (kWh).
+            # Track usage per (year, month) so each regime's monthly cap is
+            # respected across window boundaries and resets each year: when
+            # exclusive_control_months is None, use events per month, when set use
+            # cycled energy (kWh).
+            year_ids = pd.DatetimeIndex(self.time_index).year.to_numpy()
             events_used_per_month = {}
             energy_used_per_month = {}
 
@@ -447,6 +451,11 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
             for window_start in window_start_indices:
                 window_len: int = min(n_w, self.n_timesteps - window_start)
                 month_ids_w = self.month_ids[window_start : window_start + window_len]
+                year_ids_w = year_ids[window_start : window_start + window_len]
+                # A window spans at most one year per month, so month alone keys the MILP.
+                year_of_month_w = {
+                    int(m): int(y) for m, y in zip(month_ids_w, year_ids_w, strict=True)
+                }
                 is_exclusive = self.config.exclusive_control_months is None or bool(
                     self.in_exclusive_control_month[window_start]
                 )
@@ -469,18 +478,19 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                                 self.config.max_cycles_per_day
                                 * self.days_in_month_lookup.get(int(m), 30)
                                 * E_max
-                                - energy_used_per_month.get(int(m), 0.0),
+                                - energy_used_per_month.get((year_of_month_w[m], m), 0.0),
                             )
-                            for m in np.unique(month_ids_w)
+                            for m in year_of_month_w
                         }
                     else:
                         # Event-based budget
                         remaining_budget = {
                             int(m): max(
                                 0,
-                                self.config.n_max_events - events_used_per_month.get(int(m), 0),
+                                self.config.n_max_events
+                                - events_used_per_month.get((year_of_month_w[m], m), 0),
                             )
-                            for m in np.unique(month_ids_w)
+                            for m in year_of_month_w
                         }
 
                     # Construct the MILP for this window
@@ -521,8 +531,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                         self.p_to_local_history[abs_t] = pyomo.value(self.dr_model.p_to_local[t])
 
                         if self.config.exclusive_control_months is not None:
-                            month = int(month_ids_w[t])
-                            energy_used_per_month[month] = energy_used_per_month.get(month, 0.0) + (
+                            key = (int(year_ids_w[t]), int(month_ids_w[t]))
+                            energy_used_per_month[key] = energy_used_per_month.get(key, 0.0) + (
                                 p_d1 + p_d2
                             ) * (self.dt_seconds / 3600.0)
                         else:
@@ -533,10 +543,8 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                             # Detect the rising edge of a discharge event (0 -> 1)
                             # and count it if it occurs in this window.
                             if discharging and not prev_discharging:
-                                month = int(month_ids_w[t])
-                                events_used_per_month[month] = (
-                                    events_used_per_month.get(month, 0) + 1
-                                )
+                                key = (int(year_ids_w[t]), int(month_ids_w[t]))
+                                events_used_per_month[key] = events_used_per_month.get(key, 0) + 1
                 else:
                     # Off-months: the local party retains control of the DBESS and
                     # runs its own bill-minimization problem instead of dispatching
@@ -714,23 +722,17 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
     def _compute_days_in_month_lookup(self) -> dict:
         """Map each calendar month present in the simulation to its day count.
 
-        For simulations spanning multiple years, the day count is taken
-        from the first occurrence of that calendar month (matching the
-        existing ``month_ids`` simplification of not tracking year).
+        Day counts follow a 365-day year, so February always has 28 days.
 
         Returns:
             dict[int, int]: Mapping of month (1-12) to number of days.
         """
-        idx = pd.DatetimeIndex(self.time_index)
-        lookup = {}
-        for month in range(1, 13):
-            matches = idx[idx.month == month]
-            if len(matches) == 0:
-                continue
-            lookup[month] = int(
-                pd.Timestamp(year=matches[0].year, month=month, day=1).days_in_month
-            )
-        return lookup
+        months_present = np.unique(pd.DatetimeIndex(self.time_index).month)
+        # 2001 is a non-leap reference year.
+        return {
+            int(month): int(pd.Timestamp(year=2001, month=month, day=1).days_in_month)
+            for month in months_present
+        }
 
     def _check_windows_do_not_span_control_boundary(self) -> None:
         """Raise if any rolling window mixes Exclusive Control and off-month timesteps.
@@ -1113,8 +1115,6 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 rule=lambda mdl, t: mdl.p_charge[t] <= max(-float(set_point_w[t]), 0.0),
             )
 
-        m.soc_init = pyomo.Constraint(expr=m.soc[0] == init_soc)
-
         # Dynamics of the battery SOC evolution.
         def soc_evolution_rule(mdl, t):
             if t == 0:
@@ -1300,8 +1300,6 @@ class PeakLoadManagementOptimizedStorageController(PyomoStorageControllerBaseCla
                 mdl.charge[t] == 0 if in_peak_window_w[t] else pyomo.Constraint.Skip
             ),
         )
-
-        m.soc_init = pyomo.Constraint(expr=m.soc[0] == init_soc)
 
         def soc_evolution_rule(mdl, t):
             prev_soc = init_soc if t == 0 else mdl.soc[t - 1]
