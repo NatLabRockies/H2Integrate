@@ -191,3 +191,32 @@ technologies:
           refurbishment_period_years: 15
           replacement_cost_percent: 1.0
 ```
+
+(profast:save_to_file)=
+## Providing Finance Parameters: Saving Results to Files
+
+Both ProFAST models support saving the ProFAST configuration to a .yaml file, this can be used to re-run ProFAST and replicate results without rerunning a full simulation. This is enabled by setting `save_profast_config` to True. An example is shown below that includes the other options for saving ProFAST information to a file:
+
+```yaml
+finance_parameters:
+  finance_model: "ProFastLCO"
+  model_inputs:
+    save_profast_config: True
+    profast_output_description: # optional description used for naming files. This defaults to the class-name, in this case, 'ProFASTLCO'
+    overwrite_config: False # optional. if False, this will create a unique filename for the config to prevent overwriting existing configuration files
+    profast_outputs_dir: # folder to save the profast_config to. If not provided, this will default to the 'folder_output' specified in the 'general' section of the driver config
+
+    params:
+      #Finance information
+    capital_items: #default parameters for capital items unless specified in tech_config
+      depr_type: "MACRS" ##depreciation method for capital items, can be "MACRS" or "Straight line"
+      depr_period: 5 #depreciation period for capital items
+      refurb: [0.]
+
+```
+
+The `ProFASTLCO` model supports saving results to a file. This is enabled similarly to saving the profast config, but by setting `save_profast_results` to True. Overwriting previously saved results is enabled by setting `overwrite_results` to True.
+
+Any files saved by a ProFAST finance model follow the same filenaming convention: `<profast_output_description>_<finance_subgroup_name>_<commodity>_<output_description>`. The `profast_output_desci
+
+The `finance_subgroup_name` and `output_description` are based on the subgroup and group naming convention described in [Finance Parameters](financeparameters:specifiyingfinanceparameters)). The `output_description` is the commodity description and/or the finance group name, the `finance_subgroup_name` is the name of the finance subgroup.

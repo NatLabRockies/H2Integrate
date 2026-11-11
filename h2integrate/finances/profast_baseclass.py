@@ -643,6 +643,10 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             for k, v in plant_config["finance_parameters"]["model_inputs"].items()
             if not isinstance(v, dict)
         }
+        # make sure to not include model-specific top-level inputs, only the ones for saving results
+        profast_options = {
+            k: v for k, v in profast_options.items() if "profast" in k or "overwrite" in k
+        }
         profast_options.setdefault("profast_output_description", self.__class__.__name__)
         self.profast_options = ProFASTOptions.from_dict(profast_options)
 
@@ -825,7 +829,7 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             output_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a base-filename, including the profast_output description
-        subgroup_desc = self.pathname.split("finance_subgroup", 1)[-1].strip("_").replace(".", "-")
+        subgroup_desc = self.pathname.split("finance_subgroup", 1)[-1].strip("_").split(".", 1)[0]
         fbasename = (
             f"{self.profast_options.profast_output_description}_{subgroup_desc}_{self.output_txt}"
         )

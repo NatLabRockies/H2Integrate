@@ -162,4 +162,4 @@ class ProFastNPV(ProFastBase):
         outputs[f"NPV_{self.output_txt}"] = pf.cash_flow(price=sell_profile)
 
         if self.profast_options.save_profast_config:
-            self.export_profast_config_to_file()
+            self.export_profast_config_to_file(pf)
