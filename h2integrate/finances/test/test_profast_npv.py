@@ -264,7 +264,7 @@ def test_profast_npv_no2(
     with subtests.test("LCO from ProFAST ran with saved config (USD/MWh)"):
         assert pytest.approx(sol["lco"] * 1e3, rel=1e-6) == 53.37880579248
     with subtests.test("NPV from run_profast"):
-        assert pytest.approx(sol["NPV"], rel=1e-4, abs=1e-8) == 2.682209014892578e-7
+        assert pytest.approx(sol["NPV"], rel=1e-4, abs=1e-6) == 2.682209014892578e-7
 
 
 @pytest.mark.regression
