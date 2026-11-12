@@ -217,6 +217,6 @@ finance_parameters:
 
 The `ProFASTLCO` model supports saving results to a file. This is enabled similarly to saving the profast config, but by setting `save_profast_results` to True. Overwriting previously saved results is enabled by setting `overwrite_results` to True.
 
-Any files saved by a ProFAST finance model follow the same filenaming convention: `<profast_output_description>_<finance_subgroup_name>_<commodity>_<output_description>`. The `profast_output_desci
+Any files saved by a ProFAST finance model follow the same filenaming convention `<profast_output_description>_<finance_subgroup_name>_<commodity>_<output_description>`.
 
-The `finance_subgroup_name` and `output_description` are based on the subgroup and group naming convention described in [Finance Parameters](financeparameters:specifiyingfinanceparameters)). The `output_description` is the commodity description and/or the finance group name, the `finance_subgroup_name` is the name of the finance subgroup.
+The `profast_output_description` defaults to the name of the finance model being used if `profast_output_description` is described for that finance group. The `finance_subgroup_name` and `output_description` are based on the subgroup and group naming convention described in [Finance Parameters](financeparameters:specifiyingfinanceparameters)). The `output_description` is the commodity description and/or the finance group name, the `finance_subgroup_name` is the name of the finance subgroup.
