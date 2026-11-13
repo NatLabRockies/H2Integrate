@@ -39,6 +39,7 @@ parts:
       - file: technology_models/tidal
       - file: technology_models/wave
       - file: technology_models/natural_gas
+      - file: technology_models/combustion_machines
       - file: technology_models/nuclear
       - file: technology_models/wombat_electrolyzer_om
       - file: technology_models/pem_electrolyzer

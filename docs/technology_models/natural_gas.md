@@ -41,27 +41,4 @@ handled separately by a feedstock model. The cost model supports one-hour time s
 
 ## Simple-cycle turbine
 
-The {py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceModel`
-uses a Brayton-cycle thermodynamic calculation with ambient temperature and pressure rather
-than a fixed heat rate. Its
-{py:class}`~h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceConfig`
-specifies turbine count and per-turbine rating, compressor pressure ratio, firing temperature,
-working-fluid flow limit, component efficiencies, generator oversize ratio, and fuel source.
-Currently `natural_gas` is the only supported fuel.
-
-Inputs include `num_turbines`, `turbine_capacity` (MW per turbine),
-`generator_oversize_ratio`, `flowrate_max_fluid` (m^3/s), `electricity_command_value` (MW
-for the plant), and `natural_gas_in` (kJ/s). The discrete `solar_resource_data` input supplies
-temperature in degrees Celsius and pressure in hPa. The model reports `electricity_out`,
-`natural_gas_consumed`, `unmet_electricity_demand`, `electricity_headroom`, `system_capacity`,
-and inherited production metrics. It supports 5-minute to one-hour time steps. Optional
-reliability modeling samples availability independently for each turbine; see the
-[reliability guide](../reliability/reliability_guide.md).
-
-### Configuration
-
-```{eval-rst}
-.. autoclass:: h2integrate.converters.combustion_machines.turbine_simple_cycle.SimpleCycleTurbinePerformanceConfig
-   :no-members:
-   :no-index:
-```
+The simple cycle turbine found in [combustion_machines.md](./combustion_machines.md) can be configured by setting `fuel_source` to `natural_gas`, and using the appropriate commodity supply.
