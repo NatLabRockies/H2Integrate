@@ -87,8 +87,8 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
 
     def initialize(self):
         self.commodity = "sponge_iron"
-        self.commodity_rate_units = "kg/h"
-        self.commodity_amount_units = "kg"
+        self.commodity_rate_units = "t/h"
+        self.commodity_amount_units = "t"
         super().initialize()
 
     def setup(self):
@@ -222,11 +222,11 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         ore_consume = fe_prod / pct_fe
 
         # Return iron production
-        outputs["sponge_iron_out"] = fe_prod
+        outputs["sponge_iron_out"] = fe_prod / 1000  # convert kg to t
         outputs["electricity_consumed"] = elec_consume
         outputs["iron_ore_consumed"] = ore_consume
-        outputs["total_sponge_iron_produced"] = np.sum(fe_prod)
-        outputs["rated_sponge_iron_production"] = cap_kw / kwh_kg_fe
+        outputs["total_sponge_iron_produced"] = np.sum(fe_prod) / 1000  # convert kg to t
+        outputs["rated_sponge_iron_production"] = cap_kw / kwh_kg_fe / 1000  # convert kg to t
         outputs["annual_sponge_iron_produced"] = outputs["total_sponge_iron_produced"] * (
             1 / self.fraction_of_year_simulated
         )

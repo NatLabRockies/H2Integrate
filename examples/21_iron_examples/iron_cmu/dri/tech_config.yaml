@@ -115,7 +115,7 @@ technologies:
         rated_capacity: 100000000.0  # t/h
       cost_parameters:
         cost_year: 2022
-        price: 1.07  # USD/t
+        price: 258.4  # USD/t
         annual_cost: 0.
         start_up_cost: 0.
   scrap_transport:
@@ -138,7 +138,7 @@ technologies:
         rated_capacity: 10.0  # t/h
       cost_parameters:
         cost_year: 2022
-        price: 150.00  # USD/t
+        price: 105.00  # USD/t
         annual_cost: 0.
         start_up_cost: 0.
   coal_transport:
@@ -158,10 +158,10 @@ technologies:
         commodity: doloma
         commodity_rate_units: t/h
       performance_parameters:
-        rated_capacity: 2.0  # t/h
+        rated_capacity: 200.0  # t/h
       cost_parameters:
         cost_year: 2022
-        price: 3670.0  # USD/t (3.67 USD/kg)
+        price: 150.0  # USD/t (3.67 USD/kg)
         annual_cost: 0.
         start_up_cost: 0.
   doloma_transport:
@@ -181,7 +181,7 @@ technologies:
         commodity: lime
         commodity_rate_units: t/h
       performance_parameters:
-        rated_capacity: 2.0  # t/h
+        rated_capacity: 200.0  # t/h
       cost_parameters:
         cost_year: 2022
         price: 120.00  # USD/t

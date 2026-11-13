@@ -2985,15 +2985,15 @@ def test_cmu_eaf_scrap_only_example(subtests, temp_copy_of_example):
 
     with subtests.test("EAF CapEx"):
         capex = h2i.model.get_val("steel_plant.CapEx", units="USD")
-        assert pytest.approx(capex, rel=1e-4) == 762_839_961.07
+        assert pytest.approx(capex, rel=1e-4) == 646373205.11
 
     with subtests.test("EAF OpEx"):
         opex = h2i.model.get_val("steel_plant.OpEx", units="USD/year")
-        assert pytest.approx(opex, rel=1e-4) == 48_328_598.25
+        assert pytest.approx(opex, rel=1e-4) == 43087594.23
 
     with subtests.test("LCOS"):
-        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 0.2233330
+        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcos, rel=1e-4) == 457.8989
 
 
 @pytest.mark.examples
@@ -3012,15 +3012,15 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
 
     with subtests.test("EAF CapEx"):
         capex = h2i.model.get_val("steel_plant.CapEx", units="USD")
-        assert pytest.approx(capex, rel=1e-4) == 762_839_961.07
+        assert pytest.approx(capex, rel=1e-4) == 646373205.11
 
     with subtests.test("EAF OpEx"):
         opex = h2i.model.get_val("steel_plant.OpEx", units="USD/year")
-        assert pytest.approx(opex, rel=1e-4) == 48_328_598.25
+        assert pytest.approx(opex, rel=1e-4) == 43087594.23
 
     with subtests.test("LCOS"):
-        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 1.4932
+        lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcos, rel=1e-4) == 449.56
 
 
 @pytest.mark.examples
