@@ -481,6 +481,10 @@ class ProFASTOptions(BaseConfig):
         profast_outputs_dir (str | Path | None, optional): Folder to save the output files to
             (if enabled). If None, the 'folder_output' in the driver configuration will be used.
             Defaults to None.
+        profast_outputs_format (str, optional): Organization structure for saving output files,
+            must be either 'file' or 'folder', defaults to 'file'. The 'file' option saves all files
+            to the 'profast_outputs_dir', whereas the 'folder' option saves files into a nested
+            folder structure that represents the finance group and subgroup organization.
     """
 
     profast_output_description: str = field()
@@ -814,8 +818,14 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
 
     def get_output_folder_and_filename_description(self):
         """Get the output folder to save results to and create the folder if it
-        doesn't already exist. Create a unique filename based on the finance subgroup,
-        commodity description, and finance group or class.
+        doesn't already exist. If ``profast_options.profast_outputs_format``
+        is 'file', creates a unique filename description based on the
+        finance subgroup, commodity description and/or finance group.
+
+        If ``profast_options.profast_outputs_format`` is 'folder', creates a unique
+        folder structure based on the finance group and finance subgroup, with a filename
+        based on the commodity and description. The finance group name is inferred from
+        the ``pathname`` attribute.
 
         Returns:
             tuple[Path, str]: output folder and a filename descriptor unique to the
@@ -831,24 +841,26 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             # make output folder if it doesn't exist
             output_dir.mkdir(parents=True, exist_ok=True)
 
+        # extract the name of the finance subgroup from the pathname
         subgroup_desc = self.pathname.split("finance_subgroup", 1)[-1].strip("_").split(".", 1)[0]
         pf_output_desc = self.profast_options.profast_output_description
+
         if self.profast_options.profast_outputs_format == "file":
-            # Create a base-filename, including the profast_output description
+            # Create a base-filename, including the profast_output_description
+            # self.output_txt is formatted as `{commodity}{description}` and ensures that there
+            # is unique naming for finance subgroups that use multiple finance groups
             fbasename = f"{pf_output_desc}_{subgroup_desc}_{self.output_txt}"
 
-            # self.description is
             return output_dir, fbasename
 
         # using folder output naming convention, which uses the finance group name
         # folder-based file saving means output folder is:
         # output_dir/finance_group_{finance_group_name}/finance_subgroup_{subgroup_desc}
-        # and the filename base description is {commodity}{description}
         group_commodity_desc = self.pathname.split(f"finance_subgroup_{subgroup_desc}.")[-1]
         if "_finance_" not in group_commodity_desc:
             # the finance model is being run outside of the H2IntegrateModel framework and doesn't
             # follow the same naming conventions
-            # so, assume the top-level folder is n
+            # so, assume the top-level folder is whatever description follows `finance_subgroup_.`
             folder_output = (
                 output_dir
                 / f"finance_group_{group_commodity_desc}"
@@ -856,15 +868,21 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             )
             fname_base = f"{pf_output_desc}_{self.output_txt}"
         else:
+            # finance model is being run within H2IntegrateModel framework
             if "_finance_" not in self.output_txt:
-                # this will properly separate the commodity_desc from the finance_group
+                # this will properly separate the `commodity_desc` from the `finance_group`
+                # the group_commodity_desc is formatted as
+                # `{commodity}_{commodity_desc}_finance_{finance_group_name}`
                 commodity_with_desc, fin_group_name = group_commodity_desc.split("_finance_", 1)
             else:
                 # special handling for case if 'commodity_desc' includes '_finance' or the
                 # finance group name includes '_finance_' and multiple finance models are being
                 # run with this subgroup.
                 output_txt_parts = self.output_txt.split("_")
+                # split the output text into pieces
                 for i_split in range(1, len(output_txt_parts)):
+                    # iterate through the parts of output_text to determine which part of the output
+                    # text is the commodity and description and which part is the finance group name
                     commodity_with_desc = "_".join(k for k in output_txt_parts[:i_split])
                     fin_group_name = "_".join(k for k in output_txt_parts[i_split:])
                     if f"{commodity_with_desc}_finance_{fin_group_name}" == group_commodity_desc:
