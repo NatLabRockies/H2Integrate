@@ -489,6 +489,9 @@ class ProFASTOptions(BaseConfig):
     overwrite_config: bool = field(default=False)
     overwrite_results: bool = field(default=False)
     profast_outputs_dir: str | Path | None = field(default=None)
+    profast_outputs_format: str = field(
+        default="file", validator=validators.in_(["file", "folder"])
+    )
 
 
 class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
@@ -828,12 +831,47 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             # make output folder if it doesn't exist
             output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create a base-filename, including the profast_output description
         subgroup_desc = self.pathname.split("finance_subgroup", 1)[-1].strip("_").split(".", 1)[0]
-        fbasename = (
-            f"{self.profast_options.profast_output_description}_{subgroup_desc}_{self.output_txt}"
-        )
-        return output_dir, fbasename
+        pf_output_desc = self.profast_options.profast_output_description
+        if self.profast_options.profast_outputs_format == "file":
+            # Create a base-filename, including the profast_output description
+            fbasename = f"{pf_output_desc}_{subgroup_desc}_{self.output_txt}"
+
+            # self.description is
+            return output_dir, fbasename
+
+        # using folder output naming convention, which uses the finance group name
+        # folder-based file saving means output folder is:
+        # output_dir/finance_group_{finance_group_name}/finance_subgroup_{subgroup_desc}
+        # and the filename base description is {commodity}{description}
+        group_commodity_desc = self.pathname.split(f"finance_subgroup_{subgroup_desc}.")[-1]
+        if "_finance_" not in group_commodity_desc:
+            # the finance model is being run outside of the H2IntegrateModel framework and doesn't
+            # follow the same naming conventions
+            # so, assume the top-level folder is n
+            folder_output = (
+                output_dir
+                / f"finance_group_{group_commodity_desc}"
+                / f"finance_subgroup_{subgroup_desc}"
+            )
+            fname_base = f"{pf_output_desc}_{self.output_txt}"
+        else:
+            # this will work as-expected as long as commodity_desc doesn't include 'finance'
+            # (which would be a rare use-case)
+            commodity_with_desc, fin_group_name = group_commodity_desc.split("_finance_", 1)
+            # could add-in logic to handle case if 'commodity_desc' does include finance,
+            # we could tell from parts of self.output_txt if this use-case comes up,
+            # but that may be overly complicated for a rare use-case
+
+            folder_output = (
+                output_dir / f"finance_group_{fin_group_name}" / f"finance_subgroup_{subgroup_desc}"
+            )
+            fname_base = f"{pf_output_desc}_{commodity_with_desc}"
+
+        if not folder_output.exists():
+            folder_output.mkdir(parents=True, exist_ok=True)
+
+        return folder_output, fname_base
 
     def export_profast_config_to_file(self, pf):
         """Save ProFAST inputs object to a .yaml file that can be used to re-run ProFAST
