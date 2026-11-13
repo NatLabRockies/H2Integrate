@@ -856,12 +856,21 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             )
             fname_base = f"{pf_output_desc}_{self.output_txt}"
         else:
-            # this will work as-expected as long as commodity_desc doesn't include 'finance'
-            # (which would be a rare use-case)
-            commodity_with_desc, fin_group_name = group_commodity_desc.split("_finance_", 1)
-            # could add-in logic to handle case if 'commodity_desc' does include finance,
-            # we could tell from parts of self.output_txt if this use-case comes up,
-            # but that may be overly complicated for a rare use-case
+            if "_finance_" not in self.output_txt:
+                # this will properly separate the commodity_desc from the finance_group
+                commodity_with_desc, fin_group_name = group_commodity_desc.split("_finance_", 1)
+            else:
+                # special handling for case if 'commodity_desc' includes '_finance' or the
+                # finance group name includes '_finance_' and multiple finance models are being
+                # run with this subgroup.
+                output_txt_parts = self.output_txt.split("_")
+                for i_split in range(1, len(output_txt_parts)):
+                    commodity_with_desc = "_".join(k for k in output_txt_parts[:i_split])
+                    fin_group_name = "_".join(k for k in output_txt_parts[i_split:])
+                    if f"{commodity_with_desc}_finance_{fin_group_name}" == group_commodity_desc:
+                        # everything before _finance_ is the commodity and the commodity_desc
+                        # everything after _finance_ is the finance group name
+                        break
 
             folder_output = (
                 output_dir / f"finance_group_{fin_group_name}" / f"finance_subgroup_{subgroup_desc}"
