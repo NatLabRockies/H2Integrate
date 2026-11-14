@@ -256,15 +256,15 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
-    assert (outputs_dir / "profast_output_ammonia_ammonia_config.yaml").is_file(), (
-        "profast_output_ammonia_ammonia_config.yaml not found"
-    )
-    assert (outputs_dir / "profast_output_electricity_electricity_config.yaml").is_file(), (
-        "profast_output_electricity_electricity_config.yaml not found"
-    )
-    assert (outputs_dir / "profast_output_hydrogen_hydrogen_config.yaml").is_file(), (
-        "profast_output_hydrogen_hydrogen_config.yaml not found"
-    )
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_ammonia-ammonia_config.yaml"
+    ).is_file(), "profast_output_ammonia_ammonia_config.yaml not found"
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_electricity-electricity_config.yaml"
+    ).is_file(), "profast_output_electricity_electricity_config.yaml not found"
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_hydrogen-hydrogen_config.yaml"
+    ).is_file(), "profast_output_hydrogen_hydrogen_config.yaml not found"
 
 
 @pytest.mark.examples
@@ -1662,9 +1662,9 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
     expected_pf_results_fbasenames = [
-        "ProFastLCO_wind_electricity_wind_only",
-        "ProFastLCO_battery_electricity_battery_included",
-        "ProFastLCO_electricity_electricity_all_electricity_profast",
+        "ProFastLCO_finance_subgroup_wind-electricity_wind_only",
+        "ProFastLCO_finance_subgroup_battery-electricity_battery_included",
+        "ProFastLCO_finance_subgroup_electricity-electricity_all_electricity_profast",
     ]
 
     for fname_start in expected_pf_results_fbasenames:
@@ -2020,13 +2020,14 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     saved_yaml_files = [f.name for f in sql_fpath.parent.glob("*.yaml")]
     with subtests.test("4 ProFAST config files saved for 'electricity' subgroup"):
         expected_fnames = [
-            f"ProFastLCO_electricity_electricity__optimistic_config{d}.yaml" for d in file_name_ends
+            f"ProFastLCO_finance_subgroup_electricity-electricity__optimistic_config{d}.yaml"
+            for d in file_name_ends
         ]
         assert all(fname in saved_yaml_files for fname in expected_fnames)
 
     with subtests.test("4 ProFAST config files saved for 'transported_electricity' subgroup"):
         expected_fnames = [
-            f"ProFastLCO_transported_electricity_electricity__optimistic_config{d}.yaml"
+            f"ProFastLCO_finance_subgroup_transported_electricity-electricity__optimistic_config{d}.yaml"
             for d in file_name_ends
         ]
         assert all(fname in saved_yaml_files for fname in expected_fnames)

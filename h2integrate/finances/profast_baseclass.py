@@ -849,7 +849,7 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             # Create a base-filename, including the profast_output_description
             # self.output_txt is formatted as `{commodity}{description}` and ensures that there
             # is unique naming for finance subgroups that use multiple finance groups
-            fbasename = f"{pf_output_desc}_{subgroup_desc}_{self.output_txt}"
+            fbasename = f"{pf_output_desc}_finance_subgroup_{subgroup_desc}-{self.output_txt}"
 
             return output_dir, fbasename
 

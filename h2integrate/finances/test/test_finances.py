@@ -720,6 +720,7 @@ def test_save_profast_file_with_multi_finance_groups(subtests, temp_copy_of_exam
     h2i.setup()
     h2i.run()
 
+    # TODO: update filenaming to be "finance_subgroup_{subgroup}-{}"
     expected_file_descriptions = [
         # 'wind' subgroup
         "ProFastLCO_wind_electricity__profast",
@@ -747,6 +748,8 @@ def test_save_profast_file_with_multi_finance_groups(subtests, temp_copy_of_exam
         assert mismatched_fnames == []
     with subtests.test("all files have expected names"):
         assert all(fname in expected_file_descriptions for fname in files_saved)
+
+    # TODO: add tests of 'get_val' based on file base-names
 
 
 @pytest.mark.integration

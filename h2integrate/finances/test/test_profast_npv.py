@@ -241,7 +241,7 @@ def test_profast_npv_no2(
             == 611288384.412
         )
 
-    expected_config_fpath = temp_dir / "ProFastNPV_pf_electricity_no2_config.yaml"
+    expected_config_fpath = temp_dir / "ProFastNPV_finance_subgroup_pf-electricity_no2_config.yaml"
     with subtests.test("Config file saved"):
         assert expected_config_fpath.is_file()
 
