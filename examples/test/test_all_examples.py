@@ -256,15 +256,15 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
-    assert (outputs_dir / "profast_output_ammonia_config.yaml").is_file(), (
-        "profast_output_ammonia.yaml not found"
-    )
-    assert (outputs_dir / "profast_output_electricity_config.yaml").is_file(), (
-        "profast_output_electricity.yaml not found"
-    )
-    assert (outputs_dir / "profast_output_hydrogen_config.yaml").is_file(), (
-        "profast_output_hydrogen.yaml not found"
-    )
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_ammonia-ammonia_config.yaml"
+    ).is_file(), "profast_output_ammonia_ammonia_config.yaml not found"
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_electricity-electricity_config.yaml"
+    ).is_file(), "profast_output_electricity_electricity_config.yaml not found"
+    assert (
+        outputs_dir / "profast_output_finance_subgroup_hydrogen-hydrogen_config.yaml"
+    ).is_file(), "profast_output_hydrogen_hydrogen_config.yaml not found"
 
 
 @pytest.mark.examples
@@ -1661,6 +1661,18 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
     with subtests.test("Check electricity LCOE"):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
+    expected_pf_results_fbasenames = [
+        "ProFastLCO_finance_subgroup_wind-electricity_wind_only",
+        "ProFastLCO_finance_subgroup_battery-electricity_battery_included",
+        "ProFastLCO_finance_subgroup_electricity-electricity_all_electricity_profast",
+    ]
+
+    for fname_start in expected_pf_results_fbasenames:
+        for fname_end in ["LCO_breakdown.yaml", "profast_price_breakdown.csv"]:
+            with subtests.test(f"{fname_start}_{fname_end} saved"):
+                fpath = example_folder / "wind_plant_run" / f"{fname_start}_{fname_end}"
+                assert fpath.is_file()
+
 
 @pytest.mark.examples
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
@@ -2004,6 +2016,23 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         lcoe_comp = (res_df["LCOE-T"] > res_df["LCOE"]).to_list()
         assert all(k for k in lcoe_comp)
 
+    file_name_ends = ["", "0", "1", "2"]
+    saved_yaml_files = [f.name for f in sql_fpath.parent.glob("*.yaml")]
+    with subtests.test("4 ProFAST config files saved for 'electricity' subgroup"):
+        expected_fnames = [
+            f"ProFastLCO_finance_subgroup_electricity-electricity_optimistic_config{d}.yaml"
+            for d in file_name_ends
+        ]
+        assert all(fname in saved_yaml_files for fname in expected_fnames)
+
+    with subtests.test("4 ProFAST config files saved for 'transported_electricity' subgroup"):
+        expected_fnames = [
+            f"ProFastLCO_finance_subgroup_transported_electricity-electricity_optimistic_config{d}.yaml"
+            for d in file_name_ends
+        ]
+        assert all(fname in saved_yaml_files for fname in expected_fnames)
+        pass
+
 
 @pytest.mark.examples
 @pytest.mark.parametrize(
@@ -2022,7 +2051,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
         "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
     )
     npv_renewables_generic = h2i_generic.prob.get_val(
-        "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
+        "finance_subgroup_renewables.NPV_electricity_profast_npv", units="MUSD"
     )
     lcoe_ng_generic = h2i_generic.prob.get_val(
         "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"
@@ -2049,7 +2078,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
         "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
     )
     npv_renewables_flexible = h2i_flexible.prob.get_val(
-        "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
+        "finance_subgroup_renewables.NPV_electricity_profast_npv", units="MUSD"
     )
     lcoe_ng_flexible = h2i_flexible.prob.get_val(
         "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"

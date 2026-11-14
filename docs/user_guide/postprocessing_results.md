@@ -261,7 +261,7 @@ solution, summary, price_breakdown = run_profast(profast_model)
 Setting `save_profast_config: true` in the finance `model_inputs` of the plant config saves the
 ProFAST configuration of each finance subgroup to the driver's `folder_output` after a run.
 [Example 2](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/02_texas_ammonia)
-does this, so running it writes `outputs/profast_output_ammonia_config.yaml` for the ammonia
+does this, so running it writes `outputs/profast_output_finance_subgroup_ammonia-ammonia_config.yaml` for the ammonia
 subgroup. First, run Example 2:
 
 ```{code-cell} ipython3
@@ -293,7 +293,7 @@ without re-running H2I. Here, the discount rate and debt interest rate are chang
 case reproduces the LCOA from the H2I run:
 
 ```{code-cell} ipython3
-pf_config = load_yaml(Path("outputs") / "profast_output_ammonia_config.yaml")
+pf_config = load_yaml(Path("outputs") / "profast_output_finance_subgroup_ammonia-ammonia_config.yaml")
 
 cases = {
     "baseline": {},
@@ -315,3 +315,78 @@ print(pd.DataFrame(results).round(3).to_string(index=False))
 ```
 
 A higher discount rate raises the LCOA, and a lower debt interest rate lowers it.
+
+
+### Re-running ProFAST NPV with different finance parameters
+
+Setting `save_profast_config: true` in the finance `model_inputs` of the plant config saves the
+ProFAST configuration of each finance subgroup to the driver's `folder_output` after a run.
+[Example 23](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/23_solar_wind_ng_demand)
+does this, so running it writes `outputs/ProFastNPV_finance_subgroup_renewables-electricity_profast_npv_config.yaml` for the `renewables` subgroup. First, run Example 23:
+
+```{code-cell} ipython3
+import os
+from copy import deepcopy
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel, load_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate.tools.profast_tools import create_and_populate_profast
+
+plant_config = load_plant_yaml(EXAMPLE_DIR/"23_solar_wind_ng_demand"/"plant_config.yaml")
+plant_config["finance_parameters"]["finance_groups"]["profast_npv"]["model_inputs"].update({"save_profast_config": True})
+
+driver_config = load_driver_yaml(EXAMPLE_DIR/"23_solar_wind_ng_demand"/"driver_config.yaml")
+driver_config["general"]["folder_output"] = EXAMPLE_DIR/"23_solar_wind_ng_demand"/"outputs"
+
+top_level_config = {
+  "plant_config": plant_config,
+  "technology_config": EXAMPLE_DIR/"23_solar_wind_ng_demand"/"tech_config.yaml",
+  "driver_config": driver_config,
+}
+model = H2IntegrateModel(top_level_config)
+model.setup()
+model.run()
+
+npv = model.prob.get_val("finance_subgroup_renewables.NPV_electricity_profast_npv", units="USD")[0]
+print(f"Renewables NPV is {npv:.2f} USD")
+
+
+lcoe = model.prob.get_val("finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)")[0]
+
+print(f"Renewables LCOE is {lcoe:.2f} USD/MWh")
+```
+
+The saved configuration can be loaded and its `params` changed, and ProFAST can then be run again without re-running H2I. Here, the discount rate and debt interest rate are changed. The `baseline` case reproduces the NPV from the H2I run:
+
+```{code-cell} ipython3
+
+outputs_dir = EXAMPLE_DIR/"23_solar_wind_ng_demand"/"outputs"
+pf_config_fpath = outputs_dir / "ProFastNPV_finance_subgroup_renewables-electricity_profast_npv_config.yaml"
+
+pf_config = load_yaml(pf_config_fpath)
+
+cases = {
+    "baseline": {},
+    "8% discount rate": {"leverage after tax nominal discount rate": 0.08},
+    "10% discount rate": {"leverage after tax nominal discount rate": 0.10},
+    "5% debt interest rate": {"debt interest rate": 0.05},
+}
+
+results = []
+electricity_sell_price = pf_config["params"]["commodity"]["initial price"]
+
+for case_name, updated_params in cases.items():
+    case_config = deepcopy(pf_config)
+    case_config["params"].update(updated_params)
+
+    pf = create_and_populate_profast(case_config)
+    npv = pf.cash_flow(price=electricity_sell_price)
+    results.append({"case": case_name, "NPV (USD)": npv})
+
+print(pd.DataFrame(results).round(3).to_string(index=False))
+```
+
+A higher discount rate raises the NPV, and a lower debt interest rate lowers it.

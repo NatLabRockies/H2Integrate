@@ -32,6 +32,8 @@ finance_parameters:
     optimistic:
       finance_model: ProFastLCO
       model_inputs:
+        save_profast_config: true
+        overwrite_config: false
         params:
           analysis_start_year: 2032
           installation_time: 36  # months
