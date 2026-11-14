@@ -560,8 +560,8 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         # Construct output name based on commodity and optional description
         # this is necessary to allow for financial subgroups
         self.description = (
-            f"_{self.options['description'].strip()}"
-            if self.options["description"].strip() != ""
+            f"_{self.options['description'].strip('_()-')}"
+            if self.options["description"].strip("_()-") != ""
             else ""
         )
         self.output_txt = f"{self.options['commodity_type'].lower()}{self.description}"

@@ -2020,14 +2020,14 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     saved_yaml_files = [f.name for f in sql_fpath.parent.glob("*.yaml")]
     with subtests.test("4 ProFAST config files saved for 'electricity' subgroup"):
         expected_fnames = [
-            f"ProFastLCO_finance_subgroup_electricity-electricity__optimistic_config{d}.yaml"
+            f"ProFastLCO_finance_subgroup_electricity-electricity_optimistic_config{d}.yaml"
             for d in file_name_ends
         ]
         assert all(fname in saved_yaml_files for fname in expected_fnames)
 
     with subtests.test("4 ProFAST config files saved for 'transported_electricity' subgroup"):
         expected_fnames = [
-            f"ProFastLCO_finance_subgroup_transported_electricity-electricity__optimistic_config{d}.yaml"
+            f"ProFastLCO_finance_subgroup_transported_electricity-electricity_optimistic_config{d}.yaml"
             for d in file_name_ends
         ]
         assert all(fname in saved_yaml_files for fname in expected_fnames)
@@ -2051,7 +2051,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
         "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
     )
     npv_renewables_generic = h2i_generic.prob.get_val(
-        "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
+        "finance_subgroup_renewables.NPV_electricity_profast_npv", units="MUSD"
     )
     lcoe_ng_generic = h2i_generic.prob.get_val(
         "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"
@@ -2078,7 +2078,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
         "finance_subgroup_renewables.LCOE_profast_lco", units="USD/(MW*h)"
     )
     npv_renewables_flexible = h2i_flexible.prob.get_val(
-        "finance_subgroup_renewables.NPV_electricity__profast_npv", units="MUSD"
+        "finance_subgroup_renewables.NPV_electricity_profast_npv", units="MUSD"
     )
     lcoe_ng_flexible = h2i_flexible.prob.get_val(
         "finance_subgroup_natural_gas.LCOE", units="USD/(MW*h)"

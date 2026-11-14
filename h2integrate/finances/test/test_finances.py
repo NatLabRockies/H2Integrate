@@ -723,18 +723,18 @@ def test_save_profast_file_with_multi_finance_groups(subtests, temp_copy_of_exam
     # TODO: update filenaming to be "finance_subgroup_{subgroup}-{}"
     expected_file_descriptions = [
         # 'wind' subgroup
-        "ProFastLCO_wind_electricity__profast",
-        "ProFastNPV_wind_electricity__profast_npv",
+        "ProFastLCO_finance_subgroup_wind-electricity_profast",
+        "ProFastNPV_finance_subgroup_wind-electricity_profast_npv",
         # 'battery' subgroup
-        "ProFastLCO_battery_electricity_battery_included_profast",
-        "ProFastNPV_battery_electricity_battery_included_profast_npv",
+        "ProFastLCO_finance_subgroup_battery-electricity_battery_included_profast",
+        "ProFastNPV_finance_subgroup_battery-electricity_battery_included_profast_npv",
         # 'electricity' subgroup
-        "ProFastLCO_electricity_electricity_all_finance_electricity_profast",
-        "ProFastNPV_electricity_electricity_all_finance_electricity_profast_npv",
+        "ProFastLCO_finance_subgroup_electricity-electricity_all_finance_electricity_profast",
+        "ProFastNPV_finance_subgroup_electricity-electricity_all_finance_electricity_profast_npv",
         # 'wind2' subgroup
-        "ProFastLCO_wind2_electricity",
+        "ProFastLCO_finance_subgroup_wind2-electricity",
         # 'battery2' subgroup
-        "ProFastLCO_battery2_electricity_battery_included",
+        "ProFastLCO_finance_subgroup_battery2-electricity_battery_included",
     ]
 
     files_saved = [
@@ -749,7 +749,16 @@ def test_save_profast_file_with_multi_finance_groups(subtests, temp_copy_of_exam
     with subtests.test("all files have expected names"):
         assert all(fname in expected_file_descriptions for fname in files_saved)
 
-    # TODO: add tests of 'get_val' based on file base-names
+    for fname in expected_file_descriptions:
+        model_name, varname_fmt = fname.split("_", 1)
+        subgroup, commodity_output_name = varname_fmt.split("-electricity")
+        if model_name == "ProFastNPV":
+            var_units = "USD"
+            varname = f"{subgroup}.NPV_electricity{commodity_output_name}"
+        else:
+            var_units = "USD/(kW*h)"
+            varname = f"{subgroup}.LCOE{commodity_output_name}"
+        assert h2i.model.get_val(varname, units=var_units), f"{varname} exists"
 
 
 @pytest.mark.integration
