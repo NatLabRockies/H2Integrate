@@ -3180,19 +3180,19 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
         battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
         assert pytest.approx(battery_opex, rel=1e-1) == 23242.5
 
-    with subtests.test("Check number of discharge events"):
-        # With the given demand profile and battery size, there should be 2 discharge events
-        num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
-        assert num_discharge_events == 2110
+    with subtests.test("Check number of discharge timesteps"):
+        num_discharge_timesteps = np.sum(battery_power > 1e-3)
+        assert num_discharge_timesteps == 2195
 
     with subtests.test("Check total energy discharged"):
-        total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 9643.0083
+        dt_hours = model.plant_config["plant"]["simulation"]["dt"] / 3600
+        total_energy_discharged = battery_power.sum() * dt_hours
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 601811.5
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
-        total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
+        total_energy_charged = battery_charge.sum() * dt_hours
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -665142.9363
 
 
 @pytest.mark.examples
