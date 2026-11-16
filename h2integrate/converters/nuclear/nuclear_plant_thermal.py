@@ -282,13 +282,14 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         rated_capacity_mw = float(inputs["rated_capacity"][0])
         upfront_cost_per_mw = float(inputs["upfront_cost"][0])
-        fixed_om_per_kw_year = float(inputs["fixed_om_cost"][0])
+        fixed_om_per_mw_year = float(inputs["fixed_om_cost"][0])
         variable_om_per_mwh = float(inputs["variable_om_cost"][0])
 
         outputs["CapEx"] = rated_capacity_mw * upfront_cost_per_mw
-        outputs["OpEx"] = fixed_om_per_kw_year * rated_capacity_mw
+        outputs["OpEx"] = fixed_om_per_mw_year * rated_capacity_mw
 
-        delivered_electricity_mwh = np.sum(inputs["electricity_out"]) * (self.dt / 3600.0)
+        # Integrate kW over hours to get kWh, then convert to MWh.
+        delivered_electricity_mwh = np.sum(inputs["electricity_out"]) * (self.dt / 3600.0) / 1000.0
         annual_variable_om = (
             variable_om_per_mwh * delivered_electricity_mwh / (self.fraction_of_year_simulated)
         )
