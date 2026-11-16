@@ -37,6 +37,7 @@
   - `n_control_window_hours` is now limited to 8016 h (334 days) so a control window never contains the same calendar month in two different years.
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
+- Update iron updates the iron and steel modeling inputs used to align with the values used in the iron project and improve scenario flexibility. [PR 989](https://github.com/NatLabRockies/H2Integrate/pull/989)
 
 ## 0.10.0 [October 12, 2026]
 
