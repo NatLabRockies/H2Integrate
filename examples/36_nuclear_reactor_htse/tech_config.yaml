@@ -41,11 +41,10 @@ technologies:
         minimum_heat_extract: 1  # MW
       cost_parameters:
         cost_year: 2022
-        upfront_cost: 5750000.0  # $/MWe  # includes significant labor as per (Moneghan and Abou-Jaoude, 2024).
-        fixed_om_cost: 2640.0 # can adjust with labor  # (Moneghan and Abou-Jaoude, 2024).
-        variable_om_cost: 145.0
-        # Values from Table 38, Meta-Analysis of Advanced Nuclear Reactor Cost Estimations,
-        # slightly adjusted away from 93% capacity factor
+        upfront_cost: 5750000.0  # USD/MW; includes significant labor.
+        fixed_om_cost: 126000.0  # USD/(MW*year); advanced large-LWR fixed non-fuel O&M.
+        variable_om_cost: 1.9  # USD/MWh; advanced large-LWR variable non-fuel O&M.
+        # O&M values are from Table 38 of INL/RPT-24-77048 (2022 USD).
       shared_parameters:
         commodity_rate_units: MW
         commodity_amount_units: MWh
