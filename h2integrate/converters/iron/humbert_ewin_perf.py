@@ -56,7 +56,7 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         OpenMDAO Inputs:
 
         electricity_in (array): Electric power input available in kW for each timestep.
-        iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
+        iron_ore_in (array): Iron ore mass flow available in t/h for each timestep.
         ore_fe_concentration (float): The iron content of the ore coming in, given as a percentage.
         spec_energy_all (float): Total specific electrical energy required to win iron.
         spec_energy_electrolysis (float): Specific energy for the electrolysis step.
@@ -71,9 +71,10 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         electricity_consumed (array): Electric power consumption in kW for each timestep.
         limiting_input (array): An array of integers indicating which input is the limiting factor
             for iron production: 0 = iron ore, 1 = electricity, 2 = NaOH or capacity, 3 = CaCl2.
-        sponge_iron_out (array): Sponge iron production in kg/h for each timestep.
-        total_sponge_iron_produced (float): Total sponge iron production over the simulation in kg.
-        rated_sponge_iron_production (float): Rated iron production in kg/h.
+        sponge_iron_out (array): Sponge iron production in t/h for each timestep.
+        total_sponge_iron_produced (float): Total sponge iron production over the simulation
+            in tonnes.
+        rated_sponge_iron_production (float): Rated iron production in t/h.
         NaOH_consumed (array): Mass flow of NaOH consumed in kg/h for each timestep.
         CaCl2_consumed (array): Mass flow of CaCl2 consumed in kg/h for each timestep.
 
@@ -135,7 +136,9 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         E_electrolysis = (E_electrolysis_lo + E_electrolysis_hi) / 2  # kWh/kg_Fe
 
         self.add_input("electricity_in", val=0.0, shape=self.n_timesteps, units="kW")
-        self.add_input("iron_ore_in", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_input(
+            "iron_ore_in", val=0.0, shape=self.n_timesteps, units=self.commodity_rate_units
+        )
         self.add_input("ore_fe_concentration", val=self.config.ore_fe_wt_pct, units="percent")
         self.add_input("spec_energy_all", val=E_all, units="kW*h/kg")
         self.add_input("spec_energy_electrolysis", val=E_electrolysis, units="kW*h/kg")
@@ -144,13 +147,13 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             "NaOH_in",
             val=0.0,
             shape=self.n_timesteps,
-            units=self.commodity_rate_units,
+            units="kg/h",
         )
         self.add_input(
             "CaCl2_in",
             val=0.0,
             shape=self.n_timesteps,
-            units=self.commodity_rate_units,
+            units="kg/h",
         )
         self.add_input("NaOH_ratio", val=NaOH_ratio, units="unitless")
         self.add_input("CaCl2_ratio", val=CaCl2_ratio, units="unitless")
@@ -161,56 +164,61 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             units="kW",
             desc="Electricity consumed",
         )
-        self.add_output("iron_ore_consumed", val=0.0, shape=self.n_timesteps, units="kg/h")
+        self.add_output("iron_ore_consumed", val=0.0, shape=self.n_timesteps, units="t/h")
         self.add_output("limiting_input", val=0.0, shape=self.n_timesteps, units=None)
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
         self.add_output(
             "NaOH_consumed",
             val=0.0,
             shape=self.n_timesteps,
-            units=self.commodity_rate_units,
+            units="kg/h",
         )
         self.add_output(
             "CaCl2_consumed",
             val=0.0,
             shape=self.n_timesteps,
-            units=self.commodity_rate_units,
+            units="kg/h",
         )
 
     def compute(self, inputs, outputs):
         # Parse inputs
-        elec_in = inputs["electricity_in"]
-        ore_in = inputs["iron_ore_in"]
+        elec_in = inputs["electricity_in"]  # kW
+        ore_in = inputs["iron_ore_in"]  # t/h
         pct_fe = inputs["ore_fe_concentration"] / 100  # convert to decimal
-        kwh_kg_fe = inputs["spec_energy_all"]
-        kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]
-        cap_kw = inputs["capacity"] * 1000
-        naoh_ratio = inputs["NaOH_ratio"]
-        cacl2_ratio = inputs["CaCl2_ratio"]
+        kwh_kg_fe = inputs["spec_energy_all"]  # kwh/kg Fe
+        kwh_kg_electrolysis = inputs["spec_energy_electrolysis"]  # kwh/kg Fe
+        cap_kw = inputs["capacity"] * 1000  # kW
+        naoh_ratio = inputs["NaOH_ratio"]  # unitless
+        cacl2_ratio = inputs["CaCl2_ratio"]  # unitless
 
         # Calculate max iron production for each input
-        fe_from_ore = ore_in * pct_fe
-        fe_from_elec = elec_in / kwh_kg_fe
+        fe_from_ore = ore_in * pct_fe  # t/h
+        fe_from_elec = (elec_in / kwh_kg_fe) / 1000  # t/h
+
         fe_from_naoh = (
             inputs["NaOH_in"] / naoh_ratio if naoh_ratio > 0 else np.full(len(elec_in), np.inf)
-        )
+        ) / 1000  # t/h
         fe_from_cacl2 = (
             inputs["CaCl2_in"] / cacl2_ratio if cacl2_ratio > 0 else np.full(len(elec_in), np.inf)
-        )
+        ) / 1000  # t/h
 
         # Limit iron production per hour by each input
-        fe_prod = np.minimum.reduce([fe_from_ore, fe_from_elec, fe_from_naoh, fe_from_cacl2])
+        fe_prod = np.minimum.reduce([fe_from_ore, fe_from_elec, fe_from_naoh, fe_from_cacl2])  # t/h
 
         # If production is limited by available ore at any timestep i, limiters[i] = 0
         # If limited by electricity, limiters[i] = 1
         limiters = np.argmin([fe_from_ore, fe_from_elec, fe_from_naoh, fe_from_cacl2], axis=0)
 
         # Limiting iron production per hour by capacity
-        fe_prod = np.minimum.reduce([fe_prod, np.full(len(fe_prod), cap_kw / kwh_kg_fe)])
+        fe_prod = np.minimum.reduce(
+            [fe_prod, np.full(len(fe_prod), (cap_kw / kwh_kg_fe) / 1000)]
+        )  # t/h
 
         # If capacity limits production at any timestep i, cap_lim[i] = 1
         # Otherwise, cap_lim[i] = 0
-        cap_lim = 1 - np.argmax([fe_prod, np.full(len(fe_prod), cap_kw / kwh_kg_fe)], axis=0)
+        cap_lim = 1 - np.argmax(
+            [fe_prod, np.full(len(fe_prod), (cap_kw / kwh_kg_fe) / 1000)], axis=0
+        )
 
         # Determine what the limiting factor is for each hour
         # At each timestep: 0 = iron ore, 1 = electricity, 2 = capacity
@@ -218,15 +226,15 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
         outputs["limiting_input"] = limiters
 
         # Determine actual feedstock consumption from iron production
-        elec_consume = fe_prod * kwh_kg_fe
+        elec_consume = fe_prod * kwh_kg_fe * 1000  # kW
         ore_consume = fe_prod / pct_fe
 
         # Return iron production
-        outputs["sponge_iron_out"] = fe_prod / 1000  # convert kg to t
+        outputs["sponge_iron_out"] = fe_prod  # t/h
         outputs["electricity_consumed"] = elec_consume
         outputs["iron_ore_consumed"] = ore_consume
-        outputs["total_sponge_iron_produced"] = np.sum(fe_prod) / 1000  # convert kg to t
-        outputs["rated_sponge_iron_production"] = cap_kw / kwh_kg_fe / 1000  # convert kg to t
+        outputs["total_sponge_iron_produced"] = np.sum(fe_prod)  # t
+        outputs["rated_sponge_iron_production"] = (cap_kw / kwh_kg_fe) / 1000  # t/h
         outputs["annual_sponge_iron_produced"] = outputs["total_sponge_iron_produced"] * (
             1 / self.fraction_of_year_simulated
         )
@@ -234,5 +242,5 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             outputs["rated_sponge_iron_production"] * self.n_timesteps
         )
         outputs["specific_energy_electrolysis"] = kwh_kg_electrolysis
-        outputs["NaOH_consumed"] = fe_prod * naoh_ratio
-        outputs["CaCl2_consumed"] = fe_prod * cacl2_ratio
+        outputs["NaOH_consumed"] = fe_prod * naoh_ratio * 1000  # kg/h
+        outputs["CaCl2_consumed"] = fe_prod * cacl2_ratio * 1000  # kg/h
