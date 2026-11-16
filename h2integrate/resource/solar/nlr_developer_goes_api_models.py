@@ -15,7 +15,7 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
 
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 1998 and 2024 (inclusive).
+            Must been between 1998 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -27,7 +27,7 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2025)))
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
@@ -63,7 +63,7 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
 
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 2018 and 2024 (inclusive).
+            Must been between 2018 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -75,7 +75,7 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2025)))
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
@@ -112,7 +112,7 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
 
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 2018 and 2024 (inclusive).
+            Must been between 2018 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -124,7 +124,7 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2025)))
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
