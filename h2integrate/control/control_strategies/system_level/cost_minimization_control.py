@@ -1,10 +1,12 @@
 import numpy as np
 
-from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
 
 
+@register
 class CostMinimizationControl(SystemLevelControlBase):
     """Cost-minimizing system-level controller.
 
@@ -33,6 +35,8 @@ class CostMinimizationControl(SystemLevelControlBase):
       ``technology_interconnections`` (using graph ancestors, so feedstocks
       behind intermediate components like combiners are included), and
       divide by the dispatchable tech's annualized total production.
+
+    See :doc:`/control/system_level_control/slc_cost_min` for configuration and I/O.
     """
 
     def setup(self):

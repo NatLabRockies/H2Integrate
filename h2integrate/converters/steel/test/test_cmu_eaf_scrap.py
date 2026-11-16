@@ -241,6 +241,7 @@ def test_cmu_eaf_error(steel_config, plant_config, feedstock_availability_costs,
         )
 
     with pytest.raises(
-        ValueError, match="Rated steel production .* cannot exceed rated steel capacity .*"
+        ValueError,
+        match="Rated steel production .* cannot exceed rated steel capacity .*",  # noqa: RUF043
     ):
         prob.run_model()

@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.geologic.h2_well_surface_baseclass import (
     GeoH2SurfaceCostConfig,
     GeoH2SurfaceCostBaseClass,
@@ -21,6 +22,8 @@ class AspenGeoH2SurfacePerformanceConfig(GeoH2SurfacePerformanceConfig):
     """Configuration for performance parameters for a natural geologic hydrogen well surface
     processing system. This class defines performance parameters specific to **natural** geologic
     hydrogen systems (as opposed to stimulated systems).
+
+    See :class:`AspenGeoH2SurfacePerformanceModel` and :doc:`/technology_models/geologic_hydrogen`.
 
     Inherits from:
         GeoH2SurfacePerformanceConfig
@@ -44,6 +47,7 @@ class AspenGeoH2SurfacePerformanceConfig(GeoH2SurfacePerformanceConfig):
     perf_coeff_fn: str = field()
 
 
+@register
 class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
     """
     ASPEN-based geologic hydrogen surface processing performance model for a
@@ -52,11 +56,14 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
     This component estimates hydrogen production performance for **naturally occurring**
     geologic hydrogen systems.
 
+    See :class:`AspenGeoH2SurfacePerformanceConfig`, :class:`AspenGeoH2SurfaceCostModel`,
+    and :doc:`/technology_models/geologic_hydrogen`.
+
     The modeling approach is informed by the following studies:
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
 
     Attributes:
-        config (NaturalGeoH2PerformanceConfig):
+        config (AspenGeoH2SurfacePerformanceConfig):
             Configuration object containing model parameters specific to natural geologic
             hydrogen systems.
 
@@ -70,10 +77,10 @@ class AspenGeoH2SurfacePerformanceModel(GeoH2SurfacePerformanceBaseClass):
             Hourly electricity consumption profile (8760 hours), in kW.
 
         water_consumed (ndarray):
-            Hourly water consumption profile (8760 hours), in kg/h.
+            Hourly water consumption profile, in kt/h.
 
         steam_out (ndarray):
-            Hourly steam production profile (8760 hours), in kW thermal.
+            Hourly steam production profile, in kt/h.
     """
 
     _time_step_bounds = (
@@ -168,6 +175,8 @@ class AspenGeoH2SurfaceCostConfig(GeoH2SurfaceCostConfig):
     processing system. This class defines cost parameters specific to **natural** geologic
     hydrogen systems (as opposed to stimulated systems).
 
+    See :class:`AspenGeoH2SurfaceCostModel` and :doc:`/technology_models/geologic_hydrogen`.
+
     Inherits from:
         GeoH2SurfaceCostConfig
 
@@ -206,6 +215,7 @@ class AspenGeoH2SurfaceCostConfig(GeoH2SurfaceCostConfig):
     water_price: float = field()
 
 
+@register
 class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
     """OpenMDAO component for modeling the cost of a surface processing system for a
         natural geologic hydrogen plant based on curve fits from an ASPEN model.
@@ -213,11 +223,14 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
     This component estimates hydrogen production cost for **naturally occurring**
     geologic hydrogen systems.
 
+    See :class:`AspenGeoH2SurfaceCostConfig`, :class:`AspenGeoH2SurfacePerformanceModel`,
+    and :doc:`/technology_models/geologic_hydrogen`.
+
     The modeling approach is informed by the following studies:
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
 
     Attributes:
-        config (NaturalGeoH2CostConfig):
+        config (AspenGeoH2SurfaceCostConfig):
             Configuration object containing model parameters specific to natural geologic
             hydrogen systems.
 
@@ -242,7 +255,7 @@ class AspenGeoH2SurfaceCostModel(GeoH2SurfaceCostBaseClass):
             Hourly electricity consumption profile (8760 hours), in kW.
 
         water_consumed (ndarray):
-            Hourly water consumption profile (8760 hours), in kg/h.
+            Hourly water consumption profile, in kt/h.
 
     Outputs:
         All inherited from GeoH2SurfaceCostBaseClass

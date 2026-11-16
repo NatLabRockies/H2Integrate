@@ -9,10 +9,11 @@ from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.finances.tools import _compute_rate_units, check_plant_config_and_profast_params
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
-class NumpyFinancialNPVFinanceConfig(BaseConfig):
+class NumpyFinancialNPVConfig(BaseConfig):
     """Configuration for NumpyFinancialNPVFinance.
 
     Future cash flows are discounted using the nominal, pre-tax weighted average
@@ -38,6 +39,8 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
     ``general_inflation`` inputs, keeping the two finance backends consistent.
     When ``inflation_rate`` is 0 (the default), the real rates are used as-is
     (and should be nominal rates if inflation effects are desired).
+
+    See :class:`NumpyFinancialNPV` and :doc:`/finance_models/numpy_financial_npv`.
 
     Attributes:
         plant_life (int): operating life of plant in years
@@ -83,6 +86,7 @@ class NumpyFinancialNPVFinanceConfig(BaseConfig):
     cost_breakdown_file_description: str = field(default="default")
 
 
+@register
 class NumpyFinancialNPV(om.ExplicitComponent):
     """OpenMDAO component for calculating Net Present Value (NPV)
     using the NumPy Financial.
@@ -96,9 +100,11 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     treated as negative cash flows, while revenues from commodity sales are
     positive. This follows the NumPy Financial convention:
 
+    See :class:`NumpyFinancialNPVConfig` and :doc:`/finance_models/numpy_financial_npv`.
+
     Reference:
         NumPy Financial NPV documentation:
-        https://numpy.org/numpy-financial/latest/npv.html#numpy_financial.npv
+        https://pypi.org/project/numpy-financial/
 
         By convention:
             - Investments or "deposits" are negative.
@@ -142,7 +148,7 @@ class NumpyFinancialNPV(om.ExplicitComponent):
             )
         finance_params.update({"plant_life": plant_config["plant"]["plant_life"]})
 
-        self.config = NumpyFinancialNPVFinanceConfig.from_dict(
+        self.config = NumpyFinancialNPVConfig.from_dict(
             finance_params,
             additional_cls_name=self.__class__.__name__,
         )

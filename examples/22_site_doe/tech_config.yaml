@@ -11,7 +11,7 @@ technologies:
         pv_capacity_kWdc: 400000
         dc_ac_ratio: 1.34
         create_model_from: new
-        tilt_angle_func: lat-func
+        tilt_angle_setting: lat-func
         pysam_options:
           SystemDesign:
             gcr: 0.3
@@ -27,4 +27,17 @@ technologies:
       cost_parameters:
         capex_per_kWac: 1367  # 2022 costs from ATB 2024 v3
         opex_per_kWac_per_year: 24  # 2022 costs from ATB 2024 v3
+        cost_year: 2022
+  electricity_transport:
+    performance_model:
+      model: GenericTransporterPerformanceModel
+    cost_model:
+      model: LinearDistanceCostModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+      cost_parameters:
+        capex_per_km: 600000  # $600k/km
+        fixed_opex_per_km: 5000  # $5000/km/year
         cost_year: 2022

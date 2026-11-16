@@ -18,7 +18,7 @@ Tips on debugging environment variable related errors or issues can be found [he
 To use models that require environment variables, [follow these instructions below](environment_variables:setting-environment-variables).
 
 (environment_variables:setting-environment-variables)=
-# Setting Environment Variables
+## Setting Environment Variables
 We will use the environment variables needed for the NLR Developer Network (`NLR_API_KEY` and `NLR_API_EMAIL`) to showcase different methods of setting environment variables in this section.
 
 In the following sections on setting these environment variables, `'api-key-value'` should be replaced with your NLR API key and `'email-for-api-key'` should be replaced with your email address.
@@ -93,11 +93,16 @@ unset NLR_API_EMAIL
 (set-environment-variables-with-env-file)=
 ## Set Environment Variables with .env file
 
-The ".env" file will be looked for in all of the following locations:
-    - H2Integrate root directory (`/path/to/H2Integrate/h2integrate/`)
-    - parent of H2Integrate root directory (`/path/to/H2Integrate/`) (preferred location to store your environment file)
-    - current working directory (this is not a preferred location to store your environment file)
-1. Choose which of the above directories you want to host your .env file, and create a file named ".env" in that folder.
+H2Integrate searches for a `.env` file in these locations, in order:
+
+1. The H2Integrate package directory (for a source checkout, `/path/to/H2Integrate/h2integrate/`).
+2. The package directory's parent (for a source checkout, `/path/to/H2Integrate/`).
+3. The current working directory.
+4. The user's home directory.
+
+For a source checkout, the repository root is a convenient location. For a pip installation, the
+package directory's parent is usually inside `site-packages`; use the home directory or current
+working directory instead. Create a file named `.env` in the directory you choose.
 2. Open the ".env" file and add the environment variables:
     ```bash
     NLR_API_KEY='api-key-value'
@@ -107,7 +112,7 @@ The ".env" file will be looked for in all of the following locations:
 
 
 (environment_variables:nlr_developer)=
-# NLR Developer Network Environment Variables
+## NLR Developer Network Environment Variables
 
 H2Integrate can pull weather resource datasets (e.g. data needed for wind or solar generation) automatically for a user-provided location.
 To use resource datasets from the NLR developer network, you will need an NLR API key, which can be obtained from:
@@ -122,7 +127,7 @@ Please migrate to ``NLR_API_KEY`` and ``NLR_API_EMAIL``.
 ```
 
 (environment_variables:eia_ng)=
-# EIA Natural Gas Cost
+## EIA Natural Gas Cost
 Further documentation on the EIA natural gas cost model can be [here](#feedstocks:eia_ng_price). This requires an API key obtained from the [EIA Open Data portal](https://www.eia.gov/opendata/). This API key should be set as the value for the environment variable `EIA_API_KEY`, i.e.,
 
 ```bash
@@ -130,7 +135,7 @@ EIA_API_KEY='api-key-value'
 ```
 
 (environment_variables:folders)=
-# Customized Directories for Resource and Feedstock data
+## Customized Directories for Resource and Feedstock data
 Two **optional** environment variables are available to customize directories for saving and loading data from. These two environment variables are `RESOURCE_DIR` and `FEEDSTOCK_DIR` and should be set to filepaths:
 
 

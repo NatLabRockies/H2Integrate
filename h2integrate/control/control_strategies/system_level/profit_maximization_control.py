@@ -2,17 +2,24 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
-from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
 
 
 @define(kw_only=True)
 class ProfitMaximizationControlConfig(BaseConfig):
+    """Configure the sell price and per-technology marginal cost settings.
+
+    See :class:`ProfitMaximizationControl` and :doc:`/control/system_level_control/slc_profit_max`.
+    """
+
     commodity_sell_price: float = field(default=0.0)
     cost_per_tech: dict = field(default={})
 
 
+@register
 class ProfitMaximizationControl(SystemLevelControlBase):
     """Profit-maximizing system-level controller.
 
@@ -50,6 +57,10 @@ class ProfitMaximizationControl(SystemLevelControlBase):
       ``technology_interconnections`` (using graph ancestors, so feedstocks
       behind intermediate components like combiners are included), and
       divide by the dispatchable tech's annualized total production.
+
+    See :class:`ProfitMaximizationControlConfig`,
+    :class:`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`,
+    and :doc:`/control/system_level_control/slc_profit_max`.
     """
 
     def _resolve_sell_price(self, config):
@@ -74,7 +85,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             price = group.get("model_inputs", {}).get("commodity_sell_price", None)
             if price is None:
                 raise ValueError(
-                    f"Finance group '{raw}' does not contain " f"model_inputs.commodity_sell_price."
+                    f"Finance group '{raw}' does not contain model_inputs.commodity_sell_price."
                 )
             return price
         return raw

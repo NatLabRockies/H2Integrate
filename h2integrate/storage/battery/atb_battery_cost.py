@@ -2,7 +2,8 @@ from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -28,6 +29,8 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             max_capacity and max_charge_rate. Must have a base of Watts ('W').
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
+
+    See :class:`ATBBatteryCostModel` and :doc:`/storage/storage_models_index`.
     """
 
     energy_capex: float | int = field(validator=validators.ge(0))
@@ -43,6 +46,7 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class ATBBatteryCostModel(CostModelBaseClass):
     """This cost model is based on the equations in the "Utility-Scale Battery Storage"
     sheet in the ATB 2024 workbook.
@@ -58,6 +62,8 @@ class ATBBatteryCostModel(CostModelBaseClass):
     - Energy_CapEx: Battery Energy Cost (USD/kWh)
     - Power_CapEx: Battery Power Cost (USD/kW)
 
+    See :class:`ATBBatteryCostConfig` and :doc:`/storage/storage_models_index` for
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (
@@ -104,8 +110,7 @@ class ATBBatteryCostModel(CostModelBaseClass):
             storage_duration_hrs = max_capacity_kWh / max_charge_rate_kW
         if max_charge_rate_kW < 0:
             msg = (
-                f"max_charge_rate cannot be less than zero and has value of "
-                f"{max_charge_rate_kW} kW"
+                f"max_charge_rate cannot be less than zero and has value of {max_charge_rate_kW} kW"
             )
             raise UserWarning(msg)
         # CapEx equation from Cell E29

@@ -1,6 +1,8 @@
 import openmdao.api as om
 from attrs import field, define
 
+from h2integrate.core.supported_models import register
+
 
 try:
     from ard.api import set_up_ard_model
@@ -8,7 +10,7 @@ except ModuleNotFoundError:
     set_up_ard_model = None
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
@@ -16,8 +18,10 @@ from h2integrate.core.model_baseclasses import (
 
 
 @define
-class WindPlantArdModelConfig(BaseConfig):
+class ArdWindPlantModelConfig(BaseConfig):
     """Configuration container for Ard wind plant model inputs.
+
+    See :class:`ArdWindPlantModel` and :doc:`/technology_models/wind_plant_ard`.
 
     Attributes:
         ard_system (dict): Dictionary of Ard system / layout parameters (turbine specs,
@@ -47,7 +51,7 @@ class WindArdPerformanceCompatibilityComponent(PerformanceModelBaseClass):
         self.commodity_amount_units = "kW*h"
 
     def setup(self):
-        self.config = WindPlantArdModelConfig.from_dict(
+        self.config = ArdWindPlantModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 
@@ -118,8 +122,11 @@ class WindArdCostCompatibilityComponent(CostModelBaseClass):
         outputs["OpEx"] = inputs["ard_OpEx"]
 
 
+@register
 class ArdWindPlantModel(om.Group):
     """OpenMDAO Group integrating the Ard wind plant as a sub-problem.
+
+    See :class:`ArdWindPlantModelConfig` and :doc:`/technology_models/wind_plant_ard`.
 
     **Subsystems:**
 
@@ -141,8 +148,7 @@ class ArdWindPlantModel(om.Group):
 
     **Promoted Outputs:**
 
-    - ``electricity_out`` (float): Annual energy production (AEP) in MWh (as provided by
-      ARD/FLORIS).
+    - ``electricity_out`` (array): Electrical output profile in kW.
     - ``CapEx`` (float): Capital expenditure from ARD turbine & balance of plant cost model.
     - ``OpEx`` (float): Operating expenditure from ARD.
     - ``boundary_distances`` (array): Distances from turbines to boundary segments.
@@ -175,7 +181,7 @@ class ArdWindPlantModel(om.Group):
             raise ModuleNotFoundError(msg)
 
     def setup(self):
-        self.config = WindPlantArdModelConfig.from_dict(
+        self.config = ArdWindPlantModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance")
         )
 

@@ -4,7 +4,8 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerCostBaseClass
 
 
@@ -14,6 +15,8 @@ class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
     Configuration class for the basic_H2_cost_model which is based on costs from
     `HFTO Program Record 19009 <https://www.hydrogen.energy.gov/pdfs/19009_h2_production_cost_pem_electrolysis_2019.pdf>`_
     which provides costs in 2016 USD.
+
+    See :class:`BasicElectrolyzerCostModel` and :doc:`/technology_models/pem_electrolyzer`.
 
     Args:
         location (str): The location of the electrolyzer; options include "onshore" or "offshore".
@@ -29,9 +32,12 @@ class BasicElectrolyzerCostModelConfig(CostModelBaseConfig):
     cost_year: int = field(default=2016, converter=int, validator=validators.in_([2016]))
 
 
+@register
 class BasicElectrolyzerCostModel(ElectrolyzerCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a PEM electrolyzer.
+
+    See :class:`BasicElectrolyzerCostModelConfig` and :doc:`/technology_models/pem_electrolyzer`.
     """
 
     _time_step_bounds = (

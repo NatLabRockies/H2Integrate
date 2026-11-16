@@ -2,16 +2,20 @@ from pathlib import Path
 
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.core.supported_models import register
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
-class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
+class MeteosatPrimeMeridianSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-download/>`_.
     This dataset covers regions covered by the Meteosat Prime Meridian satellite (Africa and Europe)
     at a spatial resolution of 4 km.
+
+    See :class:`MeteosatPrimeMeridianSolarAPI` and
+    :doc:`/resource/meteosat_prime_meridian_v4_api`.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -42,7 +46,13 @@ class MeteosatPrimeMeridianAPIConfig(ResourceBaseAPIConfig):
     resource_dir: Path | str | None = field(default=None)
 
 
+@register
 class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Meteosat data using :class:`MeteosatPrimeMeridianSolarAPIConfig`.
+
+    See :doc:`/resource/meteosat_prime_meridian_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -50,7 +60,7 @@ class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-download.csv?"
         )
         # create the resource config
-        self.config = MeteosatPrimeMeridianAPIConfig.from_dict(
+        self.config = MeteosatPrimeMeridianSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -58,12 +68,15 @@ class MeteosatPrimeMeridianSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
+class MeteosatPrimeMeridianTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `Meteosat Prime Meridian TMY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tmy-download/>`_,
     `Meteosat Prime Meridian TDY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tdy-download/>`_,
     and `Meteosat Prime Meridian TGY: PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-msg-v1-0-0-tgy-download/>`_,
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
+
+    See :class:`MeteosatPrimeMeridianTMYSolarAPI` and
+    :doc:`/resource/meteosat_prime_meridian_v4_api`.
 
     Args:
         resource_year (str): Year to use for resource data. Can be any of the following:
@@ -114,15 +127,28 @@ class MeteosatPrimeMeridianTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "nsrdb_msg_tgy_v4"
 
 
+@register
 class MeteosatPrimeMeridianTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load Meteosat typical-year data using :class:`MeteosatPrimeMeridianTMYSolarAPIConfig`.
+
+    See :doc:`/resource/meteosat_prime_meridian_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
         # create the resource config
-        self.config = MeteosatPrimeMeridianTMYAPIConfig.from_dict(
+        self.config = MeteosatPrimeMeridianTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
 
         self.base_url = f"https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-msg-v1-0-0-{self.config.resource_year.split('-')[0]}-download.csv?"
 

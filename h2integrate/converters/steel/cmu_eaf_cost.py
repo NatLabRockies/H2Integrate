@@ -1,12 +1,15 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
 class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
     """Configuration class for the CMUElectricArcFurnaceCostModel.
+
+    See :class:`CMUElectricArcFurnaceCostModel` and :doc:`/technology_models/steel_eaf_cmu`.
 
     Args:
         steel_production_capacity_tonnes_per_year (float): Rated electric arc furnace capacity
@@ -46,10 +49,13 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
     cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
 
 
+@register
 class CMUElectricArcFurnaceCostModel(CostModelBaseClass):
     """
     OpenMDAO component for calculating electric arc furnace capital and operating
     expenditures based on the CMU decarbSTEEL v5 model.
+
+    See :class:`CMUElectricArcFurnaceCostConfig` and :doc:`/technology_models/steel_eaf_cmu`.
 
 
     Inputs:

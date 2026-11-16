@@ -2,7 +2,8 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )
@@ -33,6 +34,8 @@ class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
             ``demand_profile_upstream``. One of ``"commodity"`` or ``"price"``.
             Defaults to ``"commodity"``.
 
+    See :class:`PLMHeuristicOpenLoopConverterController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     demand_profile_peak_cutoff: int | float = field()
@@ -43,6 +46,7 @@ class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
     )
 
 
+@register
 class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
     """Open-loop peak-load management controller for converter technologies.
 
@@ -54,6 +58,9 @@ class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
 
     The resulting command profile is written to ``<commodity>_command_value`` and
     can be consumed by converter performance models.
+
+    See :class:`PLMHeuristicOpenLoopConverterControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     _time_step_bounds = (

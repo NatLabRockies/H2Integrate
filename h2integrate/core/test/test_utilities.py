@@ -17,7 +17,12 @@ from h2integrate import (
     load_driver_yaml,
 )
 from h2integrate.core.utilities import BaseConfig, build_time_series_from_plant_config
-from h2integrate.core.dict_utils import check_inputs, dict_to_yaml_formatting
+from h2integrate.core.dict_utils import (
+    check_inputs,
+    percent_diff_dicts,
+    dict_to_yaml_formatting,
+    find_nonzero_percent_diffs,
+)
 from h2integrate.core.file_utils import (
     get_path,
     find_file,
@@ -54,9 +59,7 @@ def temp_resource_dir_env():
 
 
 @pytest.mark.unit
-def test_get_path(subtests):
-    current_cwd = Path.cwd()
-
+def test_get_path(subtests, monkeypatch):
     # 1. As an absolute path.
     file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = get_path(file_abs_path)
@@ -64,14 +67,14 @@ def test_get_path(subtests):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = get_path(file_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for file"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR)
+    monkeypatch.chdir(ROOT_DIR)
     file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = get_path(file_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for file"):
@@ -84,26 +87,22 @@ def test_get_path(subtests):
         assert dir_abs_out_path == dir_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     dir_cwd_rel_path = "."
     dir_cwd_rel_out_path = get_path(dir_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for folder"):
         assert dir_cwd_rel_out_path == dir_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR)
+    monkeypatch.chdir(ROOT_DIR)
     dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture"
     dir_h2i_rel_out_path = get_path(dir_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for folder"):
         assert dir_h2i_rel_out_path == dir_abs_path
 
-    os.chdir(current_cwd)
-
 
 @pytest.mark.unit
-def test_find_file(subtests):
-    current_cwd = Path.cwd()
-
+def test_find_file(subtests, monkeypatch):
     # 1. As an absolute path.
     file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = find_file(file_abs_path)
@@ -111,14 +110,14 @@ def test_find_file(subtests):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = find_file(file_cwd_rel_path)
     with subtests.test("find_file: filepath relative to cwd"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR / "core" / "inputs")
+    monkeypatch.chdir(ROOT_DIR / "core" / "inputs")
     file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = find_file(file_h2i_rel_path)
     with subtests.test("find_file: filepath relative to H2I package"):
@@ -136,7 +135,6 @@ def test_find_file(subtests):
     file_root_in_rel_out_path = find_file(file_root_in_rel_path, root_folder=ex_root)
     with subtests.test("find_file: filepath relative (inside) to root_folder"):
         assert file_root_in_rel_out_path.resolve() == file_abs_path
-    os.chdir(current_cwd)
 
 
 @pytest.mark.unit
@@ -174,8 +172,8 @@ def test_check_data_dir_no_dir(subtests):
 
 
 @pytest.mark.unit
-def test_check_data_dir_relative_dir_exists(subtests):
-    os.chdir(ROOT_DIR.parent)
+def test_check_data_dir_relative_dir_exists(subtests, monkeypatch):
+    monkeypatch.chdir(ROOT_DIR.parent)
     relative_dir = "resource_files"
     expected_dir = RESOURCE_DEFAULT_DIR
     output_dir = check_resource_dir(data_dir=relative_dir)
@@ -585,7 +583,7 @@ def test_BaseConfig(subtests):
             demo = BaseDemoModelStrictAdditional({"x": 1, "z": 2})
 
     with subtests.test("Check prohibited inputs overload w/o additional"):
-        msg = "The initialization for DemoConfig" " was given extraneous inputs"
+        msg = "The initialization for DemoConfig was given extraneous inputs"
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({"x": 1, "z": 2})
         assert demo.config.y == "y"
@@ -602,6 +600,10 @@ def test_BaseConfig(subtests):
         msg = "The class definition for DemoConfig is missing the following inputs"
         with pytest.raises(AttributeError, match=msg):
             demo = BaseDemoModelStrict({})
+
+    with subtests.test("Check instance is returned back"):
+        demo = DemoConfig(x=13, y=12)
+        assert demo == DemoConfig.from_dict(demo)
 
 
 @pytest.mark.unit
@@ -877,3 +879,53 @@ def test_check_inputs(subtests):
                 assert expected_error_05 == str(excinfo.value)
             else:
                 check_inputs(prob, tech, tech_info, tech_config_fpath)
+
+
+@pytest.mark.unit
+def test_percent_diff_dicts(subtests):
+    d1 = {
+        "v1": 10.5,
+        "v2": np.array([1.0, 2.0, 3.5]),
+        "v3": {"results": ["complicated_string", 12345]},
+        "v4": "A good result",
+        "v5": True,
+    }
+    d2 = {
+        "v1": 10.5,
+        "v2": np.array([1.0, 2.0, 3.5]),
+        "v3": {"results": ["complicated_string", 54321]},
+        "v4": "A bad result",
+        "v5": False,
+    }
+
+    # Match openmdao formatting for input and output dicts.
+    d1 = {k: {"val": v} for k, v in d1.items()}
+    d2 = {k: {"val": v} for k, v in d2.items()}
+
+    pd_same = percent_diff_dicts(d1, d2)
+    abs_same, rel_same = find_nonzero_percent_diffs(pd_same, d1)
+
+    with subtests.test("Same dicts case"):
+        # Only the float and the array should be compared. The other values are skipped.
+        assert len(pd_same) == 2
+
+        assert pd_same["v1"] == 0
+        assert pd_same["v2"] == 0
+
+        assert len(abs_same) == 0
+        assert len(rel_same) == 0
+
+    # Change some values so there are differences between the two dicts.
+    d2["v1"]["val"] = 10
+    d2["v2"]["val"] = np.array([1.1, 2.0, 3.6])
+
+    pd_different = percent_diff_dicts(d1, d2)
+    abs_different, rel_different = find_nonzero_percent_diffs(pd_different, d1)
+
+    with subtests.test("Different dicts case"):
+        assert len(pd_different) == 2
+        assert np.isclose(4.878048780487805, pd_different["v1"])
+        assert np.isclose(9.931660555553472, pd_different["v2"])
+
+        assert len(abs_different) == 2
+        assert len(rel_different) == 2

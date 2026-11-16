@@ -1,21 +1,40 @@
 import pyomo.environ as pyo
+from attrs import define
 from pyomo.network import Port
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_rules.pyomo_rule_baseclass import (
     PyomoRuleBaseClass,
     PyomoRuleBaseConfig,
 )
 
 
+@define(kw_only=True)
+class PyomoDispatchGenericConverterConfig(PyomoRuleBaseConfig):
+    """Configuration for :class:`PyomoDispatchGenericConverter`.
+
+    See :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
+
+    pass
+
+
+@register
 class PyomoDispatchGenericConverter(PyomoRuleBaseClass):
+    """Build generic converter blocks for heuristic Pyomo dispatch.
+
+    See :class:`PyomoDispatchGenericConverterConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = PyomoRuleBaseConfig.from_dict(
+        self.config = PyomoDispatchGenericConverterConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
             strict=False,
             additional_cls_name=self.__class__.__name__,

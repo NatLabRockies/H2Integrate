@@ -2,16 +2,20 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
-class SimpleThermalNuclearReactorConfig(BaseConfig):
+class SimpleThermalNuclearReactorPerformanceModelConfig(BaseConfig):
     """Configuration class for the thermal nuclear reactor performance model.
+
+    See :class:`SimpleThermalNuclearReactorPerformanceModel` and
+    :doc:`/technology_models/nuclear`.
 
     Args:
         operating_mode (str): Dispatch mode of the reactor. Must be ``"heat"`` or
@@ -19,14 +23,14 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
             first and converts the remaining low-pressure heat to electricity; in
             ``electricity`` mode it satisfies the electricity command first and delivers
             the remaining available heat.
-        electricity_command_value (float): Requested electrical output in kW.
+        electricity_command_value (float): Requested electrical output in MW.
         high_pressure_electrical_efficiency (float): Fraction of total thermal input
             converted to electricity in the high-pressure stage (unitless).
         low_pressure_electrical_efficiency (float): Efficiency applied to the remaining
             low-pressure heat when generating electricity (unitless).
-        rated_capacity (float): Rated electrical capacity in kW, used to infer the reactor
+        rated_capacity (float): Rated electrical capacity in MW, used to infer the reactor
             thermal capacity.
-        minimum_heat_extract (float): Minimum process heat reserved for extraction in kW.
+        minimum_heat_extract (float): Minimum process heat reserved for extraction in MW.
             Defaults to ``0.0``.
     """
 
@@ -42,6 +46,7 @@ class SimpleThermalNuclearReactorConfig(BaseConfig):
     minimum_heat_extract: float = field(default=0.0)
 
 
+@register
 class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
     """Simple thermal nuclear reactor model with heat and electricity outputs.
 
@@ -50,6 +55,9 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
     upstream of the low-pressure turbine stages. It trades off electricity production and
     process heat delivery according to the selected operating mode, making it suitable for
     coupled workflows such as nuclear plus HTSE.
+
+    See :class:`SimpleThermalNuclearReactorPerformanceModelConfig`,
+    :class:`SimpleThermalNuclearReactorCostModel`, and :doc:`/technology_models/nuclear`.
 
     The reactor infers its thermal capacity from the rated electrical capacity using a
     combined electric efficiency and supports two operating modes:
@@ -69,7 +77,7 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
         self.commodity_amount_units = "MW*h"
 
     def setup(self):
-        self.config = SimpleThermalNuclearReactorConfig.from_dict(
+        self.config = SimpleThermalNuclearReactorPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -197,15 +205,17 @@ class SimpleThermalNuclearReactorPerformanceModel(PerformanceModelBaseClass):
 
 
 @define(kw_only=True)
-class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
+class SimpleThermalNuclearReactorCostModelConfig(CostModelBaseConfig):
     """Configuration class for the thermal nuclear reactor cost model.
 
+    See :class:`SimpleThermalNuclearReactorCostModel` and :doc:`/technology_models/nuclear`.
+
     Args:
-        rated_capacity (float): Rated capacity used for cost calculations in kW.
-        upfront_cost (float): Capital cost per kW in USD/kW.
-        fixed_om_cost (float): Fixed annual O&M in USD/(kW*year).
+        rated_capacity (float): Rated capacity used for cost calculations in MW.
+        upfront_cost (float): Capital cost per MW in USD/MW.
+        fixed_om_cost (float): Fixed annual O&M in USD/(MW*year).
         variable_om_cost (float): Variable O&M applied to the simulated
-            electricity production in USD/(kW*h).
+            electricity production in USD/(MW*h).
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
     """
 
@@ -216,11 +226,16 @@ class SimpleThermalNuclearReactorCostConfig(CostModelBaseConfig):
     cost_year: int = field(default=2025, converter=int)
 
 
+@register
 class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     """Simple cost model for the thermal nuclear reactor.
 
     The model applies capacity-based capital and fixed O&M costs and computes variable O&M
     from the delivered electricity:
+
+    See :class:`SimpleThermalNuclearReactorCostModelConfig`,
+    :class:`SimpleThermalNuclearReactorPerformanceModel`, and :doc:`/technology_models/nuclear`
+    for the variable-cost unit limitation.
 
     - ``CapEx`` from ``rated_capacity * upfront_cost``
     - ``OpEx`` from ``rated_capacity * fixed_om_cost``
@@ -235,7 +250,7 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
         self.plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
         self.fraction_of_year_simulated = (self.dt * n_timesteps / 3600.0) / 8760.0
-        self.config = SimpleThermalNuclearReactorCostConfig.from_dict(
+        self.config = SimpleThermalNuclearReactorCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -267,13 +282,14 @@ class SimpleThermalNuclearReactorCostModel(CostModelBaseClass):
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         rated_capacity_mw = float(inputs["rated_capacity"][0])
         upfront_cost_per_mw = float(inputs["upfront_cost"][0])
-        fixed_om_per_kw_year = float(inputs["fixed_om_cost"][0])
+        fixed_om_per_mw_year = float(inputs["fixed_om_cost"][0])
         variable_om_per_mwh = float(inputs["variable_om_cost"][0])
 
         outputs["CapEx"] = rated_capacity_mw * upfront_cost_per_mw
-        outputs["OpEx"] = fixed_om_per_kw_year * rated_capacity_mw
+        outputs["OpEx"] = fixed_om_per_mw_year * rated_capacity_mw
 
-        delivered_electricity_mwh = np.sum(inputs["electricity_out"]) * (self.dt / 3600.0)
+        # Integrate kW over hours to get kWh, then convert to MWh.
+        delivered_electricity_mwh = np.sum(inputs["electricity_out"]) * (self.dt / 3600.0) / 1000.0
         annual_variable_om = (
             variable_om_per_mwh * delivered_electricity_mwh / (self.fraction_of_year_simulated)
         )

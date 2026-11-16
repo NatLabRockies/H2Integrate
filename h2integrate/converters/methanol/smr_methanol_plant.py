@@ -3,6 +3,7 @@ from attrs import field, define
 from openmdao.utils.units import convert_units
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.methanol.methanol_baseclass import (
     MethanolCostConfig,
     MethanolCostBaseClass,
@@ -14,18 +15,37 @@ from h2integrate.converters.methanol.methanol_baseclass import (
 
 
 @define(kw_only=True)
-class SMRPerformanceConfig(MethanolPerformanceConfig):
+class SMRMethanolPlantFinanceModelConfig(MethanolFinanceConfig):
+    """Configuration for :class:`SMRMethanolPlantFinanceModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
+
+    pass
+
+
+@define(kw_only=True)
+class SMRMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
+    """Configuration for :class:`SMRMethanolPlantPerformanceModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
+
     meoh_syn_cat_consume_ratio: float = field()
     meoh_atr_cat_consume_ratio: float = field()
     ng_consume_ratio: float = field()
     elec_produce_ratio: float = field()
 
 
+@register
 class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of a steam methane reforming (SMR) methanol
-    plant. Computes annual methanol and co-product production, feedstock consumption, and emissions
-    based on plant capacity and capacity factor.
+    plant. Computes methanol and electricity production and feedstock consumption based on plant
+    capacity and available feedstocks.
+
+    See :class:`SMRMethanolPlantPerformanceModelConfig`, :class:`SMRMethanolPlantCostModel`,
+    and :doc:`/technology_models/methanol`.
 
     Inputs:
         - meoh_syn_cat_consume_ratio: ratio of ft^3 methanol synthesis catalyst consumed to
@@ -48,7 +68,7 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = SMRPerformanceConfig.from_dict(
+        self.config = SMRMethanolPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -120,7 +140,12 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 
 
 @define(kw_only=True)
-class SMRCostConfig(MethanolCostConfig):
+class SMRMethanolPlantCostModelConfig(MethanolCostConfig):
+    """Configuration for :class:`SMRMethanolPlantCostModel`.
+
+    See :doc:`/technology_models/methanol`.
+    """
+
     ng_lhv: float = field()
     meoh_syn_cat_price: float = field()
     meoh_atr_cat_price: float = field()
@@ -128,9 +153,13 @@ class SMRCostConfig(MethanolCostConfig):
     cost_year: int = field(converter=int)
 
 
+@register
 class SMRMethanolPlantCostModel(MethanolCostBaseClass):
     """
     An OpenMDAO component for modeling the cost of a steam methane (SMR) reforming methanol plant.
+
+    See :class:`SMRMethanolPlantCostModelConfig`, :class:`SMRMethanolPlantPerformanceModel`,
+    :class:`SMRMethanolPlantFinanceModel`, and :doc:`/technology_models/methanol`.
 
     Inputs:
         ng_lhv: natural gas lower heating value in MJ/kg
@@ -155,7 +184,7 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = SMRCostConfig.from_dict(
+        self.config = SMRMethanolPlantCostModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "cost"),
             additional_cls_name=self.__class__.__name__,
         )
@@ -202,10 +231,14 @@ class SMRMethanolPlantCostModel(MethanolCostBaseClass):
         outputs["OpEx"] = foc_usd_y + voc_usd_y + meoh_cat + atr_cat + ng_cost - elec_rev
 
 
+@register
 class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
     An OpenMDAO component for modeling the financing of a steam methane reforming (SMR) methanol
     plant.
+
+    See :class:`SMRMethanolPlantFinanceModelConfig`, :class:`SMRMethanolPlantCostModel`,
+    and :doc:`/technology_models/methanol`.
 
     Inputs:
         meoh_syn_cat_cost: annual cost of synthesis catalyst in USD/year
@@ -220,7 +253,7 @@ class SMRMethanolPlantFinanceModel(MethanolFinanceBaseClass):
     """
 
     def setup(self):
-        self.config = MethanolFinanceConfig.from_dict(
+        self.config = SMRMethanolPlantFinanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "finance"),
             additional_cls_name=self.__class__.__name__,
         )

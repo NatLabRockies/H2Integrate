@@ -1,20 +1,18 @@
-"""Tests for _split_indices_from_connected_parameter_definition function."""
+"""Tests for connection index utilities."""
 
 import pytest
 import openmdao.api as om
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate.core.connection_utils import split_indices_from_connected_parameter_definition
 
 
 class TestSplitIndicesFromConnectedParameterDefinition:
-    """Test suite for _split_indices_from_connected_parameter_definition method."""
+    """Tests for parsing slice specifications in connection parameters."""
 
     @staticmethod
     def split_indices(connected_parameter):
-        """Helper to call the static method."""
-        return H2IntegrateModel._split_indices_from_connected_parameter_definition(
-            connected_parameter
-        )
+        """Call the connection utility."""
+        return split_indices_from_connected_parameter_definition(connected_parameter)
 
     @pytest.mark.unit
     def test_no_slices(self):

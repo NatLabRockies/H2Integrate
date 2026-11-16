@@ -5,7 +5,8 @@ from attrs import field, define, validators
 from floris import TimeSeries, FlorisModel
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CacheBaseClass, CacheBaseConfig
+from h2integrate.core.model_baseclass import CacheBaseClass, CacheBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.wind.tools.resource_tools import (
     calculate_air_density,
     average_wind_data_for_hubheight,
@@ -19,8 +20,10 @@ from h2integrate.converters.wind.layout.simple_grid_layout import (
 
 
 @define
-class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
+class FlorisWindPlantPerformanceModelConfig(CacheBaseConfig):
     """Configuration class for FlorisWindPlantPerformanceModel.
+
+    See :class:`FlorisWindPlantPerformanceModel` and :doc:`/technology_models/floris_wind_plant`.
 
     Attributes:
         num_turbines (int): number of turbines in farm
@@ -97,11 +100,15 @@ class FlorisWindPlantPerformanceConfig(CacheBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
     """
     An OpenMDAO component that wraps a Floris model.
     It takes wind turbine model parameters and wind resource data as input and
     outputs power generation data.
+
+    See :class:`FlorisWindPlantPerformanceModelConfig` and
+    :doc:`/technology_models/floris_wind_plant`.
     """
 
     _time_step_bounds = (
@@ -125,7 +132,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         self.layout_mode = layout_mode
 
         # initialize wind turbine config
-        self.config = FlorisWindPlantPerformanceConfig.from_dict(
+        self.config = FlorisWindPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )

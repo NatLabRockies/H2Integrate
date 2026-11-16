@@ -4,6 +4,7 @@ import PySAM.BatteryStateful as BatteryStateful
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -21,9 +22,9 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
     Attributes:
         max_capacity (float): Maximum battery energy capacity in kilowatt-hours (kWh).
-            Must be greater than zero.
+            Must be nonnegative. Zero capacity produces zero flow.
         max_charge_rate (float): Rated power capacity of the battery in kilowatts (kW).
-            Must be greater than zero.
+            Must be nonnegative. Zero charge rate produces zero flow.
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
@@ -48,6 +49,10 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             environment [W/m2*K]. Defaults to 20.
         resistance (int | float, optional): Battery internal resistance [Ohm].
             Defaults to 0.001.
+        pysam_options (dict, optional): Additional PySAM BatteryStateful parameters grouped
+            by PySAM group name (for example, ``{"ParamsCell": {"calendar_choice": 1}}``).
+
+    See :class:`PySAMBatteryPerformanceModel` and :doc:`/storage/pysam_battery`.
     """
 
     max_capacity: float = field(validator=validators.ge(0))
@@ -66,8 +71,10 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
     Cp: int | float = field(default=900)
     battery_h: int | float = field(default=20)
     resistance: int | float = field(default=0.001)
+    pysam_options: dict = field(factory=dict)
 
 
+@register
 class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     """OpenMDAO component wrapping the PySAM Battery Performance model.
 
@@ -82,6 +89,8 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     Attributes:
         system_model (``BatteryStateful``): Instance of the PySAM BatteryStateful model, initialized
             with the selected chemistry and configuration parameters.
+
+    See :class:`PySAMBatteryPerformanceModelConfig` and :doc:`/storage/pysam_battery`.
     """
 
     _time_step_bounds = (
@@ -113,6 +122,21 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
 
         # Initialize the PySAM BatteryStateful model with defaults
         self.system_model = BatteryStateful.default(self.config.chemistry)
+
+        reserved_options = {
+            "Controls": {"control_mode", "dt_hr", "input_current", "input_power"},
+            "ParamsCell": {"C_rate", "resistance", "initial_SOC", "minimum_SOC", "maximum_SOC"},
+            "ParamsPack": {"Cp", "h", "mass", "nominal_energy", "nominal_voltage", "surface_area"},
+        }
+        for group, parameters in self.config.pysam_options.items():
+            if group not in self.system_model.export():
+                raise ValueError(f"Unknown PySAM battery options group: {group}")
+            conflicting = reserved_options.get(group, set()).intersection(parameters)
+            if conflicting:
+                raise ValueError(
+                    f"PySAM battery options {group}.{', '.join(sorted(conflicting))} "
+                    "are managed by the battery model configuration."
+                )
 
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the PySAM Battery model for one simulation step.
@@ -163,6 +187,9 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         self.system_model.value("maximum_SOC", self.config.max_soc_fraction * 100)
         self.system_model.value("initial_SOC", self.config.init_soc_fraction * 100)
 
+        if self.config.pysam_options:
+            self.system_model.assign(self.config.pysam_options)
+
         # Setup PySAM battery model using PySAM method
         self.system_model.setup()
 
@@ -188,6 +215,7 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
         storage_capacity: float,
         commodity_available=list | np.ndarray,
         sim_start_index: int = 0,
+        sim_end_index: int = 8760,
     ):
         """Run the PySAM BatteryStateful model over a control window.
 
@@ -211,6 +239,9 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
                 PySAM control input to set each step ("input_power" or "input_current").
             sim_start_index : int, optional
                 Starting index for writing into persistent output arrays (default 0).
+            sim_end_index (int, optional):
+                Ending index for writing into persistent output arrays.
+                Defaults to 8760 (1 year)
 
         Returns:
             tuple[np.ndarray, np.ndarray]: Battery power (kW) and SOC (%) per timestep.

@@ -1,53 +1,30 @@
-# Welcome to H2Integrate
+# H2Integrate Design Rationale
 
-This collection of docs is focused on presenting H2Integrate, acknowledging where we are now and where we want to be in the future.
-Most of these docs are written in a way that we'll be able to reuse them immediately as proper docs in the actual H2Integrate repo.
-For now, to reduce development overhead and encourage rapid iteration, we'll continue to work in this sandbox repo.
+H2Integrate provides a framework for combining technology models into hybrid-system simulations,
+technoeconomic analyses, and optimization studies. Its design emphasizes reusable model interfaces
+and explicit connections between technologies.
 
-Our goal with these doc pages is to communicate ideas that exist in our heads, put them to paper, and provide diagrams where helpful.
-These docs are a work in progress; please ask questions about any and all parts presented here.
+## Why modularity?
 
-## Why make H2Integrate?
-
-H2Integrate has already proven itself useful as a tool that can analyze and design complex hybrid systems producing electricity, hydrogen, steel, and more.
-However, these developments came in waves across multiple disparate projects, leading to a sometimes disjointed codebase.
-In an effort to streamline and modularize H2Integrate to make it more effective and capable for necessary future studies, we are devoting time to redesigning it from the ground up.
-This page discusses some of the high-level decisions and mindsets that we've used throughout this process.
-
-## What does it mean to "modularize" H2Integrate?
-
-Most of the current implementation of H2Integrate assumes that you are modeling a certain hybrid system architecture using a limited number of specific models.
-As more projects call for using H2Integrate, we must make it easier to develop and add capability to the tool in a sustainable and clear way.
-By making the internal framework of H2Integrate more agnostic to the technologies considered in the hybrid system design, we can allow for more user-defined modularized subsystems to be considered effectively.
-
-Getting into the details, this means creating generalized components that H2Integrate can expect to behave in a certain way.
-
-We introduce the ideas of "converters", which convert one resource into another.
-Simple examples of converters include electrolyzers, wind turbines, solar PV panels, and more.
-These converters can pass resources to other converters or "storage" components via "transporter" components.
-
-Transporters include hydrogen pipelines, electricity cables, or anything that transports a resource.
-In a broad sense, these might include delivery trucks or shipping vessels, though those are more for future consideration.
-
-Storage components include batteries, hydrogen tanks; anything where you store a resource.
-
-By combining instances of these different generalized components, we can study distinct hybrid systems in H2Integrate.
-Internally, the H2Integrate framework just needs to know if a something is a converter, transporter, storage, or some other type of component.
-Additionally, this allows users to develop their own components using the expected interface, and add in custom subsystems to their hybrid plant.
+Hybrid systems combine components with different physical behavior, cost assumptions, and operating
+constraints. H2Integrate separates these concerns into model roles such as performance, cost,
+finance, and control, and connects technologies through defined commodities and transport
+components. Users can combine the registered models or add components that follow the framework's
+interfaces.
 
 ## Why use OpenMDAO as the internal framework for H2Integrate?
 
-Through a series of internal discussions, the H2Integrate dev team landed on using [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/) for this new version of the tool.
+H2Integrate uses [NASA's OpenMDAO framework](https://github.com/OpenMDAO/OpenMDAO/) to assemble and
+run its models.
 
-Using OpenMDAO for this gives quite a few benefits:
+OpenMDAO provides:
 - a proven framework for complex data-passing within multidisciplinary systems
 - automatically-generated visualization tools to help understand models and debug them
 - internal units handling and conversion
 - built-in nonlinear solvers to resolve model coupling
 - built-in optimization and parameter sweep drivers
 - multiple existing NLR tools use OpenMDAO, including [WISDEM](https://github.com/NLRWindSystems/WISDEM/) and [WEIS](https://github.com/NLRWindSystems/WEIS), so we can draw from institutional knowledge
-- set up with gradient-based optimization in mind, which is not currently a focus for H2Integrate but this positions the tool well for potential future additions
-- parallelization done using MPI, which is also not currently a focus but useful for the future
+- gradient-based optimization and MPI-based parallelization capabilities for applicable studies
 
 However, there are a few downsides to using OpenMDAO:
 - an additional layer of code that developers must consider
@@ -55,24 +32,15 @@ However, there are a few downsides to using OpenMDAO:
 - potentially increased computational costs depending on problem type and size
 - it isn't great at optimizing mixed-integer problems
 
-The benefits outweighed the downsides, hence the team's choice to use OpenMDAO going forward.
-Additionally, we can code H2Integrate in a way to minimize some of the potential issues, given that we're aware of them before refactoring H2Integrate.
+These benefits support H2Integrate's component-level modeling and optimization goals. Contributors
+should still consider OpenMDAO's additional abstraction layer, longer error traces, possible
+computational overhead, and limitations with mixed-integer optimization.
 
-## How are generation technologies handled today?
+## Where should code live?
 
-H2Integrate now models generation technologies directly with native technology components
-for wind, solar, storage, wave, and tidal systems.
-This keeps technology behavior, dispatch interfaces, and cost modeling within a single
-framework, with all components exposed consistently to the same configuration and
-optimization infrastructure.
-
-## Where should code I develop and implement live?
-
-Historically, H2Integrate has been a sort of hybrid itself, where it contains both the tool itself as well as project-specific code.
-This has led to a somewhat disjointed codebase that is difficult to maintain and understand.
-
-To address this, here are guidelines for where code you develop should live:
-- If the code is specific to a project, it should live in the project's repository.
-- If the code is generalizable, could be used in multiple projects, or is a useful addition to the H2Integrate tool, it should live in the H2Integrate repository.
-- Wrappers to models that are used in H2Integrate should live in the H2Integrate repository.
-- The actual models (physics, costs, financials) should live **outside** the H2Integrate repository. Complex models might live in their own repo (e.g. BERT), whereas other models might live in the project's repository.
+- Reusable technology models, cost and finance models, and integrations that benefit multiple
+	projects belong in the H2Integrate repository.
+- Project-specific or proprietary models belong in the project repository. They can be integrated
+	by implementing the interfaces expected by H2Integrate.
+- For the model interfaces and contribution workflow, see
+	[Adding a New Technology](adding_a_new_technology.md).

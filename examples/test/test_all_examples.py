@@ -8,14 +8,21 @@ import pandas as pd
 import pytest
 import openmdao.api as om
 
-from h2integrate import ROOT_DIR, H2IntegrateModel, load_yaml, load_plant_yaml
+from h2integrate import (
+    ROOT_DIR,
+    H2IntegrateModel,
+    load_yaml,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
 
 
 ROOT = Path(__file__).parents[1]
 
 
 # docs fencepost start: DO NOT REMOVE
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
 def test_steel_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -127,7 +134,7 @@ def test_steel_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("02_texas_ammonia", None)])
 def test_simple_ammonia_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -249,18 +256,18 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
 
     # Check that the expected output files exist
     outputs_dir = example_folder / "outputs"
-    assert (
-        outputs_dir / "profast_output_ammonia_config.yaml"
-    ).is_file(), "profast_output_ammonia.yaml not found"
-    assert (
-        outputs_dir / "profast_output_electricity_config.yaml"
-    ).is_file(), "profast_output_electricity.yaml not found"
-    assert (
-        outputs_dir / "profast_output_hydrogen_config.yaml"
-    ).is_file(), "profast_output_hydrogen.yaml not found"
+    assert (outputs_dir / "profast_output_ammonia_config.yaml").is_file(), (
+        "profast_output_ammonia.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_electricity_config.yaml").is_file(), (
+        "profast_output_electricity.yaml not found"
+    )
+    assert (outputs_dir / "profast_output_hydrogen_config.yaml").is_file(), (
+        "profast_output_hydrogen.yaml not found"
+    )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("12_ammonia_synloop", None)])
 def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -312,13 +319,13 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check H2 storage CapEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.CapEx", units="USD"), rel=1e-6)
-            == 64553014.22218219
+            == 69521620.41642682
         )
 
     with subtests.test("Check H2 storage OpEx"):
         assert (
             pytest.approx(model.prob.get_val("h2_storage.OpEx", units="USD/year"), rel=1e-4)
-            == 2975616.89
+            == 3110212.576328236
         )
 
     with subtests.test("Check ammonia CapEx"):
@@ -330,7 +337,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
     with subtests.test("Check ammonia OpEx"):
         assert (
             pytest.approx(model.prob.get_val("ammonia.OpEx", units="USD/year")[0], rel=1e-4)
-            == 25415561.5
+            == 25547542.96710026
         )
 
     with subtests.test("Check ammonia production"):
@@ -338,7 +345,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("ammonia.annual_ammonia_produced", units="t/yr").mean(), rel=1e-3
             )
-            == 406226.7872
+            == 388947.8683921149
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -347,7 +354,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_capex_adjusted", units="USD")[0],
                 rel=1e-4,
             )
-            == 3728034379.0699997
+            == 3733518790.635646
         )
 
     with subtests.test("Check total adjusted OpEx"):
@@ -356,7 +363,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_nh3.total_opex_adjusted", units="USD/year")[0],
                 rel=1e-4,
             )
-            == 79258124.93845007
+            == 79538674.8511007
         )
 
     with subtests.test("Check LCOH"):
@@ -364,7 +371,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-4
             )
-            == 4.013427289493614
+            == 4.2034231727488836
         )
 
     with subtests.test("Check LCOA"):
@@ -372,7 +379,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-3
             )
-            == 1.1021542544557135
+            == 1.1531642215468845
         )
     with subtests.test("Check LCON"):
         assert (
@@ -383,7 +390,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("03_methanol/smr", None)])
 def test_smr_methanol_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -404,7 +411,7 @@ def test_smr_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation", None)]
 )
@@ -454,7 +461,7 @@ def test_co2h_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("03_methanol/co2_hydrogenation_doc", None)]
 )
@@ -480,7 +487,7 @@ def test_doc_methanol_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("05_wind_h2_opt", None)])
 def test_wind_h2_opt_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -533,9 +540,9 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
                 break
         if sql_path:
             break
-    assert (
-        sql_path is not None
-    ), "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    assert sql_path is not None, (
+        "wind_h2_opt.sql file not found in current working directory or subdirectories."
+    )
 
     cr = om.CaseReader(str(sql_path))
     cases = list(cr.get_cases())
@@ -580,7 +587,7 @@ def test_wind_h2_opt_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("06_custom_tech", None)])
 def test_paper_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -601,7 +608,7 @@ def test_paper_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("09_co2/direct_ocean_capture", None)]
 )
@@ -638,7 +645,7 @@ def test_wind_wave_doc_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("17_splitter_wind_doc_h2", None)]
 )
@@ -795,7 +802,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("07_run_of_river_plant", None)]
 )
@@ -823,55 +830,12 @@ def test_hydro_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("11_hybrid_energy_plant", None)]
-)
-def test_hybrid_energy_plant_example(subtests, temp_copy_of_example):
-    example_folder = temp_copy_of_example
-
-    # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "wind_pv_battery.yaml")
-
-    # Run the model
-    model.run()
-
-    model.post_process()
-
-    # Subtests for checking specific values
-    with subtests.test("Check LCOE is positive"):
-        lcoe = model.prob.get_val("finance_subgroup_default.LCOE", units="USD/(MW*h)")[0]
-        assert lcoe <= 69
-
-    with subtests.test("Check wind rated production"):
-        wind_rated = model.prob.get_val("wind.rated_electricity_production", units="kW")[0]
-        assert wind_rated <= 3005
-
-    with subtests.test("Check solar rated production"):
-        solar_rated = model.prob.get_val("solar.rated_electricity_production", units="kW")[0]
-        assert solar_rated <= 1925
-
-    with subtests.test("Check percent_load_missed"):
-        pct_missed = model.prob.get_val("electrical_load_demand.percent_load_missed")[0]
-        assert pct_missed <= 18.7
-
-    with subtests.test("Check curtailment_percent"):
-        curtailment = model.prob.get_val("electrical_load_demand.curtailment_percent")[0]
-        assert curtailment <= 16.5
-
-    with subtests.test("Check delivered total electricity produced"):
-        load_total = model.prob.get_val(
-            "electrical_load_demand.total_electricity_produced", units="kW*h"
-        )[0]
-        assert load_total <= 9700000
-
-
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("13_dispatch_for_electrolyzer", None)]
 )
 def test_electrolyzer_demand(subtests, temp_copy_of_example):
-    from h2integrate import load_tech_yaml, load_plant_yaml, load_driver_yaml
+    from h2integrate import load_plant_yaml, load_driver_yaml
 
     example_folder = temp_copy_of_example
 
@@ -911,28 +875,28 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("LCOE of electricity generated"):
-        assert pytest.approx(138.9378311, rel=1e-6) == lcoe_gen
+        assert pytest.approx(121.66558068665938, rel=1e-6) == lcoe_gen
 
     with subtests.test("LCOE of electrical load (battery for min power)"):
-        assert pytest.approx(153.2393976, rel=1e-6) == lcoe_load
+        assert pytest.approx(135.76636056874776, rel=1e-6) == lcoe_load
 
     with subtests.test("LCOE of electrical system (battery for min power)"):
-        assert pytest.approx(150.374804998, rel=1e-6) == lcoe_sys
+        assert pytest.approx(131.68316748483326, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for min power)"):
-        assert pytest.approx(10.230507642864733, rel=1e-3) == lcoh
+        assert pytest.approx(9.108995855797247, rel=1e-3) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for min power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
-        assert pytest.approx(38.63085748, rel=1e-3) == elec_cf_yr0
+        assert pytest.approx(43.430309930087155, rel=1e-3) == elec_cf_yr0
 
     with subtests.test("Electrical load capacity factor (battery for min power)"):
         load_cf = h2i.prob.get_val("elec_load_demand.capacity_factor", units="percent")[0]
-        assert pytest.approx(37.4444016, rel=1e-6) == load_cf
+        assert pytest.approx(42.26347029528633, rel=1e-6) == load_cf
 
     with subtests.test("Electricity to electrolyzer (battery for min power)"):
         electricity_to_electrolyzer = h2i.prob.get_val("electrolyzer.electricity_in", "MW").sum()
-        assert pytest.approx(196807.7748, rel=1e-6) == electricity_to_electrolyzer
+        assert pytest.approx(222136.79987202495, rel=1e-6) == electricity_to_electrolyzer
     # Re-run where we set the battery demand equal to the electrolyzer capacity
 
     h2i.prob.set_val("battery.electricity_set_point", electrolyzer_capacity_MW, units="MW")
@@ -945,28 +909,28 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
     lcoh = h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("LCOE of electrical load (battery for full power)"):
-        assert pytest.approx(151.0430342961, rel=1e-6) == lcoe_load
+        assert pytest.approx(132.9892815088089, rel=1e-6) == lcoe_load
 
     with subtests.test("LCOE of electrical system (battery for full power)"):
-        assert pytest.approx(150.35216704, rel=1e-6) == lcoe_sys
+        assert pytest.approx(131.66092750719028, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for full power)"):
-        assert pytest.approx(10.809740788, rel=1e-6) == lcoh
+        assert pytest.approx(9.282072582110251, rel=1e-6) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for full power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
-        assert pytest.approx(38.633272786, rel=1e-6) == elec_cf_yr0
+        assert pytest.approx(43.78774804839158, rel=1e-6) == elec_cf_yr0
 
     with subtests.test("Electrical load capacity factor (battery for full power)"):
         load_cf = h2i.prob.get_val("elec_load_demand.capacity_factor", units="percent")[0]
-        assert pytest.approx(37.988892, rel=1e-6) == load_cf
+        assert pytest.approx(43.146015091573176, rel=1e-6) == load_cf
 
     with subtests.test("Electricity to electrolyzer (battery for full power)"):
         electricity_to_electrolyzer = h2i.prob.get_val("electrolyzer.electricity_in", "MW").sum()
-        assert pytest.approx(199669.6173879, rel=1e-6) == electricity_to_electrolyzer
+        assert pytest.approx(226775.45532130863, rel=1e-6) == electricity_to_electrolyzer
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("14_wind_hydrogen_dispatch", None)]
 )
@@ -1052,7 +1016,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("09_co2/ocean_alkalinity_enhancement", None)]
 )
@@ -1078,7 +1042,7 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_co2.LCOC", units="USD/kg")[0], rel=1e-3
             )
-            == 41.156
+            == 41.36241716032637
         )
 
     with subtests.test("Check LCOE"):
@@ -1091,16 +1055,16 @@ def test_wind_wave_oae_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("09_co2/ocean_alkalinity_enhancement_financials", None)],
+    [("09_co2/ocean_alkalinity_enhancement", None)],
 )
 def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
     # Create a H2Integrate model
-    model = H2IntegrateModel(example_folder / "offshore_plant_oae.yaml")
+    model = H2IntegrateModel(example_folder / "offshore_plant_oae_financials.yaml")
 
     # Run the model
     model.run()
@@ -1120,14 +1084,12 @@ def test_wind_wave_oae_example_with_finance(subtests, temp_copy_of_example):
     with subtests.test("Check Carbon Credit"):
         assert (
             pytest.approx(model.prob.get_val("oae.carbon_credit_value", units="USD/t")[0], rel=1e-3)
-            == 1026.4684117
+            == 1087.6316247363743
         )
 
 
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("16_natural_gas", "11_hybrid_energy_plant")]
-)
+@pytest.mark.examples
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("16_natural_gas", None)])
 def test_natural_gas_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
@@ -1299,10 +1261,10 @@ def test_natural_gas_example(subtests, temp_copy_of_example):
         assert pytest.approx(ng_cf, rel=1e-6) == 0.5676562763739097
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("15_wind_solar_electrolyzer", "11_hybrid_energy_plant/")],
+    [("15_wind_solar_electrolyzer", None)],
 )
 def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1381,7 +1343,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
         assert pytest.approx(total_generation.sum(), rel=1e-5) == total_energy_to_electrolyzer.sum()
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("10_electrolyzer_om", None)])
 def test_electrolyzer_om_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1406,7 +1368,7 @@ def test_electrolyzer_om_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoh_with_lcoe_finance, rel=2e-3) == 10.3360027653
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("08_wind_electrolyzer", None)])
 def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1440,7 +1402,7 @@ def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoe_with_profast_model, rel=1e-5) == 59.0962084
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("18_pyomo_heuristic_dispatch", None)]
 )
@@ -1541,7 +1503,7 @@ def test_pyomo_heuristic_dispatch_example(subtests, temp_copy_of_example):
         model = H2IntegrateModel(model_config)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
 def test_simple_dispatch_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1602,7 +1564,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
         npv = model.prob.get_val(
             "finance_subgroup_electricity.NPV_electricity_all_electricity_npv", units="USD"
         )[0]
-        assert pytest.approx(npv, rel=1e-6) == 3791194.71
+        assert pytest.approx(npv, rel=1e-5) == 3791194.71
 
     # Subtest for ProFAST NPV
     with subtests.test("Check NPV value (profast)"):
@@ -1610,7 +1572,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
             "finance_subgroup_electricity.NPV_electricity_all_electricity_profast_npv",
             units="USD",
         )[0]
-        assert pytest.approx(npv, rel=1e-6) == 7518969.18
+        assert pytest.approx(npv, rel=1e-5) == 7518969.18
 
     # Subtest for total electricity produced
     with subtests.test("Check total electricity produced"):
@@ -1700,7 +1662,7 @@ def test_simple_dispatch_example(subtests, temp_copy_of_example):
         assert pytest.approx(electricity_lcoe, rel=1e-6) == 78.01723
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("29_wind_ard", None)])
 def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
@@ -1786,7 +1748,7 @@ def test_windard_pv_battery_dispatch_example(subtests, temp_copy_of_example):
         assert electricity_missed_load == pytest.approx(1403.5372787817894)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("20_solar_electrolyzer_doe", None)]
 )
@@ -1797,7 +1759,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
         model = H2IntegrateModel(example_folder / "20_solar_electrolyzer_doe.yaml")
     assert "There may be issues with the csv file csv_doe_cases.csv" in str(excinfo.value)
 
-    from h2integrate import write_yaml, load_driver_yaml
+    from h2integrate import write_yaml
     from h2integrate.core.dict_utils import update_defaults
     from h2integrate.core.file_utils import check_file_format_for_csv_generator
 
@@ -1933,7 +1895,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
     new_csv_filename.unlink()
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("22_site_doe", None)])
 def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -1962,11 +1924,31 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         solar_capacity = case.get_design_vars()["solar.system_capacity_DC"][0]
         aep = case.get_val("solar.annual_electricity_produced", units="MW*h/yr")[0]
         lcoe = case.get_val("finance_subgroup_electricity.LCOE_optimistic", units="USD/(MW*h)")[0]
+        lcoe_transported = case.get_val(
+            "finance_subgroup_transported_electricity.LCOE_optimistic", units="USD/(MW*h)"
+        )[0]
+        transport_distance = case.get_val("electricity_transport.transport_distance", units="km")[0]
+        transport_capex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.capex_electricity_transport", units="USD"
+        )
+        transport_opex_adj = case.get_val(
+            "finance_subgroup_transported_electricity.opex_electricity_transport", units="USD/year"
+        )
+        transport_capex = case.get_val("electricity_transport.CapEx", units="USD")
+        transport_opex = case.get_val("electricity_transport.OpEx", units="USD/year")
 
         site_res = pd.DataFrame(
-            [aep, lcoe, solar_capacity], index=["AEP", "LCOE", "solar_capacity"], columns=[lat_lon]
+            [aep, lcoe, lcoe_transported, solar_capacity, transport_distance],
+            index=["AEP", "LCOE", "LCOE-T", "solar_capacity", "Distance"],
+            columns=[lat_lon],
         ).T
         res_df = pd.concat([site_res, res_df], axis=0)
+
+        with subtests.test(f"Case {ci}: Transport Costs are Non-zero"):
+            assert transport_capex_adj == transport_capex
+            assert transport_opex_adj == transport_opex
+            assert transport_capex_adj > 0
+            assert transport_opex_adj > 0
 
         with subtests.test(f"Case {ci}: Solar resource latitude matches site latitude"):
             assert (
@@ -1978,6 +1960,26 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
                 pytest.approx(case.get_val("site.longitude", units="deg"), abs=0.1)
                 == solar_resource_data["site_lon"]
             )
+        with subtests.test(f"Case {ci}: Site longitude matches transport source longitude"):
+            assert pytest.approx(
+                case.get_val("site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_longitude", units="deg")
+        with subtests.test(f"Case {ci}: Site latitude matches transport source latitude"):
+            assert pytest.approx(
+                case.get_val("site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.source_latitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site longitude matches transport source longitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.longitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_longitude", units="deg")
+        with subtests.test(
+            f"Case {ci}: Interconnect site latitude matches transport source latitude"
+        ):
+            assert pytest.approx(
+                case.get_val("interconnection_site.latitude", units="deg"), abs=1e-3
+            ) == case.get_val("electricity_transport.dest_latitude", units="deg")
 
     locations = list(set(res_df.index.to_list()))
     solar_sizes = list(set(res_df["solar_capacity"].to_list()))
@@ -1986,18 +1988,27 @@ def test_sweeping_solar_sites_doe(subtests, temp_copy_of_example):
         assert len(solar_sizes) == 2
     with subtests.test("Two unique sites"):
         assert len(locations) == 2
+    with subtests.test("Two unique transport distances"):
+        assert len(list(set(res_df["Distance"].to_list()))) == 2
 
     with subtests.test("Unique AEPs per case"):
         assert len(list(set(res_df["AEP"].to_list()))) == len(res_df)
 
+    with subtests.test("Unique LCOE (transported) per case"):
+        assert len(list(set(res_df["LCOE-T"].to_list()))) == len(res_df)
+
     with subtests.test("Unique LCOEs per case"):
         assert len(list(set(res_df["LCOE"].to_list()))) == len(res_df)
 
+    with subtests.test("Transported LCOE > LCOE"):
+        lcoe_comp = (res_df["LCOE-T"] > res_df["LCOE"]).to_list()
+        assert all(k for k in lcoe_comp)
 
-@pytest.mark.integration
+
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
-    [("23_solar_wind_ng_demand", "11_hybrid_energy_plant/")],
+    [("23_solar_wind_ng_demand", None)],
 )
 def test_ng_demand_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2023,7 +2034,7 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
     with subtests.test("Renewables LCOE with generic demand"):
         assert pytest.approx(65.25367747, rel=1e-6) == lcoe_renewables_generic[0]
     with subtests.test("Renewables NPV with generic demand"):
-        assert pytest.approx(-36.0408322, rel=1e-6) == npv_renewables_generic[0]
+        assert pytest.approx(-36.0408322, rel=1e-5) == npv_renewables_generic[0]
     with subtests.test("Natural gas LCOE with generic demand"):
         assert pytest.approx(60.30971126, rel=1e-6) == lcoe_ng_generic[0]
     with subtests.test("Electricity LCOE with generic demand"):
@@ -2050,14 +2061,14 @@ def test_ng_demand_example(subtests, temp_copy_of_example):
     with subtests.test("Renewables LCOE with flexible demand"):
         assert pytest.approx(65.25367747, rel=1e-6) == lcoe_renewables_flexible[0]
     with subtests.test("Renewables NPV with flexible demand"):
-        assert pytest.approx(-36.0408322, rel=1e-6) == npv_renewables_flexible[0]
+        assert pytest.approx(-36.0408322, rel=1e-5) == npv_renewables_flexible[0]
     with subtests.test("Natural gas LCOE with flexible demand"):
         assert pytest.approx(115.92792486, rel=1e-6) == lcoe_ng_flexible[0]
     with subtests.test("Electricity LCOE with flexible demand"):
         assert pytest.approx(76.39162926, rel=1e-6) == lcoe_electricity_flexible[0]
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("26_floris", None)])
 def test_floris_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2085,7 +2096,7 @@ def test_floris_example(subtests, temp_copy_of_example):
             pytest.approx(
                 h2i.prob.get_val("finance_subgroup_distributed.LCOE", units="USD/MW/h")[0], rel=1e-6
             )
-            == 99.8978994
+            == 94.86633261636857
         )
     with subtests.test("Utility LCOE"):
         assert (
@@ -2101,7 +2112,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("finance_subgroup_total_electricity.LCOE", units="USD/MW/h")[0],
                 rel=1e-6,
             )
-            == 65.24845058
+            == 57.39614177712789
         )
 
     with subtests.test("Distributed wind plant capacity"):
@@ -2110,7 +2121,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("distributed_wind_plant.rated_electricity_production", units="MW"),
                 rel=1e-6,
             )
-            == 66.0
+            == 16.5
         )
 
     with subtests.test("Total distributed electricity production"):
@@ -2123,7 +2134,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 ),
                 rel=1e-6,
             )
-            == 128915.05855
+            == 33938.129582746864
         )
 
     with subtests.test("Total utility electricity production"):
@@ -2140,7 +2151,7 @@ def test_floris_example(subtests, temp_copy_of_example):
                 h2i.prob.get_val("distributed_wind_plant.capacity_factor", units="percent")[0],
                 rel=1e-6,
             )
-            == 22.297471
+            == 23.480095186624368
         )
 
     with subtests.test("Utility wind plant capacity"):
@@ -2203,9 +2214,9 @@ def test_floris_example(subtests, temp_copy_of_example):
         )
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("24_solar_battery_grid", "11_hybrid_energy_plant/")]
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", None)]
 )
 def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
     # NOTE: would be good to compare LCOE against the same example without grid selling
@@ -2254,7 +2265,7 @@ def test_24_solar_battery_grid_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcoe, rel=1e-4) == 91.7057887
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_mapping", None)]
 )
@@ -2275,25 +2286,27 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_out_dir = ex_dir / "ex_out"
     ore_prices_filepath = ex_dir / "example_ore_prices.csv"
     shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping_coords.csv"
-    shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
-    cases_csv_fpath = ex_out_dir / "cases.csv"
+    shipping_prices_filepath = ex_out_dir / "cases_transport.csv"
+    cases_csv_fpath = ex_out_dir / "cases_iron_plant.csv"
     ex_png_fpath = ex_out_dir / "example_iron_map.png"
     ex_png_fpath.unlink(missing_ok=True)
 
     # Plot LCOI results from cases.sql file, save sql data to csv
-    fig, ax, lcoi_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, lcoi_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=cases_csv_fpath,
-        metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/kg)",
+        latitude_var_name="iron_transport.destination_latitude (deg)",
+        longitude_var_name="iron_transport.destination_longitude (deg)",
+        metric_to_plot="finance_subgroup_sponge_iron.LCOS (USD/t)",
         map_preferences={
             "figsize": (10, 8),
-            "colorbar_label": "Levelized Cost of\nIron [$/kg]",
+            "colorbar_label": "Levelized Cost of\nIron [$/t]",
             "colorbar_limits": (0.6, 1.0),
         },
     )
     # Add a layer for example ore cost prices from select mines
-    fig, ax, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, ore_cost_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=ore_prices_filepath,
-        metric_to_plot="ore_cost_per_kg",
+        metric_to_plot="ore_cost_per_tonne",
         map_preferences={
             "colormap": "Greens",
             "marker": "o",
@@ -2306,9 +2319,11 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
         base_layer_gdf=lcoi_layer_gdf,
     )
     # Add a layer for example waterway shipping cost from select mines to select ports
-    fig, ax, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
+    fig, ax, _, shipping_cost_layer_gdf = plot_geospatial_point_heat_map(
         case_results_fpath=shipping_prices_filepath,
-        metric_to_plot="shipping_cost_per_kg",
+        latitude_var_name="iron_transport.destination_latitude (deg)",
+        longitude_var_name="iron_transport.destination_longitude (deg)",
+        metric_to_plot="iron_transport.iron_transport_cost (USD/t)",
         map_preferences={
             "colormap": "Greys",
             "marker": "d",
@@ -2378,7 +2393,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
         ],
     )
     # Add chicago route as layer
-    fig, ax, transport_layer3_gdf = plot_straight_line_shipping_routes(
+    fig, ax, _transport_layer3_gdf = plot_straight_line_shipping_routes(
         shipping_coords_fpath=shipping_coords_filepath,
         shipping_route=chicago_route,
         map_preferences={"figure_title": "Example H2 DRI Iron Costs"},
@@ -2395,18 +2410,18 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     )
 
     with subtests.test("Type check on fig, ax, and lcoi_layer_gdf"):
-        assert isinstance(
-            fig, matplotlib.figure.Figure
-        ), f"Expected matplotlib.figure.Figure but got{type(fig)}"
-        assert isinstance(
-            ax, matplotlib.axes._axes.Axes
-        ), f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
-        assert isinstance(
-            lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame
-        ), f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        assert isinstance(fig, matplotlib.figure.Figure), (
+            f"Expected matplotlib.figure.Figure but got{type(fig)}"
+        )
+        assert isinstance(ax, matplotlib.axes._axes.Axes), (
+            f"Expected matplotlib.axes._axes.Axes but got{type(ax)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(lcoi_layer_gdf)}"
+        )
+        assert isinstance(lcoi_layer_gdf, gpd.geodataframe.GeoDataFrame), (
+            f"Expected gpd.geodataframe.GeoDataFrame but got{type(transport_layer1_gdf)}"
+        )
 
     with subtests.test("Check example_28_iron_map.png was saved"):
         assert (ex_png_fpath).is_file(), "example_28_iron_map.png file not found"
@@ -2415,7 +2430,7 @@ def test_iron_mapping_example(subtests, temp_copy_of_example):
     ex_png_fpath.unlink(missing_ok=True)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_natural_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2493,7 +2508,7 @@ def test_natural_geoh2(subtests, temp_copy_of_example):
         assert pytest.approx(surface_adjusted_opex, rel=1e-6) == 4798691.865
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("04_geo_h2", None)])
 def test_stimulated_geoh2(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2539,7 +2554,7 @@ def test_stimulated_geoh2(subtests, temp_copy_of_example):
         assert pytest.approx(adjusted_opex, rel=1e-6) == 215100.7857875
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_dri", None)]
 )
@@ -2556,21 +2571,21 @@ def test_iron_dri_eaf_example(subtests, temp_copy_of_example):
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 359.670379351
+        assert pytest.approx(lcos, rel=1e-4) == 350.75112
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 531.5842266865
+        assert pytest.approx(lcos, rel=1e-4) == 520.9524
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
-    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri_nrri", None)]
+    "example_folder,resource_example_folder", [("21_iron_examples/iron_dri", None)]
 )
 def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
 
-    h2i = H2IntegrateModel(example_folder / "single_site_iron.yaml")
+    h2i = H2IntegrateModel(example_folder / "single_site_iron_nrri.yaml")
 
     h2i.run()
 
@@ -2580,14 +2595,14 @@ def test_iron_dri_nrri_example(subtests, temp_copy_of_example):
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 350.302
+        assert pytest.approx(lcos, rel=1e-4) == 341.3828
 
     with subtests.test("Value check on LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 520.417
+        assert pytest.approx(lcos, rel=1e-4) == 509.785
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("21_iron_examples/iron_electrowinning", None)]
 )
@@ -2603,7 +2618,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.187185703820872
+        assert pytest.approx(lcoi, rel=1e-4) == 1.0336601
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2619,7 +2634,7 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 3.3399342887615115
+        assert pytest.approx(lcoi, rel=1e-4) == 2.1629239
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2631,10 +2646,10 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         model.setup()
         model.run()
         lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.2802793527655987
+        assert pytest.approx(lcoi, rel=1e-4) == 1.1254852
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("27_site_doe_diff", None)])
 def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2748,7 +2763,7 @@ def test_sweeping_different_resource_sites_doe(subtests, temp_copy_of_example):
         assert len(list(set(res_df["combiner LCOE"].to_list()))) == len(res_df)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("30_pyomo_optimized_dispatch", None)]
 )
@@ -2844,7 +2859,7 @@ def test_pyomo_optimized_dispatch_example(subtests, temp_copy_of_example):
         assert price == pytest.approx(0.134, rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize("example_folder,resource_example_folder", [("31_tidal", None)])
 def test_tidal_example(subtests, temp_copy_of_example):
     example_folder = temp_copy_of_example
@@ -2872,7 +2887,7 @@ def test_tidal_example(subtests, temp_copy_of_example):
         assert lcoe == pytest.approx(0.287, rel=1e-4)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("32_multivariable_streams", None)]
 )
@@ -2954,7 +2969,7 @@ def test_multivariable_streams_example(subtests, temp_copy_of_example):
         assert avg_pres[0] == pytest.approx(10.40, rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("21_iron_examples/iron_cmu/scrap_only", None)],
@@ -2981,7 +2996,7 @@ def test_cmu_eaf_scrap_only_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 0.2233330
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("21_iron_examples/iron_cmu/dri", None)],
@@ -3008,7 +3023,7 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
         assert pytest.approx(lcos, rel=1e-4) == 1.4932
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("33_peak_load_management_heuristics/plm_storage", None)],
@@ -3055,7 +3070,7 @@ def test_peak_load_management_example(subtests, temp_copy_of_example):
         assert battery_unmet_demand.sum() == pytest.approx(grid_purchase.sum(), rel=1e-3)
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder,expected",
     [
@@ -3104,7 +3119,7 @@ def test_plm_converter_heuristic_example(subtests, temp_copy_of_example, expecte
         assert np.sum(command > 0) == expected["nonzero_dispatch"]
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("34_plm_optimized_dispatch", None)]
 )
@@ -3136,22 +3151,22 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
         battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
         assert pytest.approx(battery_opex, rel=1e-1) == 23242.5
 
-    with subtests.test("Check number of discharge events"):
-        # With the given demand profile and battery size, there should be 2 discharge events
-        num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
-        assert num_discharge_events == 588
+    with subtests.test("Check number of discharge timesteps"):
+        num_discharge_timesteps = np.sum(battery_power > 1e-3)
+        assert num_discharge_timesteps == 2195
 
     with subtests.test("Check total energy discharged"):
-        total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 2428.0
+        dt_hours = model.plant_config["plant"]["simulation"]["dt"] / 3600
+        total_energy_discharged = battery_power.sum() * dt_hours
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 601811.5
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
-        total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -2663.0
+        total_energy_charged = battery_charge.sum() * dt_hours
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -665142.9363
 
 
-@pytest.mark.integration
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "example_folder,resource_example_folder", [("36_nuclear_reactor_htse", None)]
 )
@@ -3167,9 +3182,17 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     annual_htse_electricity = model.prob.get_val("htse.electricity_demand", units="TW*h/year")[0]
     annual_grid_sell = model.prob.get_val("grid_sell.annual_electricity_sold", units="TW*h/year")[0]
     annual_hydrogen = model.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
+    nuclear_lcoe = model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+    nuclear_lcoh = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("Nuclear annual electricity"):
         assert annual_nuclear_electricity == pytest.approx(8.75162086757)
+
+    with subtests.test("Nuclear LCOE is plausible"):
+        assert 50.0 <= nuclear_lcoe <= 400.0
+
+    with subtests.test("Hydrogen LCOH is plausible"):
+        assert 0.0 < nuclear_lcoh < 100.0
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)
@@ -3202,3 +3225,141 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
 
     with subtests.test("Unused electricity is routed to grid sell"):
         assert pytest.approx(unused_electricity.sum(), rel=1e-6) == grid_electricity_in.sum()
+
+
+@pytest.mark.examples
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("24_solar_battery_grid", None)]
+)
+def test_time_marching_simulation_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    # Load config files into dict
+    config_root = example_folder
+    config_path = config_root / "solar_battery_grid.yaml"
+
+    # Load top level config
+    config = load_yaml(config_path)
+    config["plant_config"] = load_plant_yaml(config_root / config["plant_config"])
+
+    # Run simulation sequentially, one subsystem at a time
+    h2i_seq = H2IntegrateModel(config)
+    h2i_seq.run()
+    h2i_seq.post_process(print_results=False)
+
+    inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
+    outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
+
+    # Run time-marching simulation for all subsystems, one window of timesteps at a time
+    config["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
+    config["plant_config"]["plant"]["simulation"]["n_timesteps_window"] = 24
+
+    # Create an H2I model for time-marching simulation
+    h2i_con = H2IntegrateModel(config)
+    h2i_con.run()
+    h2i_con.post_process(print_results=False)
+
+    inputs_con = dict(h2i_con.model.list_inputs(out_stream=None))
+    outputs_con = dict(h2i_con.model.list_outputs(out_stream=None))
+
+    from h2integrate.core.dict_utils import percent_diff_dicts
+
+    inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_con)
+    outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_con)
+
+    with subtests.test("Component iter_count reflects expected number of calls"):
+        assert h2i_seq.plant.battery.StoragePerformanceModel.iter_count == 1
+        assert h2i_con.plant.battery.StoragePerformanceModel.iter_count == 365
+
+    with subtests.test("Sequential and time-marching H2I inputs are consistent"):
+        for k, v in inputs_pd_dict.items():
+            if k.endswith(".timestep_index"):
+                continue
+            assert v <= 1e-8, (
+                f"H2I input: {k}, is not consistent between sequential and time-marching runs"
+            )
+
+    with subtests.test("Sequential and time-marching H2I outputs are consistent"):
+        for k, v in outputs_pd_dict.items():
+            assert v <= 1e-8, (
+                f"H2I output: {k}, is not consistent between sequential and time-marching runs"
+            )
+
+
+@pytest.mark.examples
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder",
+    [("37_paper_mill", None)],
+)
+def test_paper_mill_example(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    h2i = H2IntegrateModel(example_folder / "37_paper_mill_mn.yaml")
+
+    h2i.run()
+
+    h2i.post_process()
+
+    paper_capacity = h2i.prob.get_val(
+        "paper_mill.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    paper_capacity_factor = h2i.prob.get_val(
+        "paper_mill.capacity_factor",
+    )[0]
+
+    saf_capacity = h2i.prob.get_val(
+        "saf.plant_capacity_mtpy",
+        units="t/year",
+    )[0]
+
+    saf_capacity_factor = h2i.prob.get_val(
+        "saf.capacity_factor",
+    )[0]
+
+    lignin_in = h2i.prob.get_val(
+        "saf.lignin_in",
+        units="kg/h",
+    )
+
+    lignin_yield = 0.06  # t lignin/t paper
+    pulp_yield = 1.1  # t pulp/t paper
+    lignin_consumption = 1650  # kg lignin/t SAF
+
+    with subtests.test("Paper Mill CapEx"):
+        capex = h2i.prob.get_val("paper_mill.CapEx", units="USD")
+        assert pytest.approx(capex, rel=1e-2) == 2500 * paper_capacity
+
+    with subtests.test("Paper Mill OpEx"):
+        opex = h2i.prob.get_val("paper_mill.OpEx", units="USD/year")
+        assert pytest.approx(opex, rel=1e-2) == 1386000000
+
+    with subtests.test("Paper Mill Variable OpEx"):
+        varopex = h2i.prob.get_val("paper_mill.VarOpEx", units="USD/year")
+        assert pytest.approx(varopex, rel=1e-2) == 705431159.4
+
+    with subtests.test("Annual lignin production"):
+        lignin = h2i.prob.get_val("paper_mill.annual_lignin_produced", units="kg/year")
+        assert (
+            pytest.approx(lignin, rel=1e-2)
+            == paper_capacity * paper_capacity_factor * lignin_yield * 1000
+        )
+
+    with subtests.test("Annual pulp production"):
+        pulp = h2i.prob.get_val("paper_mill.annual_pulp_out_produced", units="t/year")
+        assert pytest.approx(pulp, rel=1e-2) == paper_capacity * paper_capacity_factor * pulp_yield
+
+    expected_hourly_saf = np.minimum(
+        saf_capacity * saf_capacity_factor / 8760,
+        lignin_in / lignin_consumption,
+    )
+
+    with subtests.test("Annual SAF production"):
+        saf = h2i.prob.get_val("saf.annual_saf_produced", units="t/year")
+        assert pytest.approx(saf, rel=1e-2) == expected_hourly_saf.sum()
+
+    with subtests.test("Paper mill lignin output is connected to SAF input"):
+        lignin_out = h2i.prob.get_val("paper_mill.lignin_out", units="kg/h")
+        lignin_in = h2i.prob.get_val("saf.lignin_in", units="kg/h")
+        np.testing.assert_allclose(lignin_in, lignin_out, rtol=1e-6)

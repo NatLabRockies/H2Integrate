@@ -691,3 +691,55 @@ def test_wave_resource_output_shape(plant_config, subtests):
 
     with subtests.test("energy_period positive"):
         assert (prob.get_val("energy_period") > 0).all()
+
+
+@pytest.mark.unit
+def test_wave_pysam_with_lifetime_performance(plant_config, wave_config, pysam_options, subtests):
+    pysam_options["Lifetime"] = {
+        "system_use_lifetime_output": 1,
+        "analysis_period": 30,
+        "generic_degradation": [0.025, 0.05, 0.075],
+    }
+
+    prob = om.Problem()
+
+    wave_resource = WaveResource(
+        plant_config=plant_config,
+        resource_config=plant_config["site"]["resources"]["wave_resource"]["resource_parameters"],
+        driver_config={},
+    )
+
+    prob.model.add_subsystem("wave_resource", wave_resource, promotes=["*"])
+
+    wave_config["model_inputs"]["performance_parameters"]["pysam_options"] = pysam_options
+    comp = PySAMWavePerformanceModel(
+        plant_config=plant_config,
+        tech_config=wave_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.run_model()
+
+    aep = prob.model.get_val("comp.annual_electricity_produced", units="kW*h/yr")
+    cf = prob.model.get_val("comp.capacity_factor", units="percent")
+    with subtests.test("AEP decreases from years 1-3"):
+        assert all(k < 0 for k in np.diff(aep[:3]))
+
+    with subtests.test("AEP years 0:30:3"):
+        assert 110229797.6595 == pytest.approx(aep[0:30:3], rel=1e-6)
+
+    with subtests.test("Capacity Factor 0:30:3"):
+        assert 40.73850762465275 == pytest.approx(cf[0:30:3], rel=1e-6)
+
+    with subtests.test("AEP years 1:30:3"):
+        assert 110202233.319 == pytest.approx(aep[1:30:3], rel=1e-6)
+
+    with subtests.test("Capacity Factor 1:30:3"):
+        assert 40.72832045095316 == pytest.approx(cf[1:30:3], rel=1e-6)
+
+    with subtests.test("AEP years 2:30:3"):
+        assert 110174668.97850001 == pytest.approx(aep[2:30:3], rel=1e-6)
+
+    with subtests.test("Capacity Factor 2:30:3"):
+        assert 40.71813327725357 == pytest.approx(cf[2:30:3], rel=1e-6)

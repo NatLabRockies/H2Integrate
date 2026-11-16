@@ -1,9 +1,4 @@
-from h2integrate.converters.co2.marine.direct_ocean_capture import (
-    DOCPerformanceModel,
-    DOCCostModel,
-)
-from h2integrate.converters.co2.marine.ocean_alkalinity_enhancement import (
-    OAEPerformanceModel,
-    OAECostModel,
-    OAECostAndFinancialModel,
-)
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(__name__, globals())

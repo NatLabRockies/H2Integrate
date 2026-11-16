@@ -1,3 +1,4 @@
+import re
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -238,7 +239,8 @@ def test_get_peaks_invalid_min_proximity_raises():
         "demand": [1.0, 2.0, 4.0, 3.0, 3.0, 4.0, 3.0, 2.0, 1.0, 2.0],
     }
 
-    with pytest.raises(ValueError, match="Selected peaks violate min_proximity."):
+    msg = re.escape("Selected peaks violate min_proximity.")
+    with pytest.raises(ValueError, match=msg):
         controller.get_peaks(
             demand_profile,
             n_override_events=2,

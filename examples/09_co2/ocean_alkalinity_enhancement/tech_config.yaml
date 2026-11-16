@@ -79,7 +79,7 @@ technologies:
     model_inputs:
       performance_parameters:
         number_ed_min: 1
-        number_ed_max: 10
+        number_ed_max: 5
         max_ed_system_flow_rate_m3s: 0.0324  # m^3/s
         frac_base_flow: 0.5
         assumed_CDR_rate: 0.8  # mol CO2/mol NaOH

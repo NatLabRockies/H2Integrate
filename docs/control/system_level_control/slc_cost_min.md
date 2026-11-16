@@ -14,16 +14,21 @@ kernelspec:
 (slc-cost-min)=
 # Cost Minimization System Level Controller
 
-The cost minimization controller, `CostMinimizationControl`, meets demand at minimum variable cost using merit-order dispatch.
+The {py:class}`~h2integrate.control.control_strategies.system_level.cost_minimization_control.CostMinimizationControl`
+meets demand using merit-order dispatch. It inherits its demand and technology interface from
+{py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`;
+solver options use
+{py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`.
 Unlike the {ref}`demand following controller <slc-demand-following>`, which splits demand evenly across dispatchable technologies, this controller dispatches the cheapest technologies first.
 
 ## Dispatch Logic
 
-The controller follows a three-step dispatch process:
+The controller follows a four-step dispatch process:
 
-1. **Flexible technologies** run at their available capacity (assumed zero marginal cost). Their output is subtracted from the demand.
-2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging). Residual demand is split evenly across storage technologies producing the demanded commodity.
-3. **Dispatchable technologies** are dispatched by cheapest marginal cost first, each up to its rated capacity, until the remaining demand is met.
+1. **Fixed technologies** produce without a set-point and are subtracted from demand.
+2. **Flexible technologies** run at their available capacity (assumed zero marginal cost). Their output is subtracted from the demand.
+3. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging). Residual demand is split evenly across storage technologies producing the demanded commodity.
+4. **Dispatchable technologies** are dispatched by cheapest marginal cost first, each up to its rated capacity, until the remaining demand is met.
 
 ## Marginal Cost Configuration
 
@@ -59,6 +64,8 @@ The base inputs for technologies classified as `flexible`, `dispatchable`, and `
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
 - `f"{tech_name}_{tech_output_commodity}_demand"`
+
+The outputs are `{tech_name}_{commodity}_set_point` signals for the controlled technologies.
 
 ## Limitations
 

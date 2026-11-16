@@ -4,18 +4,26 @@
 This model uses the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html) available in PySAM to simulate the performance of a solar-PV system.
 
 To use this model, specify `"PYSAMSolarPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#performance-parameters).
+See {py:class}`~h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModel` and
+{py:class}`~h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModelConfig`.
+
+The model receives the discrete `solar_resource_data` dictionary, `system_capacity_DC`, and
+`dc_ac_ratio`, plus `tilt_angle` or `azimuth_angle` inputs when the respective setting is
+`input`. It reports AC capacity, the electricity profile and production summaries. It supports
+one-hour time steps. See [solar cost models](atb_costs_pv.md) for capacity-based cost options.
 
 ```yaml
 technologies:
     pv:
-        performance_model: "PYSAMSolarPlantPerformanceModel"
+        performance_model:
+            model: "PYSAMSolarPlantPerformanceModel"
         model_inputs:
             performance_parameters:
                 pv_capacity_kWdc: 1000.0
                 dc_ac_ratio: 1.3
                 create_model_from: "new" #"options are "default" and "new"
-                tilt: #panel tilt angle to use if tilt_angle_func is "none"
-                tilt_angle_func: "lat-func" #options are "lat-func", "lat", "none"
+                tilt: #panel tilt angle to use if tilt_angle_setting is "input"
+                tilt_angle_setting: "lat-func" #options are "lat-func", "lat", "input"
                 config_name: #only used if create_model_from is "default"
                 pysam_options: #user specified pysam inputs
                     SystemDesign:
@@ -30,40 +38,35 @@ technologies:
 
 (performance-parameters)=
 ## Performance Parameters
-- `pv_capacity_kWdc` (required): capacity of the PV system in kW-DC
-- `dc_ac_ratio`: the ratio of DC capacity to AC capacity, equal to `pv_capacity_kWdc/pv_system_capacity_AC` is used to calculate the PV capacity in kW-AC and is equivalent as the inverter rated power. An inverter is used in PV systems to convert DC power (output from panels) to AC power (input to AC microgrid). The PV capacity in kW-AC is `pv_capacity_kWdc/dc_ac_ratio`. A general default `dc_ac_ratio` is between 1.2 and 1.3. **This is required if** `dc_ac_ratio` is not either loaded from a default Pvwattsv8 config OR not included in the `pysam_options` dictionary under the `SystemDesign` group.
+The configuration reference is generated from the class used by the model:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.solar.solar_pysam.PYSAMSolarPlantPerformanceModelConfig
+   :no-members:
+   :no-index:
+```
+
+The DC-to-AC ratio converts PV capacity to inverter-rated AC power:
 
 $$
 \text{PV Capacity (kW-AC)} = \frac{\text{PV Capacity (kW-DC)}}{\text{dc_ac_ratio}}
 $$
 
-- `tilt` (optional): tilt angle of the PV panel (in degrees) used if `tilt_angle_func` is `"none"`. Must be between 0 and 90.
-- `tilt_angle_func` (optional): options are `"none"`, `"lat-func"` or `"lat"` and defaults to `"none"`.
-    - `"none"`: use the tilt angle value specified in `'tilt'` input (if provided). If `tilt` is not provided, use the default value from the Pvwattsv8 module or config.
-    - `"lat"`: set the panel tilt angle equal to the latitude of the site.
-    - `"lat-func"`: calculate the tilt angle based on the latitude of the site using the equation below:
+When tilt is determined by latitude, the `lat-func` mode uses:
 
-        $$
-        \theta =
-        \begin{cases}
-            \text{lat} \cdot 0.87 & \text{if } \text{lat} \leq 25^\circ \\
-            3.1 + \text{lat} \cdot 0.76 & \text{if } 25^\circ < \text{lat} \leq 50^\circ \\
-            \text{lat} & \text{if } 50^\circ < \text{lat} \\
-        \end{cases}
-        $$
+$$
+\theta =
+\begin{cases}
+    \text{lat} \cdot 0.87 & \text{if } \text{lat} \leq 25^\circ \\
+    3.1 + \text{lat} \cdot 0.76 & \text{if } 25^\circ < \text{lat} \leq 50^\circ \\
+    \text{lat} & \text{if } 50^\circ < \text{lat} \\
+\end{cases}
+$$
 
-- `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the PV model is initialized using `Pvwattsv8.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the PV model is initialized using `Pvwattsv8.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
-- `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"PVWattsSingleOwner"`. The available options and their default parameters are listed below:
-    - [PVWattsCommercial](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommercial.json)
-    - [PVWattsCommunitySolar](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsCommunitySolar.json)
-    - [PVWattsHostDeveloper](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsHostDeveloper.json)
-    - [PVWattsMerchantPlant](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsMerchantPlant.json)
-    - [PVWattsNone](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsNone.json)
-    - [PVWattsResidential](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsResidential.json)
-    - [PVWattsSaleLeaseback](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSaleLeaseback.json)
-    - [PVWattsSingleOwner](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsSingleOwner.json)
-    - [PVWattsThirdParty](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsThirdParty.json)
-    - [PVWattsAllEquityPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Pvwattsv8_PVWattsAllEquityPartnershipFlip.json)
+The latitude-based azimuth points north for negative latitudes and south for positive latitudes.
+For available PySAM defaults, see the
+[SAM defaults directory](https://github.com/NatLabRockies/SAM/tree/develop/api/api_autogen/library/defaults).
+
 - `pysam_options` (dict): The top-level keys correspond to the Groups available in the [Pvwattsv8 module](https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html). The next level is the individual attributes a user could set and a full list is available through the PySAM documentation of Pvwattsv8 module. The Groups that users may want to specify specific options for are the:
     - [SystemDesign](#systemdesign-group)
     - [SolarResource](#solarresource-group)
@@ -104,8 +107,12 @@ Some common design parameters that a user may want to specify within the [System
 
     ```{note}
     Do not specify tilt angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
-    - `tilt_angle_func` is set to either "lat" or "lat-func"
-    - `tilt_angle_func` is set to "none" and `tilt` is specified under the performance parameters.
+    - `tilt_angle_setting` is set to either "lat" or "lat-func"
+    - `tilt_angle_setting` is set to "input" and `tilt` is specified under the performance parameters.
+
+    Do not specify azimuth angle in the SystemDesign Group parameters if the following parameters are specified in the performance_parameters:
+    - `azimuth_angle_setting` is set to "lat-func"
+    - `azimuth_angle_setting` is set to "input" and `azimuth` is specified under the performance parameters.
     ```
 
 (solarresource-group)=

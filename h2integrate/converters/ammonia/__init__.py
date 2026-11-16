@@ -1,11 +1,6 @@
-from h2integrate.converters.ammonia.simple_ammonia_model import (
-    SimpleAmmoniaPerformanceModel,
-    SimpleAmmoniaCostModel,
-)
-from h2integrate.converters.ammonia.ammonia_synloop_performance import (
-    AmmoniaSynLoopPerformanceModel,
-)
-from h2integrate.converters.ammonia.ammonia_synloop_cost import (
-    AmmoniaSynLoopCostModel,
-    AmmoniaSynLoopCostConfig,
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(
+    __name__, globals(), {"AmmoniaSynLoopCostConfig": "ammonia_synloop_cost"}
 )

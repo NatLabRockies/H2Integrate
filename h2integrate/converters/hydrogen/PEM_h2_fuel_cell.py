@@ -3,7 +3,8 @@ from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, faraday
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -14,6 +15,9 @@ class PEMH2FuelCellPerformanceConfig(BaseConfig):
         system_capacity_kw (float): The capacity of the fuel cell system in kilowatts (kW).
         n_stacks (int): The number of stacks in the fuel cell system.
         stack_temperature_K (float): The operating temperature of the fuel cell stack in Kelvin (K).
+        hhv (float): Higher heating value of hydrogen in kWh/kg.
+
+    See :class:`PEMH2FuelCellPerformanceModel` and :doc:`/technology_models/PEM_h2_fuel_cell`.
     """
 
     system_capacity_kw: float = field(validator=validators.ge(0))
@@ -67,9 +71,12 @@ def calc_current(system_power_reference, cell_area, n_cells, n_stacks):
     return stack_current, V_J_curve
 
 
+@register
 class PEMH2FuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a PEM hydrogen fuel cell.
+
+    See :class:`PEMH2FuelCellPerformanceConfig` and :doc:`/technology_models/PEM_h2_fuel_cell`.
 
     The model simulates electrochemical conversion of hydrogen and oxygen into electricity
     and water. It calculates:

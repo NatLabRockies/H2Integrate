@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -93,52 +95,6 @@ def fake_cost_dict():
         "varopex_adjusted_natural_gas": [65458026.9] * 30,
     }
     return fake_costs
-
-
-@pytest.mark.regression
-def test_profast_npv_no1(profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests):
-    mean_hourly_production = 500000.0
-    prob = om.Problem()
-    plant_config = {
-        "plant": {
-            "plant_life": 30,
-        },
-        "finance_parameters": {"model_inputs": profast_inputs_no1},
-    }
-    pf = ProFastNPV(
-        driver_config={},
-        plant_config=plant_config,
-        tech_config=fake_filtered_tech_config,
-        commodity_type="electricity",
-        description="no1",
-    )
-    ivc = om.IndepVarComp()
-
-    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
-    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
-
-    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
-    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
-    prob.setup()
-    for variable, cost in fake_cost_dict.items():
-        units = "USD" if "capex" in variable else "USD/year"
-        prob.set_val(f"pf.{variable}", cost, units=units)
-
-    prob.run_model()
-
-    with subtests.test("Sell price"):
-        assert (
-            pytest.approx(
-                prob.get_val("pf.sell_price_electricity_no1", units="USD/(kW*h)"), rel=1e-6
-            )
-            == profast_inputs_no1["commodity_sell_price"]
-        )
-
-    with subtests.test("NPV"):
-        assert (
-            pytest.approx(prob.get_val("pf.NPV_electricity_no1", units="USD")[0], rel=1e-6)
-            == -580179388.883
-        )
 
 
 @pytest.mark.regression
@@ -336,6 +292,99 @@ def test_profast_npv_nonstandard_price_units(
 
 
 @pytest.mark.regression
+def test_profast_npv_across_different_production_units(
+    profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
+):
+    expected_npv = 611288384.412
+    mean_hourly_production = 500000.0  # kg/h
+    mean_production_per_min = mean_hourly_production / 60  # kg/min
+    prob = om.Problem()
+
+    profast_inputs_no2["commodity_sell_price_units"] = "USD/kg"
+
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+    pf1 = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="hydrogen",
+        description="no2",
+    )
+
+    pf2 = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="hydrogen",
+        description="no2",
+    )
+
+    # make one group with the production in units of kg/h
+    per_hr_group = prob.model.add_subsystem("hourly", om.Group())
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_hydrogen_production", mean_hourly_production, units="kg/h")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    per_hr_group.add_subsystem("ivc", ivc, promotes=["*"])
+    per_hr_group.add_subsystem("pf", pf1, promotes=["rated_hydrogen_production", "capacity_factor"])
+
+    # make another group with the production in units of kg/min
+    per_min_group = prob.model.add_subsystem("minutely", om.Group())
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_hydrogen_production", mean_production_per_min, units="kg/min")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    per_min_group.add_subsystem("ivc", ivc, promotes=["*"])
+    per_min_group.add_subsystem(
+        "pf", pf2, promotes=["rated_hydrogen_production", "capacity_factor"]
+    )
+
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"hourly.pf.{variable}", cost, units=units)
+        prob.set_val(f"minutely.pf.{variable}", cost, units=units)
+
+    prob.set_val(
+        "hourly.pf.sell_price_hydrogen_no2",
+        profast_inputs_no2["commodity_sell_price"],
+        units="USD/kg",
+    )
+    prob.set_val(
+        "minutely.pf.sell_price_hydrogen_no2",
+        profast_inputs_no2["commodity_sell_price"],
+        units="USD/kg",
+    )
+    prob.run_model()
+
+    with subtests.test("Sell price"):
+        assert (
+            pytest.approx(
+                prob.get_val("minutely.pf.sell_price_hydrogen_no2", units="USD/kg"), rel=1e-6
+            )
+            == profast_inputs_no2["commodity_sell_price"]
+        )
+
+    with subtests.test("NPV (hourly)"):
+        assert (
+            pytest.approx(prob.get_val("hourly.pf.NPV_hydrogen_no2", units="USD")[0], rel=1e-6)
+            == expected_npv
+        )
+    with subtests.test("NPV (minutely)"):
+        assert (
+            pytest.approx(prob.get_val("minutely.pf.NPV_hydrogen_no2", units="USD")[0], rel=1e-6)
+            == expected_npv
+        )
+
+
+@pytest.mark.regression
 def test_profast_npv_multi_year_sell_price(
     profast_inputs_no2, fake_filtered_tech_config, fake_cost_dict, subtests
 ):
@@ -524,3 +573,127 @@ def test_profast_npv_with_inflation(
             pytest.approx(prob.get_val("pf.NPV_electricity_no2", units="USD")[0], rel=1e-6)
             == 611288384.4121004
         )
+
+
+@pytest.mark.regression
+def test_profast_npv_uses_first_year_price_for_construction_padding(
+    profast_inputs_no2,
+    subtests,
+):
+    mock_pf = MagicMock()
+    mock_pf.cash_flow.return_value = 123.0
+
+    # A non-divisible by 12 installation period exercises the construction-year boundary case.
+    profast_inputs_no2["params"]["installation_time"] = 14
+    profast_inputs_no2["commodity_sell_price"] = [0.07] * 30
+    plant_life = 30
+    tech_config = {"grid": {"model_inputs": {}}}
+
+    plant_config = {
+        "plant": {
+            "plant_life": plant_life,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no2},
+    }
+
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=tech_config,
+        commodity_type="electricity",
+        description="no2",
+    )
+
+    ivc = om.IndepVarComp()
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_life, units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+
+    prob.set_val("pf.capex_adjusted_grid", 1.0e6, units="USD")
+    prob.set_val("pf.opex_adjusted_grid", 1.0e4, units="USD/year")
+    prob.set_val("pf.varopex_adjusted_grid", [0.0] * plant_life, units="USD/year")
+    prob.set_val("pf.replacement_schedule_grid", [0.0] * plant_life, units="unitless")
+
+    with patch.object(ProFastNPV, "populate_profast", return_value=mock_pf):
+        prob.run_model()
+
+    expected_prefix_len = int(np.ceil(profast_inputs_no2["params"]["installation_time"] / 12) + 1)
+    expected_price = profast_inputs_no2["commodity_sell_price"][0]
+    calculated_price = np.asarray(mock_pf.cash_flow.call_args.kwargs["price"], dtype=float)
+
+    with subtests.test("Construction-year padding uses first sell price"):
+        assert np.allclose(calculated_price[:expected_prefix_len], expected_price)
+
+    with subtests.test("First operating year keeps same sell price"):
+        assert calculated_price[expected_prefix_len] == pytest.approx(expected_price)
+
+    with subtests.test("NPV uses mocked cash_flow return"):
+        assert prob.get_val("pf.NPV_electricity_no2", units="USD")[0] == pytest.approx(123.0)
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("use_slc", [True, False])
+def test_profast_npv_warnings(
+    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests, use_slc
+):
+    mean_hourly_production = 500000.0
+    prob = om.Problem()
+    plant_config = {
+        "plant": {
+            "plant_life": 30,
+        },
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+    }
+    if use_slc:
+        plant_config["system_level_control"] = {}
+    pf = ProFastNPV(
+        driver_config={},
+        plant_config=plant_config,
+        tech_config=fake_filtered_tech_config,
+        commodity_type="electricity",
+        description="no1",
+    )
+    ivc = om.IndepVarComp()
+
+    ivc.add_output("rated_electricity_production", mean_hourly_production, units="kW")
+    ivc.add_output("capacity_factor", [1.0] * plant_config["plant"]["plant_life"], units="unitless")
+
+    prob.model.add_subsystem("ivc", ivc, promotes=["*"])
+    prob.model.add_subsystem("pf", pf, promotes=["rated_electricity_production", "capacity_factor"])
+    prob.setup()
+    for variable, cost in fake_cost_dict.items():
+        units = "USD" if "capex" in variable else "USD/year"
+        prob.set_val(f"pf.{variable}", cost, units=units)
+
+    # Set rated capacity to 0
+    prob.set_val("pf.rated_electricity_production", 0.0, units="kW")
+
+    with subtests.test("Test zero capacity warning"):
+        expected_str = "has a zero capacity."
+        with pytest.warns(UserWarning) as excinfo:
+            prob.run_model()
+        assert expected_str in str(excinfo.list[0].message)
+        assert str(excinfo.list[0].message).endswith("default value of -1e20")
+
+    with subtests.test("Test zero capacity value"):
+        assert prob.get_val("pf.NPV_electricity_no1", units="GUSD")[0] == -1e11
+
+    # Set capacity factor to 0
+    prob.set_val("pf.rated_electricity_production", mean_hourly_production, units="kW")
+    prob.set_val(
+        "pf.capacity_factor", [0.0] * plant_config["plant"]["plant_life"], units="unitless"
+    )
+    with subtests.test("Test zero capacity factor warning"):
+        expected_str = "has a zero capacity factor."
+        with pytest.warns(UserWarning) as excinfo:
+            prob.run_model()
+        assert expected_str in str(excinfo.list[0].message)
+        assert str(excinfo.list[0].message).endswith("default value of -1e20")
+
+    with subtests.test("Test zero capacity factor value"):
+        assert prob.get_val("pf.NPV_electricity_no1", units="GUSD")[0] == -1e11

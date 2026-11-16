@@ -7,6 +7,7 @@ from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig
 from h2integrate.core.file_utils import get_path, find_file
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -14,15 +15,18 @@ class TidalResourceConfig(BaseConfig):
     """
     Args:
         resource_dir (str | Path, optional): Folder to save resource files to or
-        load resource files from. Defaults to "".
+        load resource files from. Defaults to None.
         resource_filename (str, optional): Filename to save resource data to or load
-            resource data from. Defaults to None.
+            resource data from. Defaults to "".
+
+    See :class:`TidalResource` and :doc:`/resource/tidal_resource`.
     """
 
     resource_dir: Path | str | None = field(default=None)
     resource_filename: Path | str = field(default="")
 
 
+@register
 class TidalResource(om.ExplicitComponent):
     """
     A resource component for processing tidal data from a CSV file.
@@ -44,6 +48,8 @@ class TidalResource(om.ExplicitComponent):
         FileNotFoundError: If the specified file does not exist.
         ValueError: If the file does not contain sufficient data or the required
             speed column is not found.
+
+    See :class:`TidalResourceConfig` and :doc:`/resource/tidal_resource`.
     """
 
     def initialize(self):

@@ -3,6 +3,7 @@ import copy
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfaceCostConfig,
@@ -17,6 +18,8 @@ class GeoH2SubsurfaceCostConfig(GeoH2SubsurfaceCostConfig):
     This configuration defines cost parameters specific to subsurface well
     components used in geologic hydrogen systems. It supports either the use of
     a built-in drilling cost curve or a manually specified constant drilling cost.
+
+    See :class:`GeoH2SubsurfaceCostModel` and :doc:`/technology_models/geologic_hydrogen`.
 
     Attributes:
         test_drill_cost (float):
@@ -100,6 +103,7 @@ class GeoH2SubsurfaceCostConfig(GeoH2SubsurfaceCostConfig):
             )
 
 
+@register
 class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
     """An OpenMDAO component for modeling subsurface well costs in geologic
         hydrogen plants.
@@ -109,6 +113,8 @@ class GeoH2SubsurfaceCostModel(GeoH2SubsurfaceCostBaseClass):
 
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
         - NETL Quality Guidelines: https://doi.org/10.2172/1567736
+
+    See :class:`GeoH2SubsurfaceCostConfig` and :doc:`/technology_models/geologic_hydrogen`.
 
     Attributes:
         config (GeoH2SubsurfaceCostConfig): Configuration object containing cost parameters.

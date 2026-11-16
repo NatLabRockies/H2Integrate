@@ -31,7 +31,7 @@ technology_interconnections:
   # connect natural gas and combined solar+battery generation to finance combiner
   - [elec_combiner, fin_combiner, electricity, cable]
   - [natural_gas_plant, fin_combiner, electricity, cable]
-resource_to_tech_connections:
+site_to_tech_connections:
   # connect the wind resource to the wind technology
   - [site.solar_resource, solar, solar_resource_data]
 plant:

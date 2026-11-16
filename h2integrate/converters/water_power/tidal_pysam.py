@@ -2,7 +2,8 @@ import PySAM.MhkTidal as MhkTidal
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -28,6 +29,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
         run_recalculate_power_curve (bool, optional): If True, the tidal device power curve will be
             recalculated based on the device_rating_kw and original power_curve. Defaults to False.
 
+    See :class:`PySAMTidalPerformanceModel` and :doc:`/technology_models/tidal`.
     """
 
     device_rating_kw: float = field(validator=validators.gt(0))
@@ -62,8 +64,7 @@ class PySAMTidalPerformanceConfig(BaseConfig):
 
         if self.create_model_from == "new" and self.tidal_power_curve is None:
             msg = (
-                "To create a new MhkTidal object, please provide a "
-                "tidal_power_curve in the config."
+                "To create a new MhkTidal object, please provide a tidal_power_curve in the config."
             )
             raise ValueError(msg)
 
@@ -116,9 +117,13 @@ class PySAMTidalPerformanceConfig(BaseConfig):
         return design_dict
 
 
+@register
 class PySAMTidalPerformanceModel(PerformanceModelBaseClass):
     """An OpenMDAO component that wraps the PySAM MhkTidal model.
     It takes tidal parameters as input and outputs power generation data.
+
+    See :class:`PySAMTidalPerformanceConfig`, :class:`~h2integrate.resource.tidal.TidalResource`,
+    and :doc:`/technology_models/tidal`.
     """
 
     _time_step_bounds = (

@@ -3,6 +3,7 @@ import openmdao.api as om
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -11,6 +12,9 @@ class GenericSplitterPerformanceConfig(BaseConfig):
 
     Fields include `split_mode`, `commodity`, `commodity_rate_units`,
     `fraction_to_priority_tech`, and `prescribed_commodity_to_priority_tech`.
+
+    See :class:`GenericSplitterPerformanceModel` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     split_mode: str = field(
@@ -29,7 +33,7 @@ class GenericSplitterPerformanceConfig(BaseConfig):
         if self.split_mode == "fraction":
             if self.fraction_to_priority_tech is None:
                 raise ValueError(
-                    "fraction_to_priority_tech is required" " when split_mode is 'fraction'"
+                    "fraction_to_priority_tech is required when split_mode is 'fraction'"
                 )
         if self.split_mode == "prescribed_commodity":
             if self.prescribed_commodity_to_priority_tech is None:
@@ -45,6 +49,7 @@ class GenericSplitterPerformanceConfig(BaseConfig):
             self.fraction_to_priority_tech = 0.0
 
 
+@register(no_cost=True)
 class GenericSplitterPerformanceModel(om.ExplicitComponent):
     """Split a commodity stream from one source into two outputs.
 
@@ -55,7 +60,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     - Prescribed commodity splitting: send a prescribed amount to the priority
         technology, with the remainder to the other technology.
 
-    The ``priority_tech`` parameter determines which technology receives the
+    The order of downstream connections determines which technology receives the
     primary allocation. The outputs are:
 
     - ``{commodity}_out1``: commodity sent to the first technology.
@@ -63,6 +68,9 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
+
+    See :class:`GenericSplitterPerformanceConfig` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     _time_step_bounds = (
@@ -71,6 +79,8 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     _control_classifier = "splitter"
+
+    _is_steppable = False
 
     def initialize(self):
         self.options.declare("driver_config", types=dict, default={})

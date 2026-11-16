@@ -1,7 +1,4 @@
-from h2integrate.transporters.cable import CablePerformanceModel
-from h2integrate.transporters.pipe import PipePerformanceModel
-from h2integrate.transporters.generic_combiner import GenericCombinerPerformanceModel
-from h2integrate.transporters.generic_splitter import GenericSplitterPerformanceModel
-from h2integrate.transporters.generic_transporter import GenericTransporterPerformanceModel
-from h2integrate.transporters.generic_summer import GenericSummerPerformanceModel
-from h2integrate.transporters.gas_stream_combiner import GasStreamCombinerPerformanceModel
+from h2integrate.core.lazy_imports import lazy_exports
+
+
+__getattr__, __dir__ = lazy_exports(__name__, globals())

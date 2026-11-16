@@ -4,7 +4,8 @@ from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
 from h2integrate.tools.constants import H_MW, O2_MW, CH4_MW, CO2_MW, LHV_CH4_MJ_PER_KG, faraday
-from h2integrate.core.model_baseclasses import PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -16,6 +17,8 @@ class SONGFuelCellPerformanceConfig(BaseConfig):
         n_stacks (int): The number of stacks in the fuel cell system.
         stack_temperature_K (float): The operating temperature of the fuel cell stack in Kelvin (K).
         hhv (float): higher heating value of the fuel in kWh/kg
+
+    See :class:`SONGFuelCellPerformanceModel` and :doc:`/technology_models/SO_NG_fuel_cell`.
     """
 
     system_capacity_kw: float = field(validator=validators.ge(0))
@@ -69,9 +72,12 @@ def calc_current(system_power_reference, cell_area, n_cells, n_stacks):
     return stack_current, V_J_curve
 
 
+@register
 class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for a solid oxide natural gas fuel cell.
+
+    See :class:`SONGFuelCellPerformanceConfig` and :doc:`/technology_models/SO_NG_fuel_cell`.
 
     The model calculates electricity output based on natural gas and oxygen inputs,
     with current and voltage determined from power density using IV curves.
@@ -79,7 +85,7 @@ class SONGFuelCellPerformanceModel(PerformanceModelBaseClass):
     Possible source: https://www.pnnl.gov/main/publications/external/technical_reports/PNNL-18338.pdf
 
     where:
-    - natural_gas_in is the mass flow rate of natural gas in kg/hr
+    - natural_gas_in is the natural gas energy flow in MMBtu/h
     - oxygen_in is the mass flow rate of oxygen in kg/hr
     - water_out is the mass flow rate of water produced in kg/hr
     - co2_out is the mass flow rate of carbon dioxide produced in kg/hr

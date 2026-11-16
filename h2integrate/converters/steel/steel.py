@@ -2,6 +2,7 @@ import ProFAST
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.steel.steel_baseclass import (
     SteelCostBaseClass,
     SteelPerformanceBaseClass,
@@ -10,14 +11,23 @@ from h2integrate.converters.steel.steel_baseclass import (
 
 @define(kw_only=True)
 class SteelPerformanceModelConfig(BaseConfig):
+    """Configuration for :class:`SteelPerformanceModel`.
+
+    See :doc:`/technology_models/steel_eaf`.
+    """
+
     plant_capacity_mtpy: float = field()
     capacity_factor: float = field()
 
 
+@register
 class SteelPerformanceModel(SteelPerformanceBaseClass):
     """
     An OpenMDAO component for modeling the performance of an steel plant.
     Computes annual steel production based on plant capacity and capacity factor.
+
+    See :class:`SteelPerformanceModelConfig`, :class:`SteelCostAndFinancialModel`, and
+    :doc:`/technology_models/steel_eaf`.
     """
 
     _time_step_bounds = (
@@ -45,6 +55,11 @@ class SteelPerformanceModel(SteelPerformanceBaseClass):
 
 @define(kw_only=True)
 class SteelCostAndFinancialModelConfig(BaseConfig):
+    """Configuration for :class:`SteelCostAndFinancialModel`.
+
+    See :doc:`/technology_models/steel_eaf`.
+    """
+
     installation_time: int = field()
     inflation_rate: float = field()
     operational_year: int = field()
@@ -82,10 +97,14 @@ class SteelCostAndFinancialModelConfig(BaseConfig):
     maintenance_materials_unitcost: float = field(default=7.72)
 
 
+@register
 class SteelCostAndFinancialModel(SteelCostBaseClass):
     """
     An OpenMDAO component for calculating the costs associated with steel production.
     Includes CapEx, OpEx, and byproduct credits.
+
+    See :class:`SteelCostAndFinancialModelConfig`, :class:`SteelPerformanceModel`, and
+    :doc:`/technology_models/steel_eaf`.
     """
 
     _time_step_bounds = (

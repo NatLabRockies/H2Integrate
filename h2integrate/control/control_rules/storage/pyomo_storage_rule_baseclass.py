@@ -3,6 +3,7 @@ from attrs import field, define, validators
 from pyomo.network import Port
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.control.control_rules.pyomo_rule_baseclass import (
     PyomoRuleBaseClass,
     PyomoRuleBaseConfig,
@@ -22,8 +23,23 @@ class PyomoStorageRuleBaseConfig(PyomoRuleBaseConfig):
     )
 
 
+@define(kw_only=True)
+class PyomoRuleStorageBaseclassConfig(PyomoStorageRuleBaseConfig):
+    """Configuration for :class:`PyomoRuleStorageBaseclass`.
+
+    See :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
+
+    pass
+
+
+@register
 class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
-    """Base class defining Pyomo rules for generic commodity storage components."""
+    """Base class defining Pyomo rules for generic commodity storage components.
+
+    See :class:`PyomoRuleStorageBaseclassConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
 
     _time_step_bounds = (
         3600,
@@ -31,7 +47,7 @@ class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     def setup(self):
-        self.config = PyomoStorageRuleBaseConfig.from_dict(
+        self.config = PyomoRuleStorageBaseclassConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "dispatch_rule"),
             strict=False,
             additional_cls_name=self.__class__.__name__,

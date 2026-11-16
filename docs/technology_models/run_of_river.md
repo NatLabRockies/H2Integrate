@@ -1,14 +1,51 @@
 (run_of_river_hydro)=
 # Run-of-river hydropower model
 
-The `RunOfRiverHydro` model simulates the generation of electricity from a river generation source, taking into account the flow rate and the efficiency of the turbine.
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceModel`,
+configured by
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceConfig`,
+simulates electricity generation from river flow. The
+{py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostModel`
+uses {py:class}`~h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostConfig`
+to calculate capital and fixed operating costs.
 The run-of-river model is representative of a canal and/or penstock that produces energy by using the natural decline of the river bed elevation.
 The model uses a simple formula to calculate the power generated based on the flow rate and the height difference between the water source and the turbine.
 This doc page walks you through how to obtain resource information and how to use the model.
 
+The {py:class}`~h2integrate.resource.river.RiverResource` component and its
+{py:class}`~h2integrate.resource.river.RiverResourceConfig` read the discharge file. The resource
+outputs 8,760 hourly `discharge` values in `ft**3/s`. Its latitude and longitude inputs do not
+select the file. The performance model takes `discharge` in `m**3/s`, clips electricity production to the
+configured capacity, and reports `electricity_out`, rated and annual production, and capacity
+factor. Both hydro models support one-hour time steps. With system-level control, electricity
+output is curtailed after production summaries are calculated, so those summaries reflect
+uncurtailed production.
+
+## Configuration
+
+The model and resource configurations are generated from their API documentation:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroPerformanceConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.water_power.hydro_plant_run_of_river.RunOfRiverHydroCostConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.resource.river.RiverResourceConfig
+   :no-members:
+   :no-index:
+```
+
 ```{note}
 This process is quite manual and not as automated as obtaining other resource information.
 This is because river information is available at discrete station locations along waterways and each station has different sensor information reported.
+```
+
+```{note}
+The legacy USGS NWIS Web Interface used in the screenshots is scheduled for decommissioning in late 2026; see the [USGS modernization timeline](https://waterdata.usgs.gov/blog/nwisweb-decommission-campaign3/). The current `RiverResource` importer expects the tab-delimited export from that interface, so check the USGS updates before following these steps.
 ```
 
 ## Obtaining river resource information
@@ -56,7 +93,7 @@ Please check the site information to ensure that the site you selected has disch
 ```
 
 5. Now you can select the date range that you're interested in.
-   H2Integrate requires exactly one year of data, so you can select the start and end dates accordingly.
+   The current `RiverResource` importer requires exactly 8,760 hourly values for one year of data. Select the start and end dates accordingly; multi-year river files are not supported by this importer.
    In this example, we select the start date as `2024-05-01` and the end date as `2025-04-30`.
    Then, select the `Tab-separated data` option and click `Submit`.
    This will download a file with the river data in tab-separated format.

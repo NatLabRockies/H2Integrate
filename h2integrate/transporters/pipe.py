@@ -1,9 +1,14 @@
 import openmdao.api as om
 
+from h2integrate.core.supported_models import register
 
+
+@register(name="pipe", no_cost=True)
 class PipePerformanceModel(om.ExplicitComponent):
     """
     Pass-through pipe with no losses.
+
+    See :doc:`/technology_models/transport` for supported commodities and units.
     """
 
     _time_step_bounds = (
@@ -24,6 +29,7 @@ class PipePerformanceModel(om.ExplicitComponent):
                 "wellhead_gas",
                 "water",
                 "oxygen",
+                "lignin",
                 "diesel",
             ],
         )

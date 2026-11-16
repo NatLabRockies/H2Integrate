@@ -2,7 +2,8 @@ from attrs import field, define, validators
 from mcm.capture import echem_mcc
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass, PerformanceModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 def setup_electrodialysis_inputs(config):
@@ -27,6 +28,8 @@ def setup_electrodialysis_inputs(config):
 class DOCPerformanceConfig(BaseConfig):
     """Extended configuration for Direct Ocean Capture (DOC) performance model.
 
+    See :class:`DOCPerformanceModel` and :doc:`/technology_models/co2`.
+
     Attributes:
         number_ed_min (int): Minimum number of ED units to operate.
         number_ed_max (int): Maximum number of ED units available.
@@ -47,6 +50,7 @@ class DOCPerformanceConfig(BaseConfig):
         initial_tank_volume_m3 (float): Initial volume of the tank (m³).
         save_outputs (bool, optional): If true, save results to .csv files. Defaults to False.
         save_plots (bool, optional): If true, save plots of results. Defaults to False.
+
     """
 
     number_ed_min: int = field(validator=validators.gt(0))
@@ -70,9 +74,12 @@ class DOCPerformanceConfig(BaseConfig):
     save_plots: bool = field(default=False)
 
 
+@register
 class DOCPerformanceModel(PerformanceModelBaseClass):
     """
     An OpenMDAO component for modeling the performance of a Direct Ocean Capture (DOC) plant.
+
+    See :class:`DOCPerformanceConfig`, :class:`DOCCostModel`, and :doc:`/technology_models/co2`.
     """
 
     _time_step_bounds = (
@@ -111,7 +118,7 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
     def compute(self, inputs, outputs):
         ED_inputs = setup_electrodialysis_inputs(self.config)
 
-        co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
+        _co_2_outputs, range_outputs, ed_outputs = echem_mcc.run_electrodialysis_physics_model(
             power_profile_w=inputs["electricity_in"],
             initial_tank_volume_m3=self.config.initial_tank_volume_m3,
             electrodialysis_config=ED_inputs,
@@ -144,18 +151,25 @@ class DOCPerformanceModel(PerformanceModelBaseClass):
 class DOCCostModelConfig(DOCPerformanceConfig):
     """Configuration for the DOC cost model.
 
+    See :class:`DOCCostModel` and :doc:`/technology_models/co2`.
+
     Attributes:
         infrastructure_type (str): Type of infrastructure (e.g., "desal", "swCool", "new").
         cost_year (int): dollar year corresponding to cost values
+
     """
 
     infrastructure_type: str = field(validator=validators.in_(["desal", "swCool", "new"]))
     cost_year: int = field(default=2023, converter=int, validator=validators.in_([2023]))
 
 
+@register
 class DOCCostModel(CostModelBaseClass):
     """OpenMDAO component for computing capital (CapEx) and operational (OpEx) costs of a
     direct ocean capture (DOC) system.
+
+    See :class:`DOCCostModelConfig`, :class:`DOCPerformanceModel`, and
+    :doc:`/technology_models/co2`.
     """
 
     _time_step_bounds = (

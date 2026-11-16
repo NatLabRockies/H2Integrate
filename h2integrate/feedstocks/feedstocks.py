@@ -3,7 +3,8 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -15,6 +16,8 @@ class FeedstockPerformanceConfig(BaseConfig):
         commodity_rate_units (str): feedstock usage rate units (such as "galUS/h", "kg/h" or "kW")
         rated_capacity (float):  The rated capacity of the feedstock in `commodity_rate_units`.
             This is used to size the feedstock supply to meet the plant's needs.
+
+    See :class:`FeedstockPerformanceModel` and :doc:`/technology_models/feedstocks`.
     """
 
     commodity: str = field()
@@ -22,11 +25,20 @@ class FeedstockPerformanceConfig(BaseConfig):
     rated_capacity: float = field()
 
 
+@register
 class FeedstockPerformanceModel(om.ExplicitComponent):
+    """Provide a constant feedstock supply at the input capacity.
+
+    See :class:`FeedstockPerformanceConfig`, :class:`FeedstockCostModel`, and
+    :doc:`/technology_models/feedstocks`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    _is_steppable = False
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)
@@ -74,6 +86,8 @@ class FeedstockCostConfig(CostModelBaseConfig):
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
         commodity_amount_units (str | None, optional): the amount units of the commodity (i.e.,
             "galUS", "kg" or "kW*h"). If None, will be set as `commodity_rate_units*h`
+
+    See :class:`FeedstockCostModel` and :doc:`/technology_models/feedstocks`.
     """
 
     commodity: str = field()
@@ -88,7 +102,14 @@ class FeedstockCostConfig(CostModelBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class FeedstockCostModel(CostModelBaseClass):
+    """Calculate feedstock consumption and costs from supply and consumption profiles.
+
+    See :class:`FeedstockCostConfig`, :class:`FeedstockPerformanceModel`, and
+    :doc:`/technology_models/feedstocks`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,
@@ -183,8 +204,7 @@ class FeedstockCostModel(CostModelBaseClass):
         """Calculates the following outputs:
 
         - ``capacity_factor``: commodity_consumed / commodity_out
-        - ``total_commodity_consumed``: sum of commodity_consumed divided by number
-          of hours simulated.
+        - ``total_commodity_consumed``: sum of commodity_consumed times the timestep in hours.
         - ``annual_commodity_consumed``: :py:attr:`total_commodity_consumed` * (1 / years simulated)
         - ``rated_commodity_production``: maximum input ``commodity_out``.
         - ``CapEx``: :py:attr:`FeedstockCostConfig.start_up_cost`.

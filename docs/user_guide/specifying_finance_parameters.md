@@ -134,8 +134,10 @@ finance_parameters:
       finance_model: "ProFastLCO"
       model_inputs: {discount_rate: 0.08}
     group_b:
-      finance_model: "NPVFinancial"
-      model_inputs: {real_discount_rate: 0.05}
+      finance_model: "NumpyFinancialNPV"
+      model_inputs:
+        real_discount_rate: 0.05
+        commodity_sell_price_units: "USD/kg"
   finance_subgroups:
     subgroup_a:
       commodity: "hydrogen"

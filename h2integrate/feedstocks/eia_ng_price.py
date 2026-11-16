@@ -9,12 +9,11 @@ from attrs import field, define, validators
 from h2integrate.preprocess import eia, geospatial
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.file_utils import get_path, check_feedstock_dir
+from h2integrate.core.model_baseclass import BaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
-from h2integrate.core.model_baseclasses import BaseConfig
 
 
-HOURS_PER_YEAR = 8760
-SECONDS_PER_HOUR = 3600
 CURRENT_YEAR = datetime.now().year
 
 
@@ -31,7 +30,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
         resource_year (int): The YYYY-format year whose data should be retrieved. Must be between
             2001 and the current year, inclusive of endpoints.
         cost_year (int): dollar-year for costs. Defaults to the current year.
-        monthly (Path): True, if monthly data is desired, False if annual data is desired.
+        monthly (bool): True if monthly data is desired, False if annual data is desired.
         price_category (str): One of "wellhead", "imports", "citygate", "residential", "commercial",
             "industrial", "electrical_power", or "exports". Note that not all categories will return
             state-level data.
@@ -55,6 +54,8 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             Defaults to 0.0.
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
             Defaults to 0.0.
+
+    See :class:`EIANaturalGasFeedstockCostModel` and :doc:`/technology_models/feedstocks`.
     """
 
     resource_year: int = field(validator=validators.in_(range(2001, CURRENT_YEAR + 1)))
@@ -117,6 +118,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             self.feedstock_dir = fd
 
 
+@register
 class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     """Feedstock cost model based on the EIA natural gas price API results that uses
     annual or monthly data to model an hourly time step for a single year to model the
@@ -125,6 +127,8 @@ class EIANaturalGasFeedstockCostModel(FeedstockCostModel):
     The model will pull the single site data if it is made available to pass the ``latitude`` and
     ``longitude`` from the site configuration, otherwise the ``state`` will need to be provided
     in the configuration.
+
+    See :class:`EIANaturalGasFeedstockConfig` and :doc:`/technology_models/feedstocks`.
     """
 
     def setup(self):

@@ -4,7 +4,8 @@ import numpy as np
 from attrs import define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )
@@ -17,6 +18,8 @@ class DemandOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
 
     This class defines the parameters required to configure the `DemandOpenLoopStorageController`.
 
+    See :class:`DemandOpenLoopStorageController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     require_storage_parameters = True
@@ -35,6 +38,7 @@ class DemandOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
         self.common_post_init_operations()
 
 
+@register
 class DemandOpenLoopStorageController(OpenLoopControlBase):
     """
     A controller that manages commodity flow based on demand and storage constraints.
@@ -42,12 +46,17 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
     The `DemandOpenLoopStorageController` computes the dispatch commands for a commodity storage
     system. It uses a demand profile and storage parameters to determine how much of the
     commodity to charge, discharge, or curtail at each time step.
+
+    See :class:`DemandOpenLoopStorageControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     _time_step_bounds = (
         3600,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    _is_steppable = True
 
     def setup(self):
         self.config = DemandOpenLoopStorageControllerConfig.from_dict(
@@ -57,7 +66,15 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         )
         super().setup()
 
-        self.n_timesteps = self.options["plant_config"]["plant"]["simulation"]["n_timesteps"]
+        # Ensure _soc_timeseries is consistent length with simulation
+        self._soc_timeseries = np.zeros(self.n_timesteps)
+
+        # Initialize soc to the value in the config, if given or halfway between
+        # the minimum and maximum limits otherwise.
+        if hasattr(self.config, "init_soc_fraction"):
+            self.soc_init = self.config.init_soc_fraction
+        else:
+            self.soc_init = self.config.min_soc_fraction
 
         # Design constraints of storage system
         self.add_input(
@@ -98,7 +115,8 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
             * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
-            * ``max_capacity``: Maximum total storage capacity.
+            * ``storage_capacity``: Maximum total storage capacity.
+            * ``timestep_index``: Starting index for the component simulation.
 
         Outputs populated:
             * ``<commodity>_command_value``: Dispatch command to storage,
@@ -117,6 +135,10 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
         Returns:
             None
         """
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         commodity = self.config.commodity
 
         self.common_checks_needed_in_compute(inputs)
@@ -131,23 +153,26 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
 
         soc_max = self.config.max_soc_fraction
         soc_min = self.config.min_soc_fraction
-        init_soc_fraction = self.config.init_soc_fraction
 
         charge_eff = float(self.config.charge_efficiency)
         discharge_eff = float(self.config.discharge_efficiency)
 
         # Initialize time-step state of charge prior to loop so the loop starts with
         # the previous time step's value
-        soc = deepcopy(init_soc_fraction)
+        if simulation_range.start == 0:
+            soc = deepcopy(self.soc_init)
+        else:
+            soc = self._soc_timeseries[simulation_range.start - 1]
 
         demand_profile = inputs[f"{commodity}_set_point"]
 
         # initialize outputs
-        soc_array = np.zeros(self.n_timesteps)
         set_point_array = np.zeros(self.n_timesteps)
+
         combined_output_array = np.zeros(self.n_timesteps)
         # Loop through each time step
-        for t, demand_t in enumerate(demand_profile):
+        for t in simulation_range:
+            demand_t = demand_profile[t]
             # Get the input flow at the current time step
             input_flow = inputs[f"{commodity}_in"][t]
 
@@ -190,6 +215,6 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             soc = max(soc_min, min(soc_max, soc))
 
             # Record the SOC for the current time step
-            soc_array[t] = deepcopy(soc)
+            self._soc_timeseries[t] = deepcopy(soc)
 
-        outputs[f"{commodity}_command_value"] = set_point_array
+        outputs[f"{commodity}_command_value"][simulation_range] = set_point_array[simulation_range]

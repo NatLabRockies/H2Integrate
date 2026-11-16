@@ -46,7 +46,6 @@ def tech_config(max_capacity, max_charge_rate):
         "CompressedGasStorageCostModel-1M-kg",
     ]
 )
-# fmt: on
 def test_h2_storage_capex_opex(
     subtests,
     plant_config,
@@ -110,7 +109,6 @@ def test_h2_storage_capex_opex(
         "CompressedGasStorageCostModel-1M-kg",
     ]
 )
-# fmt: on
 def test_h2_storage_capex_per_kg(
     plant_config,
     tech_config,

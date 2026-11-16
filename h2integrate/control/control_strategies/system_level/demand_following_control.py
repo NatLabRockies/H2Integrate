@@ -1,10 +1,12 @@
 import numpy as np
 
-from h2integrate.control.control_strategies.system_level.system_level_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     SystemLevelControlBase,
 )
 
 
+@register
 class DemandFollowingControl(SystemLevelControlBase):
     """Demand-following system-level controller.
 
@@ -29,6 +31,8 @@ class DemandFollowingControl(SystemLevelControlBase):
        storage. The remaining demand (floored at zero) is split **evenly**
        across all dispatchable techs that produce the demanded commodity
        (each receives ``remaining_demand / n_dispatchable``).
+
+    See :doc:`/control/system_level_control/slc_demand_following` for configuration and I/O.
     """
 
     def compute(self, inputs, outputs):

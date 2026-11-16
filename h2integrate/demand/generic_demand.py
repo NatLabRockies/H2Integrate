@@ -1,7 +1,9 @@
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.demand.demand_base import DemandComponentBase, DemandComponentBaseConfig
+from h2integrate.core.supported_models import register
+from h2integrate.demand.demand_baseclass import DemandComponentBase, DemandComponentBaseConfig
 
 
+@register
 class GenericDemandComponent(DemandComponentBase):
     """Component for for converting input supply into met demand.
 
@@ -16,7 +18,12 @@ class GenericDemandComponent(DemandComponentBase):
     This component relies on configuration provided through the
     ``tech_config`` dictionary, which must define the demand's
     ``performance_parameters``.
+
+    See :class:`~h2integrate.demand.demand_baseclass.DemandComponentBaseConfig` and
+    :doc:`/demand/demand_components`.
     """
+
+    _is_steppable = True
 
     def setup(self):
         self.config = DemandComponentBaseConfig.from_dict(
@@ -51,6 +58,6 @@ class GenericDemandComponent(DemandComponentBase):
             array shape ``(n_timesteps,)``.
         """
 
-        outputs = self.calculate_outputs(
-            inputs[f"{self.commodity}_in"], inputs[f"{self.commodity}_demand"], outputs
-        )
+        commodity_in = inputs[f"{self.commodity}_in"]
+        commodity_demand = inputs[f"{self.commodity}_demand"]
+        outputs = self.calculate_outputs(commodity_in, commodity_demand, inputs, outputs)

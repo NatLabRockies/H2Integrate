@@ -1,0 +1,67 @@
+name: Documentation Guardrails
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - .github/workflows/docs.yml
+      - docs/**
+      - examples/**
+      - h2integrate/**/*.py
+      - test/**
+  schedule:
+    - cron: 0 0 * * MON
+permissions:
+  contents: read
+jobs:
+  consistency:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.11
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          miniconda-version: latest
+          auto-update-conda: true
+          python-version: '3.11'
+          channels: conda-forge,defaults
+          auto-activate: true
+          activate-environment: h2integrate
+      - name: Install solver dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge glpk "coin-or-cbc>=2.10.12"
+      - name: Install H2Integrate test dependencies
+        shell: bash -el {0}
+        run: pip install ".[develop]"
+      - name: Create env file
+        run: touch .env
+      - name: Run docs consistency tests
+        shell: bash -el {0}
+        run: pytest test/test_docs_consistency.py -q
+  linkcheck:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.11
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          miniconda-version: latest
+          auto-update-conda: true
+          python-version: '3.11'
+          channels: conda-forge,defaults
+          auto-activate: true
+          activate-environment: h2integrate
+      - name: Install solver dependencies
+        shell: bash -el {0}
+        run: conda install -y -c conda-forge glpk "coin-or-cbc>=2.10.12"
+      - name: Install documentation dependencies
+        shell: bash -el {0}
+        run: pip install ".[all]"
+      - name: Create env file
+        run: touch .env
+      - name: Check external documentation links
+        shell: bash -el {0}
+        run: bash docs/build_book.sh --builder linkcheck

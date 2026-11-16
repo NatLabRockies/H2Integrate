@@ -1,7 +1,8 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -21,6 +22,8 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
             system in $/kW-DC/year
         pv_capacity_kWdc (float): capacity of solar-PV system in kW-DC
         cost_year (int): dollar year corresponding to input costs
+
+    See :class:`ATBResComPVCostModel` and :doc:`/technology_models/atb_costs_pv`.
     """
 
     capex_per_kWdc: float | int = field(validator=validators.gt(0))
@@ -28,7 +31,13 @@ class ATBResComPVCostModelConfig(CostModelBaseConfig):
     pv_capacity_kWdc: float = field()
 
 
+@register
 class ATBResComPVCostModel(CostModelBaseClass):
+    """Estimate residential or commercial PV costs from DC capacity.
+
+    See :class:`ATBResComPVCostModelConfig` and :doc:`/technology_models/atb_costs_pv`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

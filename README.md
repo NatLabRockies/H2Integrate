@@ -2,6 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/H2Integrate.svg)](https://badge.fury.io/py/H2Integrate)
 ![CI Tests](https://github.com/NatLabRockies/H2Integrate/actions/workflows/ci.yml/badge.svg)
+[![Nightly Examples](https://github.com/NatLabRockies/H2Integrate/actions/workflows/examples.yml/badge.svg?branch=develop&event=schedule)](https://github.com/NatLabRockies/H2Integrate/actions/workflows/examples.yml)
 [![image](https://img.shields.io/pypi/pyversions/H2Integrate.svg)](https://pypi.python.org/pypi/H2Integrate)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![DOI 10.5281/zenodo.17903150](https://zenodo.org/badge/DOI/10.5281/zenodo.17903150.svg)](https://zenodo.org/records/17903150)
@@ -28,16 +29,9 @@ H2Integrate is both a **hybrid systems engineering design tool** and a **technoe
 - **Cost inputs settable by the user** with examples based on the [Annual Technology Baseline (ATB)](https://atb.nlr.gov/)
 - **Optimization and scenario analysis** to explore design trade-offs across hybrid plant configurations
 
-### Available Technologies
+### Model Library
 
-H2I includes models for a broad set of energy generation, conversion, and storage technologies.
-This is a non-exhaustive list, and the library of available technologies is actively expanding:
-
-- **Electricity generation**: solar PV, wind, wave, tidal, natural gas combined cycle (NGCC), natural gas combustion turbines (NGCT), nuclear, grid
-- **Hydrogen production**: PEM electrolysis, NG-SMR
-- **Energy storage**: Li-ion batteries, long-duration energy storage (LDES), pumped storage hydropower (PSH), hydrogen storage, compressed gas storage
-- **Fuel cells**: H2 PEM fuel cells
-- **Industrial processes**: ammonia synthesis, iron ore reduction, steel production, and more
+See the [Model Overview](./docs/user_guide/model_overview.md) for the current registered models and their categories. The [documentation](https://h2integrate.readthedocs.io/en/latest/intro.html) provides the project overview and links to model-specific guides.
 
 ## Getting Started
 

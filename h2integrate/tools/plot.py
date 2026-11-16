@@ -60,7 +60,7 @@ def plot_hydrogen_flows(
     df_data = df_data.iloc[hour_start:hour_end]
 
     # set up plots
-    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(12, 6))
+    _fig, ax = plt.subplots(2, 1, sharex=True, figsize=(12, 6))
 
     # plot hydrogen production
     df_h_out = df_data[["h2 production hourly [kg]"]] * 1e-3  # convert to t
@@ -128,7 +128,7 @@ def plot_energy_flows(
     df_data = df_data.iloc[hour_start:hour_end]
 
     # set up plots
-    fig, ax = plt.subplots(2, 2, sharex=True, figsize=(10, 6))
+    _fig, ax = plt.subplots(2, 2, sharex=True, figsize=(10, 6))
 
     # plot electricity output
     # df_e_out = df_data[["wind generation [kW]", "pv generation [kW]", "wave generation [kW]"]]

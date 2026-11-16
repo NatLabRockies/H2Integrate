@@ -1,20 +1,21 @@
-import os
 from pathlib import Path
 
 import pytest
 
-from h2integrate import EXAMPLE_DIR, H2IntegrateModel
+from h2integrate import H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 
 
 @pytest.mark.regression
-def test_tech_config_modifier(subtests):
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("15_wind_solar_electrolyzer", None)]
+)
+def test_tech_config_modifier(subtests, temp_copy_of_example):
     """Test cases for modifying and running tech_config from csv.
     Using 15 example as test case
     """
 
     # Make an H2I model from the 15 example
-    os.chdir(EXAMPLE_DIR / "15_wind_solar_electrolyzer")
     example_yaml = "15_wind_solar_electrolyzer.yaml"
     model = H2IntegrateModel(example_yaml)
 

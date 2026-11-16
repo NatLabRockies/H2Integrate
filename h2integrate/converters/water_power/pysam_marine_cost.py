@@ -2,7 +2,8 @@ import PySAM.MhkCosts as MhkCost
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -26,6 +27,8 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
             (please refer to MhkCosts documentation
             `here <https://nrel-pysam.readthedocs.io/en/main/modules/MhkCosts.html>`__
             )
+
+    See :class:`PySAMMarineCostModel` and :doc:`/technology_models/marine_hydrokinetic`.
 
         Note:
         More information about the reference models and their
@@ -137,6 +140,7 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
         return design_dict
 
 
+@register
 class PySAMMarineCostModel(CostModelBaseClass):
     """An OpenMDAO component for calculating the costs associated
     with Marine Hydrokinetic (MHK) energy systems.
@@ -147,6 +151,8 @@ class PySAMMarineCostModel(CostModelBaseClass):
         [Reference Model Project](https://energy.sandia.gov/programs/renewable-energy/water-power/projects/reference-model-project-rmp/).
         Additional MHK cost model information can be found
         through the [System Advisor Model](https://sam.nlr.gov/).
+
+    See :class:`PySAMMarineCostConfig` and :doc:`/technology_models/marine_hydrokinetic`.
 
     Note:
         The supported reference models in this cost model are:

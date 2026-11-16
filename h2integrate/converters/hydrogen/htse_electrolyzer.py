@@ -2,10 +2,11 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseConfig,
     ResizeablePerformanceModelBaseConfig,
 )
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
     ElectrolyzerCostBaseClass,
@@ -14,7 +15,7 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import (
 
 
 @define(kw_only=True)
-class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
+class HTSEPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """Configuration class for the HTSE performance model.
 
     Args:
@@ -28,6 +29,8 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
             Defaults to ``80000``.
         turndown_ratio (float): Minimum fraction of rated hydrogen production required to
             stay on (unitless). Defaults to ``0.1``.
+
+    See :class:`HTSEPerformanceModel` and :doc:`/technology_models/h2_htse`.
     """
 
     n_clusters: int = field(validator=validators.gt(0))
@@ -38,6 +41,7 @@ class HTSEElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfi
     turndown_ratio: float = field(default=0.1, validator=validators.gt(0))
 
 
+@register
 class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """A simplified high-temperature steam electrolysis (HTSE) model.
 
@@ -47,12 +51,13 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     dispatchable technology with an ``electricity_in`` input and a ``hydrogen_out`` output.
 
     Installed size is inferred from ``n_clusters`` and ``cluster_rating_MW``, and the model
-    also supports the ``resize_by_max_feedstock`` (from electricity) and
+    accepts the ``resize_by_max_feedstock`` (from electricity) and
     ``resize_by_max_commodity`` (from hydrogen) sizing modes inherited from the resizeable
-    performance base class. At each timestep the model uses available heat first, supplies
-    the remaining required energy electrically when possible, and limits hydrogen
-    production by the combined available energy and the turndown threshold. It also exposes
-    operating signals useful for coupled systems, including ``heat_demand``,
+    performance base class. The calculated resized value is currently overwritten by the
+    cluster-based size before outputs are computed. At each timestep the model uses available
+    heat first, supplies the remaining required energy electrically when possible, and limits
+    hydrogen production by the combined available energy and the turndown threshold. It also
+    exposes operating signals useful for coupled systems, including ``heat_demand``,
     ``electricity_demand``, ``electricity_consumed``, and ``water_consumed``.
 
     In the current implementation, ``electricity_demand`` reports installed electrical
@@ -62,10 +67,13 @@ class HTSEPerformanceModel(ElectrolyzerPerformanceBaseClass):
     The implementation is intentionally simple and should be interpreted as a reduced-order
     plant representation, not a detailed SOEC stack model with thermal transients,
     degradation coupling, startup dynamics, or detailed balance-of-plant behavior.
+
+    See :class:`HTSEPerformanceModelConfig`, :class:`HTSECostModel`, and
+    :doc:`/technology_models/h2_htse`.
     """
 
     def setup(self) -> None:
-        self.config = HTSEElectrolyzerPerformanceModelConfig.from_dict(
+        self.config = HTSEPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=False,
             additional_cls_name=self.__class__.__name__,
@@ -271,6 +279,8 @@ class HTSECostModelConfig(CostModelBaseConfig):
         fixed_capex (float, optional): Fallback value used to populate ``fixed_opex`` when
             ``fixed_opex`` is not provided.
         cost_year (int): Dollar year corresponding to the input costs. Defaults to ``2025``.
+
+    See :class:`HTSECostModel` and :doc:`/technology_models/h2_htse`.
     """
 
     unit_capex: float = field(validator=validators.gt(0))
@@ -283,6 +293,7 @@ class HTSECostModelConfig(CostModelBaseConfig):
             self.fixed_opex = 0.0 if self.fixed_capex is None else float(self.fixed_capex)
 
 
+@register
 class HTSECostModel(ElectrolyzerCostBaseClass):
     """A simple size-based cost model for HTSE.
 
@@ -293,6 +304,9 @@ class HTSECostModel(ElectrolyzerCostBaseClass):
     - ``OpEx`` from ``fixed_opex * electrolyzer_size_kw``
 
     The current model does not set a nonzero variable operating cost.
+
+    See :class:`HTSECostModelConfig`, :class:`HTSEPerformanceModel`, and
+    :doc:`/technology_models/h2_htse`.
     """
 
     def setup(self) -> None:

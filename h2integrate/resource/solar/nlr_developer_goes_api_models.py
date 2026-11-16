@@ -1,14 +1,17 @@
 from attrs import field, define, validators
 
-from h2integrate.resource.resource_base import ResourceBaseAPIConfig
-from h2integrate.resource.solar.nlr_developer_api_base import NLRDeveloperAPISolarResourceBase
+from h2integrate.core.supported_models import register
+from h2integrate.resource.resource_baseclass import ResourceBaseAPIConfig
+from h2integrate.resource.solar.nlr_developer_api_baseclass import NLRDeveloperAPISolarResourceBase
 
 
 @define(kw_only=True)
-class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
+class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Aggregated PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
+
+    See :class:`GOESAggregatedSolarAPI` and :doc:`/resource/solar_index`.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -30,13 +33,19 @@ class GOESAggregatedAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
 
 
+@register
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES aggregated data using :class:`GOESAggregatedSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
         self.base_url = "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-aggregated-v4-0-0-download.csv?"
         # create the resource config
-        self.config = GOESAggregatedAPIConfig.from_dict(
+        self.config = GOESAggregatedSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -44,11 +53,13 @@ class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESConusAPIConfig(ResourceBaseAPIConfig):
+class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Conus PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/>`_.
     This dataset covers regions within the continental United States at a spatial resolution of
     2 km.
+
+    See :class:`GOESConusSolarAPI` and :doc:`/resource/solar_index`.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -70,7 +81,13 @@ class GOESConusAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
 
 
+@register
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES CONUS data using :class:`GOESConusSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -78,7 +95,7 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-conus-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESConusAPIConfig.from_dict(
+        self.config = GOESConusSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -86,10 +103,12 @@ class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
+class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 2 km.
+
+    See :class:`GOESFullDiscSolarAPI` and :doc:`/resource/solar_index`.
 
     Args:
         resource_year (int): Year to use for resource data.
@@ -111,7 +130,13 @@ class GOESFullDiscAPIConfig(ResourceBaseAPIConfig):
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
 
 
+@register
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES full-disc data using :class:`GOESFullDiscSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -119,7 +144,7 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-full-disc-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESFullDiscAPIConfig.from_dict(
+        self.config = GOESFullDiscSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
@@ -127,10 +152,12 @@ class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
 
 
 @define(kw_only=True)
-class GOESTMYAPIConfig(ResourceBaseAPIConfig):
+class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
+
+    See :class:`GOESTMYSolarAPI` and :doc:`/resource/solar_index`.
 
     Args:
         resource_year (str): Year to use for resource data. Can be any of the following:
@@ -176,7 +203,13 @@ class GOESTMYAPIConfig(ResourceBaseAPIConfig):
             self.dataset_desc = "goes_tgy_v4"
 
 
+@register
 class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES typical-year data using :class:`GOESTMYSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -184,8 +217,16 @@ class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
             "https://developer.nlr.gov/api/nsrdb/v2/solar/nsrdb-GOES-tmy-v4-0-0-download.csv?"
         )
         # create the resource config
-        self.config = GOESTMYAPIConfig.from_dict(
+        self.config = GOESTMYSolarAPIConfig.from_dict(
             resource_specs,
             additional_cls_name=self.__class__.__name__,
         )
+
+        if self.config.include_leap_day:
+            msg = (
+                "GOESTMYSolarAPI: Leap day data is not available for TMY/TGY/TDY datasets"
+                "Please set include_leap_day to False or use a different dataset."
+            )
+            raise ValueError(msg)
+
         super().setup()

@@ -211,8 +211,8 @@ if __name__ == "__main__":
     motor_rating, power = comp.compressor_system_power()
     total_capex, total_OM = comp.compressor_costs()  # 2016$ , 2016$/y
     print("Power (kW): ", power)
-    print(f"CAPEX: {round(total_capex,2)} $")
-    print(f"Annual operating expense: {round(total_OM,2)} $/yr")
+    print(f"CAPEX: {round(total_capex, 2)} $")
+    print(f"Annual operating expense: {round(total_OM, 2)} $/yr")
 
     # CAPEX: 680590.34 $
     # Annual operating expense: 200014.0 $/yr

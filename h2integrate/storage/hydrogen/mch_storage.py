@@ -3,15 +3,26 @@ from attrs import field, define, validators
 from openmdao.utils import units
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
 class MCHTOLStorageCostModelConfig(BaseConfig):
     """Config class for MCHTOLStorageCostModel
 
-    Fields include `max_capacity`, `max_charge_rate`, `max_discharge_rate`,
-    `charge_equals_discharge`, `commodity_name`, `commodity_units`, and `cost_year`.
+    Attributes:
+        max_capacity (float): Maximum storage capacity, in commodity units times hours.
+        max_charge_rate (float): Maximum charging rate, in ``commodity_units``.
+        max_discharge_rate (float, optional): Maximum discharging rate, in ``commodity_units``.
+            When ``charge_equals_discharge`` is true, this must be omitted or equal the charge rate.
+        charge_equals_discharge (bool): Use the charge rate as the discharge rate when true.
+        commodity_name (str): Stored commodity name.
+        commodity_units (str): Commodity rate units: ``kg/h``, ``g/h``, or ``t/h``.
+        cost_year (int): Cost dollar year; currently only 2024 is supported.
+        marginal_cost (float): Marginal cost parameter.
+
+    See :class:`MCHTOLStorageCostModel` and :doc:`/storage/hydrogen_storage`.
     """
 
     max_capacity: float = field()
@@ -41,11 +52,14 @@ class MCHTOLStorageCostModelConfig(BaseConfig):
             self.max_discharge_rate = self.max_charge_rate
 
 
+@register
 class MCHTOLStorageCostModel(CostModelBaseClass):
     """
     Cost model representing a toluene/methylcyclohexane (TOL/MCH) hydrogen storage system.
 
     Costs are in 2024 USD.
+
+    See :class:`MCHTOLStorageCostModelConfig` and :doc:`/storage/hydrogen_storage`.
 
     Sources:
         Breunig, H., Rosner, F., Saqline, S. et al. "Achieving gigawatt-scale green hydrogen

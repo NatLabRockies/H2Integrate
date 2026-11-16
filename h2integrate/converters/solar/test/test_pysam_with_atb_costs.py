@@ -29,7 +29,7 @@ def utility_scale_pv_performance_params():
         "dc_ac_ratio": 1.34,
         "create_model_from": "new",
         "tilt": 0,
-        "tilt_angle_func": "none",
+        "tilt_angle_setting": "input",
         # "config_name":
         "pysam_options": pysam_options,
     }
@@ -49,7 +49,7 @@ def commercial_pv_performance_params():
         "dc_ac_ratio": 1.23,
         "create_model_from": "default",
         # "tilt": 0,
-        "tilt_angle_func": "none",
+        "tilt_angle_setting": "input",
         "config_name": "PVWattsCommercial",
         "pysam_options": pysam_options,
     }
@@ -73,7 +73,7 @@ def residential_pv_performance_params():
         "dc_ac_ratio": 1.21,
         "create_model_from": "default",
         "tilt": 20,
-        "tilt_angle_func": "none",
+        "tilt_angle_setting": "input",
         "config_name": "PVWattsResidential",
         "pysam_options": pysam_options,
     }

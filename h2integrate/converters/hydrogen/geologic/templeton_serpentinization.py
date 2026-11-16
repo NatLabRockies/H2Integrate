@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.geologic.h2_well_subsurface_baseclass import (
     GeoH2SubsurfacePerformanceConfig,
     GeoH2SubsurfacePerformanceBaseClass,
@@ -19,6 +20,8 @@ class StimulatedGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     performance models.
 
     Defines performance-related parameters specific to *stimulated* geologic hydrogen systems.
+
+    See :class:`StimulatedGeoH2PerformanceModel` and :doc:`/technology_models/geologic_hydrogen`.
 
     Attributes:
         olivine_phase_vol (float): Volume percent of olivine in the formation [%].
@@ -41,6 +44,7 @@ class StimulatedGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
     water_temp: float = field()  # deg C
 
 
+@register
 class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
     """OpenMDAO component modeling the performance of a stimulated geologic hydrogen plant.
 
@@ -50,6 +54,8 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
 
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
         - Templeton et al. (UC Boulder): https://doi.org/10.3389/fgeoc.2024.1366268
+
+    See :doc:`/technology_models/geologic_hydrogen`.
 
     All model inputs are provided through :class:`StimulatedGeoH2PerformanceConfig`.
 

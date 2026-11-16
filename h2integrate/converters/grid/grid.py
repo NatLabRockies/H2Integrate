@@ -2,11 +2,12 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -15,11 +16,14 @@ class GridPerformanceModelConfig(BaseConfig):
 
     Attributes:
         interconnection_size: Maximum power capacity for grid connection in kW
+
+    See :class:`GridPerformanceModel` and :doc:`/technology_models/grid`.
     """
 
     interconnection_size: float = field()  # kW
 
 
+@register
 class GridPerformanceModel(PerformanceModelBaseClass):
     """Model a grid interconnection point.
 
@@ -45,6 +49,10 @@ class GridPerformanceModel(PerformanceModelBaseClass):
 
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
+        electricity_sold (array): Power sold to the grid (kW).
+
+    See :class:`GridPerformanceModelConfig` and :doc:`/technology_models/grid` for all
+    inputs, outputs, and control behavior.
     """
 
     _time_step_bounds = (
@@ -52,6 +60,8 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
     _control_classifier = "dispatchable"
+
+    _is_steppable = True
 
     def initialize(self):
         super().initialize()
@@ -98,8 +108,24 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             "electricity_sold",
             val=0.0,
             shape=self.n_timesteps,
-            units="kW",
+            units=self.commodity_rate_units,
             desc="Electricity sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_sell_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be sold to the grid",
+        )
+
+        self.add_output(
+            "electricity_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+            desc="Reserve capacity that could be bought from the grid",
         )
 
         self.add_output(
@@ -127,26 +153,55 @@ class GridPerformanceModel(PerformanceModelBaseClass):
         )
 
     def compute(self, inputs, outputs):
+        # Range object for the slice of the total simulation to run in this
+        # compute call
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
+        # Scalar inputs
         interconnection_size = inputs["interconnection_size"]
 
         # Selling: electricity flows into grid, limited by interconnection size
-        electricity_sold = np.clip(inputs["electricity_in"], 0, interconnection_size)
-        outputs["electricity_sold"] = electricity_sold
+        electricity_sold = np.clip(
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_sold"][simulation_range.start : simulation_range.stop] = (
+            electricity_sold
+        )
 
-        # Buying: electricity flows out of grid to meet command value, limited by interconnection
-        electricity_bought = np.clip(inputs["electricity_command_value"], 0, interconnection_size)
-        outputs["electricity_out"] = electricity_bought
+        # Buying: electricity flows out of grid to meet command value,
+        # limited by interconnection
+        electricity_bought = np.clip(
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop],
+            0,
+            interconnection_size,
+        )
+        outputs["electricity_out"][simulation_range.start : simulation_range.stop] = (
+            electricity_bought
+        )
 
         # Unmet demand if command value exceeds interconnection size
-        outputs["electricity_unmet_demand"] = (
-            inputs["electricity_command_value"] - electricity_bought
+        outputs["electricity_unmet_demand"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_command_value"][simulation_range.start : simulation_range.stop]
+            - electricity_bought
         )
 
         # Not sold electricity if demand exceeds interconnection size
-        outputs["electricity_excess"] = inputs["electricity_in"] - electricity_sold
+        outputs["electricity_excess"][simulation_range.start : simulation_range.stop] = (
+            inputs["electricity_in"][simulation_range.start : simulation_range.stop]
+            - electricity_sold
+        )
 
+        # Scalar outputs
         max_production = (
             inputs["interconnection_size"] * len(outputs["electricity_out"]) * (self.dt / 3600)
+        )
+        outputs["electricity_sell_headroom"][simulation_range] = (
+            interconnection_size - electricity_sold
+        )
+        outputs["electricity_headroom"][simulation_range] = (
+            interconnection_size - electricity_bought
         )
         outputs["rated_electricity_production"] = inputs["interconnection_size"]
         outputs["total_electricity_produced"] = np.sum(outputs["electricity_out"]) * (
@@ -157,7 +212,7 @@ class GridPerformanceModel(PerformanceModelBaseClass):
             1 / self.fraction_of_year_simulated
         )
 
-        total_electricity_sold = np.sum(electricity_sold) * (self.dt / 3600)
+        total_electricity_sold = np.sum(outputs["electricity_sold"]) * (self.dt / 3600)
         outputs["annual_electricity_sold"] = total_electricity_sold * (
             1 / self.fraction_of_year_simulated
         )
@@ -174,6 +229,10 @@ class GridCostModelConfig(CostModelBaseConfig):
         fixed_interconnection_cost: One-time fixed cost regardless of size ($)
         electricity_buy_price: Price to buy electricity from grid ($/kWh), optional
         electricity_sell_price: Price to sell electricity to grid ($/kWh), optional
+        buy_price_mode: Buy-price mode: per_timestep, per_year, or constant.
+        sell_price_mode: Sell-price mode: per_timestep, per_year, or constant.
+
+    See :class:`GridCostModel` and :doc:`/technology_models/grid`.
     """
 
     interconnection_size: float = field()  # kW
@@ -190,6 +249,7 @@ class GridCostModelConfig(CostModelBaseConfig):
     )
 
 
+@register
 class GridCostModel(CostModelBaseClass):
     """
     An OpenMDAO component that computes costs for grid connections.
@@ -203,6 +263,8 @@ class GridCostModel(CostModelBaseClass):
 
     This model is compatible with time steps ranging from 5-minutes to 1-hour.
 
+    See :class:`GridCostModelConfig` and :doc:`/technology_models/grid` for price modes,
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (

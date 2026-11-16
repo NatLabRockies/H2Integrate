@@ -47,7 +47,6 @@ from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceMode
         "OpenMeteoHistoricalWindResource",
     ],
 )
-# fmt: on
 def test_pysam_windpower_integration(
     subtests, plant_simulation, site_config, wind_plant_config, model, expected_aep
 ):
@@ -130,7 +129,6 @@ def test_pysam_windpower_integration(
         "OpenMeteoHistoricalWindResource",
     ],
 )
-# fmt: on
 def test_floris_integration(
     subtests, plant_simulation, site_config, floris_config, model, expected_aep
 ):

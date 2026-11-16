@@ -91,7 +91,7 @@ def run_profast(pf):
     """
     sol = pf.solve_price()
     summary = pf.get_summary_vals()
-    price_breakdown = pf.get_cost_breakdown()
+    price_breakdown = pf.get_cost_breakdown(sorted=False)
     return sol, summary, price_breakdown
 
 
@@ -186,6 +186,29 @@ def make_price_breakdown(price_breakdown, pf_config):
         # add the capex breakdown to the full price breakdown
         full_price_breakdown.update(price_breakdown_capex)
 
+    if "feedstocks" in config_keys:
+        # feedstocks are of type "Operating expenses"
+        # if the price_breakdown isn't sorted by NPV, then feedstock items are added
+        # before fixed items (feedstock items will come earlier in the dictionary)
+        # this is because of the ordering in the `get_summary_vals` method in ProFAST
+        feedstock_items = pf_config["feedstocks"]
+        for item in feedstock_items:
+            key_name = f"{lco_str}: {item} Variable OpEx ({lco_units})"
+
+            # Add the feedstock cost in lco_units to the feedstock breakdown
+            price_breakdown_feedstocks[key_name] = operating_expenses.loc[
+                operating_expenses["Name"] == item, "NPV"
+            ].tolist()[0]
+
+            # Remove the feedstock cost from the cash outflow prices
+            i_drop = operating_expenses.loc[
+                operating_expenses["Name"] == item, "NPV"
+            ].index.tolist()[0]
+            operating_expenses = operating_expenses.drop(labels=i_drop, axis=0)
+
+        # add the feedstock cost breakdown to the full price breakdown
+        full_price_breakdown.update(price_breakdown_feedstocks)
+
     if "fixed_costs" in config_keys:
         # fixed_costs are of type "Operating expenses"
         fixed_items = pf_config["fixed_costs"]
@@ -205,26 +228,6 @@ def make_price_breakdown(price_breakdown, pf_config):
 
         # add the fixed cost breakdown to the full price breakdown
         full_price_breakdown.update(price_breakdown_fixed_cost)
-
-    if "feedstocks" in config_keys:
-        # feedstocks are of type "Operating expenses"
-        feedstock_items = pf_config["feedstocks"]
-        for item in feedstock_items:
-            key_name = f"{lco_str}: {item} Feedstock ({lco_units})"
-
-            # Add the feedstock cost in lco_units to the feedstock breakdown
-            price_breakdown_feedstocks[key_name] = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].tolist()[0]
-
-            # Remove the feedstock cost from the cash outflow prices
-            i_drop = operating_expenses.loc[
-                operating_expenses["Name"] == item, "NPV"
-            ].index.tolist()[0]
-            operating_expenses = operating_expenses.drop(labels=i_drop, axis=0)
-
-        # add the feedstock cost breakdown to the full price breakdown
-        full_price_breakdown.update(price_breakdown_feedstocks)
 
     if "coproducts" in config_keys:
         # coproducts are of type "Operating revenue"
@@ -298,6 +301,20 @@ def format_profast_price_breakdown_per_year(price_breakdown):
     Returns:
         pd.DataFrame: Formatted DataFrame with yearly amounts expanded into separate columns.
     """
+
+    # Remove any non inflow or outflow types (this is to remove 'Depreciation expense')
+    # The below logic is representative of what profast does if it sorts the price breakdown
+    price_breakdown = price_breakdown.loc[
+        price_breakdown["Type"].isin(
+            [
+                "Operating revenue",
+                "Financing cash inflow",
+                "Operating expenses",
+                "Financing cash outflow",
+            ]
+        )
+    ]
+
     n_years = len(price_breakdown.iloc[0]["Amount"])
     year_cols = [f"Year {i} Amount" for i in range(n_years)]
 

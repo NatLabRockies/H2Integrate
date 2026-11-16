@@ -1,9 +1,14 @@
 import openmdao.api as om
 
+from h2integrate.core.supported_models import register
 
+
+@register(name="cable", no_cost=True)
 class CablePerformanceModel(om.ExplicitComponent):
     """
     Pass-through cable with no losses.
+
+    See :doc:`/technology_models/transport` for the registered alias and interface.
     """
 
     _time_step_bounds = (

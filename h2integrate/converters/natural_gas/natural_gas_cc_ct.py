@@ -2,11 +2,13 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import (
+from h2integrate.reliability.models import PerformanceReliability
+from h2integrate.core.model_baseclass import (
     CostModelBaseClass,
     CostModelBaseConfig,
     PerformanceModelBaseClass,
 )
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -18,19 +20,22 @@ class NaturalGasPerformanceConfig(BaseConfig):
     combustion turbines (NGCT) and natural gas combined cycle (NGCC) plants.
 
     Attributes:
-        system_capacity (float): rated capacity of the natural gas plant in MW
+        system_capacity_mw (float): rated capacity of the natural gas plant in MW
         heat_rate_mmbtu_per_mwh (float): Heat rate of the natural gas plant in MMBtu/MWh.
             This represents the amount of fuel energy required to produce
             one MWh of electricity. Lower values indicate higher efficiency.
             Typical values:
             - NGCT: 10-14 MMBtu/MWh
             - NGCC: 6-8 MMBtu/MWh
+
+    See :class:`NaturalGasPerformanceModel` and :doc:`/technology_models/natural_gas`.
     """
 
     system_capacity_mw: float = field(validator=validators.ge(0))
     heat_rate_mmbtu_per_mwh: float = field(validator=validators.gt(0))
 
 
+@register
 class NaturalGasPerformanceModel(PerformanceModelBaseClass):
     """
     Performance model for natural gas power plants.
@@ -53,6 +58,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         electricity_out (array): Electricity output in MW for each timestep
         natural_gas_consumed (array): Natural gas consumed in MMBtu/h
 
+    See :class:`NaturalGasPerformanceConfig` and :doc:`/technology_models/natural_gas`.
     """
 
     _time_step_bounds = (
@@ -66,6 +72,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         self.commodity = "electricity"
         self.commodity_rate_units = "MW"
         self.commodity_amount_units = "MW*h"
+        self.reliability_model = None
 
     def setup(self):
         super().setup()
@@ -74,6 +81,18 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             additional_cls_name=self.__class__.__name__,
         )
+        if use_reliability := "reliability" in self.options["tech_config"]["model_inputs"]:
+            plant_simulation_config = self.options["plant_config"]["plant"]["simulation"]
+            simulation_config = {
+                "simulation": {
+                    "dt": plant_simulation_config.get("dt", 3600),
+                    "n_timesteps": plant_simulation_config.get("n_timesteps", 8760),
+                },
+            }
+            config = self.options["tech_config"]["model_inputs"]["reliability"]
+            use_reliability = config.get("use_reliability", use_reliability)
+            self.reliability_model = PerformanceReliability.from_dict(config | simulation_config)
+        self.use_reliability = use_reliability
 
         # Add natural gas consumed output
         self.add_output(
@@ -119,6 +138,13 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         )
 
         self.add_output(
+            f"{self.commodity}_headroom_out",  # unused but "accessible" portion of rated power
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )
+
+        self.add_output(
             "unmet_electricity_demand",
             val=0.0,
             shape=self.n_timesteps,
@@ -146,11 +172,14 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         heat_rate_mmbtu_per_mwh = inputs["heat_rate_mmbtu_per_mwh"]
         max_natural_gas_consumption = system_capacity * heat_rate_mmbtu_per_mwh
 
-        # electrical command value, saturated at maximum rated system capacity
-        electricity_command_value = np.where(
-            inputs["electricity_command_value"] > system_capacity,
-            system_capacity,
-            inputs["electricity_command_value"],
+        available_capacity = system_capacity
+        if self.use_reliability:
+            self.reliability_model.run()
+            available_capacity = system_capacity * self.reliability_model.availability
+
+        # electrical command value, saturated at the available system capacity
+        electricity_command_value = np.minimum(
+            inputs["electricity_command_value"], available_capacity
         )
         natural_gas_demand = electricity_command_value * heat_rate_mmbtu_per_mwh
 
@@ -169,6 +198,14 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
 
         outputs["electricity_out"] = electricity_out
         outputs["natural_gas_consumed"] = natural_gas_consumed
+        outputs["electricity_headroom_out"] = (
+            np.minimum(  # we are limited by either
+                natural_gas_available
+                / heat_rate_mmbtu_per_mwh,  # the power available in the natural gas supply
+                available_capacity,  # or the available power of the system
+            )
+            - electricity_out
+        )  # and subtracting out what we're using gives the available excess capacity
 
         outputs["rated_electricity_production"] = inputs["system_capacity"]
 
@@ -203,6 +240,8 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
             This includes variable O&M costs that scale with electricity generation.
             Typical values: 1-5 $/MWh
         cost_year (int): Dollar year corresponding to input costs.
+
+    See :class:`NaturalGasCostModel` and :doc:`/technology_models/natural_gas`.
     """
 
     capex_per_kw: float | int = field(validator=validators.ge(0))
@@ -210,16 +249,17 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
     variable_opex_per_mwh: float | int = field(validator=validators.ge(0))
 
 
+@register
 class NaturalGasCostModel(CostModelBaseClass):
     """
     Cost model for natural gas power plants.
 
-    This model calculates capital and operating costs for natural gas plants
-    including fuel costs. It can be used for both NGCT and NGCC plants.
+    This model calculates capital and operating costs for natural gas plants.
+    Fuel costs are handled separately. It can be used for both NGCT and NGCC plants.
 
     The model calculates:
     - CapEx: Capital expenditure based on plant capacity
-    - OpEx: Operating expenditure including fixed O&M, variable O&M, and fuel costs
+    - OpEx: Operating expenditure including fixed O&M and variable O&M
 
     Cost components:
     1. Capital costs: capex_per_kw * plant_capacity_kw
@@ -227,7 +267,7 @@ class NaturalGasCostModel(CostModelBaseClass):
     3. Variable O&M: variable_opex_per_mwh * delivered_electricity_MWh
 
     Inputs:
-        system_capacity (float): Natural gas plant capacity in MW from performance model
+        rated_electricity_production (float): Plant capacity in MW from the performance model
         electricity_out (array): Hourly electricity output in MW from performance model
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
@@ -237,6 +277,10 @@ class NaturalGasCostModel(CostModelBaseClass):
         CapEx (float): Total capital expenditure in USD
         OpEx (float): Total operating expenditure in USD/year
         cost_year (int): Dollar year for the costs
+
+    Variable O&M is calculated from simulated electricity and is not annualized for a
+    partial-year simulation. See :class:`NaturalGasCostModelConfig` and
+    :doc:`/technology_models/natural_gas`.
     """
 
     _time_step_bounds = (

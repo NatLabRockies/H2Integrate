@@ -24,7 +24,7 @@ technology_interconnections:
   # subtract electricity production from electricity demand
   - [elec_combiner, electrical_load_demand, electricity, cable]
   # etc
-resource_to_tech_connections:
+site_to_tech_connections:
   # The wind resource is handled strictly by Ard in this example,
   # so only the solar resource connection is included here
   - [site.solar_resource, solar, solar_resource_data]

@@ -2,7 +2,12 @@
 
 In this example, iron ore pellets are produced at different iron mine locations in NE Minnesota.
 These mines send processed ore pellets to a separate iron DRI plant located outside Chicago.
-Four different cases are generated for four different iron mine setups in the `test_inputs.csv`.
+The example is run with two iron mine models: the simple mine model (`single_site_iron.yaml`) and
+the NRRI mine model (`single_site_iron_nrri.yaml`), which also models the natural gas and diesel
+consumed at the mine.
+
+For each mine model, four different cases are generated for four different iron mine setups in
+`test_inputs.csv` (simple mine model) or `test_inputs_nrri.csv` (NRRI mine model).
 The first two cases generate standard blast furnace grade pellets at two different mine locations.
 The second two cases generate DR grade pellets at the same location, with the output capacity
 varied to show how the capacity of the mine does not affect the levelized cost of iron_ore pellets
@@ -13,21 +18,12 @@ of the steel produced by the EAF (LCOS).
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from h2integrate import H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 
 
-# Create H2Integrate model
-model = H2IntegrateModel("single_site_iron.yaml")
-
-# Load cases
-case_file = Path("test_inputs.csv")
-cases = load_tech_config_cases(case_file)
-
-# Modify and run the model for different cases
 casenames = [
     "Standard Iron - Hibbing",
     "Standard Iron - Northshore",
@@ -35,92 +31,6 @@ casenames = [
     "DR Grade Iron - Northshore (adjusted)",
 ]
 
-# Create empty lists to store the costs
-lcois_ore = []
-capexes_ore = []
-fopexes_ore = []
-vopexes_ore = []
-production_ore = []
-lcois_iron = []
-capexes_iron = []
-fopexes_iron = []
-vopexes_iron = []
-production_ore = []
-lcois_steel = []
-capexes_steel = []
-fopexes_steel = []
-vopexes_steel = []
-
-model.run()
-model.post_process()
-
-for casename in casenames:
-    model = modify_tech_config(model, cases[casename])
-    model.run()
-    lcois_ore.append(
-        float(model.model.get_val("finance_subgroup_iron_ore.price_iron_ore", units="USD/kg")[0])
-    )
-    capexes_ore.append(
-        float(model.model.get_val("finance_subgroup_iron_ore.total_capex_adjusted", units="USD")[0])
-    )
-    fopexes_ore.append(
-        float(
-            model.model.get_val("finance_subgroup_iron_ore.total_opex_adjusted", units="USD/year")[
-                0
-            ]
-        )
-    )
-    vopexes_ore.append(
-        float(
-            model.model.get_val(
-                "finance_subgroup_iron_ore.total_varopex_adjusted", units="USD/year"
-            )[0]
-        )
-    )
-    lcois_iron.append(
-        float(
-            model.model.get_val("finance_subgroup_sponge_iron.price_sponge_iron", units="USD/kg")[0]
-        )
-    )
-    capexes_iron.append(
-        float(
-            model.model.get_val("finance_subgroup_sponge_iron.total_capex_adjusted", units="USD")[0]
-        )
-    )
-    fopexes_iron.append(
-        float(
-            model.model.get_val(
-                "finance_subgroup_sponge_iron.total_opex_adjusted", units="USD/year"
-            )[0]
-        )
-    )
-    vopexes_iron.append(
-        float(
-            model.model.get_val(
-                "finance_subgroup_sponge_iron.total_varopex_adjusted", units="USD/year"
-            )[0]
-        )
-    )
-    lcois_steel.append(
-        float(model.model.get_val("finance_subgroup_steel.price_steel", units="USD/kg")[0])
-    )
-    capexes_steel.append(
-        float(model.model.get_val("finance_subgroup_steel.total_capex_adjusted", units="USD")[0])
-    )
-    fopexes_steel.append(
-        float(
-            model.model.get_val("finance_subgroup_steel.total_opex_adjusted", units="USD/year")[0]
-        )
-    )
-    vopexes_steel.append(
-        float(
-            model.model.get_val("finance_subgroup_steel.total_varopex_adjusted", units="USD/year")[
-                0
-            ]
-        )
-    )
-
-# Compare the Capex, Fixed Opex, and Variable Opex across the 4 cases
 columns = pd.MultiIndex.from_tuples(
     [
         ("Levelized Cost", "[USD/kg]"),
@@ -129,28 +39,51 @@ columns = pd.MultiIndex.from_tuples(
         ("Variable Opex", "[USD/year]"),
     ]
 )
-print()
 
-df_ore = pd.DataFrame(
-    np.transpose(np.vstack([lcois_ore, capexes_ore, fopexes_ore, vopexes_ore])),
-    index=casenames,
-    columns=columns,
-)
-print(df_ore)
 
-print()
-df_iron = pd.DataFrame(
-    np.transpose(np.vstack([lcois_iron, capexes_iron, fopexes_iron, vopexes_iron])),
-    index=casenames,
-    columns=columns,
-)
-print(df_iron)
+def get_costs(model: H2IntegrateModel, product: str) -> list[float]:
+    """Return the levelized cost, CapEx, fixed OpEx, and variable OpEx of one product."""
+    subgroup = f"finance_subgroup_{product}"
+    return [
+        float(model.model.get_val(f"{subgroup}.price_{product}", units="USD/kg")[0]),
+        float(model.model.get_val(f"{subgroup}.total_capex_adjusted", units="USD")[0]),
+        float(model.model.get_val(f"{subgroup}.total_opex_adjusted", units="USD/year")[0]),
+        float(model.model.get_val(f"{subgroup}.total_varopex_adjusted", units="USD/year")[0]),
+    ]
 
-print()
-df_steel = pd.DataFrame(
-    np.transpose(np.vstack([lcois_steel, capexes_steel, fopexes_steel, vopexes_steel])),
-    index=casenames,
-    columns=columns,
-)
-df_steel = df_steel.iloc[2:]
-print(df_steel)
+
+def run_mine_cases(config_file: str, case_file: str) -> dict[str, pd.DataFrame]:
+    """Run each mine case and tabulate the costs of the iron ore, sponge iron, and steel."""
+    model = H2IntegrateModel(config_file)
+    model.run()
+    model.post_process()
+
+    cases = load_tech_config_cases(Path(case_file))
+    costs = {"iron_ore": [], "sponge_iron": [], "steel": []}
+    for casename in casenames:
+        model = modify_tech_config(model, cases[casename])
+        model.run()
+        for product, product_costs in costs.items():
+            product_costs.append(get_costs(model, product))
+
+    return {
+        product: pd.DataFrame(product_costs, index=casenames, columns=columns)
+        for product, product_costs in costs.items()
+    }
+
+
+mine_models = {
+    "Simple iron mine model": ("single_site_iron.yaml", "test_inputs.csv"),
+    "NRRI iron mine model": ("single_site_iron_nrri.yaml", "test_inputs_nrri.csv"),
+}
+
+# Compare the Capex, Fixed Opex, and Variable Opex across the 4 cases for each mine model
+for mine_model, (config_file, case_file) in mine_models.items():
+    tables = run_mine_cases(config_file, case_file)
+    print(f"\n{mine_model}\n")
+    print(tables["iron_ore"])
+    print()
+    print(tables["sponge_iron"])
+    print()
+    # Steel results are only reported for the DR grade pellet cases
+    print(tables["steel"].iloc[2:])

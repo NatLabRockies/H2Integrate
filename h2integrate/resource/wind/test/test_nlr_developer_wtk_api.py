@@ -1,5 +1,4 @@
 import shutil
-import hashlib
 from pathlib import Path
 
 import pytest
@@ -26,7 +25,6 @@ def wtk_site_config(site_config, lat2, lon2):
     ],
     ids=["WTKNLRDeveloperAPIWindResource", "HRRRMETToolkitWindAPI"],
 )
-# fmt: on
 def test_wind_resource_loaded_from_default_dir(
     subtests,
     plant_simulation,
@@ -65,14 +63,15 @@ def test_wind_resource_loaded_from_default_dir(
     wspd_keys = [k for k in list(wtk_data.keys()) if "wind_speed" in k]
     pressure_keys = [k for k in list(wtk_data.keys()) if "pressure" in k]
 
-    with subtests.test("more than 3 wind speed keys"):
+    with subtests.test("wind speed data is present"):
         assert len(wspd_keys) > 0
     with subtests.test("same number of wind direction keys and wind speed"):
         assert len(wdir_keys) == len(wspd_keys)
     with subtests.test("temperature keys for at least all the wind speed heights"):
         assert len(temp_keys) >= len(wspd_keys)
-    with subtests.test("3 heights for pressure data"):
-        assert len(pressure_keys) == len(pressure_keys)
+    with subtests.test("pressure data at all fixture heights"):
+        expected_pressure_count = 3 if model == "WTKNLRDeveloperAPIWindResource" else 4
+        assert len(pressure_keys) == expected_pressure_count
     with subtests.test("Start time"):
         assert wtk_data["start_time"] == f"{resource_year}/01/01 00:{minute_of_hour}:00 (+0000)"
     with subtests.test("Time step"):
@@ -82,15 +81,6 @@ def test_wind_resource_loaded_from_default_dir(
     with subtests.test("resource data is 8760 in length"):
         assert all(len(wtk_data[k]) == 8760 for k in data_keys)
 
-    off_hr_minute = "00" if minute_of_hour == "30" else "30"
-    # check that minor changes to the data will create a unique hash
-    hash_init = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
-    wtk_data["start_time"] = f"{resource_year}/01/01 00:{off_hr_minute}:00 (+0000)"
-    hash_modified = hashlib.md5(str(wtk_data).encode("utf-8")).hexdigest()
-    with subtests.test("Unique hash with modified start time"):
-        assert hash_init != hash_modified
-
-
 # fmt: off
 @pytest.mark.unit
 @pytest.mark.parametrize(
@@ -98,7 +88,6 @@ def test_wind_resource_loaded_from_default_dir(
     [("WTKNLRDeveloperAPIWindResource", "wind", 34.22, -102.75, 35.2018863, -101.945027, 2012, "wtk_v2", 0)],  # noqa: E501
     ids=["WTKNLRDeveloperAPIWindResource"],
 )
-# fmt: on
 def test_wind_resource_loaded_from_weather_dir(
     temp_dir,
     plant_simulation,

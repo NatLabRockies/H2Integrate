@@ -1,7 +1,8 @@
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -18,12 +19,15 @@ class ATBWindPlantCostModelConfig(CostModelBaseConfig):
         capex_per_kW (float|int): capital cost of wind system in $/kW
         opex_per_kW_per_year (float|int): annual operating cost of wind
             system in $/kW/year
+
+    See :class:`ATBWindPlantCostModel` and :doc:`/technology_models/atb_costs_wind`.
     """
 
     capex_per_kW: float | int = field(validator=validators.ge(0))
     opex_per_kW_per_year: float | int = field(validator=validators.ge(0))
 
 
+@register
 class ATBWindPlantCostModel(CostModelBaseClass):
     """
     OpenMDAO component for calculating wind plant capital and operating expenditures.
@@ -31,6 +35,8 @@ class ATBWindPlantCostModel(CostModelBaseClass):
     This component calculates the capital expenditure (CapEx) and annual operating
     expenditure (OpEx) of a wind plant based on its rated capacity and cost model
     parameters defined in an `ATBWindPlantCostModelConfig`.
+
+    See :class:`ATBWindPlantCostModelConfig` and :doc:`/technology_models/atb_costs_wind`.
 
     Attributes:
         config (ATBWindPlantCostModelConfig):

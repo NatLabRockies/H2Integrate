@@ -14,7 +14,13 @@ kernelspec:
 (slc-profit-max)=
 # Profit Maximization System Level Controller
 
-The profit maximization controller, `ProfitMaximizationControl`, dispatches technologies only when the revenue from selling the commodity exceeds the marginal cost of production. This means demand may go **unmet** if dispatch is unprofitable.
+The {py:class}`~h2integrate.control.control_strategies.system_level.profit_maximization_control.ProfitMaximizationControl`
+dispatches technologies only when the revenue from selling the commodity exceeds the marginal cost of production. This means demand may go **unmet** if dispatch is unprofitable.
+It uses {py:class}`~h2integrate.control.control_strategies.system_level.profit_maximization_control.ProfitMaximizationControlConfig`,
+inherits its demand and technology interface from
+{py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`,
+and uses {py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`
+for solver options.
 
 The N2 diagram below shows an example system using the profit maximization controller with wind, natural gas, and battery storage technologies.
 
@@ -56,11 +62,12 @@ display(
 
 ## Dispatch Logic
 
-The controller follows a three-step dispatch process:
+The controller follows a four-step dispatch process:
 
-1. **Flexible technologies** run at available capacity - they are always profitable to produce (zero marginal cost).
-2. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging), split evenly across storage technologies producing the demanded commodity.
-3. **Dispatchable technologies** are dispatched in merit order (cheapest first), but **only at timesteps where their marginal cost is below the sell price**. At each timestep, the dispatch is the minimum of the remaining demand and the rated capacity, gated by the profitability check.
+1. **Fixed technologies** produce without a set-point and are subtracted from demand.
+2. **Flexible technologies** run at available capacity - they are always profitable to produce (zero marginal cost).
+3. **Storage technologies** absorb any surplus (charging) or provide the deficit (discharging), split evenly across storage technologies producing the demanded commodity.
+4. **Dispatchable technologies** are dispatched in merit order (cheapest first), but **only at timesteps where their marginal cost is below the sell price**. At each timestep, the dispatch is the minimum of the remaining demand and the rated capacity, gated by the profitability check.
 
 ```{note}
 This is the key difference from the {ref}`cost minimization controller <slc-cost-min>`: unprofitable dispatch is skipped entirely, so demand may go unmet.
@@ -109,6 +116,8 @@ The base inputs for technologies classified as `flexible`, `dispatchable`, and `
 - `f"{tech_name}_{tech_output_commodity}_out"`
 - `f"{tech_name}_rated_{tech_output_commodity}_production"`
 - `f"{tech_name}_{tech_output_commodity}_demand"`
+
+The outputs are `{tech_name}_{commodity}_set_point` signals for the controlled technologies.
 
 ## Limitations
 

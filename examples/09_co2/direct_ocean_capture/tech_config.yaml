@@ -6,8 +6,6 @@ technologies:
       model: PySAMWavePerformanceModel
     cost_model:
       model: PySAMMarineCostModel
-    dispatch_rule_set:
-      model: PyomoDispatchGenericConverter
     model_inputs:
       shared_parameters:
         device_rating_kw: 286  # kW, rated power of a single wave device
@@ -63,9 +61,6 @@ technologies:
         device_spacing: 600  # meters
         row_spacing: 600  # meters
         cable_system_overbuild: 20  # percent
-      dispatch_rule_parameters:
-        commodity: electricity
-        commodity_rate_units: kW
   wind:
     performance_model:
       model: FlorisWindPlantPerformanceModel

@@ -2,7 +2,8 @@ import numpy as np
 from attrs import field, define
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.control.control_strategies.openloop_control_base import (
+from h2integrate.core.supported_models import register
+from h2integrate.control.control_strategies.openloop_control_baseclass import (
     OpenLoopControlBase,
     OpenLoopControlBaseConfig,
 )
@@ -22,6 +23,8 @@ class SimpleStorageOpenLoopControllerConfig(OpenLoopControlBaseConfig):
             demand or a list/array for time-varying demand.
             Only used if `set_demand_as_avg_commodity_in` is False. Defaults to 0.
 
+    See :class:`SimpleStorageOpenLoopController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     set_demand_as_avg_commodity_in: bool = field()
@@ -46,6 +49,7 @@ class SimpleStorageOpenLoopControllerConfig(OpenLoopControlBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class SimpleStorageOpenLoopController(OpenLoopControlBase):
     """
     A simple open-loop controller for storage systems.
@@ -54,6 +58,9 @@ class SimpleStorageOpenLoopController(OpenLoopControlBase):
     demand and the available input commodity. It is useful for testing, as a placeholder for
     more complex storage controllers, and for maintaining consistency between controlled and
     uncontrolled frameworks.
+
+    See :class:`SimpleStorageOpenLoopControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     _time_step_bounds = (

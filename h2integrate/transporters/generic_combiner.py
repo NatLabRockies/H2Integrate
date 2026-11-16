@@ -2,6 +2,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -9,6 +10,9 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     """Configuration class for a generic combiner.
 
     Fields include `commodity`, `commodity_rate_units`, and `in_streams`.
+
+    See :class:`GenericCombinerPerformanceModel` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     commodity: str = field(converter=(str.lower, str.strip))
@@ -16,9 +20,13 @@ class GenericCombinerPerformanceConfig(BaseConfig):
     in_streams: int = field(default=2)
 
 
+@register(no_cost=True)
 class GenericCombinerPerformanceModel(om.ExplicitComponent):
     """
     Combine any commodity or resource from multiple sources into one output without losses.
+
+    See :class:`GenericCombinerPerformanceConfig` and
+    :doc:`/technology_models/combiners_and_splitters`.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
@@ -44,6 +52,8 @@ class GenericCombinerPerformanceModel(om.ExplicitComponent):
     )  # (min, max) time step lengths (in seconds) compatible with this model
 
     _control_classifier = "combiner"
+
+    _is_steppable = True
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)

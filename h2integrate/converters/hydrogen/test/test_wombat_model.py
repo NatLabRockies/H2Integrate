@@ -111,5 +111,5 @@ def test_wombat_error(subtests):
     prob.setup()
     prob.set_val("electricity_in", np.ones(8760) * 40.0, units="MW")
 
-    with pytest.raises(ValueError, match="Electrolyzer rating .* does not match the product of"):
+    with pytest.raises(ValueError, match="Electrolyzer rating .* does not match the product of"):  # noqa: RUF043
         prob.run_model()

@@ -1,0 +1,31 @@
+name: driver_config
+description: This analysis runs a hybrid plant to match the first example in H2Integrate
+general:
+  folder_output: ex_out
+driver:
+  parameter_sweep:
+    flag: true
+    debug_print: false
+    generator: csvgen
+    filename: dock_sites.csv
+    run_parallel: false
+design_variables:
+  iron_transport:
+    destination_latitude:
+      flag: true
+      units: deg
+      lower: -90.0
+      upper: 90.0
+    destination_longitude:
+      flag: true
+      units: deg
+      lower: -180.0
+      upper: 180.0
+objective:
+  name: iron_transport.iron_transport_cost
+recorder:
+  file: cases_transport.sql
+  overwrite_recorder: true
+  flag: true
+  includes: [site.latitude, site.longitude, iron_transport.iron_transport_cost]
+  excludes: ['*']

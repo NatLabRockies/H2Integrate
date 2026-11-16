@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -35,6 +36,8 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
             provided.
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
+
+    See :class:`StorageAutoSizingModel` and :doc:`/storage/storage_models_index`.
     """
 
     commodity: str = field(converter=(str.strip, str.lower))
@@ -99,6 +102,7 @@ class StorageSizingModelConfig(StoragePerformanceBaseConfig):
             raise ValueError(msg)
 
 
+@register
 class StorageAutoSizingModel(StoragePerformanceBase):
     """Performance model that calculates the storage charge rate and capacity needed
     to either:
@@ -108,6 +112,9 @@ class StorageAutoSizingModel(StoragePerformanceBase):
 
     Then simulates performance of a basic storage component using the charge rate and
     capacity calculated.
+
+    See :class:`StorageSizingModelConfig` and :doc:`/storage/storage_models_index` for
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (
@@ -257,7 +264,7 @@ class StorageAutoSizingModel(StoragePerformanceBase):
         # Estimate the initial SOC
 
         # 1. Set the starting SOC (as a fraction) at the start of the simulation.
-        self.current_soc = np.max(
+        self.soc_init = np.max(
             [self.config.min_soc_fraction, commodity_storage_soc[0] / rated_storage_capacity]
         )
 

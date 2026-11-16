@@ -1,4 +1,4 @@
-import os
+import shutil
 import importlib
 
 import pytest
@@ -99,8 +99,10 @@ def plant_config():
 
 @pytest.mark.regression
 @pytest.mark.skipif(importlib.util.find_spec("ard") is None, reason="ard is not installed")
-def test_ard_wind_combined(plant_config, ard_config, subtests):
-    os.chdir(EXAMPLE_DIR / "29_wind_ard" / "ard_inputs")
+def test_ard_wind_combined(plant_config, ard_config, subtests, tmp_path, monkeypatch):
+    ard_inputs = tmp_path / "ard_inputs"
+    shutil.copytree(EXAMPLE_DIR / "29_wind_ard" / "ard_inputs", ard_inputs)
+    monkeypatch.chdir(ard_inputs)
 
     tech_config_dict = {
         "model_inputs": ard_config,

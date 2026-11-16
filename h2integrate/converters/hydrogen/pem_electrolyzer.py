@@ -4,7 +4,8 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import ResizeablePerformanceModelBaseConfig
+from h2integrate.core.model_baseclass import ResizeablePerformanceModelBaseConfig
+from h2integrate.core.supported_models import register
 from h2integrate.converters.hydrogen.utilities import size_electrolyzer_for_hydrogen_demand
 from h2integrate.converters.hydrogen.pem_model.run_h2_PEM import run_h2_PEM
 from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerPerformanceBaseClass
@@ -14,6 +15,8 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerP
 class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig):
     """
     Configuration class for the ECOElectrolyzerPerformanceModel.
+
+    See :class:`ECOElectrolyzerPerformanceModel` and :doc:`/technology_models/pem_electrolyzer`.
 
     Args:
         size_mode (str): The mode in which the component is sized. Options:
@@ -52,10 +55,14 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
     electrolyzer_capex: int = field()
 
 
+@register
 class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
     """
     An OpenMDAO component that wraps the PEM electrolyzer model.
     Takes electricity input and outputs hydrogen and oxygen generation rates.
+
+    See :class:`ECOElectrolyzerPerformanceModelConfig` and
+    :doc:`/technology_models/pem_electrolyzer`.
     """
 
     _time_step_bounds = (
@@ -144,7 +151,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         elif size_mode != "normal":
             raise NotImplementedError("Sizing mode '%s' not implemented".format())
 
-        n_pem_clusters = int(math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW))
+        n_pem_clusters = math.ceil(electrolyzer_size_mw / self.config.cluster_rating_MW)
 
         electrolyzer_actual_capacity_MW = n_pem_clusters * self.config.cluster_rating_MW
         pem_param_dict = {
@@ -155,7 +162,7 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         }
 
         energy_to_electrolyzer_kw = inputs["electricity_in"]
-        H2_Results, h2_ts, h2_tot, power_to_electrolyzer_kw = run_h2_PEM(
+        H2_Results, h2_ts, _h2_tot, _power_to_electrolyzer_kw = run_h2_PEM(
             electrical_generation_timeseries=energy_to_electrolyzer_kw,
             electrolyzer_size=electrolyzer_size_mw,
             useful_life=self.plant_life,
@@ -173,7 +180,8 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
         outputs["electricity_consumed"] = h2_ts.loc["Power Consumed [kWh]"]
         # 1 gal H2O = 3.79 kg H2O
         outputs["water_consumed"] = 3.79 * H2_Results["Water Hourly Consumption [kg/hr]"]
-        outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()
+        # outputs[...] is a view into the OpenMDAO vector, so copy before it is overwritten below.
+        unclipped_hydrogen_production = outputs["hydrogen_out"].copy()
 
         if not np.isfinite(H2_Results["Sim: Average Efficiency [%-HHV]"]).all():
             # if no hydrogen is produced, then set efficiency to 0 rather than a NaN
@@ -221,8 +229,33 @@ class ECOElectrolyzerPerformanceModel(ElectrolyzerPerformanceBaseClass):
             "Annual O2 Production [kg/year]"
         ]
 
-        # Apply command_value from system-level controller if present
+        # Apply the SLC command to reported production; the PEM calculation still uses full input.
         if "system_level_control" in self.options["plant_config"]:
             command_value = inputs[f"{self.commodity}_command_value"]
-            commodity_out_key = f"{self.commodity}_out"
-            outputs[commodity_out_key] = np.minimum(outputs[commodity_out_key], command_value)
+            clipped_hydrogen_production = np.minimum(unclipped_hydrogen_production, command_value)
+            # Keep hourly consumption and coproducts proportional to the hydrogen delivered.
+            ts_scale = np.ones_like(unclipped_hydrogen_production, dtype=float)
+            # Fills ts_scale in place with clipped/unclipped; hours with no hydrogen stay at 1.0.
+            np.divide(
+                clipped_hydrogen_production,
+                unclipped_hydrogen_production,
+                out=ts_scale,
+                where=unclipped_hydrogen_production > 0.0,
+            )
+            unclipped_total = np.sum(unclipped_hydrogen_production)
+            # Annual schedules summarize total production, so use the production-weighted clip.
+            annual_scale = (
+                np.sum(clipped_hydrogen_production) / unclipped_total
+                if unclipped_total > 0.0
+                else 1.0
+            )
+
+            outputs["hydrogen_out"] = clipped_hydrogen_production
+            outputs["electricity_consumed"] = outputs["electricity_consumed"] * ts_scale
+            outputs["oxygen_out"] = outputs["oxygen_out"] * ts_scale
+            outputs["water_consumed"] = outputs["water_consumed"] * ts_scale
+            outputs["annual_hydrogen_produced"] = outputs["annual_hydrogen_produced"] * annual_scale
+            outputs["annual_oxygen_produced"] = outputs["annual_oxygen_produced"] * annual_scale
+            outputs["capacity_factor"] = outputs["capacity_factor"] * annual_scale
+
+        outputs["total_hydrogen_produced"] = outputs["hydrogen_out"].sum()

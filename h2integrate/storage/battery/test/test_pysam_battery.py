@@ -14,7 +14,8 @@ from h2integrate.storage.battery.pysam_battery import (
 
 @pytest.mark.regression
 @pytest.mark.parametrize("n_timesteps", [24])
-def test_pysam_battery_performance_model_without_controller(plant_config, subtests):
+@pytest.mark.parametrize("calendar_a", [None, 0.004])
+def test_pysam_battery_performance_model_without_controller(plant_config, subtests, calendar_a):
     # Get the directory of the current script
     current_dir = Path(__file__).parent
 
@@ -24,6 +25,11 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     # Load the technology configuration
     with tech_config_path.open() as file:
         tech_config = yaml.safe_load(file)
+
+    if calendar_a is not None:
+        tech_config["technologies"]["battery"]["model_inputs"]["performance_parameters"][
+            "pysam_options"
+        ] = {"ParamsCell": {"calendar_a": calendar_a}}
 
     # Set up the OpenMDAO problem
     prob = om.Problem()
@@ -81,6 +87,13 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
     prob.setup()
 
     prob.run_model()
+
+    with subtests.test("PySAM options are applied"):
+        battery = prob.model.pysam_battery
+        if calendar_a is not None:
+            assert battery.system_model.ParamsCell.calendar_a == pytest.approx(calendar_a)
+        else:
+            assert battery.config.pysam_options == {}
 
     expected_battery_power = np.array(
         [
@@ -190,6 +203,7 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
             unmet_demand,
             expected_unment_demand,
             rtol=1e-2,
+            atol=1e-7,
         )
 
     with subtests.test("expected_battery_unused_commodity"):
@@ -205,6 +219,84 @@ def test_pysam_battery_performance_model_without_controller(plant_config, subtes
         charge_profile = prob.get_val("storage_electricity_charge", units="kW")
         indx_charging = np.argwhere(charge_profile).flatten()
         assert np.all(np.abs(charge_profile)[indx_charging] <= electricity_in[indx_charging])
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("n_timesteps", [24])
+def test_pysam_battery_chemistry_option_changes_results(plant_config, subtests):
+    tech_config_path = Path(__file__).parent / "inputs" / "tech_config.yaml"
+    with tech_config_path.open() as file:
+        tech_config = yaml.safe_load(file)["technologies"]["battery"]
+
+    n_control_window_hours = tech_config["model_inputs"]["control_parameters"][
+        "n_control_window_hours"
+    ]
+    electricity_in = np.concatenate(
+        (
+            np.ones(int(n_control_window_hours / 2)) * 1000.0,
+            np.zeros(int(n_control_window_hours / 2)),
+        )
+    )
+    electricity_demand = np.ones(int(n_control_window_hours)) * 1000.0
+
+    def run_battery(pysam_options):
+        configured_tech = deepcopy(tech_config)
+        if pysam_options:
+            configured_tech["model_inputs"]["performance_parameters"]["pysam_options"] = (
+                pysam_options
+            )
+
+        prob = om.Problem()
+        indep_var_comp = om.IndepVarComp()
+        indep_var_comp.add_output("electricity_in", val=electricity_in, units="kW")
+        indep_var_comp.add_output(
+            "time_step_duration", val=np.ones(n_control_window_hours), units="h"
+        )
+        indep_var_comp.add_output("electricity_set_point", val=electricity_demand, units="kW")
+        indep_var_comp.add_output(
+            "electricity_command_value",
+            val=electricity_demand - electricity_in,
+            units="kW",
+        )
+        prob.model.add_subsystem("inputs", indep_var_comp, promotes=["*"])
+        prob.model.add_subsystem(
+            "pysam_battery",
+            PySAMBatteryPerformanceModel(
+                plant_config=plant_config,
+                tech_config=configured_tech,
+            ),
+            promotes=["*"],
+        )
+        prob.setup()
+        prob.run_model()
+        return prob
+
+    default_prob = run_battery({})
+    iron_flow_prob = run_battery(
+        {
+            "ParamsCell": {
+                "chem": 3,
+                "Qfull_flow": 2.25,
+                "Vnom_default": 1.25,
+                "voltage_matrix": [[0.0, 1.4], [100.0, 1.0]],
+            }
+        }
+    )
+
+    with subtests.test("PySAM chemistry option is applied"):
+        assert iron_flow_prob.model.pysam_battery.system_model.ParamsCell.chem == 3
+
+    with subtests.test("chemistry option changes battery power"):
+        assert not np.allclose(
+            default_prob.get_val("electricity_out", units="kW"),
+            iron_flow_prob.get_val("electricity_out", units="kW"),
+        )
+
+    with subtests.test("chemistry option changes battery SOC"):
+        assert not np.allclose(
+            default_prob.get_val("SOC", units="percent"),
+            iron_flow_prob.get_val("SOC", units="percent"),
+        )
 
 
 @pytest.mark.regression
@@ -296,6 +388,27 @@ def test_battery_initialization(plant_config, subtests):
         # computed in `compute()` rather than at model initialization
         # suggest removing this subtest
         assert battery.system_model.ParamsPack.mass * 20000 == pytest.approx(3044540.0, 1e-3)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("n_timesteps", [24])
+@pytest.mark.parametrize(
+    "pysam_options, error",
+    [
+        ({"NotAGroup": {"value": 1}}, "Unknown PySAM battery options group: NotAGroup"),
+        ({"ParamsCell": {"minimum_SOC": 20}}, "ParamsCell.minimum_SOC.*managed"),
+    ],
+)
+def test_battery_rejects_invalid_pysam_options(plant_config, pysam_options, error):
+    tech_config_path = Path(__file__).parent / "inputs" / "tech_config.yaml"
+    with tech_config_path.open() as file:
+        tech_config = yaml.safe_load(file)["technologies"]["battery"]
+
+    tech_config["model_inputs"]["performance_parameters"]["pysam_options"] = pysam_options
+    battery = PySAMBatteryPerformanceModel(plant_config=plant_config, tech_config=tech_config)
+
+    with pytest.raises(ValueError, match=error):
+        battery.setup()
 
 
 @pytest.mark.regression

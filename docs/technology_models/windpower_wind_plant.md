@@ -3,11 +3,21 @@
 This model uses the [Windpower module](https://nrel-pysam.readthedocs.io/en/main/modules/Windpower.html) available in PySAM to simulate the performance of a wind power plant.
 
 To use this model, specify `"PYSAMWindPlantPerformanceModel"` as the performance model. An example of how this may look in the `tech_config` file is shown below and details on the performance parameter inputs can be found [here](#windpower-performance-parameters).
+See {py:class}`~h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModel`,
+{py:class}`~h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModelConfig`, and
+{py:class}`~h2integrate.converters.wind.wind_pysam.PySAMPowerCurveCalculationInputs`.
+
+The model receives a discrete `wind_resource_data` dictionary, `num_turbines`,
+`wind_turbine_rating`, `rotor_diameter`, and `hub_height`. It reports an electricity profile
+and production summaries and supports one-hour time steps. The current setup requires a `layout`
+section in the performance parameters. See [wind cost models](atb_costs_wind.md) for a
+capacity-based cost option.
 
 ```yaml
 technologies:
   wind:
-     performance_model: "PYSAMWindPlantPerformanceModel"
+         performance_model:
+             model: "PYSAMWindPlantPerformanceModel"
      model_inputs:
          performance_parameters:
             num_turbines: 10
@@ -44,52 +54,36 @@ technologies:
 
 (windpower-performance-parameters)=
 ## Performance Parameters
-- `num_turbines` (required): number of wind turbines in the wind farm. Previously limited to 300 turbines, but this limit has been removed in the latest version.
-- `hub_height` (required): wind turbine hub height in meters
-- `rotor_diameter` (required): wind turbine rotor diameter in meters
-- `turbine_rating_kw` (required): rated power of individual wind turbine in kW
-- `create_model_from`: this can either be set to `"new"` or `"default"` and defaults to `"new"`. If `create_model_from` is `"new"`, the wind model is initialized using `Windpower.new()` and *populated* with parameters specified in `pysam_options`. If `create_model_from` is `"default"`, the wind model is initialized using `Windpower.default(config_name)` (`config_name` is also an input parameter) then *updated* with parameters specified in `pysam_options`.
-- `config_name`: this is only used if `create_model_from` is `"default"`. The default value for this is `"WindPowerSingleOwner"`. The available options and their default parameters are listed below:
-    - [WindPowerAllEquityPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerAllEquityPartnershipFlip.json)
-    - [WindPowerCommercial](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerCommercial.json)
-    - [WindPowerLeveragedPartnershipFlip](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerLeveragedPartnershipFlip.json)
-    - [WindPowerMerchantPlant](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerMerchantPlant.json)
-    - [WindPowerNone](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerNone.json)
-    - [WindPowerResidential](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerResidential.json)
-    - [WindPowerSaleLeaseback](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSaleLeaseback.json)
-    - [WindPowerSingleOwner](https://github.com/NatLabRockies/SAM/blob/develop/api/api_autogen/library/defaults/Windpower_WindPowerSingleOwner.json)
-- `run_recalculate_power_curve` (optional): Flag whether to recalculate the wind turbine
-        power curve. defaults to True.
+The configuration reference is generated from the class used by the model:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.wind.wind_pysam.PYSAMWindPlantPerformanceModelConfig
+   :no-members:
+   :no-index:
+```
+
+For PySAM default configurations, see the
+[SAM defaults directory](https://github.com/NatLabRockies/SAM/tree/develop/api/api_autogen/library/defaults).
 
 (layout-parameters)=
 ## Layout Parameters
-- `layout` (dict): configuration for wind turbine layout within the wind farm
-    - `layout_mode` (str): currently only `"basicgrid"` is supported
-    - `layout_options` (dict): options specific to the layout mode
-        - For `"basicgrid"` mode:
-            - `row_D_spacing` (float): rotor diameter multiplier for spacing between rows of
-            turbines (y direction).
-            - `rotation_angle_deg` (float, Optional): rotation angle of layout in degrees where 0 is North, increasing counter-clockwise. 90 degrees is East, 180 degrees is South,
-            270 degrees is West. Defaults to 0.0.
-            - `row_phase_offset` (float, Optional): offset of turbines along row from one row to the next. Value must be between 0 and 1. Defaults to 0.0.
-            - `layout_shape` (str, optional): layout shape with respect to the number of turbines. Must be either 'square' or 'rectangle'. Defaults to 'square'.
-            - `turbine_aspect_ratio` (float, optional): ratio of number turbines per row / number of rows if using a 'rectangle' layout_shape. Unused for 'square' layout_shape.
+The `layout` dictionary selects `layout_mode: basicgrid` and provides `layout_options` using:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.wind.layout.simple_grid_layout.BasicGridLayoutConfig
+   :no-members:
+   :no-index:
+```
 
 (powercurve-calc-parameters)=
 ## Power Curve Calculation Parameters
-The `powercurve_calc_config` section allows customization of the turbine power curve calculation:
+The `powercurve_calc_config` section uses:
 
-- `elevation` (float): elevation in meters. Required if using Weibull resource model, otherwise should be zero. Defaults to 0.
-- `wind_default_max_cp` (float): maximum power coefficient. Defaults to 0.45.
-- `wind_default_max_tip_speed` (float): maximum tip speed in m/s. Defaults to 60.
-- `wind_default_max_tip_speed_ratio` (float): maximum tip-speed ratio. Defaults to 8.
-- `wind_default_cut_in_speed` (float): cut-in wind speed in m/s. Defaults to 4.
-- `wind_default_cut_out_speed` (float): cut-out wind speed in m/s. Defaults to 25.
-- `wind_default_drive_train` (int): integer representing wind turbine drive train type. Defaults to 0. The mapping is:
-    - 0: 3 Stage Planetary
-    - 1: Single Stage - Low Speed Generator
-    - 2: Multi-Generator
-    - 3: Direct Drive
+```{eval-rst}
+.. autoclass:: h2integrate.converters.wind.wind_pysam.PySAMPowerCurveCalculationInputs
+   :no-members:
+   :no-index:
+```
 
 (pysam-options-windpower)=
 ## PySAM Options
@@ -144,3 +138,14 @@ The model automatically formats wind resource data from the H2I wind resource da
 - Wind direction in degrees east of north
 
 The model handles interpolation between available resource heights to match the specified hub height and uses the closest available data when exact matches are not available.
+
+## Turbine file preprocessing
+The `h2integrate.preprocess.wind_turbine_file_tools` module can create turbine files from the
+[turbine-models](https://github.com/NatLabRockies/turbine-models) library, so you do not have to
+write them by hand:
+
+- `export_turbine_to_pysam_format(turbine_name)` writes a PySAM options turbine YAML file (named `pysam_options_{turbine_name}.yaml` by default) to the H2I library folder, or to `output_folder`
+if given. Use its path as the `pysam_options` turbine configuration input for this model.
+
+See [Turbine Models Library Pre-Processing](../misc_resources/turbine_models_library_preprocessing.md)
+for a worked example that exports a turbine, updates the `tech_config`, and runs [Example 26](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/26_floris).

@@ -16,9 +16,9 @@ fig, ax = plt.subplots(2, 1, sharex=True)
 
 start_hour = 0
 end_hour = 200
-total_time_steps = model.prob.get_val("battery.electricity_soc", units="unitless").size
+total_time_steps = model.prob.get_val("battery.SOC", units="percent").size
 demand_profile = [
-    model.technology_config["technologies"]["battery"]["model_inputs"]["control_parameters"][
+    model.technology_config["technologies"]["battery"]["model_inputs"]["shared_parameters"][
         "demand_profile"
     ]
     * 1e-3
@@ -26,7 +26,7 @@ demand_profile = [
 
 ax[0].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.electricity_soc", units="percent")[start_hour:end_hour],
+    model.prob.get_val("battery.SOC", units="percent")[start_hour:end_hour],
     label="SOC",
     linewidth=2,
 )
@@ -42,14 +42,18 @@ ax[1].plot(
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.unused_electricity_out", units="MW")[start_hour:end_hour],
+    model.prob.get_val("electrical_load_demand.unused_electricity_out", units="MW")[
+        start_hour:end_hour
+    ],
     linestyle=":",
     label="Unused Electricity commodity (MW)",
     linewidth=2,
 )
 ax[1].plot(
     range(start_hour, end_hour),
-    model.prob.get_val("battery.unmet_electricity_demand_out", units="MW")[start_hour:end_hour],
+    model.prob.get_val("electrical_load_demand.unmet_electricity_demand_out", units="MW")[
+        start_hour:end_hour
+    ],
     linestyle=":",
     label="Electricity Unmet Demand (MW)",
     linewidth=2,

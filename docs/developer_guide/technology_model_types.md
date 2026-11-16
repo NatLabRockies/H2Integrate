@@ -19,7 +19,7 @@ from h2integrate.converters.solar.solar_baseclass import SolarPerformanceBaseCla
 
 
 @define(kw_only=True)
-class PYSAMSolarPlantPerformanceModelDesignConfig(BaseConfig):
+class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
     """Performance-model configuration for ``PYSAMSolarPlantPerformanceModel``.
 
     Fields declared here are validated against the user inputs supplied in
@@ -49,7 +49,7 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
         super().setup()
 
         # Build a validated configuration object from user inputs.
-        self.config = PYSAMSolarPlantPerformanceModelDesignConfig.from_dict(
+        self.config = PYSAMSolarPlantPerformanceModelConfig.from_dict(
             merge_shared_inputs(self.options["tech_config"]["model_inputs"], "performance"),
             strict=True,
             additional_cls_name=self.__class__.__name__,
@@ -115,15 +115,14 @@ model always reports costs in a fixed dollar-year), inherit the config from
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass
+from h2integrate.core.model_baseclass import CostModelBaseClass
 
 
 @define(kw_only=True)
 class ReverseOsmosisCostModelConfig(BaseConfig):
     # Config values come from tech_config['model_inputs']['cost_parameters']
     # or tech_config['model_inputs']['shared_parameters'].
-    freshwater_kg_per_hour: float = field(validator=validators.gt(0))
-    freshwater_density: float = field(validator=validators.gt(0))
+    freshwater_capacity_kg_per_hr: float = field(validator=validators.gt(0))
     # cost_year is fixed because this model always reports 2013 USD.
     cost_year: int = field(default=2013, converter=int, validator=validators.in_([2013]))
 
@@ -137,12 +136,15 @@ class ReverseOsmosisCostModel(CostModelBaseClass):
         super().setup()
 
         self.add_input(
-            "plant_capacity_kgph", val=0.0, units="kg/h", desc="Desired freshwater flow rate"
+            "rated_freshwater_production_capacity",
+            val=self.config.freshwater_capacity_kg_per_hr / 3600,
+            units="kg/s",
+            desc="Maximum freshwater production rate",
         )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
-        capex = 32894 * (self.config.freshwater_kg_per_hour / 3600)  # USD
-        opex = 4841 * (self.config.freshwater_kg_per_hour / 3600)    # USD/yr
+        capex = 32894 * inputs["rated_freshwater_production_capacity"]  # USD
+        opex = 4841 * inputs["rated_freshwater_production_capacity"]    # USD/yr
         outputs["CapEx"] = capex
         outputs["OpEx"] = opex
 ```
@@ -155,7 +157,7 @@ adds a required `cost_year` field, forcing the user to supply it:
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
-from h2integrate.core.model_baseclasses import CostModelBaseClass, CostModelBaseConfig
+from h2integrate.core.model_baseclass import CostModelBaseClass, CostModelBaseConfig
 
 
 @define(kw_only=True)

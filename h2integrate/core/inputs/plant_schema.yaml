@@ -73,6 +73,10 @@ properties:
             description: number of timesteps to simulate
             default: 8760
             minimum: 1
+          n_timesteps_window:
+            type: integer
+            description: number of timesteps per window in a time-marching simulation
+            minimum: 1
           start_time:
             type: string
             description: simulation start time formatted as mm/dd/yyyy HH:MM:SS or mm/dd HH:MM:SS
@@ -93,7 +97,7 @@ properties:
       items:
         type: [string, array]
         description: Technology names and connection types
-  resource_to_tech_connections:
+  site_to_tech_connections:
     type: array
     description: Array of arrays representing resource to technology connections
     items:

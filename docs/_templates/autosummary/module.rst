@@ -47,11 +47,8 @@
    {% endblock %}
 
 {% block modules %}
-{# Filter out pytest conftest modules; they cannot be imported outside a
-   pytest session (they use `from test.conftest import ...` which requires
-   the repo-root ``test/`` package to be on ``sys.path``) and so autosummary
-   raises "failed to import" warnings on them. #}
-{% set filtered_modules = modules | reject('equalto', 'conftest') | list %}
+{# Exclude pytest modules from the generated public API tree. #}
+{% set filtered_modules = modules | reject('equalto', 'conftest') | reject('equalto', 'test') | list %}
 {% if filtered_modules %}
 .. rubric:: Modules
 

@@ -146,3 +146,40 @@ This is the name that you will use to reference the objective function in the dr
 The default behavior of the optimization driver is to minimize the objective function.
 If you want to maximize the objective function, you can set the `ref` keyword argument in the driver config file to -1.
 ```
+
+## Statistical reduction components
+
+For the purposes of design optimization, it is frequently the case that some _in situ_ control of the statistical behavior of time series data is desired.
+Consider a simulation that requires the 5th percentile value of a timeseries to exceed some value, as a constraint.
+
+In `h2integrate/statistical` there are special components that can be used to pose optimization problems of this type.
+There are two of these components.
+
+### Summary statistics
+
+The first is `summary_stats.py` which gives simple summary statistics.
+This component takes a commodity input timeseries (as, e.g. `electricity_in`) for any specified commodity.
+It returns, by default, the
+- mean (`f"{commodity}_mean"`),
+- stdev (`f"{commodity}_stdev"`),
+- median (`f"{commodity}_median"`),
+- min (`f"{commodity}_min"`),
+- max (`f"{commodity}_max"`),
+- percentiles (`f"{commodity}_percentiles"`),
+
+Percentiles, by default, return the following:
+- 2.275% (2-sigma lower bound)
+- 5.0%
+- 15.865% (1-sigma lower bound)
+- 50.0%
+- 84.135% (1-sigma upper bound)
+- 95.0%
+- 97.725% (2-sigma upper bound)
+but these can be configured as a parameter.
+
+### Threshold statistics
+
+The second statistical component is found in `threshold_stats.py`, and this component specifically considers the case in which there is some type of signal indicating a threshold that we want to measure a commodity flow against, resulting in surplus and deficit with respect to the signal.
+
+As before, a commodity input timeseries is specified, and an optional `f"{commodity}_threshold"` parameter can be used to set the threshold to compare against (it goes to zero by default).
+The result of the component is that it outputs the `f"net_{commodity}_deficit"` and `f"net_{commodity}_surplus"`, the quantity of the commodity in the configured amount units, as well as ratios of the total simulated timesteps that are in deficit or surplus, `f"ratio_timestep_{commodity}_deficit"` and `f"ratio_timestep_{commodity}_surplus"` relatively.

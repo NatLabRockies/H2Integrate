@@ -2,6 +2,7 @@ import numpy as np
 from attrs import field, define, validators
 
 from h2integrate.core.utilities import merge_shared_inputs
+from h2integrate.core.supported_models import register
 from h2integrate.storage.storage_baseclass import (
     StoragePerformanceBase,
     StoragePerformanceBaseConfig,
@@ -49,6 +50,7 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
             81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
             provided.
 
+    See :class:`StoragePerformanceModel` and :doc:`/storage/simple_generic_storage`.
     """
 
     commodity: str = field()
@@ -121,13 +123,20 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
             self.commodity_amount_units = f"({self.commodity_rate_units})*h"
 
 
+@register
 class StoragePerformanceModel(StoragePerformanceBase):
-    """OpenMDAO component for a storage component."""
+    """OpenMDAO component for a storage component.
+
+    See :class:`StoragePerformanceModelConfig` and :doc:`/storage/simple_generic_storage` for
+    configuration, controls, inputs, and outputs.
+    """
 
     _time_step_bounds = (
         1,
         3600,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+
+    _is_steppable = True
 
     def setup(self):
         self.config = StoragePerformanceModelConfig.from_dict(
@@ -142,16 +151,66 @@ class StoragePerformanceModel(StoragePerformanceBase):
 
         super().setup()
 
+        self.add_output(
+            f"{self.commodity}_charge_demand",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )  # the current demand to charge the system at maximum rate
+
+        self.add_output(
+            f"{self.commodity}_headroom",
+            val=0.0,
+            shape=self.n_timesteps,
+            units=self.commodity_rate_units,
+        )  # this represents the excess capacity that could have been dumped
+
     def compute(self, inputs, outputs, discrete_inputs=[], discrete_outputs=[]):
         """Run the storage performance model."""
-        self.current_soc = self.config.init_soc_fraction
 
+        # Unpack scalar inputs
         charge_rate = inputs["max_charge_rate"][0]
+
         if "max_discharge_rate" in inputs:
             discharge_rate = inputs["max_discharge_rate"][0]
         else:
             discharge_rate = inputs["max_charge_rate"][0]
         storage_capacity = inputs["storage_capacity"][0]
+
         outputs = self.run_storage(
             charge_rate, discharge_rate, storage_capacity, inputs, outputs, discrete_inputs
+        )
+
+        # add charge demand calculation
+        headroom_capacity_charge = (
+            (self.config.max_soc_fraction - outputs["SOC"] / 100.0) * storage_capacity / self.dt_hr
+        )
+        available_charge = np.maximum(
+            0.0,  # at worst no charge is available
+            np.minimum(
+                charge_rate,  # the fundamental limit on charge rate is the max
+                headroom_capacity_charge,  # but that could be limited by the available capacity
+            ),
+        )  # this is the max i could charge right now
+
+        # add headroom calculation
+        headroom_capacity_discharge = (
+            (outputs["SOC"] / 100.0 - self.config.min_soc_fraction) * storage_capacity / self.dt_hr
+        )  # i *could've* dumped the state of charge by this much
+
+        available_discharge = np.maximum(
+            0.0,  # at worst no discharge is available
+            np.minimum(
+                discharge_rate,  # the fundamental limit on discharge rate is the max
+                headroom_capacity_discharge,  # but that could be limited by the available capacity
+            ),
+        )  # this is the max i could discharge right now
+
+        # add the charge/discharge outputs
+        outputs[f"{self.commodity}_charge_demand"] = (
+            available_charge / self.config.charge_efficiency
+        )
+        outputs[f"{self.commodity}_headroom"] = (
+            available_discharge
+            * self.config.discharge_efficiency  # i could dump this much power out total
         )

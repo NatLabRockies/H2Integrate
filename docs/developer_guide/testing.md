@@ -50,6 +50,24 @@ def test_BaseConfig(subtests):
     ... # rest of the test
 ```
 
+Tests must be marked with at least one of `unit`, `regression`, `integration`, `hpc`, or `examples`. The test configuration rejects unknown markers, and `test/conftest.py` fails collection for unmarked tests.
+
+## Parallel Test Execution
+
+Install the `develop` extra from the `pyproject.toml` to include `pytest-xdist`.
+Tests run in parallel by default using `-n auto --dist=loadfile`, which keeps tests from the same file on one worker so they can reuse module-scoped fixtures.
+The automatic worker count considers core count and reported available memory.
+CI caps the automatic count at four workers per job.
+
+Use `pytest -n 0` to run serially, including when debugging.
+Use `pytest -n <num_workers>` to request a specific number of workers, or set `PYTEST_XDIST_AUTO_NUM_WORKERS` to override the automatic count.
+Use `pytest --maxprocesses=2` to cap the automatic count without bypassing the budget.
+
+Workers have separate process state but share the repository and other external resources.
+Tests must use temporary paths for generated files, restore changes to the working directory,
+and not depend on execution order.
+Each worker performs its own collection, so parameter values and test IDs must have a consistent order. `pytest-cov` combines coverage from the workers.
+
 ## Unit Tests
 
 Unit tests should test the correctness of the code in isolation from the rest of the system.
@@ -57,7 +75,7 @@ At a minimum, this involves testing data handling, utility methods, setup, and e
 should also be taken to test around the edges of the program being written to ensure code can't
 silently fail by producing erroneous results or failing unexpectedly.
 
-Run `pytest -m unit` to run only the unit test suite or `pytest -m not-unit` to skip the unit tests.
+Run `pytest -m unit` to run only the unit test suite or `pytest -m "not unit"` to skip the unit tests.
 
 An example of a unit test is in the example below where there is only a validation of the location
 of the output directory and subdirectory, and not the contents of those files.
@@ -73,7 +91,7 @@ In an analysis-focused code base, regression tests should test the results of ru
 ensure changes made do not alter expected results. These should not encapsulate more than the focal
 system if it can be helped.
 
-Run `pytest -m regression` to run only the regression test suite or `pytest -m not-regression` to
+Run `pytest -m regression` to run only the regression test suite or `pytest -m "not regression"` to
 skip the regression tests.
 
 An example of a regression test is in the example below where the model's outputs are checked
@@ -95,12 +113,36 @@ An example would be to test that a model configuration that contributed to a pub
 produces the same results, ensuring the legitimacy of those results and the underlying modeled
 systems.
 
-Run `pytest -m integration` to run only the integration test suite or `pytest -m not-integration`
+Run `pytest -m integration` to run only the integration test suite or `pytest -m "not integration"`
 to skip the integration tests.
 
-For examples of integration tests, please see the `examples/test/test_all_examples.py` module
-where multiple components are combined to test the models outputs for stability when using tools
-in conjunction with each other.
+For examples of integration tests, please see the
+`h2integrate/control/control_strategies/storage/test/test_openloop_storage_integration.py` module,
+where storage performance models and their controllers are connected and run together over a short
+simulation.
+
+## Example Tests
+
+Tests that run a full example from the `examples/` folder are marked with `@pytest.mark.examples`.
+These tests are the most expensive part of the test suite, so they do not run with the unit,
+regression, and integration tests on every pull request. Instead, the
+[Examples workflow](https://github.com/NatLabRockies/H2Integrate/actions/workflows/examples.yml)
+runs them nightly on `develop`, on pull requests that change files in `examples/`, and on demand
+from the GitHub Actions tab. When a nightly run fails, the workflow opens (or comments on) an issue
+labeled `nightly-examples`, and it closes that issue once the examples pass again.
+
+There are two example test modules:
+
+- `examples/test/test_all_examples.py` builds and runs each example model and checks key outputs,
+  such as levelized costs and annual production, for stability.
+- `examples/test/test_example_scripts.py` runs every `run_*.py` script in `examples/` from a
+  temporary copy of its folder, the same way a user would from the command line, to make sure
+  plotting and post-processing code keeps working. New example scripts must be named `run_*.py`
+  so they are picked up automatically.
+
+Run `pytest -m examples` to run the example tests locally. Because these tests do not run on every
+pull request, run the example tests that use any model you change before requesting a review, for
+example `pytest examples/test/test_all_examples.py -k steel`.
 
 ## Test coverage
 

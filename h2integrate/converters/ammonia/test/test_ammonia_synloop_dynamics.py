@@ -3,6 +3,8 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.tools.constants import H_MW, N_MW
+from h2integrate.core.h2integrate_model import H2IntegrateModel
 from h2integrate.converters.ammonia.ammonia_synloop_performance import (
     AmmoniaSynLoopPerformanceModel,
 )
@@ -87,6 +89,17 @@ def make_production_sequence(min_prod, max_prod, onoff_sequence, n_timesteps, st
     return production
 
 
+def stoichiometric_feedstock_rates(performance):
+    feed_mw = performance["feed_gas_x_h2"] * H_MW * 2 + performance["feed_gas_x_n2"] * N_MW * 2
+    hydrogen_rate = (
+        performance["feed_gas_x_h2"] * H_MW * 2 / feed_mw * performance["feed_gas_mass_ratio"]
+    )
+    nitrogen_rate = (
+        performance["feed_gas_x_n2"] * N_MW * 2 / feed_mw * performance["feed_gas_mass_ratio"]
+    )
+    return hydrogen_rate, nitrogen_rate
+
+
 @pytest.mark.regression
 @pytest.mark.parametrize("dt,n_timesteps", [(3600, 40)])
 def test_ammonia_subdt_offtime_subdt_delay(
@@ -159,6 +172,10 @@ def test_ammonia_subdt_offtime_subdt_delay(
         total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
         nh3_produced = nh3_out[:n_timesteps_test].sum()
         assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
+
+    with subtests.test("Consumption follows partial ammonia output during a startup delay"):
+        assert elec_consumed[2] == pytest.approx(nh3_out[2])
+        assert nh3_out[2] > 0.0
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -240,11 +257,19 @@ def test_ammonia_subdt_offtime_multidt_delay(
     # h2_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
     # n2_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
     elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+    hydrogen_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
 
     with subtests.test(f"Electricity consumption for first {n_timesteps_test} timesteps"):
         total_elec_consumed = elec_consumed[:n_timesteps_test].sum()
         nh3_produced = nh3_out[:n_timesteps_test].sum()
         assert pytest.approx(nh3_produced, rel=1e-6) == total_elec_consumed
+
+    with subtests.test("No feed is consumed during zero-output startup delay hours"):
+        startup_delay_hours = (nh3_out == 0.0) & (nh3_no_dynamics >= min_nh3)
+        assert np.any(startup_delay_hours)
+        assert np.all(hydrogen_consumed[startup_delay_hours] == 0.0)
+        assert np.all(elec_consumed[startup_delay_hours] == 0.0)
+        assert np.all(hydrogen_consumed[nh3_out > 0.0] > 0.0)
 
     # Confirm losses repeat consistently across all full sequence repeats in the sim
     n_repeats = (n_timesteps - 1) // len(on_off_sequence)
@@ -641,7 +666,7 @@ def test_ammonia_multidt_delay_fraction(
         )
         assert pytest.approx(nh3_produced, rel=1e-6) == expected_nh3
 
-    prob.get_val("comp.electricity_consumed", units="kW")
+    elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
     with subtests.test(
         f"Electricity consumption for first {n_timesteps_test} timesteps (subdt offtime)"
     ):
@@ -1157,6 +1182,228 @@ def test_ammonia_turndown_enforced_without_startup(
     with subtests.test("Feedstock consumption is also zero during sub-turndown shutoff"):
         elec_consumed = prob.get_val("comp.electricity_consumed", units="kW")
         assert np.all(elec_consumed[3:7] == pytest.approx(0.0, abs=1e-9))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 4)])
+def test_ammonia_consumption_tracks_positive_rampdown_output(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    rated_capacity = 4000.0
+    synloop_config["model_inputs"]["shared_parameters"]["production_capacity"] = rated_capacity
+    dynamics_config["turndown_ratio"] = 0.2
+    dynamics_config["ramp_down_rate_fraction"] = 0.6
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+
+    production_profile = np.array([2000.0, 3000.0, 3000.0, 0.0])
+    performance = synloop_config["model_inputs"]["performance_parameters"]
+    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(performance)
+    hydrogen_in = production_profile * hydrogen_rate
+    nitrogen_in = production_profile * nitrogen_rate
+    electricity_in = production_profile * performance["energy_demand"]
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", hydrogen_in, units="kg/h")
+    prob.set_val("comp.nitrogen_in", nitrogen_in, units="kg/h")
+    prob.set_val("comp.electricity_in", electricity_in, units="kW")
+    prob.run_model()
+
+    ammonia_out = prob.get_val("comp.ammonia_out", units="kg/h")
+    hydrogen_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
+    nitrogen_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
+    electricity_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+
+    with subtests.test("Ramp-down output remains positive below turndown"):
+        assert 0.0 < ammonia_out[2] < rated_capacity * dynamics_config["turndown_ratio"]
+        assert ammonia_out[2] == pytest.approx(600.0)
+
+    with subtests.test("Consumption follows the positive ramp-down production"):
+        np.testing.assert_allclose(hydrogen_consumed, ammonia_out * hydrogen_rate)
+        np.testing.assert_allclose(nitrogen_consumed, ammonia_out * nitrogen_rate)
+        np.testing.assert_allclose(electricity_consumed, ammonia_out * performance["energy_demand"])
+        assert np.all(hydrogen_consumed[ammonia_out > 0.0] > 0.0)
+
+    with subtests.test("Leftover feed stays non-negative"):
+        assert np.all(prob.get_val("comp.hydrogen_out", units="kg/h") >= -1e-9)
+        assert np.all(prob.get_val("comp.nitrogen_out", units="kg/h") >= -1e-9)
+        assert np.all(prob.get_val("comp.electricity_out", units="kW") >= -1e-9)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 5)])
+def test_ammonia_slc_command_limits_production(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    plant_config["system_level_control"] = {}
+    dynamics_config["turndown_ratio"] = 0.2
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+    performance = synloop_config["model_inputs"]["performance_parameters"]
+    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(performance)
+    hydrogen_in = np.full(n_timesteps, 100.0 * hydrogen_rate)
+    nitrogen_in = np.full(n_timesteps, 100.0 * nitrogen_rate)
+    electricity_in = np.full(n_timesteps, 100.0)
+    command = np.array([20.0, 30.0, 40.0, 60.0, 50.0])
+    expected_ammonia = np.minimum(
+        command, synloop_config["model_inputs"]["shared_parameters"]["production_capacity"]
+    )
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", hydrogen_in, units="kg/h")
+    prob.set_val("comp.nitrogen_in", nitrogen_in, units="kg/h")
+    prob.set_val("comp.electricity_in", electricity_in, units="kW")
+    prob.set_val("comp.ammonia_command_value", command, units="kg/h")
+    prob.run_model()
+
+    ammonia_out = prob.get_val("comp.ammonia_out", units="kg/h")
+    hydrogen_consumed = prob.get_val("comp.hydrogen_consumed", units="kg/h")
+    nitrogen_consumed = prob.get_val("comp.nitrogen_consumed", units="kg/h")
+    electricity_consumed = prob.get_val("comp.electricity_consumed", units="kW")
+
+    with subtests.test("Ammonia output follows the SLC command"):
+        np.testing.assert_allclose(ammonia_out, expected_ammonia)
+        assert np.all(ammonia_out <= command)
+        np.testing.assert_array_equal(prob.get_val("comp.limiting_input"), [4, 4, 4, 3, 3])
+
+    with subtests.test("Feed consumption follows commanded production"):
+        np.testing.assert_allclose(hydrogen_consumed, expected_ammonia * hydrogen_rate)
+        np.testing.assert_allclose(nitrogen_consumed, expected_ammonia * nitrogen_rate)
+        np.testing.assert_allclose(
+            electricity_consumed, expected_ammonia * performance["energy_demand"]
+        )
+
+    with subtests.test("Leftover feed equals input minus commanded consumption"):
+        np.testing.assert_allclose(
+            prob.get_val("comp.hydrogen_out", units="kg/h"), hydrogen_in - hydrogen_consumed
+        )
+        np.testing.assert_allclose(
+            prob.get_val("comp.nitrogen_out", units="kg/h"), nitrogen_in - nitrogen_consumed
+        )
+        np.testing.assert_allclose(
+            prob.get_val("comp.electricity_out", units="kW"), electricity_in - electricity_consumed
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 4)])
+def test_ammonia_slc_command_below_turndown_shuts_down(
+    plant_config, synloop_config, dynamics_config, n_timesteps, subtests
+):
+    plant_config["system_level_control"] = {}
+    dynamics_config["turndown_ratio"] = 0.2
+    synloop_config["model_inputs"]["performance_parameters"] = (
+        synloop_config["model_inputs"]["performance_parameters"] | dynamics_config
+    )
+    performance = synloop_config["model_inputs"]["performance_parameters"]
+    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(performance)
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", np.full(n_timesteps, 100.0 * hydrogen_rate), units="kg/h")
+    prob.set_val("comp.nitrogen_in", np.full(n_timesteps, 100.0 * nitrogen_rate), units="kg/h")
+    prob.set_val("comp.electricity_in", np.full(n_timesteps, 100.0), units="kW")
+    prob.set_val("comp.ammonia_command_value", np.full(n_timesteps, 5.0), units="kg/h")
+    prob.run_model()
+
+    with subtests.test("Command below turndown produces no ammonia"):
+        assert np.all(prob.get_val("comp.ammonia_out", units="kg/h") == 0.0)
+
+    with subtests.test("Command below turndown consumes no feed"):
+        assert np.all(prob.get_val("comp.hydrogen_consumed", units="kg/h") == 0.0)
+        assert np.all(prob.get_val("comp.nitrogen_consumed", units="kg/h") == 0.0)
+        assert np.all(prob.get_val("comp.electricity_consumed", units="kW") == 0.0)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 4)])
+def test_ammonia_without_slc_retains_develop_baseline(
+    plant_config, synloop_config, n_timesteps, subtests
+):
+    performance = synloop_config["model_inputs"]["performance_parameters"]
+    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(performance)
+    hydrogen_in = np.full(n_timesteps, 100.0 * hydrogen_rate)
+    nitrogen_in = np.full(n_timesteps, 100.0 * nitrogen_rate)
+    electricity_in = np.array([35.0, 60.0, 25.0, 50.0])
+
+    prob = om.Problem()
+    comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    prob.model.add_subsystem("comp", comp, promotes=["*"])
+    prob.setup()
+    prob.set_val("comp.hydrogen_in", hydrogen_in, units="kg/h")
+    prob.set_val("comp.nitrogen_in", nitrogen_in, units="kg/h")
+    prob.set_val("comp.electricity_in", electricity_in, units="kW")
+    prob.run_model()
+
+    with subtests.test("No ammonia command input is registered without SLC"):
+        input_names = {name for name, _ in prob.model.list_inputs(out_stream=None)}
+        assert "comp.ammonia_command_value" not in input_names
+
+    with subtests.test("Non-SLC output matches the develop baseline"):
+        np.testing.assert_allclose(
+            prob.get_val("comp.ammonia_out", units="kg/h"), [35.0, 50.0, 25.0, 50.0]
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dt,n_timesteps", [(3600, 4)])
+def test_ammonia_passthrough_controller_connects_command(plant_config, synloop_config, n_timesteps):
+    plant_config["system_level_control"] = {}
+    performance = synloop_config["model_inputs"]["performance_parameters"]
+    hydrogen_rate, nitrogen_rate = stoichiometric_feedstock_rates(performance)
+
+    perf_comp = AmmoniaSynLoopPerformanceModel(
+        plant_config=plant_config,
+        tech_config=synloop_config,
+        driver_config={},
+    )
+    tech_group = om.Group()
+    tech_group.add_subsystem("performance", perf_comp, promotes=["*"])
+
+    model = object.__new__(H2IntegrateModel)
+    model.plant_config = plant_config
+    model.control_strategies = []
+    model._add_passthrough_controller(tech_group, perf_comp, {})
+
+    prob = om.Problem(model=tech_group)
+    prob.setup()
+    command = np.full(n_timesteps, 30.0)
+    prob.set_val("ammonia_set_point", command, units="kg/h")
+    prob.set_val("hydrogen_in", np.full(n_timesteps, 100.0 * hydrogen_rate), units="kg/h")
+    prob.set_val("nitrogen_in", np.full(n_timesteps, 100.0 * nitrogen_rate), units="kg/h")
+    prob.set_val("electricity_in", np.full(n_timesteps, 100.0), units="kW")
+    prob.run_model()
+
+    np.testing.assert_allclose(
+        prob.get_val("performance.ammonia_command_value", units="kg/h"), command
+    )
+    np.testing.assert_allclose(prob.get_val("performance.ammonia_out", units="kg/h"), command)
 
 
 @pytest.mark.regression

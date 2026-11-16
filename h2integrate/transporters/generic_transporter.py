@@ -2,6 +2,7 @@ import openmdao.api as om
 from attrs import field, define
 
 from h2integrate.core.utilities import BaseConfig, merge_shared_inputs
+from h2integrate.core.supported_models import register
 
 
 @define(kw_only=True)
@@ -9,24 +10,32 @@ class GenericTransporterPerformanceConfig(BaseConfig):
     """Configuration class for a generic transporter.
 
     Fields include `commodity` and `commodity_rate_units`.
+
+    See :class:`GenericTransporterPerformanceModel` and :doc:`/technology_models/transport`.
     """
 
     commodity: str = field(converter=(str.strip))
     commodity_rate_units: str = field()
 
 
+@register(no_cost=True, no_replacement_schedule=True)
 class GenericTransporterPerformanceModel(om.ExplicitComponent):
     """
     Transport any commodity from a source technology to a destination technology.
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
+
+    See :class:`GenericTransporterPerformanceConfig` and :doc:`/technology_models/transport`.
     """
 
     _time_step_bounds = (
         1,
         1e9,
     )  # (min, max) time step lengths (in seconds) compatible with this model
+    _control_classifier = "transport"
+
+    _is_steppable = False
 
     def initialize(self):
         self.options.declare("driver_config", types=dict)

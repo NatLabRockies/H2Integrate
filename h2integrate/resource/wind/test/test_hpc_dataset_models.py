@@ -54,7 +54,6 @@ def wind_site_config(lat, lon, model, resource_year):
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
-# fmt: on
 def test_pysam_windpower_integration(
     subtests, plant_simulation, wind_site_config, wind_plant_config, model, expected_aep
 ):
@@ -98,7 +97,6 @@ def test_pysam_windpower_integration(
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
-# fmt: on
 def test_floris_integration(
     subtests, plant_simulation, wind_site_config, floris_config, model, expected_aep
 ):
@@ -159,7 +157,6 @@ def test_floris_integration(
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
-# fmt: on
 def test_hpc_integration_with_pysam(
     subtests, plant_simulation, wind_site_config, wind_plant_config, model, expected_aep
 ):
@@ -216,7 +213,6 @@ def test_hpc_integration_with_pysam(
         "HRRRMETToolkitWindAPI-813606",
     ],
 )
-# fmt: on
 def test_hpc_integration_with_floris(
     subtests, plant_simulation, wind_site_config, floris_config, model, expected_aep
 ):
