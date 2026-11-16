@@ -211,10 +211,6 @@ def test_thermal_cost_model(plant_config, thermal_cost_params, subtests):
     fixed_om_per_mw_year = thermal_cost_params["fixed_om_cost"]
     variable_om_per_mwh = thermal_cost_params["variable_om_cost"]
 
-    dt = half_year_plant_config["plant"]["simulation"]["dt"]
-    delivered_electricity_mwh = electricity_out.sum() * (dt / 3600.0)
-    fraction_of_year_simulated = (dt * n_timesteps / 3600.0) / 8760.0
-
     with subtests.test("Thermal reactor capital cost"):
         assert pytest.approx(prob.get_val("CapEx", units="USD")[0], rel=1e-6) == (
             rated_capacity_mw * upfront_cost_per_mw
@@ -226,9 +222,8 @@ def test_thermal_cost_model(plant_config, thermal_cost_params, subtests):
         )
 
     with subtests.test("Thermal reactor variable operating cost"):
-        expected_varopex = (
-            variable_om_per_mwh * delivered_electricity_mwh / fraction_of_year_simulated
-        )
+        expected_annual_electricity_mwh = 0.4 * 8760.0
+        expected_varopex = variable_om_per_mwh * expected_annual_electricity_mwh
         assert pytest.approx(prob.get_val("VarOpEx", units="USD/year"), rel=1e-6) == np.full(
             plant_life, expected_varopex
         )
