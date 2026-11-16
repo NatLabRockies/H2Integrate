@@ -164,7 +164,9 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
             units="kW",
             desc="Electricity consumed",
         )
-        self.add_output("iron_ore_consumed", val=0.0, shape=self.n_timesteps, units="t/h")
+        self.add_output(
+            "iron_ore_consumed", val=0.0, shape=self.n_timesteps, units=self.commodity_rate_units
+        )
         self.add_output("limiting_input", val=0.0, shape=self.n_timesteps, units=None)
         self.add_output("specific_energy_electrolysis", val=0.0, units="kW*h/kg")
         self.add_output(

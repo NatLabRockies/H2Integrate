@@ -2617,8 +2617,8 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         ] = "ahe"
         model.setup()
         model.run()
-        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 1.0336601
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 1033.6601
 
     with subtests.test("Value check on MSE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2633,8 +2633,8 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
 
         model.setup()
         model.run()
-        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 2.1629239
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 2162.9239
 
     with subtests.test("Value check on MOE"):
         model.technology_config["technologies"]["iron_plant"]["model_inputs"]["shared_parameters"][
@@ -2645,8 +2645,8 @@ def test_iron_electrowinning_example(subtests, temp_copy_of_example):
         ]["rated_capacity"] = 0
         model.setup()
         model.run()
-        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/kg")[0]
-        assert pytest.approx(lcoi, rel=1e-4) == 1.1254852
+        lcoi = model.model.get_val("finance_subgroup_sponge_iron.LCOS", units="USD/t")[0]
+        assert pytest.approx(lcoi, rel=1e-4) == 1125.4852
 
 
 @pytest.mark.examples
