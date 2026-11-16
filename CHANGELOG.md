@@ -29,6 +29,7 @@
 - Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
+- Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
 
 ## 0.10.0 [October 12, 2026]
 
