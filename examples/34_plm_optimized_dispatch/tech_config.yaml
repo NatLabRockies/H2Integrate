@@ -22,6 +22,8 @@ technologies:
       performance_parameters:
         demand_profile: 0.0
       control_parameters:
+        pyomo_solver_options:
+          mip_rel_gap: 1.0e-9
         system_commodity_interface_limit: 1.0e9
         lmp_signal: !include demand_profiles/lmp_profile.yaml
         demand_signal: !include demand_profiles/demand_profile_consumers.yaml

@@ -37,6 +37,7 @@
   - `n_control_window_hours` is now limited to 8016 h (334 days) so a control window never contains the same calendar month in two different years.
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
+- Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
 
 ## 0.10.0 [October 12, 2026]
 
