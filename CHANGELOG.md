@@ -29,6 +29,8 @@
 - Consolidate redundant tests, strengthen weak assertions, and replace expensive recorder setups with a small grid model. [PR 974](https://github.com/NatLabRockies/H2Integrate/pull/974)
 - Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
+- Added an opt-in `scale_control_variables` solver option for system-level control that applies characteristic `ref` and `res_ref` scales to SLC set points, passthrough command values, and the ProFAST levelized-cost and NPV outputs to improve coupled-solver convergence. [PR 957](https://github.com/NatLabRockies/H2Integrate/pull/957)
+
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
 - Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
 - Fixed `PeakLoadManagementOptimizedStorageController` issues affecting degraded batteries and multi-year simulations. [PR 988](https://github.com/NatLabRockies/H2Integrate/pull/988)

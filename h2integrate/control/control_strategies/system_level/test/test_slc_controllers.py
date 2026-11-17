@@ -145,6 +145,76 @@ def _build_problem(slc_cls, plant_config, slc_topology, demand=50000, tech_confi
 
 
 # ---------------------------------------------------------------------------
+# SystemLevelControlBase
+# ---------------------------------------------------------------------------
+@pytest.mark.unit
+class TestSystemLevelControlBase:
+    """Tests for the abstract base class setup logic."""
+
+    @pytest.mark.parametrize("scale_control_variables", [True, False])
+    def test_set_point_scaling(self, subtests, scale_control_variables):
+        tech_connections = [["ng", "demand", "electricity", "cable"]]
+        plant_config = _build_plant_config(tech_connections)
+        plant_config["system_level_control"]["solver_options"] = {
+            "scale_control_variables": scale_control_variables
+        }
+        tech_graph = _build_technology_graph(tech_connections)
+        tech_control_classifiers = _build_tech_control_classifiers(dispatchable=["ng"])
+        slc_topology = _build_slc_topology(tech_graph, tech_control_classifiers)
+        prob = _build_problem(DemandFollowingControl, plant_config, slc_topology)
+        metadata = prob.model.slc._var_rel2meta["ng_electricity_set_point"]
+        expected_reference = 1e5 if scale_control_variables else 1.0
+
+        with subtests.test("set point reference scale"):
+            assert metadata["ref"] == expected_reference
+            assert metadata["res_ref"] == expected_reference
+
+        with subtests.test("dispatch is unchanged by scaling"):
+            prob.set_val("slc.ng_rated_electricity_production", 80000)
+            prob.run_model()
+            np.testing.assert_allclose(prob.get_val("slc.ng_electricity_set_point"), 50000)
+
+    def test_set_point_scaling_with_connection_derived_units(self):
+        tech_connections = [
+            ["plant1", "sink", "ammonia", "pipe"],
+            ["plant2", "sink", "ammonia", "pipe"],
+        ]
+        plant_config = _build_plant_config(tech_connections)
+        plant_config["system_level_control"]["solver_options"] = {"scale_control_variables": True}
+        tech_graph = _build_technology_graph(tech_connections)
+        classifiers = _build_tech_control_classifiers(dispatchable=["plant1", "plant2"])
+        slc_topology = _build_slc_topology(tech_graph, classifiers)
+        slc_topology["demand_profile"] = 50000
+
+        prob = om.Problem()
+        prob.model.add_subsystem(
+            "source", om.IndepVarComp("ammonia_out", val=np.ones(4), units="kg/h")
+        )
+        prob.model.add_subsystem(
+            "slc",
+            DemandFollowingControl(
+                driver_config={},
+                plant_config=plant_config,
+                tech_config={},
+                slc_topology=slc_topology,
+            ),
+        )
+        for tech in ("plant1", "plant2"):
+            prob.model.connect("source.ammonia_out", f"slc.{tech}_ammonia_out")
+        prob.setup()
+        prob.final_setup()
+
+        metadata = prob.model.get_io_metadata(
+            iotypes="output", metadata_keys=["units", "ref", "res_ref"]
+        )
+        for tech in ("plant1", "plant2"):
+            set_point = metadata[f"slc.{tech}_ammonia_set_point"]
+            assert set_point["units"] == "kg/h"
+            assert set_point["ref"] == 4e3
+            assert set_point["res_ref"] == 4e3
+
+
+# ---------------------------------------------------------------------------
 # DemandFollowingControl
 # ---------------------------------------------------------------------------
 @pytest.mark.unit

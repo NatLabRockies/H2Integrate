@@ -511,6 +511,18 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
         """Placeholder for subclass-defined outputs."""
         raise NotImplementedError("This method should be implemented in a subclass.")
 
+    def _get_output_scaling(self, reference: float) -> dict[str, float]:
+        """Return opt-in solver scales using a positive reference in the output's units."""
+        scale_control_variables = (
+            self.options["plant_config"]
+            .get("system_level_control", {})
+            .get("solver_options", {})
+            .get("scale_control_variables", False)
+        )
+        if scale_control_variables:
+            return {"ref": reference, "res_ref": reference}
+        return {}
+
     def setup(self):
         """Set up component inputs and outputs based on plant and technology configurations."""
 

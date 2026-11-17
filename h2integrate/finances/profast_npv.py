@@ -40,6 +40,7 @@ class ProFastNPV(ProFastBase):
             f"NPV_{self.output_txt}",
             val=0.0,
             units="USD",
+            **self._get_output_scaling(1e20),
         )
 
         return
