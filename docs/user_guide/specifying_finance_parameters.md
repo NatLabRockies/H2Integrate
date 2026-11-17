@@ -15,6 +15,22 @@ Other variables in finance_parameters vary depending on the financial analysis s
 - **Single-model mode (default)**: All technologies are grouped together into a single financial calculation.
 - **Subgroup mode**: Technologies are split into one or more subgroups, each with its own commodity and one or more finance models.
 
+(financeparameters:execution)=
+### Finance execution order within an H2I model
+
+For a plant with system-level control or a technology feedback cycle, system finance subgroups run after the plant's coupled operations are solved.
+In time-marching simulations, they run after the complete production history has been assembled.
+Finance remains part of each full H2Integrate model evaluation, including optimizer steps and parameter sweeps.
+Cost models needed by operations remain inside the plant group
+
+This separation currently requires finance outputs to be downstream of operations.
+Connections from system finance back to operations are rejected for coupled and time-marching plants, including connections added directly to the OpenMDAO model.
+Call `H2IntegrateModel.setup()` (or `run()`) after adding connections so the checks run; calling `prob.setup()` directly bypasses H2Integrate's validation.
+Technology-local finance is also not supported in these plants or inside an iterative technology group.
+Acyclic, non-time-marching plants can use local finance and finance-to-technology connections.
+
+When system finance follows a coupled plant solve, the plant solver raises on nonconvergence rather than evaluating finance on a failed solve. An SLC configuration cannot disable `err_on_non_converge` in that case. These checks do not change the failure settings of independently configured nested solvers.
+
 ### Finance Groups vs. Finance Subgroups
 Within this framework, there are two distinct layers, **finance groups** and **finance subgroups**:
 

@@ -192,6 +192,11 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
             == 16.52990277
         )
 
+    with subtests.test("Finance runs once after operations converge"):
+        # Repeated finance calls would put transient outputs back in the solve.
+        finance = model.model.finance_subgroup_hydrogen.hydrogen_finance_profast_lco
+        assert finance.iter_count == 1
+
 
 @pytest.mark.examples
 @pytest.mark.parametrize(

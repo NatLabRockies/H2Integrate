@@ -55,9 +55,8 @@ if run_dict.get("run_sequential", False):
     inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
     outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
 
-    lcoe_seq = outputs_seq[
-        "plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"
-    ]
+    # Promoted names work in both sequential and time-marching layouts.
+    lcoe_seq = h2i_seq.prob.get_val("finance_subgroup_renewables.LCOE")
 
 
 # Run the time-marching simulation, advancing all subsystems one window of timesteps at a time
@@ -83,10 +82,19 @@ if run_dict.get("run_time_marching", False):
     inputs_tm = dict(h2i_tm.model.list_inputs(out_stream=None))
     outputs_tm = dict(h2i_tm.model.list_outputs(out_stream=None))
 
-    lcoe_tm = outputs_tm["plant.finance_subgroup_renewables.electricity_finance_profast_model.LCOE"]
+    lcoe_tm = h2i_tm.prob.get_val("finance_subgroup_renewables.LCOE")
 
 # Compare results
 if run_dict.get("run_sequential", False) and run_dict.get("run_time_marching", False):
+    # Normalize finance paths because only the time-marching layout moves them outside plant.
+    inputs_seq = {
+        k.removeprefix("plant.") if k.startswith("plant.finance_subgroup_") else k: v
+        for k, v in inputs_seq.items()
+    }
+    outputs_seq = {
+        k.removeprefix("plant.") if k.startswith("plant.finance_subgroup_") else k: v
+        for k, v in outputs_seq.items()
+    }
     inputs_pd_dict = percent_diff_dicts(inputs_seq, inputs_tm)
     outputs_pd_dict = percent_diff_dicts(outputs_seq, outputs_tm)
 

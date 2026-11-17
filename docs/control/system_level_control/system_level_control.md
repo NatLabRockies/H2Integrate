@@ -64,3 +64,7 @@ See additional information, which is more developer focused, about the [`SystemL
 
 ## Solver Options
 The system attempts to converge the system using a solver. The solver is defined in `solver_options`.
+
+System finance is evaluated after this coupled solve, not in its convergence norm.
+When system finance is present, the plant solver raises on nonconvergence and`solver_option_kwargs.err_on_non_converge` cannot be set to `false`.
+See [finance execution and model paths](financeparameters:execution) for supported connections and absolute-path changes.

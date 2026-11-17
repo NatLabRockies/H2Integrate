@@ -3249,6 +3249,15 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
 
     inputs_seq = dict(h2i_seq.model.list_inputs(out_stream=None))
     outputs_seq = dict(h2i_seq.model.list_outputs(out_stream=None))
+    # Finance has a different absolute parent in the time-marching layout.
+    inputs_seq = {
+        k.removeprefix("plant.") if k.startswith("plant.finance_subgroup_") else k: v
+        for k, v in inputs_seq.items()
+    }
+    outputs_seq = {
+        k.removeprefix("plant.") if k.startswith("plant.finance_subgroup_") else k: v
+        for k, v in outputs_seq.items()
+    }
 
     # Run time-marching simulation for all subsystems, one window of timesteps at a time
     config["plant_config"]["plant"]["simulation"]["n_timesteps"] = 8760
@@ -3270,6 +3279,10 @@ def test_time_marching_simulation_example(subtests, temp_copy_of_example):
     with subtests.test("Component iter_count reflects expected number of calls"):
         assert h2i_seq.plant.battery.StoragePerformanceModel.iter_count == 1
         assert h2i_con.plant.battery.StoragePerformanceModel.iter_count == 365
+        assert (
+            h2i_con.model.finance_subgroup_renewables.electricity_finance_profast_model.iter_count
+            == 1
+        )
 
     with subtests.test("Sequential and time-marching H2I inputs are consistent"):
         for k, v in inputs_pd_dict.items():

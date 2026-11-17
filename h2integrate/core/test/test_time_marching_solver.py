@@ -97,3 +97,30 @@ def test_time_marching_solver_reenables_skipped_models_after_failure():
     assert prob.model.plant.perf.window_starts == [0, 4]
     assert prob.model.plant.cost.n_computes == 0
     assert prob.model.plant.cost.options["skip_compute"] is False
+
+
+@pytest.mark.unit
+def test_downstream_finance_receives_full_time_marching_history_after_retry():
+    prob = om.Problem()
+    config = {"plant": {"simulation": {"n_timesteps": N_TIMESTEPS, "n_timesteps_window": WINDOW}}}
+    plant = prob.model.add_subsystem("plant", om.Group())
+    producer = plant.add_subsystem("perf", WindowedProducer(fail_at=4))
+    cost = plant.add_subsystem("cost", TotalCost())
+    plant.connect("perf.production", "cost.production")
+    plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=config)
+    # Finance must wait until every production window is available.
+    finance = prob.model.add_subsystem("finance", TotalCost())
+    prob.model.connect("plant.perf.production", "finance.production")
+    prob.setup()
+
+    with pytest.raises(RuntimeError, match="window starting at 4"):
+        prob.run_model()
+    assert finance.n_computes == 0
+    assert cost.options["skip_compute"] is False
+
+    # A failed window must leave skip state clean for the next evaluation.
+    producer.options["fail_at"] = None
+    prob.run_model()
+    assert finance.n_computes == 1
+    assert prob.get_val("finance.total")[0] == pytest.approx(48.0)
+    assert cost.options["skip_compute"] is False
