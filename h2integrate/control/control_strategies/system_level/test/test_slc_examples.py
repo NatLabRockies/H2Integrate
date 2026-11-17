@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 
+from h2integrate.core.file_utils import load_yaml
 from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate.core.inputs.validation import load_plant_yaml
 
 
 @pytest.mark.examples
@@ -201,15 +203,12 @@ def test_slc_yes_hydrogen_scaled_control_variables(subtests, temp_copy_of_exampl
     example_folder = temp_copy_of_example
 
     plant_config_path = example_folder / "plant_config.yaml"
-    plant_config = plant_config_path.read_text(encoding="utf-8")
-    solver_option = "    solver_name: gauss_seidel\n"
-    assert plant_config.count(solver_option) == 1
-    plant_config_path.write_text(
-        plant_config.replace(solver_option, solver_option + "    scale_control_variables: true\n"),
-        encoding="utf-8",
-    )
+    plant_config = load_plant_yaml(plant_config_path)
+    plant_config["system_level_control"]["solver_options"]["scale_control_variables"] = True
+    config = load_yaml(example_folder / "wind_ng_demand.yaml")
+    config["plant_config"] = plant_config
 
-    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+    model = H2IntegrateModel(config)
     model.run()
 
     with subtests.test("controller set points and passthrough commands are scaled"):

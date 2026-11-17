@@ -40,7 +40,7 @@ class SLCSolverOptionsConfig(BaseConfig):
         convergence_tolerance: Convenience value used to set both ``atol`` and ``rtol``
             when they are not specified individually.
         scale_control_variables: Apply characteristic ``ref`` and ``res_ref`` scales to
-            SLC set points, passthrough commands, and the ProFAST LCO output.
+            SLC set points, passthrough commands, and the ProFAST LCO and NPV outputs.
         iprint: Solver print level (0 = silent, 2 = verbose).
         solver_option_kwargs: Additional keyword arguments passed directly to the
             solver's ``options`` dict.
