@@ -660,3 +660,216 @@ def test_parameter_validation_duplicate_parameters():
     # Should raise ValueError during setup due to clashing values
     with pytest.raises(ValueError, match="Duplicate entries found in ProFastLCO params"):
         prob.setup()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
+def test_save_profast_file_with_multi_finance_groups(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    profast_results_folder = example_folder / "outputs_for_files"
+    driver_config["general"]["folder_output"] = profast_results_folder
+
+    fin_groups = plant_config["finance_parameters"]["finance_groups"]
+    profast_options = {
+        "save_profast_config": True,
+        "save_profast_results": False,
+        "overwrite_config": True,
+        "profast_outputs_format": "file",
+    }
+    fin_groups["profast"]["model_inputs"].update(profast_options)
+    fin_groups["profast_npv"]["model_inputs"].update(profast_options)
+
+    fin_subgroups = plant_config["finance_parameters"]["finance_subgroups"]
+    # 'wind' subgroup: multiple finance groups without a `commodity_desc`
+    fin_subgroups["wind"].pop("commodity_desc")
+    fin_subgroups["wind"]["finance_groups"] = ["profast", "profast_npv"]
+    # 'battery' subgroup: multiple finance groups with a `commodity_desc`
+    fin_subgroups["battery"]["finance_groups"] = ["profast", "profast_npv"]
+    # 'electricity' subgroup: multiple finance groups with a rare-case `commodity_desc`
+    # NOTE: only rare-case if using 'folder' naming option
+    fin_subgroups["electricity"]["commodity_desc"] = "all_finance_electricity"
+    # 'wind2' subgroup: single finance group without `commodity_desc`
+    wind2_subgroup = {
+        "commodity": "electricity",
+        "commodity_stream": "wind",
+        "finance_groups": ["profast"],
+        "technologies": ["wind"],
+    }
+    fin_subgroups.update({"wind2": wind2_subgroup})
+    # 'battery' subgroup: single finance group with `commodity_desc`
+    battery2_subgroup = {
+        "commodity": "electricity",
+        "commodity_stream": "electrical_load_demand",
+        "finance_groups": ["profast"],
+        "commodity_desc": "battery_included",
+        "technologies": ["wind", "battery"],
+    }
+    fin_subgroups.update({"battery2": battery2_subgroup})
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    # run H2I
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+    # TODO: update filenaming to be "finance_subgroup_{subgroup}-{}"
+    expected_file_descriptions = [
+        # 'wind' subgroup
+        "ProFastLCO_finance_subgroup_wind-electricity_profast",
+        "ProFastNPV_finance_subgroup_wind-electricity_profast_npv",
+        # 'battery' subgroup
+        "ProFastLCO_finance_subgroup_battery-electricity_battery_included_profast",
+        "ProFastNPV_finance_subgroup_battery-electricity_battery_included_profast_npv",
+        # 'electricity' subgroup
+        "ProFastLCO_finance_subgroup_electricity-electricity_all_finance_electricity_profast",
+        "ProFastNPV_finance_subgroup_electricity-electricity_all_finance_electricity_profast_npv",
+        # 'wind2' subgroup
+        "ProFastLCO_finance_subgroup_wind2-electricity",
+        # 'battery2' subgroup
+        "ProFastLCO_finance_subgroup_battery2-electricity_battery_included",
+    ]
+
+    files_saved = [
+        fname.name.split("_config.yaml")[0]
+        for fname in profast_results_folder.glob("*_config.yaml")
+    ]
+    with subtests.test("expected number of files saved"):
+        assert len(files_saved) == len(expected_file_descriptions)
+    mismatched_fnames = [fname for fname in files_saved if fname not in expected_file_descriptions]
+    with subtests.test("no mismatched files"):
+        assert mismatched_fnames == []
+    with subtests.test("all files have expected names"):
+        assert all(fname in expected_file_descriptions for fname in files_saved)
+
+    for fname in expected_file_descriptions:
+        model_name, varname_fmt = fname.split("_", 1)
+        subgroup, commodity_output_name = varname_fmt.split("-electricity")
+        if model_name == "ProFastNPV":
+            var_units = "USD"
+            varname = f"{subgroup}.NPV_electricity{commodity_output_name}"
+        else:
+            var_units = "USD/(kW*h)"
+            varname = f"{subgroup}.LCOE{commodity_output_name}"
+        assert h2i.model.get_val(varname, units=var_units), f"{varname} exists"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("example_folder,resource_example_folder", [("19_simple_dispatch", None)])
+def test_save_profast_folder_with_multi_finance_groups(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    tech_config = load_tech_yaml(example_folder / "tech_config.yaml")
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    driver_config = load_driver_yaml(example_folder / "driver_config.yaml")
+    profast_results_folder = example_folder / "outputs_for_folders"
+    driver_config["general"]["folder_output"] = profast_results_folder
+
+    fin_groups = plant_config["finance_parameters"]["finance_groups"]
+    profast_options = {
+        "save_profast_config": True,
+        "save_profast_results": False,
+        "overwrite_config": True,
+        "profast_outputs_format": "folder",
+    }
+    fin_groups["profast"]["model_inputs"].update(profast_options)
+    fin_groups["profast_npv"]["model_inputs"].update(profast_options)
+
+    fin_subgroups = plant_config["finance_parameters"]["finance_subgroups"]
+    # 'wind' subgroup: multiple finance groups without a `commodity_desc`
+    fin_subgroups["wind"].pop("commodity_desc")
+    fin_subgroups["wind"]["finance_groups"] = ["profast", "profast_npv"]
+    # 'battery' subgroup: multiple finance groups with a `commodity_desc`
+    fin_subgroups["battery"]["finance_groups"] = ["profast", "profast_npv"]
+    # 'electricity' subgroup: multiple finance groups with a rare-case `commodity_desc`
+    # containing _finance_
+    # NOTE: only rare-case if using 'folder' naming option
+    fin_subgroups["electricity"]["commodity_desc"] = "all_finance_electricity"
+    # 'wind2' subgroup: single finance group without `commodity_desc`
+    wind2_subgroup = {
+        "commodity": "electricity",
+        "commodity_stream": "wind",
+        "finance_groups": ["profast"],
+        "technologies": ["wind"],
+    }
+    fin_subgroups.update({"wind2": wind2_subgroup})
+    # 'battery' subgroup: single finance group with `commodity_desc`
+    battery2_subgroup = {
+        "commodity": "electricity",
+        "commodity_stream": "electrical_load_demand",
+        "finance_groups": ["profast"],
+        "commodity_desc": "battery_included",
+        "technologies": ["wind", "battery"],
+    }
+    fin_subgroups.update({"battery2": battery2_subgroup})
+
+    top_level_config = {
+        "plant_config": plant_config,
+        "technology_config": tech_config,
+        "driver_config": driver_config,
+    }
+
+    # run H2I
+    h2i = H2IntegrateModel(top_level_config)
+    h2i.setup()
+    h2i.run()
+
+    expected_filepath_parts = [
+        # 'wind' subgroup
+        ("finance_group_profast", "finance_subgroup_wind", "ProFastLCO_electricity_config.yaml"),
+        (
+            "finance_group_profast_npv",
+            "finance_subgroup_wind",
+            "ProFastNPV_electricity_config.yaml",
+        ),
+        # 'battery' subgroup
+        (
+            "finance_group_profast",
+            "finance_subgroup_battery",
+            "ProFastLCO_electricity_battery_included_config.yaml",
+        ),
+        (
+            "finance_group_profast_npv",
+            "finance_subgroup_battery",
+            "ProFastNPV_electricity_battery_included_config.yaml",
+        ),
+        # 'electricity' subgroup
+        (
+            "finance_group_profast",
+            "finance_subgroup_electricity",
+            "ProFastLCO_electricity_all_finance_electricity_config.yaml",
+        ),
+        (
+            "finance_group_profast_npv",
+            "finance_subgroup_electricity",
+            "ProFastNPV_electricity_all_finance_electricity_config.yaml",
+        ),
+        # 'wind2' subgroup
+        ("finance_group_profast", "finance_subgroup_wind2", "ProFastLCO_electricity_config.yaml"),
+        # 'battery2' subgroup
+        (
+            "finance_group_profast",
+            "finance_subgroup_battery2",
+            "ProFastLCO_electricity_battery_included_config.yaml",
+        ),
+    ]
+    grouped_parts = [
+        fpath.relative_to(profast_results_folder).parts
+        for fpath in list(profast_results_folder.glob("finance_group_*/**/*.yaml"))
+    ]
+
+    with subtests.test("expected number of files saved"):
+        assert len(grouped_parts) == len(expected_filepath_parts)
+
+    mismatched_fnames = [fname for fname in grouped_parts if fname not in expected_filepath_parts]
+    with subtests.test("no mismatched files"):
+        assert mismatched_fnames == []
+
+    with subtests.test("all files have expected parts"):
+        assert all(fname in expected_filepath_parts for fname in grouped_parts)
