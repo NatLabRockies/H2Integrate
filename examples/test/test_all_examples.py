@@ -3153,17 +3153,17 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
 
     with subtests.test("Check number of discharge timesteps"):
         num_discharge_timesteps = np.sum(battery_power > 1e-3)
-        assert num_discharge_timesteps == 2195
+        assert num_discharge_timesteps == 2204
 
     with subtests.test("Check total energy discharged"):
         dt_hours = model.plant_config["plant"]["simulation"]["dt"] / 3600
         total_energy_discharged = battery_power.sum() * dt_hours
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 601811.5
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 610126.25
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
         total_energy_charged = battery_charge.sum() * dt_hours
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -665142.9363
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -674355.9557
 
 
 @pytest.mark.examples
