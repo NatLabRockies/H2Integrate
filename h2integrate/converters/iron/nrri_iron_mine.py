@@ -15,7 +15,7 @@ from h2integrate.tools.inflation.inflate import inflate_cpi
 
 MINE_LOCATIONS = {
     "Hibbing": {"latitude": 47.53, "longitude": -92.91},
-    "Northshore": {"latitude": 47.29, "longitude": -91.25},
+    "Northshore": {"latitude": 47.68, "longitude": -91.86},
     "United": {"latitude": 47.34, "longitude": -92.58},
     "Minorca": {"latitude": 47.55, "longitude": -92.52},
     "Tilden": {"latitude": 46.48, "longitude": -87.66},
@@ -459,6 +459,8 @@ class NRRIIronMineCostComponentConfig(BaseConfig):
             based on the mine name.
         longitude (float): longitude of the mine location. If not provided, it will be set
             based on the mine name.
+        capex_modifier (float): Capital expenditure modifier. Multiplies capex by this amount.
+        opex_modifier (float): Operational expenditure modifier. Multiplies opex by this amount.
 
     See :class:`NRRIIronMineCostComponent` and :doc:`/technology_models/iron_mine`.
     """
@@ -474,6 +476,8 @@ class NRRIIronMineCostComponentConfig(BaseConfig):
     cost_year: int = field(converter=int, validator=(validators.ge(2010), validators.le(2024)))
     latitude: float = field(default=None)
     longitude: float = field(default=None)
+    capex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
+    opex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
 
     def __attrs_post_init__(self):
         if self.latitude is not None or self.longitude is not None:
@@ -568,6 +572,18 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
             units="deg",
             desc="Longitude of the mine location",
         )
+        self.add_input(
+            "capex_modifier",
+            val=self.config.capex_modifier,
+            units="unitless",
+            desc="Capital expenditure modifier",
+        )
+        self.add_input(
+            "opex_modifier",
+            val=self.config.opex_modifier,
+            units="unitless",
+            desc="Operational expenditure modifier",
+        )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "nrri_ore" / "cost_coeffs.csv"
         # nrri ore cost model
@@ -657,5 +673,11 @@ class NRRIIronMineCostComponent(CostModelBaseClass):
         )
 
         # adjust costs to cost year
-        outputs["CapEx"] = inflate_cpi(tot_capex_2021USD, 2021, self.config.cost_year)
-        outputs["OpEx"] = inflate_cpi(om_2021USD, 2021, self.config.cost_year)
+        tot_capex = inflate_cpi(tot_capex_2021USD, 2021, self.config.cost_year)
+        tot_opex = inflate_cpi(om_2021USD, 2021, self.config.cost_year)
+
+        # Apply capex and opex modifiers
+        tot_capex *= inputs["capex_modifier"]
+        tot_opex *= inputs["opex_modifier"]
+        outputs["CapEx"] = tot_capex
+        outputs["OpEx"] = tot_opex

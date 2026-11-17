@@ -47,6 +47,8 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
             the number used in the Humbert OpEx model and adjusted to 2018 USD using CPI.
         annual_labor_hours_per_position (float | int, optional): The labor hours per position
             per year. Defaults to 2000, the number used in the Humbert OpEx model.
+        capex_modifier (float): Capital expenditure modifier. Multiplies capex by this amount.
+        opex_modifier (float): Operational expenditure modifier. Multiplies opex by this amount.
 
     See :class:`HumbertStinnEwinCostComponent` and :doc:`/technology_models/iron_ewin`.
     """
@@ -57,10 +59,12 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
         validator=validators.in_(["ahe", "mse", "moe"]),
     )  # product selection
     # Set cost year to 2018 - fixed for Stinn modeling
-    cost_year: int = field(default=2018, converter=int, validator=validators.in_([2018]))
+    cost_year: int = field(default=2018, converter=int, validator=validators.ge(1900))
     labor_rate_cost: float = field(default=55.90)
     anode_cost_per_tonne: float = field(default=1660.716)
     annual_labor_hours_per_position: int | float = field(default=2000)
+    capex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
+    opex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
 
 
 @register
@@ -198,6 +202,18 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         self.add_input("current_efficiency", val=e, units="unitless")
         self.add_input("cell_voltage", val=V, units="V")
         self.add_input("rectifier_lines", val=N, units="unitless")
+        self.add_input(
+            "capex_modifier",
+            val=self.config.capex_modifier,
+            units="unitless",
+            desc="Capital expenditure modifier",
+        )
+        self.add_input(
+            "opex_modifier",
+            val=self.config.opex_modifier,
+            units="unitless",
+            desc="Operational expenditure modifier",
+        )
 
         # Set outputs for Stinn Capex model
         self.add_output("processing_capex", val=0.0, units="USD")
@@ -267,6 +283,11 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         # Power rectifying contribution
         rectifier_capex = a3 * V**e3 * N**e4
 
+        # Apply capex modifiers
+        processing_capex *= inputs["capex_modifier"]
+        electrolysis_capex *= inputs["capex_modifier"]
+        rectifier_capex *= inputs["capex_modifier"]
+
         # Capex outputs
         # Note: Capex is broken out into components of `processing_capex`, `electrolysis_capex`,
         # etc., which are not used by the financial model but can be used for cost breakdowns.
@@ -291,6 +312,10 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         anode_opex = (
             anode_ratio * P * self.config.anode_cost_per_tonne / anode_interval
         )  # Anode VarOpEx USD/year
+
+        # Apply opex modifiers
+        labor_opex *= inputs["opex_modifier"]
+        anode_opex *= inputs["opex_modifier"]
 
         # Opex outputs
         # Note: Opex is the labor_opex and VarOpEx is the cost of the anode.

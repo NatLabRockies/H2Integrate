@@ -33,6 +33,8 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
         cost_year (int): Year for which the cost data is reported, used for inflation adjustments.
             Default value is 2022, which corresponds to the year of the cost data used in the CMU
             decarbSTEEL v5 model.
+        capex_modifier (float): Capital expenditure modifier. Multiplies capex by this amount.
+        opex_modifier (float): Operational expenditure modifier. Multiplies opex by this amount.
 
     """
 
@@ -47,6 +49,8 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
     # person hours per ton steel, '6. Production Cost!B43' > '6. Production Cost!J73'
     eaf_labor_required_per_tLS: float = field(default=4 / 20)
     cost_year: int = field(default=2022, converter=int, validator=validators.in_([2022]))
+    capex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
+    opex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
 
 
 @register
@@ -94,6 +98,18 @@ class CMUElectricArcFurnaceCostModel(CostModelBaseClass):
             units="t/year",
             desc="Rated steel production",
         )
+        self.add_input(
+            "capex_modifier",
+            val=self.config.capex_modifier,
+            units="unitless",
+            desc="Capital expenditure modifier",
+        )
+        self.add_input(
+            "opex_modifier",
+            val=self.config.opex_modifier,
+            units="unitless",
+            desc="Operational expenditure modifier",
+        )
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         if inputs["rated_steel_production"] > inputs["rated_steel_capacity"]:
@@ -110,21 +126,19 @@ class CMUElectricArcFurnaceCostModel(CostModelBaseClass):
         # > Financial Conversion
         # CE Index (original year 2018), '6. Production Cost!F114' > '6. Production Cost!E151'
         CEPCI_index_2018 = 603.1
-        # USD conversion for 2018, '6. Production Cost!D151'
-        USD_financial_conversion_2018 = 1.180185
 
         # > CAPEX by Technology Lookup Table
-        # $/ton steel capacity annually, EAF (mid) '6. Production Cost!C114'
-        reported_levelized_capex = (
-            self.config.capex_usd_per_tonne_capacity * USD_financial_conversion_2018
-        )
         # $/ton steel capacity annually, EAF (mid) '6. Production Cost!G114' (capex_tpa)
         inflation_adjusted_levelized_capex = (
-            reported_levelized_capex * CEPCI_index_2022 / CEPCI_index_2018
+            self.config.capex_usd_per_tonne_capacity * CEPCI_index_2022 / CEPCI_index_2018
         )
         # > CAPEX by pathway node
         # $, '6. Production Cost!F73'
-        outputs["CapEx"] = inflation_adjusted_levelized_capex * annual_capacity
+        tot_capex = inflation_adjusted_levelized_capex * annual_capacity
+
+        # Apply capex modifier and set output
+        tot_capex *= inputs["capex_modifier"]
+        outputs["CapEx"] = tot_capex
 
         # > Labor by pathway node
         # $/ton liquid steel, '6. Production Cost!K73'
@@ -133,4 +147,8 @@ class CMUElectricArcFurnaceCostModel(CostModelBaseClass):
         # Not in CMU model
         labor_cost = labor_cost_per_tLS * annual_capacity  # $
         maintenance_cost = self.config.maintenance_cost_rate * outputs["CapEx"]  # $
-        outputs["OpEx"] = labor_cost + maintenance_cost  # $
+        tot_opex = labor_cost + maintenance_cost  # $
+
+        # Apply opex modifier and set output
+        tot_opex *= inputs["opex_modifier"]
+        outputs["OpEx"] = tot_opex
