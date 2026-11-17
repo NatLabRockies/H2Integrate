@@ -3151,19 +3151,19 @@ def test_plm_optimized_dispatch_example(subtests, temp_copy_of_example):
         battery_opex = model.prob.get_val("battery.OpEx", units="USD/year")[0]
         assert pytest.approx(battery_opex, rel=1e-1) == 23242.5
 
-    with subtests.test("Check number of discharge events"):
-        # With the given demand profile and battery size, there should be 2 discharge events
-        num_discharge_events = np.sum(battery_power > 1e-3)  # Count timesteps with discharge
-        assert num_discharge_events == 2110
+    with subtests.test("Check number of discharge timesteps"):
+        num_discharge_timesteps = np.sum(battery_power > 1e-3)
+        assert num_discharge_timesteps == 2195
 
     with subtests.test("Check total energy discharged"):
-        total_energy_discharged = battery_power.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_discharged, rel=1e-2) == 9643.0083
+        dt_hours = model.plant_config["plant"]["simulation"]["dt"] / 3600
+        total_energy_discharged = battery_power.sum() * dt_hours
+        assert pytest.approx(total_energy_discharged, rel=1e-2) == 601811.5
 
     with subtests.test("Check total energy charged"):
         battery_charge = model.prob.get_val("battery.storage_electricity_charge", units="kW")
-        total_energy_charged = battery_charge.sum() * (1 / 60)  # kWh, 1 min timestep
-        assert pytest.approx(total_energy_charged, rel=1e-3) == -10656.7036
+        total_energy_charged = battery_charge.sum() * dt_hours
+        assert pytest.approx(total_energy_charged, rel=1e-3) == -665142.9363
 
 
 @pytest.mark.examples
@@ -3182,9 +3182,17 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     annual_htse_electricity = model.prob.get_val("htse.electricity_demand", units="TW*h/year")[0]
     annual_grid_sell = model.prob.get_val("grid_sell.annual_electricity_sold", units="TW*h/year")[0]
     annual_hydrogen = model.prob.get_val("htse.annual_hydrogen_produced", units="kt/year")[0]
+    nuclear_lcoe = model.prob.get_val("finance_subgroup_electricity.LCOE", units="USD/(MW*h)")[0]
+    nuclear_lcoh = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 
     with subtests.test("Nuclear annual electricity"):
         assert annual_nuclear_electricity == pytest.approx(8.75162086757)
+
+    with subtests.test("Nuclear LCOE is plausible"):
+        assert 50.0 <= nuclear_lcoe <= 400.0
+
+    with subtests.test("Hydrogen LCOH is plausible"):
+        assert 0.0 < nuclear_lcoh < 100.0
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)

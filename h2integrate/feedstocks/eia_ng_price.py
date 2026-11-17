@@ -14,8 +14,6 @@ from h2integrate.core.supported_models import register
 from h2integrate.feedstocks.feedstocks import FeedstockCostModel
 
 
-HOURS_PER_YEAR = 8760
-SECONDS_PER_HOUR = 3600
 CURRENT_YEAR = datetime.now().year
 
 

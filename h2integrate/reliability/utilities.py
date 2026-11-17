@@ -1,8 +1,6 @@
 import numpy as np
 
-
-SECONDS_IN_HOUR = 60 * 60
-SECONDS_IN_YEAR = 8760 * SECONDS_IN_HOUR
+from h2integrate.tools.constants import SECONDS_PER_HOUR, SECONDS_PER_YEAR
 
 
 def update_dimensions(n_components: int, *args: np.ndarray):
@@ -32,12 +30,12 @@ def calculate_simulation_years(value, self_) -> float:
     """Calculates the length of the simulation period, in years from the :py:attr:`self_.dt` and
     :py:attr:`self_.n_timesteps` provided from a configuration.
     """
-    return self_.dt * self_.n_timesteps / SECONDS_IN_YEAR
+    return self_.dt * self_.n_timesteps / SECONDS_PER_YEAR
 
 
 def calculate_annual_timesteps(value, self_) -> float:
     """Calculates the number of timesteps in a year from the :py:attr:`self_.dt`, rounded up."""
-    return int(np.ceil(SECONDS_IN_YEAR / self_.dt))
+    return int(np.ceil(SECONDS_PER_YEAR / self_.dt))
 
 
 def calculate_hourly_timesteps(value, self_) -> float:
@@ -47,4 +45,4 @@ def calculate_hourly_timesteps(value, self_) -> float:
         This conversion is not intended to handle simulations with a coarser resolution than hourly
         timesteps.
     """
-    return int(np.ceil(SECONDS_IN_HOUR / self_.dt))
+    return int(np.ceil(SECONDS_PER_HOUR / self_.dt))

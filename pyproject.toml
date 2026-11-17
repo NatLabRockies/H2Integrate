@@ -49,7 +49,7 @@ dependencies = [
   "openmeteo-requests",
   "pandas>=2.0.3",
   "pint",
-  "ProFAST",
+  "ProFAST==1.0.6",
   "Pyomo>=6.1.2",
   "pyfluids>=4.0",
   "rainflow",
@@ -65,7 +65,7 @@ dependencies = [
   "wombat>=0.13.3",
   "charset_normalizer==3.4.9",
   "NREL-rex",
-  "statsmodels==0.14.6",
+  "statsmodels>=0.15.0",
 ]
 keywords = [
     "python3",
