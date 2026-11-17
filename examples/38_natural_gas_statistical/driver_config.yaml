@@ -1,0 +1,4 @@
+name: driver_config
+description: this analysis runs a brayton-cycle NG power plant with a wind plant
+general:
+  folder_output: outputs

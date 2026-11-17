@@ -1,0 +1,83 @@
+name: detailed NG plant
+description: a detailed NG plant for brayton-cycle analysis
+technologies:
+  ng_feedstock:
+    performance_model:
+      model: FeedstockPerformanceModel
+    cost_model:
+      model: FeedstockCostModel
+    model_inputs:
+      shared_parameters:
+        commodity: natural_gas
+        commodity_rate_units: MMBtu/h
+      performance_parameters:
+        rated_capacity: 2500.  # MMBtu
+      cost_parameters:
+        # ESTIMATES FROM: 2024 NLR ATB spreadsheet
+        #   Natural Gas - FE sheet
+        #   2-on-1 combined cycle (F-frame), no CCS, moderate scenario, 2026 numbers
+        cost_year: 2026
+        price: 2.87  # USD/MMBtu; EIA Texas Industral NG data, Nov. 26: 2.98 $/Mcf / (1.038 MMBtu/Mcf)
+        annual_cost: 0.
+        start_up_cost: 0.
+  natural_gas_plant:
+    performance_model:
+      model: SimpleCycleTurbinePerformanceModel
+    cost_model:
+      model: NaturalGasCostModel
+    model_inputs:
+      performance_parameters:
+        num_turbines: 1
+        turbine_capacity_mw: 239.0
+        fuel_source: natural_gas
+        firing_temp_C: 1300.0
+        pressure_ratio: 18.712850988834695
+        flowrate_max_fluid_cubic_m_per_s: 477.78734437019483
+        isentropic_efficiency_compressor: 0.85
+        isentropic_efficiency_turbine: 0.90
+        generator_efficiency: 1.0
+        generator_oversize_ratio: 1.067  # (300 MVA @ 0.85 PF = 255 MW)/239 MW
+      cost_parameters:
+                    # capex_per_kw: 1000  # $/kW - typical for NGCC; stolen from ex. 16
+                    # fixed_opex_per_kw_per_year: 10.0  # $/kW/year; stolen from ex. 16
+                    # variable_opex_per_mwh: 2.5  # $/MWh; stolen from ex. 16
+                    # cost_year: 2023  # stolen from ex. 16
+                    # NON-CAPEX ESTIMATES FROM: 2024 NLR ATB spreadsheet
+                    #   Natural Gas - FE sheet
+                    #   F-frame combustion turbine, no CCS, moderate scenario, 2026 numbers
+        capex_per_kw: 2200.00  # $/kW - override w/ 2026 cited statistic (2026$2500) for NGCC costs w/ inflation correction
+                    # capex_per_kw: 1309.59  # $/kW - original values from NLR ATB
+        fixed_opex_per_kw_per_year: 25.6  # $/kW/year
+        variable_opex_per_mwh: 6.94  # $/MWh
+        cost_year: 2022
+                    # ESTIMATES FROM: 2024 NLR ATB spreadsheet
+                    #   Natural Gas - FE sheet
+                    #   2-on-1 combined cycle (F-frame), no CCS, moderate scenario, 2026 numbers
+                    # capex_per_kw: 1451.00  # $/kW - typical for NGCC
+                    # cost_year: 2022
+                    # fixed_opex_per_kw_per_year: 33.10  # $/kW/year
+                    # variable_opex_per_mwh: 2.10  # $/MWh
+  electrical_load_demand:
+    performance_model:
+      model: GenericDemandComponent
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: kW
+        demand_profile: 200000.0  # 1000 MW = 1 GW
+  output_stats:
+    performance_model:
+      model: ThresholdStatisticsPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
+        commodity_amount_units: MW*h
+        epsilon_comparison: 1.0e-6
+  headroom_stats:
+    performance_model:
+      model: SummaryStatisticsPerformanceModel
+    model_inputs:
+      performance_parameters:
+        commodity: electricity
+        commodity_rate_units: MW
