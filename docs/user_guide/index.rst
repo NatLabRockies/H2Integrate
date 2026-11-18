@@ -34,7 +34,6 @@ Technology Configuration
    model_overview
    model_registry
    populate_tech_yaml
-   .. custom_user_defined_models
 
 Driver Configuration
 ====================
@@ -53,9 +52,17 @@ Advanced Setup
 .. toctree::
    :maxdepth: 1
 
-   postprocessing_results
    how_to_interface_with_user_defined_model
    how_to_run_several_cases_in_sequence
    run_size_modes
    time_marching_simulation
+
+Pre- and Post-Processing
+========================
+
+.. toctree::
+   :maxdepth: 1
+
+   preprocessing
+   postprocessing_results
    plotting_geospatial_data_with_geopandas
