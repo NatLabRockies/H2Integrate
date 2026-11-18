@@ -56,10 +56,10 @@ The H2Integrate tool is built on top of `NASA's OpenMDAO framework <https://gith
    getting_started/index
    user_guide/index
    user_reference
-   developer_guide/index
    api
-   misc_resources/changelog
    auto_examples/index
+   developer_guide/index
+   misc_resources/changelog
 
 .. grid:: 1 1 2 3
     :gutter: 2 3 4 4
