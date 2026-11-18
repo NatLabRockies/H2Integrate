@@ -10,6 +10,7 @@ import pyomo.environ as pyomo
 
 from h2integrate.storage.storage_performance_model import StoragePerformanceModel
 from h2integrate.control.control_strategies.storage.plm_optimized_storage_controller import (
+    MAX_CONTROL_WINDOW_HOURS,
     PeakLoadManagementOptimizedStorageController,
     PeakLoadManagementOptimizedStorageControllerConfig,
 )
@@ -19,13 +20,15 @@ def _make_controller():
     return object.__new__(PeakLoadManagementOptimizedStorageController)
 
 
-def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600):
+def _make_controller_with_config(config, n_timesteps=24, dt_seconds=3600, time_index=None):
     """Build a controller with pre-computed masks, bypassing OpenMDAO setup."""
     controller = _make_controller()
     controller.config = config
     controller.dt_seconds = dt_seconds
     controller.updated_initial_soc = config.init_soc_fraction
-    controller.time_index = pd.date_range("2024-01-01", periods=n_timesteps, freq="h")
+    if time_index is None:
+        time_index = pd.date_range("2024-01-01", periods=n_timesteps, freq="h")
+    controller.time_index = time_index
     controller.in_peak_window = controller._compute_peak_window_mask()
     controller.month_ids = controller._compute_month_ids()
     controller.in_exclusive_control_month = controller._compute_exclusive_control_mask()
@@ -252,6 +255,36 @@ def test_optimizer_dispatch_respects_soc_constraints(subtests, base_config):
             assert soc >= base_config.min_soc_fraction - 1e-6
         with subtests.test(f"SOC below max at t={t}"):
             assert soc <= base_config.max_soc_fraction + 1e-6
+
+
+@pytest.mark.regression
+def test_dr_model_feasible_when_first_step_requires_discharge(subtests, base_config):
+    """A small (degraded) battery must be able to discharge on the first step of a window."""
+    config = attrs.evolve(
+        base_config,
+        demand_signal=[5.0] + [0.0] * 23,
+        upstream_to_local_limit=4.0,
+    )
+    controller = _make_controller_with_config(config)
+    storage_capacity = 2.0  # small remaining capacity, e.g. low SOH before replacement
+    model = controller._build_dr_model(
+        window_start=0,
+        window_len=24,
+        init_soc=config.init_soc_fraction,
+        remaining_budget={1: config.n_max_events},
+        P_max=config.max_charge_rate,
+        storage_capacity=storage_capacity,
+    )
+
+    results = PeakLoadManagementOptimizedStorageController.pyomosolver_solve_call(model)
+
+    with subtests.test("solve is optimal"):
+        assert results.solver.termination_condition == pyomo.TerminationCondition.optimal
+    with subtests.test("battery discharges 1 kW at t=0"):
+        p_d0 = pyomo.value(model.p_discharge_upstream[0]) + pyomo.value(model.p_discharge_local[0])
+        assert p_d0 == pytest.approx(1.0)
+    with subtests.test("soc drops at t=0"):
+        assert pyomo.value(model.soc[0]) == pytest.approx(1.0 - 1.0 / storage_capacity)
 
 
 @pytest.mark.unit
@@ -694,6 +727,74 @@ def test_plm_history(subtests, om_plant_config, om_tech_config):
         assert active.sum() == expected_active.sum()
 
 
+def _dispatch_two_januaries(config):
+    """Run the rolling dispatch over one day in January 2024 and one in January 2025.
+
+    With 24 h windows, each day is its own window, so the second window only
+    gets a monthly budget if usage is tracked per (year, month).
+    """
+    time_index = pd.date_range("2024-01-15", periods=24, freq="h").append(
+        pd.date_range("2025-01-15", periods=24, freq="h")
+    )
+    controller = _make_controller_with_config(config, time_index=time_index)
+    controller.n_timesteps = len(time_index)
+
+    def full_battery_performance_model(commands, sim_start_index, sim_end_index):
+        # SOC is returned in percent; keep the battery full so every window can discharge.
+        return np.asarray(commands), np.full(len(commands), 100.0)
+
+    om_inputs = {
+        "max_charge_rate": np.array([config.max_charge_rate]),
+        "storage_capacity": np.array([config.max_capacity]),
+    }
+    dispatch = controller.pyomo_setup(discrete_inputs={}, om_inputs=om_inputs)
+    dispatch(full_battery_performance_model, {}, {})
+    return controller
+
+
+@pytest.mark.regression
+def test_monthly_event_budget_resets_each_year(subtests, base_config):
+    """One event allowed per month: January 2025 must not inherit January 2024's usage."""
+    config = attrs.evolve(
+        base_config,
+        n_max_events=1,
+        lmp_signal=[1.0] * 48,
+        demand_signal=[5.0] * 48,
+    )
+
+    controller = _dispatch_two_januaries(config)
+    events = controller.discharge_upstream_bin_history
+
+    with subtests.test("one event in January 2024"):
+        assert events[:24].sum() == pytest.approx(1.0)
+    with subtests.test("one event in January 2025"):
+        assert events[24:].sum() == pytest.approx(1.0)
+
+
+@pytest.mark.regression
+def test_monthly_energy_budget_resets_each_year(subtests, seasonal_config):
+    """1 kWh of discharge allowed per month: January 2025 must get a fresh budget."""
+    # Monthly budget = max_cycles_per_day * 31 days * 10 kWh usable = 1 kWh.
+    config = attrs.evolve(
+        seasonal_config,
+        max_capacity=10.0,
+        max_charge_rate=1.0,
+        max_cycles_per_day=1 / 310,
+        lmp_signal=[1.0] * 48,
+        demand_signal=[5.0] * 48,
+        exclusive_control_months=[1],
+    )
+
+    controller = _dispatch_two_januaries(config)
+    # dt is 1 h, so kW per step equals kWh.
+    discharge_kwh = controller.p_discharge_upstream_history + controller.p_discharge_local_history
+
+    with subtests.test("1 kWh discharged in January 2024"):
+        assert discharge_kwh[:24].sum() == pytest.approx(1.0)
+    with subtests.test("1 kWh discharged in January 2025"):
+        assert discharge_kwh[24:].sum() == pytest.approx(1.0)
+
+
 @pytest.mark.unit
 def test_exclusive_control_mask_and_window_boundary_check(subtests):
     controller = _make_controller()
@@ -811,6 +912,25 @@ def test_invalid_max_cycles_per_day_raises(seasonal_config):
 
     with pytest.raises(ValueError, match="max_cycles_per_day must be > 0"):
         PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
+
+
+@pytest.mark.unit
+def test_n_control_window_hours_bounded_below_11_months(subtests, base_config):
+    """Windows of 11 months or more could contain the same calendar month twice,
+    which would cause the controller to merge the two months with the same name into
+    a single constraint.
+    """
+    kwargs = attrs.asdict(base_config, recurse=False)
+
+    with subtests.test("at limit is valid"):
+        kwargs["n_control_window_hours"] = MAX_CONTROL_WINDOW_HOURS
+        config = PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
+        assert config.n_control_window_hours == MAX_CONTROL_WINDOW_HOURS
+
+    with subtests.test("above limit raises"):
+        kwargs["n_control_window_hours"] = MAX_CONTROL_WINDOW_HOURS + 1
+        with pytest.raises(ValueError, match="'n_control_window_hours' must be <="):
+            PeakLoadManagementOptimizedStorageControllerConfig(**kwargs)
 
 
 @pytest.mark.regression
