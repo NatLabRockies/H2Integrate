@@ -87,6 +87,10 @@ properties:
             default: 0
             minimum: -12
             maximum: 14
+          nl_solver_options:
+            type: object
+            description: nonlinear solver options for systems with feedback connections
+            default: {}
         required: [dt, n_timesteps]
     required: [plant_life, simulation]
   technology_interconnections:
