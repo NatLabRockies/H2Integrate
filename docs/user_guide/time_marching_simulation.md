@@ -95,4 +95,3 @@ The following technology performance models and control strategies are currently
 
 - [Example 24](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/24_solar_battery_grid) (`examples/24_solar_battery_grid/run_time_marching.py`) simulates a solar, battery, and grid plant both
 at once and in 24-timestep windows, and shows that the results match.
-- [Example 35](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/35_system_level_control/time_marching_system_level_control) (`examples/35_system_level_control/time_marching_system_level_control/run_time_marching_SLC.py`) simulates a plant with wind, battery, and a natural gas plant using three rule-based system level control strategies: demand following control, cost minimization control, and profit maximization control.
