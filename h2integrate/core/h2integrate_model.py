@@ -481,14 +481,14 @@ class H2IntegrateModel:
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
         simulation = self.plant_config["plant"]["simulation"]
-        window = simulation.get("n_timesteps_window")
+        window = simulation.get("n_timesteps_window", simulation["n_timesteps"])
         # Finance must not affect a coupled solve or run on a partial time history
         self._separate_finance = (
             self.slc
             or not nx.is_directed_acyclic_graph(self.technology_graph)
-            or (window is not None and window < simulation["n_timesteps"])
+            or window < simulation["n_timesteps"]
         )
-        self._downstream_finance_names = set()
+        self._downstream_finance_names = set() # only populated with names of system-level finance subgroups if _separate_finance is True
         self._unsupported_finance = []
 
     def _classify_slc_technologies(self):
@@ -917,13 +917,12 @@ class H2IntegrateModel:
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             perf_model = individual_tech_config.get("performance_model", {}).get("model")
             # Defer this error so topology validation can report invalid connections first
-            if self._separate_finance and individual_tech_config.get("finance_model", {}).get(
+            if self._separate_finance and (tech_fin_model := individual_tech_config.get("finance_model", {}).get(
                 "model"
-            ):
+            ) is not None):
                 self._unsupported_finance.append(
-                    f"Technology-local finance for '{tech_name}' is not supported "
-                    "inside a coupled or time-marching plant. Move the financial "
-                    "calculation to a system finance subgroup."
+                    f"Technology-specific finance model '{tech_fin_model}' for technology '{tech_name}' is not supported "
+                    "inside a coupled or time-marching plant. Please use a system-level finance model instead"
                 )
 
             if "control_parameters" in individual_tech_config["model_inputs"]:
@@ -980,11 +979,11 @@ class H2IntegrateModel:
                         self.control_strategies.append(control_object)
 
                     # Local finance cannot be separated from an iterative technology group.
-                    if individual_tech_config.get("finance_model", {}).get(
+                    if (tech_fin_model := individual_tech_config.get("finance_model", {}).get(
                         "model"
-                    ) and not isinstance(tech_group.nonlinear_solver, om.NonlinearRunOnce):
+                    )) is not None and not isinstance(tech_group.nonlinear_solver, om.NonlinearRunOnce):
                         self._unsupported_finance.append(
-                            f"Technology-local finance for '{tech_name}' is not supported "
+                            f"Technology-specific finance model '{tech_fin_model}' for technology '{tech_name}' is not supported "
                             "inside an iterative technology group."
                         )
 
