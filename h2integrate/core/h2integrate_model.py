@@ -1933,6 +1933,13 @@ class H2IntegrateModel:
                 has_cycles,
             )
 
+        if time_marching:
+            # Assign custom nonlinear solver to plant group to manage time-marching simulation
+            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
+
+            check_model_is_steppable(self.control_strategies, self.performance_models)
+            return
+
         if self.slc:
             # Because the controller creates a feedback loop (controller outputs become technology
             # inputs, whose outputs feed back to the controller), a nonlinear solver is required.
@@ -1960,12 +1967,6 @@ class H2IntegrateModel:
         if has_cycles:
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
-
-        if time_marching:
-            # Assign custom nonlinear solver to plant group to manage time-marching simulation
-            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
-
-            check_model_is_steppable(self.control_strategies, self.performance_models)
 
     def create_driver_model(self):
         """

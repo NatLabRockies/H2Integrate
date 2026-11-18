@@ -154,6 +154,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         slc_topology = self.options["slc_topology"]
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+        self.n_timesteps_window = plant_config["plant"]["simulation"].get(
+            "n_timesteps_window", self.n_timesteps
+        )
+
+        self.add_input("timestep_index", val=0, desc="Time step index")
 
         # Read pre-computed classification from plant_config
         self.commodity = slc_topology["demand_commodity"]
@@ -564,6 +569,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if set_point_name not in outputs:
             return
 
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         if self.storage_techs_to_control.get(storage_tech, False):
             # Storage tech has its own sub-controller: emit a combined demand
             # signal (always positive) equal to the commodity flowing into
@@ -573,14 +580,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for tech_name in upstream_techs:
                 commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
 
-            outputs[set_point_name] = commodity_into_storage + remaining_demand
+            outputs[set_point_name][simulation_range] = (
+                commodity_into_storage[simulation_range] + remaining_demand[simulation_range]
+            )
         else:
             # Storage without a sub-controller: emit a charge/discharge
             # command directly. Charge when remaining demand is negative,
             # discharge when positive.
-            outputs[set_point_name] = remaining_demand
+            outputs[set_point_name][simulation_range] = remaining_demand[simulation_range]
 
-        remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
+        remaining_demand[simulation_range] -= inputs[f"{storage_tech}_{commodity}_out"][
+            simulation_range
+        ]
         return remaining_demand
 
     def _get_commodity_for_tech(self, tech_name):
@@ -944,3 +955,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 last_converter = source_tech
 
         return converter_techs
+
+    def _get_compute_time_range(self, time_index):
+        # TODO add comment
+        ti = int(time_index[0])
+        return range(ti, ti + self.n_timesteps_window)

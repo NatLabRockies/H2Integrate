@@ -112,6 +112,8 @@ class ProfitMaximizationControl(SystemLevelControlBase):
         self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         demand = inputs[self.demand_input_name].copy()
         sell_price = inputs["commodity_sell_price"]  # shape (n_timesteps,)
 
@@ -152,7 +154,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
 
         # Initialize all dispatchable set-point outputs to zero
         for set_point_name in self.dispatchable_set_point_names:
-            outputs[set_point_name] = np.zeros(self.n_timesteps)
+            outputs[set_point_name][simulation_range] = np.zeros(self.n_timesteps_window)
 
         # Dispatch only where profitable (element-wise comparison)
         for idx in dispatch_order:
@@ -164,5 +166,5 @@ class ProfitMaximizationControl(SystemLevelControlBase):
             rated = inputs[rated_name]
 
             dispatch = np.where(profitable, np.minimum(remaining, rated), 0.0)
-            outputs[set_point_name] = dispatch
+            outputs[set_point_name][simulation_range] = dispatch[simulation_range]
             remaining -= dispatch

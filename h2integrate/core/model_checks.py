@@ -85,18 +85,6 @@ def check_time_marching_config(
             f"must be divisible by n_timesteps_window ({n_timesteps_window})."
         )
 
-    if system_level_control_enabled:
-        raise NotImplementedError(
-            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
-            "with system-level control."
-        )
-
-    if has_cycles:
-        raise NotImplementedError(
-            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
-            "when the technology interconnections contain a cycle."
-        )
-
     return True
 
 

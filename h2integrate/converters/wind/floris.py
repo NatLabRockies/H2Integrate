@@ -293,7 +293,7 @@ class FlorisWindPlantPerformanceModel(WindPerformanceBaseClass, CacheBaseClass):
         )
 
         # Apply curtailment based on set_point
-        self.apply_curtailment(outputs)
+        self.apply_curtailment(inputs, outputs)
 
         # 3. Cache the results for future use if enabled
         self.cache_outputs(
