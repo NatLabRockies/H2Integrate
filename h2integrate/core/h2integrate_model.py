@@ -64,6 +64,16 @@ class H2IntegrateModel:
             self.plant_config.get("technology_interconnections", {})
         )
 
+        # add bool for whether or not the technology connections have feedback cycles
+        self._has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+
+        # add bool for whether running time-marching simulation
+        simulation_config = self.plant_config["plant"]["simulation"]
+        self._is_time_marching = (
+            simulation_config.get("n_timesteps_window", simulation_config["n_timesteps"])
+            < simulation_config["n_timesteps"]
+        )
+
         # load in supported models
         self.supported_models = supported_models.copy()
 
@@ -1906,11 +1916,6 @@ class H2IntegrateModel:
         """Let OpenMDAO order the plant and add solvers if the technology graph has loops."""
         self.plant.options["auto_order"] = True
 
-        # If cycles are found, set solvers for the plant to resolve the coupling
-        if list(nx.simple_cycles(self.technology_graph)):
-            self.plant.nonlinear_solver = om.NonlinearBlockGS()
-            self.plant.linear_solver = om.DirectSolver()
-
     def set_plant_solver(self):
         """Configures solvers on the plant group according to the needs of the run case.
 
@@ -1920,19 +1925,22 @@ class H2IntegrateModel:
         """
 
         simulation_config = self.plant_config["plant"]["simulation"]
-        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
 
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
-        time_marching = False
-        n_timesteps_window = simulation_config.get("n_timesteps_window")
-        if n_timesteps_window is not None:
-            time_marching = check_time_marching_config(
+        if self._is_time_marching:
+            n_timesteps_window = simulation_config.get("n_timesteps_window")
+
+            check_time_marching_config(
                 simulation_config["n_timesteps"],
                 n_timesteps_window,
                 bool(self.slc),
-                has_cycles,
+                self._has_cycles,
             )
+
+            # Assign custom nonlinear solver to plant group to manage time-marching simulation
+            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
+            check_model_is_steppable(self.control_strategies, self.performance_models)
 
         if self.slc:
             # Because the controller creates a feedback loop (controller outputs become technology
@@ -1958,7 +1966,7 @@ class H2IntegrateModel:
             return
 
         # If loops are present in the technology graph, add solvers to resolve the coupling
-        if has_cycles:
+        if self._has_cycles:
             solver_options = simulation_config.get("nl_solver_options", {})
             solver_config = FeedbackNLSolverOptionsConfig.from_dict(solver_options)
             solver_cls = solver_config.return_nonlinear_solver()
@@ -1968,12 +1976,6 @@ class H2IntegrateModel:
                 solver.options[k] = v
             self.plant.nonlinear_solver = solver
             self.plant.linear_solver = om.DirectSolver()
-
-        if time_marching:
-            # Assign custom nonlinear solver to plant group to manage time-marching simulation
-            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
-
-            check_model_is_steppable(self.control_strategies, self.performance_models)
 
     def create_driver_model(self):
         """
