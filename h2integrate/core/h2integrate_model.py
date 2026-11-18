@@ -1750,20 +1750,22 @@ class H2IntegrateModel:
                 splitter_counts,
             )
         else:
-            # Input-to-input connections share a source; the top-level model owns Auto-IVC.
+            # Use the top-level model, rather than self.plant, so Auto-IVC can resolve
+            # input-to-input technology connections
             self.model.connect(
                 f"{source_tech}.{source_parameter}",
                 f"{dest_tech}.{dest_parameter}",
                 src_indices=src_indices,
             )
             source_input = f"{source_tech}.{source_parameter}"
+            # Only demand-profile input-to-input connections need this shared default
             if source_input not in demand_defaults and self._is_demand_input_profile(
                 source_tech, source_parameter
             ):
                 profile, units = self._get_demand_input_profile(source_tech)
-                # Declare value/units metadata for the shared Auto-IVC output, not an input
-                # assignment. Its value transfers to connected inputs when the model runs.
-                # Register once per source to avoid override warnings for multiple destinations.
+                # Set metadata for the shared Auto-IVC output, not the component input itself.
+                # Register once per input port to avoid override warnings when it feeds
+                # multiple destinations.
                 self.model.set_input_defaults(source_input, val=profile, units=units)
                 demand_defaults.add(source_input)
 

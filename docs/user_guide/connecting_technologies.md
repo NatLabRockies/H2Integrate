@@ -88,8 +88,8 @@ When the destination has a slice, it must (1) start at `0` (a non-zero start rai
 
 ##### Input-to-input connections
 
-The `source_parameter` of a 3-element connection can be an input instead of an output, so the destination shares the source's value.
-For a `DemandComponentBase` demand input (`{commodity}_demand`) used as the source, H2Integrate sets the shared default from `demand_profile` and `commodity_rate_units` in the demand technology's config.
+The `source_parameter` of a 3-element connection can be an input instead of an output, creating an input-to-input connection.
+H2Integrate automatically sets a shared default only when the source is a `DemandComponentBase` demand input (`{commodity}_demand`), using `demand_profile` and `commodity_rate_units` from the demand technology's config.
 The profile can be a scalar or a time series with one value per simulation timestep.
 For example, a threshold statistics model (`ThresholdStatisticsPerformanceModel`) can receive its threshold from an electricity demand component:
 
@@ -106,8 +106,8 @@ When no explicit output drives the demand, OpenMDAO connects that Auto-IVC outpu
 Those inputs receive the shared source value when the model runs, so listing inputs before running may still show component defaults.
 Destination inputs do not need matching configured defaults.
 Each source default is registered once, even when it feeds multiple destinations, avoiding duplicate-default warnings.
-When the demand input is not driven by an output, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected threshold receives the updated value.
-Setting a connected threshold with `set_val` also updates the shared source, including the demand and other connected thresholds; it does not create an independent threshold.
+When the demand input is not driven by an output, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected `threshold_stats.electricity_threshold` receives the updated value.
+Setting `threshold_stats.electricity_threshold` with `set_val` also updates the shared source, including the demand and other connected inputs; it does not create an independent threshold.
 Unlike `set_input_defaults`, `set_val` changes the source value rather than declaring default metadata.
 See OpenMDAO's [comparison of `set_input_defaults` and `set_val`](https://openmdao.org/newdocs/versions/latest/features/core_features/running_your_models/set_input_defaults.html#how-the-set-input-defaults-function-differs-from-the-set-val-function).
 If an output drives the demand input, that output supplies the shared value instead of the configured default.
@@ -116,10 +116,14 @@ Connected inputs may use compatible but different units; OpenMDAO converts betwe
 ```{note}
 OpenMDAO needs one unambiguous default for an input shared by two connected inputs.
 H2Integrate automatically sets this default only when the source is a demand component's demand input.
-For other input-to-input connections, incompatible default values or different units require an explicit `h2i.model.set_input_defaults(...)` call before setup.
+For other input-to-input connections, OpenMDAO must be able to resolve compatible default metadata; if setup reports ambiguous values, units, or shapes, set them explicitly with `h2i.model.set_input_defaults(...)` before setup.
 For an array input, provide a value with the input's full shape, along with its units.
 Threshold inputs can also be connected to an output or set directly when they are not connected.
 ```
+
+Input-to-input connections can therefore have different component default values and units when
+the top-level shared default resolves the metadata; equal component defaults alone are not always
+sufficient, for example when their units differ.
 
 ### Internal connection logic
 
