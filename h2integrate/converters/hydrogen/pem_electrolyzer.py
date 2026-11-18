@@ -18,7 +18,7 @@ class ECOElectrolyzerPerformanceModelConfig(ResizeablePerformanceModelBaseConfig
 
     See :class:`ECOElectrolyzerPerformanceModel` and :doc:`/technology_models/pem_electrolyzer`.
 
-    Args:
+    Attributes:
         size_mode (str): The mode in which the component is sized. Options:
             - "normal": The component size is taken from the tech_config.
             - "resize_by_max_feedstock": Resize based on maximum feedstock availability.

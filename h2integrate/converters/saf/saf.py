@@ -10,6 +10,11 @@ from h2integrate.core.supported_models import register
 class SAFPerformanceModelConfig(BaseConfig):
     """Configure plant capacity, capacity factor, and lignin consumption.
 
+    Attributes:
+        plant_capacity_mtpy (float): Nameplate SAF production capacity in metric tonnes per year.
+        capacity_factor (float): Fraction of nameplate capacity operated on average, from 0 to 1.
+        lignin_consumption (float): Kilograms of lignin consumed per metric tonne of SAF.
+
     See :class:`SAFPerformanceModel` and :doc:`/technology_models/saf`.
     """
 
@@ -85,6 +90,34 @@ class SAFPerformanceModel(PerformanceModelBaseClass):
 @define(kw_only=True)
 class SAFCostModelConfig(BaseConfig):
     """Configure capacity, cost year, feedstock consumption, and unit costs.
+
+    Attributes:
+        installation_time (int): Project year in which construction starts.
+        inflation_rate (float): Annual inflation rate used to escalate costs.
+        operational_year (int): Project year used to report operating costs.
+        plant_capacity_mtpy (float): Nameplate SAF production capacity in metric tonnes per year.
+        cost_year (int): Dollar year for unit cost assumptions; only 2023 is supported.
+        lignin_unitcost (float): Lignin purchase cost in dollars per kilogram.
+        lignin_transport_cost (float): Lignin transport cost in dollars per kilogram.
+        salt_mix_unitcost (float): Salt-mixture purchase cost in dollars per kilogram.
+        salt_mix_transport_cost (float): Salt-mixture transport cost in dollars per kilogram.
+        hydrogen_chloride_unitcost (float): Hydrogen chloride purchase cost in dollars per kilogram.
+        hydrogen_chloride_transport_cost (float): Hydrogen chloride transport cost in dollars
+            per kilogram.
+        hydrogen_unitcost (float): Hydrogen purchase cost in dollars per kilogram.
+        hydrogen_transport_cost (float): Hydrogen transport cost in dollars per kilogram.
+        electricity_cost (float): Electricity purchase cost in dollars per kilowatt-hour.
+        raw_water_unitcost (float): Raw water purchase cost in dollars per kilogram.
+        lignin_consumption (float): Kilograms of lignin consumed per metric tonne of SAF.
+        raw_water_consumption (float): Kilograms of raw water consumed per metric tonne of SAF.
+        hydrogen_consumption (float): Kilograms of hydrogen consumed per metric tonne of SAF.
+        salt_mix_consumption (float): Kilograms of salt mixture consumed per metric tonne of SAF.
+        hydrogen_chloride_consumption (float): Kilograms of hydrogen chloride consumed per
+            metric tonne of SAF.
+        electricity_consumption (float): Kilowatt-hours of electricity consumed per metric
+            tonne of SAF.
+        water_disposal_unitcost (float): Wastewater disposal cost in dollars per kilogram.
+        water_disposal_rate (float): Kilograms of wastewater disposed per metric tonne of SAF.
 
     See :class:`SAFCostModel` and :doc:`/technology_models/saf`.
     """

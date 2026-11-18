@@ -24,7 +24,7 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
     https://www.eia.gov/opendata/browser/natural-gas/pri/sum for further details about data
     availability.
 
-    Args:
+    Attributes:
         state (str): Full name of the state or two-letter state abbreviation, such as
             "United States" or "US". Only the "US" or all 50 states will produce valid results.
         resource_year (int): The YYYY-format year whose data should be retrieved. Must be between
@@ -54,6 +54,10 @@ class EIANaturalGasFeedstockConfig(BaseConfig):
             Defaults to 0.0.
         start_up_cost (float, optional): one-time capital cost associated with the feedstock in USD.
             Defaults to 0.0.
+        commodity (str): Fixed commodity identifier, set internally to ``"natural_gas"``.
+        commodity_rate_units (str): Fixed price-series rate units, ``"MMBtu/h"``.
+        commodity_amount_units (str): Fixed commodity amount units, ``"MMBtu"``.
+        price (np.ndarray): Price time series populated from the selected EIA data.
 
     See :class:`EIANaturalGasFeedstockCostModel` and :doc:`/technology_models/feedstocks`.
     """
