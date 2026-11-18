@@ -482,7 +482,8 @@ class H2IntegrateModel:
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
         simulation = self.plant_config["plant"]["simulation"]
         window = simulation.get("n_timesteps_window")
-        # Finance must not affect a coupled solve or run on a partial time history
+        # Separate finance for SLC, cyclic technology graphs, or partial time windows;
+        # otherwise, keep finance inside the plant as in the original execution path
         self._separate_finance = (
             self.slc
             or not nx.is_directed_acyclic_graph(self.technology_graph)
@@ -921,7 +922,7 @@ class H2IntegrateModel:
                 "model"
             ):
                 self._unsupported_finance.append(
-                    f"Technology-local finance for '{tech_name}' is not supported "
+                    f"Technology-specific finance model for '{tech_name}' is not supported "
                     "inside a coupled or time-marching plant. Move the financial "
                     "calculation to a system finance subgroup."
                 )
@@ -978,15 +979,6 @@ class H2IntegrateModel:
                             "control_strategy", individual_tech_config, tech_group
                         )
                         self.control_strategies.append(control_object)
-
-                    # Local finance cannot be separated from an iterative technology group.
-                    if individual_tech_config.get("finance_model", {}).get(
-                        "model"
-                    ) and not isinstance(tech_group.nonlinear_solver, om.NonlinearRunOnce):
-                        self._unsupported_finance.append(
-                            f"Technology-local finance for '{tech_name}' is not supported "
-                            "inside an iterative technology group."
-                        )
 
                     comp = self.supported_models[perf_model](
                         driver_config=self.driver_config,
@@ -1055,8 +1047,8 @@ class H2IntegrateModel:
                         # Keep local finance out of a technology's own residual norm too
                         if not isinstance(tech_group.nonlinear_solver, om.NonlinearRunOnce):
                             self._unsupported_finance.append(
-                                f"Technology-local finance for '{tech_name}' is not supported "
-                                "inside an iterative technology group."
+                                f"Technology-specific finance model for '{tech_name}' is not "
+                                "supported inside an iterative technology group."
                             )
                         if finance_name != individual_tech_config.get("cost_model", {}).get(
                             "model", ""
@@ -1567,7 +1559,8 @@ class H2IntegrateModel:
 
             subgroup_system_name = f"finance_subgroup_{subgroup_name}"
             if self._separate_finance:
-                # Siblings run after the plant without entering its residual norm.
+                # Add the finance subgroup to model, not plant, so it runs after the plant
+                # without entering the plant's residual norm.
                 self.model.add_subsystem(subgroup_system_name, finance_subgroup)
                 self._downstream_finance_names.add(subgroup_system_name)
             else:
@@ -1629,18 +1622,15 @@ class H2IntegrateModel:
         combiner_counts = {}
         splitter_counts = {}
 
+        self_loops = list(nx.selfloop_edges(self.technology_graph))
+        if self_loops:
+            raise NotImplementedError(
+                f"Technology self-connections are not supported: {self_loops}"
+            )
+
         # loop through each linkage and instantiate an OpenMDAO object (assume it exists) for
         # the connection type (e.g. cable, pipeline, etc)
         for connection in technology_interconnections:
-            # Transporters live in the plant and cannot span the finance boundary.
-            if len(connection) == 4 and (
-                connection[0] in self._downstream_finance_names
-                or connection[1] in self._downstream_finance_names
-            ):
-                raise NotImplementedError(
-                    "Transport connections involving downstream finance are not supported "
-                    "in a coupled or time-marching plant."
-                )
             if len(connection) == 4:
                 self._connect_technologies_with_transport(
                     connection, combiner_counts, splitter_counts
@@ -1967,7 +1957,7 @@ class H2IntegrateModel:
             self.model.options["auto_order"] = True
 
         # If cycles are found, set solvers for the plant to resolve the coupling
-        if list(nx.simple_cycles(self.technology_graph)):
+        if not nx.is_directed_acyclic_graph(self.technology_graph):
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
 
@@ -1980,7 +1970,7 @@ class H2IntegrateModel:
         """
 
         simulation_config = self.plant_config["plant"]["simulation"]
-        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+        has_cycles = not nx.is_directed_acyclic_graph(self.technology_graph)
 
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.

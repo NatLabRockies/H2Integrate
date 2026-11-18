@@ -292,8 +292,21 @@ def test_local_finance_in_coupled_plant_is_rejected(coupled_model):
             "model": "SentinelFinance"
         }
 
-    with pytest.raises(NotImplementedError, match="Technology-local finance for 'producer'"):
+    with pytest.raises(
+        NotImplementedError, match="Technology-specific finance model for 'producer'"
+    ):
         coupled_model(add_local_finance).setup()
+
+
+@pytest.mark.unit
+def test_technology_self_connection_is_rejected(coupled_model):
+    def add_self_connection(config):
+        config["plant_config"]["technology_interconnections"].append(
+            ["producer", "producer", "command"]
+        )
+
+    with pytest.raises(NotImplementedError, match="Technology self-connections are not supported"):
+        coupled_model(add_self_connection)
 
 
 @pytest.mark.unit
@@ -305,7 +318,10 @@ def test_local_finance_in_iterative_technology_is_rejected(coupled_model):
         producer["control_strategy"] = {"model": "LocalController"}
         producer["finance_model"] = {"model": "SentinelFinance"}
 
-    with pytest.raises(NotImplementedError, match="inside an iterative technology group"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Technology-specific finance model for 'producer'.*iterative technology group",
+    ):
         coupled_model(add_local_finance).setup()
 
 
