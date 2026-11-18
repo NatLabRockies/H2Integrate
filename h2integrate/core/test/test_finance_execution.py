@@ -283,7 +283,8 @@ def test_local_finance_in_coupled_plant_is_rejected(coupled_model):
         }
 
     with pytest.raises(
-        NotImplementedError, match="Technology-specific finance model for 'producer'"
+        NotImplementedError,
+        match="Technology-specific finance model 'SentinelFinance' for technology 'producer'",
     ):
         coupled_model(add_local_finance).setup()
 
