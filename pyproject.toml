@@ -65,7 +65,7 @@ dependencies = [
   "wombat>=0.13.3",
   "charset_normalizer==3.4.9",
   "NREL-rex",
-  "statsmodels==0.14.6",
+  "statsmodels>=0.15.0",
 ]
 keywords = [
     "python3",
