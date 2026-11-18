@@ -64,6 +64,7 @@ class TechPerformanceModel(ResizeablePerformanceModelBaseClass):
 driver_config = load_driver_yaml("driver_config.yaml")
 plant_config = load_plant_yaml("plant_config.yaml")
 tech_config = load_tech_yaml("tech_config.yaml")
+base_interconnections = plant_config["technology_interconnections"]
 
 # When we run this example in resize_by_max_commodity mode, the electrolyzer is sized to
 # 640 MW (as set by the config), although the electricity profile going in has a max of
@@ -136,8 +137,7 @@ tech_config["technologies"]["electrolyzer"]["model_inputs"]["performance_paramet
 ] = 1.0
 input_config["technology_config"] = tech_config
 plant_config["technology_interconnections"] = [
-    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
-    ["electrolyzer", "ammonia", "hydrogen", "pipe"],
+    *base_interconnections,
     ["ammonia", "electrolyzer", "max_hydrogen_capacity"],
 ]
 input_config["plant_config"] = plant_config
@@ -169,10 +169,7 @@ tech_config["technologies"]["ammonia"]["model_inputs"]["performance_parameters"]
     "max_feedstock_ratio"
 ] = 1.0
 input_config["technology_config"] = tech_config
-plant_config["technology_interconnections"] = [
-    ["electricity_feedstock", "electrolyzer", "electricity", "cable"],
-    ["electrolyzer", "ammonia", "hydrogen", "pipe"],
-]
+plant_config["technology_interconnections"] = base_interconnections
 input_config["plant_config"] = plant_config
 driver_config["driver"]["optimization"]["flag"] = True
 driver_config["design_variables"]["electrolyzer"]["max_feedstock_ratio"]["flag"] = True

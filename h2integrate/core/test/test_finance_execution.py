@@ -265,13 +265,37 @@ def test_finance_inside_plant_can_feed_technology(coupled_model):
 
 
 @pytest.mark.unit
-def test_coupled_finance_cannot_disable_nonconvergence_errors(coupled_model):
+@pytest.mark.parametrize("configured", [True, False], ids=["configured", "programmatic"])
+def test_feedback_between_plant_and_separated_finance_is_rejected(coupled_model, configured):
+    def add_feedback(config):
+        config["plant_config"]["technology_interconnections"].append(
+            ["finance_subgroup_default", "controller", ["price", "bias"]]
+        )
+
+    h2i = coupled_model(add_feedback if configured else None)
+    if not configured:
+        h2i.model.connect("finance_subgroup_default.price", "controller.bias")
+
+    with pytest.raises(ValueError, match="Feedback between the plant and separated finance"):
+        h2i.setup()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("solver_options", "message"),
+    [
+        (
+            {"solver_option_kwargs": {"err_on_non_converge": False}},
+            "err_on_non_converge cannot be disabled",
+        ),
+        ({"max_iter": 0, "atol": 2.0}, "max_iter must be positive"),
+    ],
+)
+def test_coupled_finance_requires_converging_slc_solver(coupled_model, solver_options, message):
     h2i = coupled_model()
     h2i.slc = True
-    h2i.plant_config["system_level_control"] = {
-        "solver_options": {"solver_option_kwargs": {"err_on_non_converge": False}}
-    }
-    with pytest.raises(ValueError, match="err_on_non_converge cannot be disabled"):
+    h2i.plant_config["system_level_control"] = {"solver_options": solver_options}
+    with pytest.raises(ValueError, match=message):
         h2i.set_plant_solver()
 
 

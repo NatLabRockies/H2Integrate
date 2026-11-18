@@ -2019,6 +2019,11 @@ class H2IntegrateModel:
             solver_options = solver_config.get_solver_options()
             if self._downstream_finance_names:
                 # Do not evaluate finance after an unconverged plant solve.
+                if solver_options["maxiter"] <= 0:
+                    raise ValueError(
+                        "max_iter must be positive when finance is evaluated "
+                        "after a coupled plant solve."
+                    )
                 if solver_options.get("err_on_non_converge") is False:
                     raise ValueError(
                         "err_on_non_converge cannot be disabled when finance is evaluated "
@@ -2076,6 +2081,19 @@ class H2IntegrateModel:
             raise NotImplementedError(self._unsupported_finance[0])
 
         self.prob.setup()
+
+        if self._downstream_finance_names:
+            # Use resolved connections so this also covers programmatic connections.
+            graph = self.model.compute_sys_graph()
+            plant_cycle = next(
+                group for group in nx.strongly_connected_components(graph) if "plant" in group
+            )
+            finance_in_cycle = self._downstream_finance_names.intersection(plant_cycle)
+            if finance_in_cycle:
+                raise ValueError(
+                    "Feedback between the plant and separated finance is not supported. "
+                    f"Break the cycle involving: {', '.join(sorted(finance_in_cycle))}."
+                )
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
