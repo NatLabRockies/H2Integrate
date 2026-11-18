@@ -1,3 +1,4 @@
+import warnings
 import importlib.util
 from enum import IntEnum
 
@@ -1926,6 +1927,15 @@ class H2IntegrateModel:
 
         simulation_config = self.plant_config["plant"]["simulation"]
 
+        if simulation_config.get("nl_solver_options") is not None and not self._has_cycles:
+            # nl_solver_options provided even if technology interconnections doesn't have cycles
+            msg = (
+                "`nl_solver_options` is an extraneous input when no feedback cycles exist in "
+                "`technology_interconnections`. `nl_solver_options` is only used if "
+                "feedback cycles exist in `technology_interconnections`."
+            )
+            warnings.warn(msg, UserWarning, stacklevel=2)
+
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
         if self._is_time_marching:
@@ -1934,7 +1944,7 @@ class H2IntegrateModel:
             check_time_marching_config(
                 simulation_config["n_timesteps"],
                 n_timesteps_window,
-                bool(self.slc),
+                self.slc,
                 self._has_cycles,
             )
 
