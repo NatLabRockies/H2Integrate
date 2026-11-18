@@ -90,7 +90,7 @@ properties:
           nl_solver_options:
             type: object
             description: nonlinear solver options for systems with feedback connections
-            default: {}
+            additionalProperties: true
         required: [dt, n_timesteps]
     required: [plant_life, simulation]
   technology_interconnections:
