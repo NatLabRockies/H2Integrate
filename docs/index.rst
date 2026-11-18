@@ -27,6 +27,28 @@ H2Integrate - Holistic Hybrids Optimization and Design Tool
 H2Integrate (H2I) is an open-source Python package for hybrid systems engineering design and technoeconomic analysis.
 It models and optimizes hybrid energy plants that produce electricity, hydrogen, ammonia, steel, and other products, using high-resolution location-specific resource data to perform optimization and scenario analysis.
 
+*****************
+About H2Integrate
+*****************
+
+H2Integrate grew from projects that needed to model and analyze complex hybrid energy systems. It is now maintained as a reusable framework for composing technology performance, cost, finance, and control models, while still allowing users to add project-specific components.
+
+Browse the example workflows in the GitHub repository: https://github.com/NatLabRockies/H2Integrate/tree/main/examples
+
+What is H2Integrate?
+====================
+
+H2Integrate is designed to be flexible and extensible, allowing users to create their own components and models for hybrid systems.
+Its registered models cover land-based wind and solar PV; wave, tidal, run-of-river hydro, natural gas, nuclear, and grid electricity; hydrogen production and storage; fuel cells; and industrial processes including ammonia, methanol, iron, and steel.
+The `Model Overview <user_guide/model_overview.md>`__ lists the current registered models, and model-specific pages describe their capabilities and configuration.
+Some models integrate existing tools, including `PySAM <https://github.com/NatLabRockies/pysam>`__ and `ProFAST <https://github.com/NatLabRockies/ProFAST>`__.
+The H2Integrate tool is built on top of `NASA's OpenMDAO framework <https://github.com/OpenMDAO/OpenMDAO/>`__, which provides a powerful and flexible environment for modeling and optimization.
+
+
+.. note::
+   H2Integrate was previously known as GreenHEART. The name was updated to H2Integrate to better reflect its expanded capabilities and focus on integrated energy systems.
+
+
 .. toctree::
    :maxdepth: 2
    :hidden:
@@ -36,13 +58,8 @@ It models and optimizes hybrid energy plants that produce electricity, hydrogen,
    user_reference
    developer_guide/index
    api
-   ../CHANGELOG
+   misc_resources/changelog
    auto_examples/index
-
-
-*********
-Option 1
-*********
 
 .. grid:: 1 1 2 3
     :gutter: 2 3 4 4
@@ -52,7 +69,7 @@ Option 1
         Getting started
         ^^^
 
-        New to H2Integrate? Check out the First Time User's Guide. It contains an
+        New to H2Integrate? Check out the first time user's guide. It contains an
         introduction to H2Integrate's main concepts.
 
         +++
@@ -66,11 +83,10 @@ Option 1
 
     .. grid-item-card::
 
-        User guide
+        Setting Up Analyses
         ^^^
 
-        The user guide provides in-depth information about running and connecting models
-        in H2Integrate.
+        The user guide provides in-depth information about setting up and running analyses in H2Integrate.
 
         +++
 
@@ -83,7 +99,7 @@ Option 1
 
     .. grid-item-card::
 
-        User reference
+        Model Building Blocks
         ^^^
 
         Explanations, background, configuration, and usage of the core components of H2Integrate.
@@ -115,12 +131,12 @@ Option 1
 
     .. grid-item-card::
 
-        Contributor's guide
+        Developers guide
         ^^^
 
         Want to add to the codebase? Can help add translation or a flowchart to the
         documentation? The contributing guidelines will guide you through the
-        process of improving NumPy.
+        process of developing in H2Integrate.
 
         +++
 
@@ -131,147 +147,21 @@ Option 1
 
             To the contributor's guide
 
-
-*********
-Option 2
-*********
-
-.. grid:: 1 1 2 3
-    :gutter: 2 3 4 4
-
     .. grid-item-card::
 
-        Technology Models
+        Examples
         ^^^
 
-        Listing and in-depth descriptions of each of technologies for energy generation
-        or conversion.
+        Configuration examples and detailed demonstrations of using H2Integrate.
 
         +++
 
-        .. button-ref:: technology_models/index
+        .. button-ref:: auto_examples/index
             :expand:
             :color: secondary
             :click-parent:
 
-            To the technology reference.
-
-    .. grid-item-card::
-
-        Storage Models
-        ^^^
-
-        Guide to energy storage models.
-
-        +++
-
-        .. button-ref:: storage/storage_models_index
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the storage reference
-
-    .. grid-item-card::
-
-        Resource Models
-        ^^^
-
-        Explanations, background, configuration, and usage of the resource (tides, solar, wind, etc.).
-
-        +++
-
-        .. button-ref:: resource/index
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the resource reference
-
-    .. grid-item-card::
-
-        Control Models
-        ^^^
-
-        Guide to controlled energy dispatching and optimization.
-
-        +++
-
-        .. button-ref:: control/index
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the controller reference
-
-    .. grid-item-card::
-
-        Demand Models
-        ^^^
-
-        Learn more about commodity demand profiling.
-
-        +++
-
-        .. button-ref:: demand/index
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the demand reference
-
-    .. grid-item-card::
-
-        Finance Models
-        ^^^
-
-        Learn more about financial modeling.
-
-        +++
-
-        .. button-ref:: finance_models/finance_index
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the finance reference
-
-    .. grid-item-card::
-
-        Reliability Modeling
-        ^^^
-
-        Learn more about modeling system and component availability.
-
-        +++
-
-        .. button-ref:: reliability/reliability_guide
-            :expand:
-            :color: secondary
-            :click-parent:
-
-            To the reliability reference
-
-*****************
-About H2Integrate
-*****************
-
-H2Integrate grew from projects that needed to model and analyze complex hybrid energy systems. It is now maintained as a reusable framework for composing technology performance, cost, finance, and control models, while still allowing users to add project-specific components.
-
-Browse the example workflows in the GitHub repository: https://github.com/NatLabRockies/H2Integrate/tree/main/examples
-
-What is H2Integrate?
-====================
-
-H2Integrate is designed to be flexible and extensible, allowing users to create their own components and models for hybrid systems.
-Its registered models cover land-based wind and solar PV; wave, tidal, run-of-river hydro, natural gas, nuclear, and grid electricity; hydrogen production and storage; fuel cells; and industrial processes including ammonia, methanol, iron, and steel.
-The `Model Overview <user_guide/model_overview.md>`__ lists the current registered models, and model-specific pages describe their capabilities and configuration.
-Some models integrate existing tools, including `PySAM <https://github.com/NatLabRockies/pysam>`__ and `ProFAST <https://github.com/NatLabRockies/ProFAST>`__.
-The H2Integrate tool is built on top of `NASA's OpenMDAO framework <https://github.com/OpenMDAO/OpenMDAO/>`__, which provides a powerful and flexible environment for modeling and optimization.
-
-
-.. note::
-   H2Integrate was previously known as GreenHEART. The name was updated to H2Integrate to better reflect its expanded capabilities and focus on integrated energy systems.
+            To the examples
 
 
 **************************

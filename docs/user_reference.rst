@@ -1,7 +1,7 @@
-.. reference-guide:
+.. model-reference:
 
 ###############
-Reference Guide
+Model Reference
 ###############
 
 .. toctree::
