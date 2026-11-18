@@ -67,8 +67,15 @@ class FeedbackNLSolverOptionsConfig(BaseConfig):
         if self.rtol is None:
             self.rtol = self.convergence_tolerance
 
-        # TODO: could add check to ensure that no duplicate keys are
+        # check to ensure that no duplicate keys are
         # provided in solver_option_kwargs
+        shared_options = set(self.solver_option_kwargs) & set(self.as_dict())
+        if bool(shared_options):
+            msg = (
+                f"Duplicated definition of solver option(s): {sorted(shared_options)}."
+                "Please remove these attributes from `solver_option_kwargs`"
+            )
+            raise AttributeError(msg)
 
     def get_solver_options(self):
         """Build the options dict to apply to the nonlinear solver.

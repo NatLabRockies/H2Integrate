@@ -6,6 +6,15 @@ sites:
     longitude: -101.945027
 plant:
   plant_life: 60
+  simulation:
+    # (optional) nonlinear solver options since the technology interconnections
+    # contains a cycle (nuclear is connected to htse and htse is connected to nuclear)
+    nl_solver_options:
+      solver_name: gauss_seidel  # nonlinear solver type
+      maxiter: 10  # max number of nonlinear iterations
+      atol: 1.0e-10  # absolute convergence tolerance
+      rtol: 1.0e-10  # relative convergence tolerance
+      iprint: 2  # 0: silent, 2: verbose
 # array of arrays containing left-to-right technology
 # interconnections; can support bidirectional connections
 # with the reverse definition.
