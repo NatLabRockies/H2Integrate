@@ -23,11 +23,10 @@ In time-marching simulations, they run after the complete production history has
 Finance remains part of each full H2Integrate model evaluation, including optimizer steps and parameter sweeps.
 Cost models needed by operations remain inside the plant group
 
-This separation currently requires finance outputs to be downstream of operations.
-Connections from system finance back to operations are rejected for coupled and time-marching plants, including connections added directly to the OpenMDAO model.
-Call `H2IntegrateModel.setup()` (or `run()`) after adding connections so the checks run; calling `prob.setup()` directly bypasses H2Integrate's validation.
+Finance-to-operations connections are allowed, but when finance is separated from the plant they are not part of the plant's coupled solve and should not be used when feedback must converge with operations.
+An acyclic, non-time-marching plant keeps finance inside the plant and can use finance-to-technology connections.
+Call `H2IntegrateModel.setup()` (or `run()`) after adding connections so H2I's other configuration checks run; calling `prob.setup()` directly bypasses H2I validation.
 Technology-specific finance is also not supported in these plants or inside an iterative technology group.
-Acyclic, non-time-marching plants can use specific finance and finance-to-technology connections.
 
 When system finance follows a coupled plant solve, the plant solver raises on nonconvergence rather than evaluating finance on a failed solve. An SLC configuration cannot disable `err_on_non_converge` in that case. These checks do not change the failure settings of independently configured nested solvers.
 

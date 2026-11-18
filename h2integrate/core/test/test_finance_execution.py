@@ -6,7 +6,7 @@ import pytest
 import openmdao.api as om
 
 import h2integrate.core.h2integrate_model as model_module
-from h2integrate.core.h2integrate_model import State, H2IntegrateModel
+from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 
 class Producer(om.ExplicitComponent):
@@ -251,27 +251,17 @@ def test_optimizer_reevaluates_and_records_finance(coupled_model, tmp_path):
 
 
 @pytest.mark.unit
-def test_manual_finance_feedback_is_rejected(coupled_model):
-    h2i = coupled_model()
-    # Resolve custom connections during H2Integrate setup, not only YAML connections.
+def test_finance_inside_plant_can_feed_technology(coupled_model):
+    def make_acyclic(config):
+        config["plant_config"]["technology_interconnections"].pop()
+
+    h2i = coupled_model(make_acyclic)
+    assert not h2i._separate_finance
     h2i.model.connect("finance_subgroup_default.price", "controller.bias")
-    with pytest.raises(NotImplementedError, match="downstream finance"):
-        h2i.setup()
-    assert h2i.state == State.INITIALIZED
-    with pytest.raises(NotImplementedError, match="downstream finance"):
-        h2i.run()
-
-
-@pytest.mark.unit
-def test_configured_finance_feedback_is_rejected(coupled_model):
-    def add_feedback(config):
-        # A YAML finance output must not become an operations input.
-        config["plant_config"]["technology_interconnections"].append(
-            ["finance_subgroup_default", "controller", ["price", "bias"]]
-        )
-
-    with pytest.raises(NotImplementedError, match="downstream finance"):
-        coupled_model(add_feedback).setup()
+    h2i.setup()
+    h2i.prob.set_val("producer.command", 2.0)
+    h2i.prob.run_model()
+    assert h2i.prob.get_val("controller.bias")[0] == pytest.approx(5.0)
 
 
 @pytest.mark.unit

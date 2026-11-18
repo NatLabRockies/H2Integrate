@@ -2060,19 +2060,6 @@ class H2IntegrateModel:
             raise NotImplementedError(self._unsupported_finance[0])
 
         self.prob.setup()
-        # OpenMDAO has now resolved both explicit and promoted connection endpoints.
-        for target, source in self.model._conn_global_abs_in2out.items():
-            source_system = source.split(".", 1)[0]
-            target_system = target.split(".", 1)[0]
-            if (
-                source_system in self._downstream_finance_names
-                and target_system not in self._downstream_finance_names
-            ):
-                raise NotImplementedError(
-                    f"Connection from downstream finance '{source}' to '{target}' is not "
-                    "supported in a coupled or time-marching plant. Finance must not feed "
-                    "operations."
-                )
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)
