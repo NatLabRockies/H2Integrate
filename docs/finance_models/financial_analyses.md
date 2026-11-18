@@ -4,6 +4,14 @@ There can be significant confusion when distinguishing between **real** and **no
 
 ---
 
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+  ../user_guide/specifying_finance_parameters
+  ../user_guide/cost_years
+```
+
 ## Key Definitions
 
 * **Real Analysis:**

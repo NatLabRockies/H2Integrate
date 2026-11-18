@@ -1,3 +1,10 @@
+"""
+Producing Steel
+===============
+
+This is some text I don't have to think about, but someone else will.
+"""
+
 import numpy as np
 
 from h2integrate import H2IntegrateModel

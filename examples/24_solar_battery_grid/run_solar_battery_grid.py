@@ -1,3 +1,8 @@
+"""
+Solar + Battery + Grid
+======================
+"""
+
 from h2integrate import H2IntegrateModel
 
 

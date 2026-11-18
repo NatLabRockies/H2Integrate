@@ -2,6 +2,15 @@
 
 Storage technologies input and output the 'Storage Commodity' (`commodity`) as a time series. These technologies can be both filled or charged and unfilled or discharged, resulting in a commodity stream that can be positive and negative.These models are usually constrained by two key model parameters: storage capacity and charge/discharge rate.
 
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+   simple_generic_storage.md
+   pysam_battery.md
+   hydrogen_storage.md
+```
+
 ## Storage Performance Models
 
 H2I currently supports the following storage performance models:

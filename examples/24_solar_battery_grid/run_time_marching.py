@@ -1,4 +1,8 @@
-"""Compare a standard simulation of example 24 with a time-marching simulation of the same plant.
+"""
+Time-Marching Simulation
+========================
+
+Compare a standard simulation of example 24 with a time-marching simulation of the same plant.
 
 The standard simulation runs each subsystem over all timesteps at once. The time-marching
 simulation sets `n_timesteps_window` so that all subsystems advance together one 24-timestep

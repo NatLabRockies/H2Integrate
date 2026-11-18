@@ -1,10 +1,20 @@
 # Control Strategies
+
 There are several simple control strategies already implemented in the SLC paradigm. While fairly simplistic, they are meant to illustrate how information can be passed from different blocks/components (converters, storage, feedstocks, demand, etc.) and models (performance, cost, finance) to use within the SLC.
 
 The current control strategies are:
 1. [Demand Following](#slc-demand-following)
 2. [Profit Maximization](#slc-profit-max)
 3. [Cost Minimization](#slc-cost-min)
+
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+   slc_demand_following
+   slc_profit_max
+   slc_cost_min
+```
 
 ```{note}
 The strategies currently implemented are experimental and will likely require further development for specific analyses.

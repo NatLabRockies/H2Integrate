@@ -1,5 +1,14 @@
 # System-Level Control
 
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+   system_level_control_base
+   control_classifier
+   controllers
+```
+
 System-level control (SLC) within H2I is meant to operate to control the entire plant with performance and cost feedback driving the operation of the plant or system in a closed-loop. It acts as a supervisory controller meaning that it can work to coordinate the entire system and can work with other technology level controllers.
 
 ```{note}

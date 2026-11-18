@@ -1,6 +1,9 @@
-# API Documentation
+.. api-reference:
 
-```{eval-rst}
+#################
+API Documentation
+#################
+
 .. currentmodule:: h2integrate
 
 .. autosummary::

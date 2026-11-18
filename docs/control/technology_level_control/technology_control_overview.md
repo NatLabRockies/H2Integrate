@@ -1,5 +1,14 @@
 # Technology-Level Control
 
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+   open-loop_controllers
+   pyomo_controllers
+   controller_demonstrations
+```
+
 Every technology group in H2Integrate contains a controller subsystem. Its job is to translate a `{commodity}_set_point` signal into the `{commodity}_command_value` consumed by the technology's performance model. This convention keeps the framework consistent: every technology exposes the same set-point/command-value interface, regardless of whether a system-level controller (SLC) is present and regardless of how complex the underlying control logic is.
 
 (implicit-passthrough-controller)=
