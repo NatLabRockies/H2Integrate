@@ -17,6 +17,9 @@ on:
     paths:
       - examples/**
       - h2integrate/control/control_strategies/system_level/test/test_slc_examples.py
+      - test/**.py
+      - conftest.py
+      - pyproject.toml
       - .github/workflows/examples.yml
 permissions:
   contents: read
@@ -58,7 +61,7 @@ jobs:
         run: touch .env
       - name: Run example tests
         shell: bash -el {0}
-        run: pytest . -m examples --durations=30
+        run: pytest . -m examples --maxprocesses=4 --durations=30
   report:
     needs: examples
     if: always() && github.event_name == 'schedule'

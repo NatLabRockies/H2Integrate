@@ -12,11 +12,24 @@ There are specific costs and performance specifications in the ATB for:
 - [Distributed Wind](https://atb.nlr.gov/electricity/2024/distributed_wind)
 
 Example usage of this cost model in the `tech_config.yaml` file is shown [in the first section below](#atb-wind-cost-model).
+See {py:class}`~h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModel` and
+{py:class}`~h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModelConfig`.
+The model multiplies `rated_electricity_production` by the configured rates to produce `CapEx`
+and annual `OpEx`, and supports one-hour time steps.
 
 (atb-wind-cost-model)=
 ## ATB Wind Cost Model
 
-The inputs for `cost_parameters` are `capex_per_kW` and `opex_per_kW_per_year`. From the ATB workbook, a value for `capex_per_kW` can be found on any of the wind-specific tabs in the Excel Workbook under the "Overnight Capital Cost" section or the "CAPEX" section. The values in the "CAPEX" section include overnight capital costs, construction finance factor, and grid connection costs. A value for `opex_per_kW_per_year` can be found on any of the wind-specific tabs in the Excel Workbook under the "Fixed Operation and Maintenance Expenses" section.
+Capital and fixed operating costs can be found on the wind-specific ATB workbook sheets under
+"Overnight Capital Cost" or "CAPEX" and "Fixed Operation and Maintenance Expenses". The "CAPEX"
+values include overnight capital costs, construction finance factor, and grid connection costs.
+Configure the model using:
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.wind.atb_wind_cost.ATBWindPlantCostModelConfig
+   :no-members:
+   :no-index:
+```
 
 Here is an example of how to use the `ATBWindPlantCostModel` model in the `tech_config.yaml` file:
 

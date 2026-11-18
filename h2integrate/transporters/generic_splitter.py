@@ -12,6 +12,9 @@ class GenericSplitterPerformanceConfig(BaseConfig):
 
     Fields include `split_mode`, `commodity`, `commodity_rate_units`,
     `fraction_to_priority_tech`, and `prescribed_commodity_to_priority_tech`.
+
+    See :class:`GenericSplitterPerformanceModel` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     split_mode: str = field(
@@ -57,7 +60,7 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
     - Prescribed commodity splitting: send a prescribed amount to the priority
         technology, with the remainder to the other technology.
 
-    The ``priority_tech`` parameter determines which technology receives the
+    The order of downstream connections determines which technology receives the
     primary allocation. The outputs are:
 
     - ``{commodity}_out1``: commodity sent to the first technology.
@@ -65,6 +68,9 @@ class GenericSplitterPerformanceModel(om.ExplicitComponent):
 
     This component is purposefully simple; a more realistic case might include
     losses or other considerations from system components.
+
+    See :class:`GenericSplitterPerformanceConfig` and
+    :doc:`/technology_models/combiners_and_splitters`.
     """
 
     _time_step_bounds = (

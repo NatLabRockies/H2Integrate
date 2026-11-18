@@ -114,10 +114,8 @@ def test_match_shape_validator(subtests):
     with subtests.test("Shapes don't match and fail"):
         msg = r"Shape of 'field2' \(4,\) does not match 'field1' \(3,\)."
         with pytest.raises(ValueError, match=msg):
-            demo = ShapeValidatorConfig(field1=[1, 2, 3], field2=[-1, -3, 20, 2])
-            assert demo.field1.shape == demo.field2.shape
+            ShapeValidatorConfig(field1=[1, 2, 3], field2=[-1, -3, 20, 2])
 
         msg = r"Shape of 'field2' \(2,\) does not match 'field1' \(3,\)."
         with pytest.raises(ValueError, match=msg):
-            demo = ShapeValidatorConfig(field1=[1, 2, 3], field2=[-1, 2])
-            assert demo.field1.shape == demo.field2.shape
+            ShapeValidatorConfig(field1=[1, 2, 3], field2=[-1, 2])

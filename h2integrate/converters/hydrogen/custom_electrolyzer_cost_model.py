@@ -10,6 +10,8 @@ from h2integrate.converters.hydrogen.electrolyzer_baseclass import ElectrolyzerC
 class CustomElectrolyzerCostModelConfig(CostModelBaseConfig):
     """Configuration class for the CustomElectrolyzerCostModel.
 
+    See :class:`CustomElectrolyzerCostModel` and :doc:`/technology_models/pem_electrolyzer`.
+
     Attributes:
         capex_USD_per_kW (float): capital cost of electrolyzer system in USD/kW
         fixed_om_USD_per_kW_per_year (float): fixed annual operating cost of
@@ -26,6 +28,8 @@ class CustomElectrolyzerCostModelConfig(CostModelBaseConfig):
 class CustomElectrolyzerCostModel(ElectrolyzerCostBaseClass):
     """
     An OpenMDAO component that computes the cost of a PEM electrolyzer.
+
+    See :class:`CustomElectrolyzerCostModelConfig` and :doc:`/technology_models/pem_electrolyzer`.
     """
 
     _time_step_bounds = (

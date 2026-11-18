@@ -3,7 +3,6 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
-from h2integrate import ROOT_DIR
 from h2integrate.converters.hydrogen.geologic.simple_natural_geoh2 import (
     NaturalGeoH2PerformanceModel,
 )
@@ -97,13 +96,10 @@ def aspen_geoh2_config():
 
 
 @fixture
-def geologic_data():
-    input_dir = ROOT_DIR / "converters" / "hydrogen" / "geologic" / "inputs"
-    perf_out_fname = "aspen_perf_coeffs_test.csv"
-    cost_out_fname = "aspen_cost_coeffs_test.csv"
-    yield input_dir, perf_out_fname, cost_out_fname
-    (input_dir / perf_out_fname).unlink(missing_ok=True)
-    (input_dir / cost_out_fname).unlink(missing_ok=True)
+def geologic_data(tmp_path):
+    perf_out_fname = str(tmp_path / "aspen_perf_coeffs_test.csv")
+    cost_out_fname = str(tmp_path / "aspen_cost_coeffs_test.csv")
+    return tmp_path, perf_out_fname, cost_out_fname
 
 
 @pytest.mark.regression

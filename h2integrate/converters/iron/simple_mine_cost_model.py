@@ -52,6 +52,8 @@ class SimpleIronMineCostComponentConfig(BaseConfig):
             based on the mine name.
         longitude (float): longitude of the mine location. If not provided, it will be set
             based on the mine name.
+
+    See :class:`SimpleIronMineCostComponent` and :doc:`/technology_models/iron_mine`.
     """
 
     max_ore_production_rate_tonnes_per_hr: float = field()
@@ -93,6 +95,11 @@ class SimpleIronMineCostComponentConfig(BaseConfig):
 
 @register
 class SimpleIronMineCostComponent(CostModelBaseClass):
+    """Estimate pellet mine capital and variable costs from reference-mine coefficients.
+
+    See :class:`SimpleIronMineCostComponentConfig` and :doc:`/technology_models/iron_mine`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

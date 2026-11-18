@@ -143,17 +143,10 @@ def test_grid_performance_outputs(plant_config, subtests):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("n_timesteps", [10])
-def test_buying_electricity(plant_config, n_timesteps):
-    """Test buying electricity from grid (electricity flows out)."""
+def test_grid_buying_and_selling(plant_config, n_timesteps, subtests):
+    """Exercise buying and selling independently and simultaneously across the limit."""
     prob = om.Problem()
-
-    tech_config = {
-        "model_inputs": {
-            "shared_parameters": {
-                "interconnection_size": 50000.0  # 50 MW
-            }
-        }
-    }
+    tech_config = {"model_inputs": {"shared_parameters": {"interconnection_size": 100.0}}}
 
     prob.model.add_subsystem(
         "grid",
@@ -162,154 +155,35 @@ def test_buying_electricity(plant_config, n_timesteps):
 
     prob.setup()
 
-    # Set demand below interconnection limit
-    demand = np.full(n_timesteps, 30000.0)  # 30 MW demand
-    prob.set_val("grid.electricity_command_value", demand)
+    demand = [0, 40, 100, 120, 0, 0, 30, 130, 50, 0]
+    supply = [0, 0, 0, 0, 40, 120, 30, 50, 130, 100]
+    prob.set_val("grid.electricity_command_value", demand, units="kW")
+    prob.set_val("grid.electricity_in", supply, units="kW")
 
     prob.run_model()
 
-    # Should get full demand since it's below interconnection limit
-    electricity_out = prob.get_val("grid.electricity_out")
-    np.testing.assert_array_almost_equal(electricity_out, demand)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("n_timesteps", [10])
-def test_buying_with_interconnection_limit(plant_config, n_timesteps):
-    """Test that buying is limited by interconnection size."""
-    prob = om.Problem()
-
-    interconnection_size = 40000.0  # 40 MW
-    tech_config = {
-        "model_inputs": {"shared_parameters": {"interconnection_size": interconnection_size}}
-    }
-
-    prob.model.add_subsystem(
-        "grid",
-        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
-    )
-
-    prob.setup()
-
-    # Set demand above interconnection limit
-    demand = np.full(n_timesteps, 60000.0)  # 60 MW demand
-    prob.set_val("grid.electricity_command_value", demand)
-
-    prob.run_model()
-
-    # Should be limited to interconnection size
-    electricity_out = prob.get_val("grid.electricity_out")
-    np.testing.assert_array_almost_equal(
-        electricity_out, np.full(n_timesteps, interconnection_size)
-    )
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("n_timesteps", [10])
-def test_selling_electricity(plant_config, n_timesteps):
-    """Test selling electricity to grid (electricity flows in)."""
-    prob = om.Problem()
-
-    tech_config = {
-        "model_inputs": {
-            "shared_parameters": {
-                "interconnection_size": 100000.0  # 100 MW
-            }
-        }
-    }
-
-    prob.model.add_subsystem(
-        "grid",
-        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
-    )
-
-    prob.setup()
-
-    # Set electricity flowing into grid
-    electricity_in = np.full(n_timesteps, 50000.0)  # 50 MW
-    prob.set_val("grid.electricity_in", electricity_in)
-
-    prob.run_model()
-
-    # The electricity_in represents what's being sold (no separate output needed)
-    # Just verify it was accepted
-    actual_in = prob.get_val("grid.electricity_in")
-    np.testing.assert_array_almost_equal(actual_in, electricity_in)
-
-    # The headroom should be the difference between electricity_in and the rating
-    headroom = prob.get_val("grid.electricity_sell_headroom")
-    np.testing.assert_array_almost_equal(
-        headroom,
-        tech_config["model_inputs"]["shared_parameters"]["interconnection_size"] - electricity_in,
-    )
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("n_timesteps", [10])
-def test_simultaneous_buy_and_sell(plant_config, n_timesteps):
-    """Test that grid can handle both buying and selling simultaneously."""
-    prob = om.Problem()
-
-    tech_config = {
-        "model_inputs": {
-            "shared_parameters": {
-                "interconnection_size": 75000.0  # 75 MW
-            }
-        }
-    }
-
-    prob.model.add_subsystem(
-        "grid",
-        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
-    )
-
-    prob.setup()
-
-    # Set both flows
-    electricity_in = np.full(n_timesteps, 30000.0)  # 30 MW in
-    electricity_demand = np.full(n_timesteps, 40000.0)  # 40 MW out
-
-    prob.set_val("grid.electricity_in", electricity_in)
-    prob.set_val("grid.electricity_command_value", electricity_demand)
-
-    prob.run_model()
-
-    electricity_out = prob.get_val("grid.electricity_out")
-    np.testing.assert_array_almost_equal(electricity_out, electricity_demand)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("n_timesteps", [10])
-def test_varying_demand_profile(plant_config, n_timesteps):
-    """Test with time-varying demand profile."""
-    prob = om.Problem()
-
-    tech_config = {"model_inputs": {"shared_parameters": {"interconnection_size": 100000.0}}}
-
-    prob.model.add_subsystem(
-        "grid",
-        GridPerformanceModel(driver_config={}, plant_config=plant_config, tech_config=tech_config),
-    )
-
-    prob.setup()
-
-    # Create varying demand profile
-    demand = np.array([10000, 20000, 30000, 50000, 70000, 90000, 110000, 80000, 60000, 40000])
-    prob.set_val("grid.electricity_command_value", demand)
-
-    prob.run_model()
-
-    electricity_out = prob.get_val("grid.electricity_out")
-    # Values above 100000 should be clipped
-    expected = np.clip(demand, 0, 100000)
-    np.testing.assert_array_almost_equal(electricity_out, expected)
-
-    # The output headroom should be the difference between electricity_out and the rating
-    headroom = prob.get_val("grid.electricity_headroom")
-    np.testing.assert_array_almost_equal(
-        headroom,
-        tech_config["model_inputs"]["shared_parameters"]["interconnection_size"] - electricity_out,
-    )
+    with subtests.test("bought electricity and unmet demand"):
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_out"), [0, 40, 100, 100, 0, 0, 30, 100, 50, 0]
+        )
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_unmet_demand"), [0, 0, 0, 20, 0, 0, 0, 30, 0, 0]
+        )
+    with subtests.test("sold electricity and excess"):
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_sold"), [0, 0, 0, 0, 40, 100, 30, 50, 100, 100]
+        )
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_excess"), [0, 0, 0, 0, 0, 20, 0, 0, 30, 0]
+        )
+    with subtests.test("buy and sell headroom"):
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_headroom"), [100, 60, 0, 0, 100, 100, 70, 0, 50, 100]
+        )
+        np.testing.assert_array_equal(
+            prob.get_val("grid.electricity_sell_headroom"),
+            [100, 100, 100, 100, 60, 0, 70, 50, 0, 0],
+        )
 
 
 @pytest.mark.unit

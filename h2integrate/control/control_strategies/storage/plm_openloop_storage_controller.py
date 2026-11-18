@@ -70,6 +70,8 @@ class PeakLoadManagementHeuristicOpenLoopStorageControllerConfig(OpenLoopControl
             consecutive retained peak events. A ``ValueError`` is raised during setup if selected
             peaks violate this constraint. Same format as ``advance_discharge_period``.
 
+    See :class:`PeakLoadManagementHeuristicOpenLoopStorageController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     require_storage_parameters = True
@@ -107,6 +109,9 @@ class PeakLoadManagementHeuristicOpenLoopStorageController(OpenLoopControlBase):
 
     The controller uses an open-loop architecture where peak discharge/charge decisions are
     pre-planned during setup() rather than dynamically optimized during compute().
+
+    See :class:`PeakLoadManagementHeuristicOpenLoopStorageControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     def setup(self):

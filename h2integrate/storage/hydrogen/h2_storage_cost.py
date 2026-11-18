@@ -30,6 +30,10 @@ class HydrogenStorageBaseCostModelConfig(BaseConfig):
             Default is $1200 (2013 dollars) from HDSAM, converted to 2018 dollars using CEPCI.
         cg_capex_per_kg_700_bar (float): Capital cost per kg for compressed gas storage at 700 bar
             Default is $1800 (2013 dollars) from HDSAM, converted to 2018 dollars using CEPCI.
+
+    See :class:`LinedRockCavernStorageCostModel`, :class:`SaltCavernStorageCostModel`,
+    :class:`PipeStorageCostModel`, :class:`CompressedGasStorageCostModel`, and
+    :doc:`/storage/hydrogen_storage`.
     """
 
     max_capacity: float | None = field(default=None)
@@ -170,6 +174,8 @@ class LinedRockCavernStorageCostModel(HydrogenStorageBaseCostModel):
 
     Costs are in 2018 USD. Operational dynamics are not yet included.
 
+    See :class:`HydrogenStorageBaseCostModelConfig` and :doc:`/storage/hydrogen_storage`.
+
     References:
         - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
         - [2] Papadias 2021: Bulk Hydrogen as Function of Capacity.docx documentation at
@@ -304,6 +310,8 @@ class SaltCavernStorageCostModel(HydrogenStorageBaseCostModel):
     """Capital and operational cost model for salt cavern hydrogen storage.
 
     Costs are in 2018 USD. Operational dynamics are not yet included.
+
+    See :class:`HydrogenStorageBaseCostModelConfig` and :doc:`/storage/hydrogen_storage`.
 
     References:
         - [1] Papadias 2021: https://www.sciencedirect.com/science/article/pii/S0360319921030834?via%3Dihub
@@ -440,6 +448,8 @@ class PipeStorageCostModel(HydrogenStorageBaseCostModel):
 
     Costs are in 2018 USD. Operational dynamics and physical size (footprint and
     mass) are not yet included.
+
+    See :class:`HydrogenStorageBaseCostModelConfig` and :doc:`/storage/hydrogen_storage`.
 
     Notes:
         - Oversize pipe: pipe OD = 24" schedule 60 [1].
@@ -592,6 +602,8 @@ class CompressedGasStorageCostModel(HydrogenStorageBaseCostModel):
     the HDSAM that relate to filling and storage, and ignoring the costs related to truck loading.
 
     Costs have been converted to 2018 costs to match the models above using CEPCI values in HDSAM.
+
+    See :class:`HydrogenStorageBaseCostModelConfig` and :doc:`/storage/hydrogen_storage`.
 
     References:
         [1] HDSAM V5.5 Compressed Gas H2 Terminal: https://hdsam.es.anl.gov/index.php?content=hdsam

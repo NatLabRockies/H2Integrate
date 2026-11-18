@@ -17,6 +17,8 @@ from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 class ElectricArcFurnacePerformanceBaseConfig(BaseConfig):
     """Configuration baseclass for ElectricArcFurnacePlantBasePerformanceComponent.
 
+    See :doc:`/technology_models/steel_eaf`.
+
     Attributes:
         steel_production_rate_tonnes_per_hr (float): capacity of the steel processing plant
             in units of metric tonnes of steel produced per hour.
@@ -276,6 +278,8 @@ class ElectricArcFurnacePlantBasePerformanceComponent(PerformanceModelBaseClass)
 @define
 class ElectricArcFurnaceCostBaseConfig(CostModelBaseConfig):
     """Configuration baseclass for ElectricArcFurnacePlantBaseCostComponent.
+
+    See :doc:`/technology_models/steel_eaf`.
 
     Attributes:
         steel_production_rate_tonnes_per_hr (float): capacity of the steel processing plant

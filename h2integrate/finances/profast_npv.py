@@ -17,6 +17,9 @@ class ProFastNPV(ProFastBase):
     commodity and its sell price. The NPV output reflects the present value of future
     cash flows, given the financial configuration of the plant.
 
+    See :class:`~h2integrate.finances.profast_baseclass.ProFastBase` and
+    :doc:`/finance_models/ProFastNPV`.
+
     Attributes:
         output_txt (str): Label used for naming outputs based on commodity type.
         lco_units (str): Units for pricing inputs (USD/kg or USD/kWh, depending on commodity).

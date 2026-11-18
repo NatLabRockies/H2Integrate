@@ -16,6 +16,8 @@ class GridPerformanceModelConfig(BaseConfig):
 
     Attributes:
         interconnection_size: Maximum power capacity for grid connection in kW
+
+    See :class:`GridPerformanceModel` and :doc:`/technology_models/grid`.
     """
 
     interconnection_size: float = field()  # kW
@@ -48,6 +50,9 @@ class GridPerformanceModel(PerformanceModelBaseClass):
     Outputs
         electricity_out (array): Power flowing out of the grid (buying) (kW).
         electricity_sold (array): Power sold to the grid (kW).
+
+    See :class:`GridPerformanceModelConfig` and :doc:`/technology_models/grid` for all
+    inputs, outputs, and control behavior.
     """
 
     _time_step_bounds = (
@@ -224,6 +229,10 @@ class GridCostModelConfig(CostModelBaseConfig):
         fixed_interconnection_cost: One-time fixed cost regardless of size ($)
         electricity_buy_price: Price to buy electricity from grid ($/kWh), optional
         electricity_sell_price: Price to sell electricity to grid ($/kWh), optional
+        buy_price_mode: Buy-price mode: per_timestep, per_year, or constant.
+        sell_price_mode: Sell-price mode: per_timestep, per_year, or constant.
+
+    See :class:`GridCostModel` and :doc:`/technology_models/grid`.
     """
 
     interconnection_size: float = field()  # kW
@@ -254,6 +263,8 @@ class GridCostModel(CostModelBaseClass):
 
     This model is compatible with time steps ranging from 5-minutes to 1-hour.
 
+    See :class:`GridCostModelConfig` and :doc:`/technology_models/grid` for price modes,
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (

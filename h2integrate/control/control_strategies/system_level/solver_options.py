@@ -25,6 +25,8 @@ class SLCSolverOptionsConfig(BaseConfig):
         iprint: Solver print level (0 = silent, 2 = verbose).
         solver_option_kwargs: Additional keyword arguments passed directly to the
             solver's ``options`` dict.
+
+    See :doc:`/control/system_level_control/system_level_control` for system-level control.
     """
 
     solver_name: str = field(

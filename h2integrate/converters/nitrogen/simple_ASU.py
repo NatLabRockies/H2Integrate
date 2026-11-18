@@ -23,7 +23,7 @@ class SimpleASUPerformanceConfig(BaseConfig):
             size the system from user input (``rated_N2_kg_pr_hr`` or ``ASU_rated_power_kW``).
         rated_N2_kg_pr_hr (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
             ``size_from_N2_demand`` is False and ASU_rated_power_kW is not input.
-        ASU_rated_power_kW (float | None): Rated capacity of ASU in kg-N2/hour. Only required if
+        ASU_rated_power_kW (float | None): Rated capacity of ASU in kW. Only required if
             ``size_from_N2_demand`` is False and ``rated_N2_kg_pr_hr`` is not input.
         efficiency_kWh_pr_kg_N2 (float): efficiency of the ASU in kWh/kg-N2, defaults to 0.29.
             Should be between 0.1 and 0.5. Some reference efficiencies are::
@@ -36,6 +36,8 @@ class SimpleASUPerformanceConfig(BaseConfig):
             Defaults to 0.2096.
         Ar_fraction_in_air (float, optional): argon content of input air stream as mole fraction.
             Defaults to 0.0093.
+
+    See :class:`SimpleASUPerformanceModel` and :doc:`/technology_models/nitrogen_asu`.
     """
 
     size_from_N2_demand: bool = field()
@@ -72,6 +74,9 @@ class SimpleASUPerformanceConfig(BaseConfig):
 class SimpleASUPerformanceModel(PerformanceModelBaseClass):
     """Simple linear converter to model nitrogen production from an
     Air Separation Unit.
+
+    See :class:`SimpleASUPerformanceConfig`, :class:`SimpleASUCostModel`, and
+    :doc:`/technology_models/nitrogen_asu`.
     """
 
     _time_step_bounds = (
@@ -267,6 +272,11 @@ def make_cost_unit_multiplier(unit_str):
 
 @define(kw_only=True)
 class SimpleASUCostConfig(CostModelBaseConfig):
+    """Cost parameters for :class:`SimpleASUCostModel`.
+
+    See :doc:`/technology_models/nitrogen_asu` for the supported cost bases.
+    """
+
     capex_usd_per_unit: float = field()
 
     capex_unit: str = field(
@@ -295,6 +305,12 @@ class SimpleASUCostConfig(CostModelBaseConfig):
 
 @register
 class SimpleASUCostModel(CostModelBaseClass):
+    """Estimate air separation costs from rated capacity.
+
+    See :class:`SimpleASUCostConfig`, :class:`SimpleASUPerformanceModel`, and
+    :doc:`/technology_models/nitrogen_asu`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

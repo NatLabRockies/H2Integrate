@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -327,9 +325,9 @@ def test_ammonia_synloop_limiting_cases(synloop_config, subtests):
 
 
 @pytest.mark.regression
-def test_size_mode_outputs(subtests, temp_dir):
+def test_size_mode_outputs(subtests, temp_dir, monkeypatch):
     # Change the current working directory to the example's directory
-    os.chdir(EXAMPLE_DIR / "25_sizing_modes")
+    monkeypatch.chdir(EXAMPLE_DIR / "25_sizing_modes")
 
     # Load the 'base' configs needed to create the H2I model
     driver_config = load_driver_yaml(EXAMPLE_DIR / "25_sizing_modes" / "driver_config.yaml")

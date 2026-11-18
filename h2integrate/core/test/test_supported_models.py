@@ -29,8 +29,12 @@ def test_supported_models(subtests):
             "GenericCombinerPerformanceModel",
             "GasStreamCombinerPerformanceModel",
             "GenericTransporterPerformanceModel",
+            "SummaryStatisticsPerformanceModel",
+            "ThresholdStatisticsPerformanceModel",
         }
         assert no_replacement_schedule_models == {
             "IronTransportPerformanceComponent",
             "GenericTransporterPerformanceModel",
+            "SummaryStatisticsPerformanceModel",
+            "ThresholdStatisticsPerformanceModel",
         }

@@ -34,6 +34,8 @@ class PLMHeuristicOpenLoopConverterControllerConfig(OpenLoopControlBaseConfig):
             ``demand_profile_upstream``. One of ``"commodity"`` or ``"price"``.
             Defaults to ``"commodity"``.
 
+    See :class:`PLMHeuristicOpenLoopConverterController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     demand_profile_peak_cutoff: int | float = field()
@@ -56,6 +58,9 @@ class PLMHeuristicOpenLoopConverterController(OpenLoopControlBase):
 
     The resulting command profile is written to ``<commodity>_command_value`` and
     can be consumed by converter performance models.
+
+    See :class:`PLMHeuristicOpenLoopConverterControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     _time_step_bounds = (

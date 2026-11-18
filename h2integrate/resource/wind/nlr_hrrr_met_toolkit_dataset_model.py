@@ -16,6 +16,8 @@ class WTKHRRRMETDatasetH5Config(ResourceBaseH5Config):
     """Configuration class to access wind resource data from NLR datasets.
     Resource data is hourly and available from 2015-2025.
 
+    See :class:`WTKHRRRMETDatasetH5` and :doc:`/resource/wind_index`.
+
     Args:
         resource_year (int): Year to use for resource data.
             Must been between 2015 and 2025 (inclusive).
@@ -38,6 +40,11 @@ class WTKHRRRMETDatasetH5Config(ResourceBaseH5Config):
 
 @register
 class WTKHRRRMETDatasetH5(WindResourceBase, ResourceBaseH5Model):
+    """Load HRRR MET HDF5 data using :class:`WTKHRRRMETDatasetH5Config`.
+
+    See :doc:`/resource/wind_index`.
+    """
+
     def setup(self):
         self.units_translation = {
             # data units: openmdao compatible units

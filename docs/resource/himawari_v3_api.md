@@ -7,6 +7,14 @@ There are three datasets that use the [NSRDB Himawari PSM v3 API](https://develo
 - "HimawariTMYSolarAPI"
     - supports solar resource data for typical meteorological year (TMY), typical global horizontal irradiance year (TGY), and typical direct normal irradiance year (TDY)
 
+API and configuration references:
+
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari7SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.Himawari8SolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_himawari_api_models.HimawariTMYSolarAPIConfig` |
+
 These datasets allow for resource data to be downloaded for **locations** within Asia, Australia, and the Pacific.
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |

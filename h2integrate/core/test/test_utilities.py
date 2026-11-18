@@ -59,9 +59,7 @@ def temp_resource_dir_env():
 
 
 @pytest.mark.unit
-def test_get_path(subtests):
-    current_cwd = Path.cwd()
-
+def test_get_path(subtests, monkeypatch):
     # 1. As an absolute path.
     file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = get_path(file_abs_path)
@@ -69,14 +67,14 @@ def test_get_path(subtests):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = get_path(file_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for file"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR)
+    monkeypatch.chdir(ROOT_DIR)
     file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = get_path(file_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for file"):
@@ -89,26 +87,22 @@ def test_get_path(subtests):
         assert dir_abs_out_path == dir_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     dir_cwd_rel_path = "."
     dir_cwd_rel_out_path = get_path(dir_cwd_rel_path)
     with subtests.test("get_path: filepath relative to cwd for folder"):
         assert dir_cwd_rel_out_path == dir_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR)
+    monkeypatch.chdir(ROOT_DIR)
     dir_h2i_rel_path = "examples/09_co2/direct_ocean_capture"
     dir_h2i_rel_out_path = get_path(dir_h2i_rel_path)
     with subtests.test("get_path: filepath relative to H2I package for folder"):
         assert dir_h2i_rel_out_path == dir_abs_path
 
-    os.chdir(current_cwd)
-
 
 @pytest.mark.unit
-def test_find_file(subtests):
-    current_cwd = Path.cwd()
-
+def test_find_file(subtests, monkeypatch):
     # 1. As an absolute path.
     file_abs_path = EXAMPLE_DIR / "09_co2" / "direct_ocean_capture" / "tech_config.yaml"
     file_abs_out_path = find_file(file_abs_path)
@@ -116,14 +110,14 @@ def test_find_file(subtests):
         assert file_abs_out_path == file_abs_path
 
     # 2. Relative to the current working directory.
-    os.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
+    monkeypatch.chdir(EXAMPLE_DIR / "09_co2" / "direct_ocean_capture")
     file_cwd_rel_path = "tech_config.yaml"
     file_cwd_rel_out_path = find_file(file_cwd_rel_path)
     with subtests.test("find_file: filepath relative to cwd"):
         assert file_cwd_rel_out_path == file_abs_path
 
     # 3. Relative to the H2Integrate package.
-    os.chdir(ROOT_DIR / "core" / "inputs")
+    monkeypatch.chdir(ROOT_DIR / "core" / "inputs")
     file_h2i_rel_path = "examples/09_co2/direct_ocean_capture/tech_config.yaml"
     file_h2i_rel_out_path = find_file(file_h2i_rel_path)
     with subtests.test("find_file: filepath relative to H2I package"):
@@ -141,7 +135,6 @@ def test_find_file(subtests):
     file_root_in_rel_out_path = find_file(file_root_in_rel_path, root_folder=ex_root)
     with subtests.test("find_file: filepath relative (inside) to root_folder"):
         assert file_root_in_rel_out_path.resolve() == file_abs_path
-    os.chdir(current_cwd)
 
 
 @pytest.mark.unit
@@ -179,8 +172,8 @@ def test_check_data_dir_no_dir(subtests):
 
 
 @pytest.mark.unit
-def test_check_data_dir_relative_dir_exists(subtests):
-    os.chdir(ROOT_DIR.parent)
+def test_check_data_dir_relative_dir_exists(subtests, monkeypatch):
+    monkeypatch.chdir(ROOT_DIR.parent)
     relative_dir = "resource_files"
     expected_dir = RESOURCE_DEFAULT_DIR
     output_dir = check_resource_dir(data_dir=relative_dir)

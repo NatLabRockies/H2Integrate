@@ -11,9 +11,11 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
     `GOES Aggregated PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
 
+    See :class:`GOESAggregatedSolarAPI` and :doc:`/resource/solar_index`.
+
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 1998 and 2024 (inclusive).
+            Must been between 1998 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -25,7 +27,7 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(1998), validators.le(2025)))
     dataset_desc: str = "goes_aggregated_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [30, 60])
@@ -33,6 +35,11 @@ class GOESAggregatedSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class GOESAggregatedSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES aggregated data using :class:`GOESAggregatedSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -52,9 +59,11 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
     This dataset covers regions within the continental United States at a spatial resolution of
     2 km.
 
+    See :class:`GOESConusSolarAPI` and :doc:`/resource/solar_index`.
+
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 2018 and 2024 (inclusive).
+            Must been between 2018 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -66,7 +75,7 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2025)))
     dataset_desc: str = "goes_conus_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [5, 15, 30, 60])
@@ -74,6 +83,11 @@ class GOESConusSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class GOESConusSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES CONUS data using :class:`GOESConusSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -94,9 +108,11 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
     `GOES Full Disc PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 2 km.
 
+    See :class:`GOESFullDiscSolarAPI` and :doc:`/resource/solar_index`.
+
     Args:
         resource_year (int): Year to use for resource data.
-            Must been between 2018 and 2024 (inclusive).
+            Must been between 2018 and 2025 (inclusive).
 
     Attributes:
         dataset_desc (str): description of the dataset, used in file naming.
@@ -108,7 +124,7 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
 
     """
 
-    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2024)))
+    resource_year: int = field(converter=int, validator=(validators.ge(2018), validators.le(2025)))
     dataset_desc: str = "goes_fulldisc_v4"
     resource_type: str = "solar"
     valid_intervals: list[int] = field(factory=lambda: [10, 30, 60])
@@ -116,6 +132,11 @@ class GOESFullDiscSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class GOESFullDiscSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES full-disc data using :class:`GOESFullDiscSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 
@@ -135,6 +156,8 @@ class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
     """Configuration class to download solar resource data from
     `GOES TMY PSM v4 <https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/>`_.
     This dataset covers regions within North and South America at a spatial resolution of 4 km.
+
+    See :class:`GOESTMYSolarAPI` and :doc:`/resource/solar_index`.
 
     Args:
         resource_year (str): Year to use for resource data. Can be any of the following:
@@ -182,6 +205,11 @@ class GOESTMYSolarAPIConfig(ResourceBaseAPIConfig):
 
 @register
 class GOESTMYSolarAPI(NLRDeveloperAPISolarResourceBase):
+    """Load GOES typical-year data using :class:`GOESTMYSolarAPIConfig`.
+
+    See :doc:`/resource/goes_solar_v4_api`.
+    """
+
     def setup(self):
         resource_specs = self.helper_setup_method()
 

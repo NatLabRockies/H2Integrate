@@ -40,6 +40,8 @@ class NumpyFinancialNPVConfig(BaseConfig):
     When ``inflation_rate`` is 0 (the default), the real rates are used as-is
     (and should be nominal rates if inflation effects are desired).
 
+    See :class:`NumpyFinancialNPV` and :doc:`/finance_models/numpy_financial_npv`.
+
     Attributes:
         plant_life (int): operating life of plant in years
         real_discount_rate (float): real equity rate (cost of equity), expressed as
@@ -97,6 +99,8 @@ class NumpyFinancialNPV(om.ExplicitComponent):
     `plant_config`. By convention, investments (CAPEX, OPEX, refurbishment) are
     treated as negative cash flows, while revenues from commodity sales are
     positive. This follows the NumPy Financial convention:
+
+    See :class:`NumpyFinancialNPVConfig` and :doc:`/finance_models/numpy_financial_npv`.
 
     Reference:
         NumPy Financial NPV documentation:

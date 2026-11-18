@@ -17,6 +17,8 @@ from h2integrate.tools.inflation.inflate import inflate_cpi, inflate_cepci
 class IronReductionPerformanceBaseConfig(BaseConfig):
     """Configuration baseclass for IronReductionPlantBasePerformanceComponent.
 
+    See :doc:`/technology_models/iron_dri`.
+
     Attributes:
         sponge_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant
             in units of metric tonnes of sponge iron produced per hour.
@@ -271,6 +273,8 @@ class IronReductionPlantBasePerformanceComponent(PerformanceModelBaseClass):
 @define
 class IronReductionCostBaseConfig(CostModelBaseConfig):
     """Configuration baseclass for IronReductionPlantBaseCostComponent.
+
+    See :doc:`/technology_models/iron_dri`.
 
     Attributes:
         sponge_iron_production_rate_tonnes_per_hr (float): capacity of the iron processing plant

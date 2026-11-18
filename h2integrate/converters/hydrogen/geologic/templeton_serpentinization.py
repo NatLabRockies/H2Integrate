@@ -21,6 +21,8 @@ class StimulatedGeoH2PerformanceConfig(GeoH2SubsurfacePerformanceConfig):
 
     Defines performance-related parameters specific to *stimulated* geologic hydrogen systems.
 
+    See :class:`StimulatedGeoH2PerformanceModel` and :doc:`/technology_models/geologic_hydrogen`.
+
     Attributes:
         olivine_phase_vol (float): Volume percent of olivine in the formation [%].
         olivine_fe_ii_conc (float): Mass percent of iron (II) in the olivine [%].
@@ -52,6 +54,8 @@ class StimulatedGeoH2PerformanceModel(GeoH2SubsurfacePerformanceBaseClass):
 
         - Mathur et al. (Stanford): https://doi.org/10.31223/X5599G
         - Templeton et al. (UC Boulder): https://doi.org/10.3389/fgeoc.2024.1366268
+
+    See :doc:`/technology_models/geologic_hydrogen`.
 
     All model inputs are provided through :class:`StimulatedGeoH2PerformanceConfig`.
 

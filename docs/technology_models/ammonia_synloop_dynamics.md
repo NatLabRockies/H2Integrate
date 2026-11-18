@@ -31,29 +31,15 @@ test suite, plotting the production response for an off-on cycle.
 
 ## Configuration parameters
 
-The following keys can be added to the `performance_parameters` block of an ammonia tech
-config to impact dynamic behavior:
+Dynamic constraints are configured in the `performance_parameters` block using the synloop
+performance configuration below. By default, no dynamic constraints are imposed. The
+[worked example](#synloop-dynamics-worked-example) illustrates how the settings affect production.
 
-
-```{note}
-If none of these parameters are specified in the configuration for the ammonia technology, the default behavior is to include no dynamic constraints:
-- `turndown_ratio` defaults to 0.0
-- `ramp_up_rate_fraction` and `ramp_down_rate_fraction` both default to 1.0
-- `include_cold_start` and `include_warm_start` both default to False and the corresponding start-up delay parameters default to None.
+```{eval-rst}
+.. autoclass:: h2integrate.converters.ammonia.ammonia_synloop_performance.AmmoniaSynLoopPerformanceConfig
+   :no-members:
+   :no-index:
 ```
-
-
-| Parameter | Units | Description |
-| --- | --- | --- |
-| `turndown_ratio` | fraction in [0, 1] | Minimum production while the plant is "on", as a fraction of rated capacity. Below this value the plant is "off". |
-| `ramp_up_rate_fraction` | fraction in [0, 1] | Maximum hourly ramp-up rate, as a fraction of rated capacity per hour. |
-| `ramp_down_rate_fraction` | fraction in [0, 1] | Maximum hourly ramp-down rate, as a fraction of rated capacity per hour. |
-| `include_cold_start` | bool | Enable cold-start delay losses. |
-| `off_hours_cold_start` | hours | Minimum continuous off-time that triggers a cold-start delay. |
-| `cold_start_delay_hours` | hours | Duration of zero production immediately after a cold start. |
-| `include_warm_start` | bool | Enable warm-start delay losses. |
-| `off_hours_warm_start` | hours | Minimum continuous off-time that triggers a warm-start delay. |
-| `warm_start_delay_hours` | hours | Duration of zero (or partial) production after a warm start. |
 
 ### Order of Operations
 1. Apply the turndown floor
@@ -74,6 +60,7 @@ in proportion to the partial NH3 output, and positive ramp-down output below the
 turndown floor still consumes feedstock.
 ```
 
+(synloop-dynamics-worked-example)=
 ## Worked example
 
 The following snippet builds a small `AmmoniaSynLoopPerformanceModel` with one

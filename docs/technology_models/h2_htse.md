@@ -2,17 +2,17 @@
 
 The HTSE model in H2Integrate represents hydrogen production from high-temperature steam electrolysis using electricity and thermal input. In this model, HTSE is represented as a solid oxide electrolyzer cell (SOEC) process. It is implemented as two components:
 
-- `HTSEPerformanceModel`
-- `HTSECostModel`
+- {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModel`, configured
+  by {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModelConfig`
+- {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModel`, configured by
+  {py:class}`~h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModelConfig`
 
 The performance model converts electricity and heat into hydrogen, water demand, and operating signals for connected technologies. The cost model computes installed capital cost and fixed operating cost from installed HTSE size.
 
 ## Model Overview
 
-This is a simplified HTSE representation with constant nominal specific energy requirements:
-
-- `nominal_electricity_required` in `kWh/kg`
-- `nominal_heat_required` in `kWh/kg`
+This is a simplified HTSE representation with constant nominal specific energy requirements;
+see the [configuration reference](#htse-configuration-reference).
 
 At each timestep, hydrogen production is determined from:
 
@@ -27,7 +27,7 @@ The model also exposes internal operating signals that are useful for coupled sy
 - `heat_demand`
 - `electricity_demand`
 - `electricity_consumed`
-- `water_demand`
+- `water_consumed`
 
 ```{note}
 The current implementation uses `electricity_demand` to report installed electrical demand equal to nameplate size, while `electricity_consumed` reports the timestep electricity required by the energy balance. For coupled analyses, `electricity_consumed` is the more literal consumption signal.
@@ -55,7 +55,7 @@ $$
 \text{electrolyzer\_size\_mw} = n_\text{clusters} \times \text{cluster\_rating\_MW}
 $$
 
-The model supports additional sizing modes inherited from the resizeable performance base class:
+The model accepts additional sizing modes inherited from the resizeable performance base class:
 
 - `normal`
 - `resize_by_max_feedstock`
@@ -65,6 +65,10 @@ In the current implementation:
 
 - `resize_by_max_feedstock` supports sizing from `electricity`
 - `resize_by_max_commodity` supports sizing from `hydrogen`
+
+However, the current calculation overwrites the calculated resized value with
+`n_clusters * cluster_rating_MW` before computing outputs, so these modes do not change the
+reported installed size.
 
 When system-level control is enabled, hydrogen demand is taken from `hydrogen_command_value`. Otherwise, the model assumes demand equal to rated hydrogen production implied by installed electrical size.
 
@@ -84,12 +88,29 @@ $$
 
 Available heat is used first up to the requested `heat_demand`. The remaining required energy is supplied electrically when possible. Hydrogen production is then limited by the combined energy available and by the turndown threshold.
 
+`water_in` is declared but does not limit production. `water_consumed` is calculated from
+hydrogen production. `electricity_consumed` is the calculated electricity demand and can exceed
+the supplied electricity when supply is insufficient.
+
 ```{note}
 The current implementation is intentionally simple and should be interpreted as a reduced-order plant representation, not a detailed SOEC stack model with thermal transients, degradation coupling, startup dynamics, or detailed balance-of-plant behavior.
 ```
 
 ### API details
 For API details, see the [`HTSEPerformanceModel` and `HTSECostModel` API documentation](../_autosummary/h2integrate.converters.hydrogen.htse_electrolyzer).
+
+(htse-configuration-reference)=
+## Configuration reference
+
+```{eval-rst}
+.. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSEPerformanceModelConfig
+   :no-members:
+   :no-index:
+
+.. autoclass:: h2integrate.converters.hydrogen.htse_electrolyzer.HTSECostModelConfig
+   :no-members:
+   :no-index:
+```
 
 The nuclear heat and electricity integration is demonstrated in
 [Example 36: Nuclear Reactor and HTSE](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/36_nuclear_reactor_htse).

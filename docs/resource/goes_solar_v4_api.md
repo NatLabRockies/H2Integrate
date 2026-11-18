@@ -8,12 +8,21 @@ There are four datasets that use the [NSRDB GOES PSM v4 API](https://developer.n
 - "GOESTMYSolarAPI"
     - supports solar resource data for typical meteorological year (TMY), typical global horizontal irradiance year (TGY), and typical direct normal irradiance year (TDY)
 
+API and configuration references:
+
+| Model | Configuration |
+|---|---|
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESAggregatedSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESConusSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESFullDiscSolarAPIConfig` |
+| {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPI` | {py:class}`~h2integrate.resource.solar.nlr_developer_goes_api_models.GOESTMYSolarAPIConfig` |
+
 
 | Model      | Temporal resolution | Spatial resolution | Years covered | Regions | Website |
 | :--------- | :---------------: | :---------------: | :---------------: | :---------------: | :---------------: |
-| `GOESAggregatedSolarAPI`  | 30, 60 min  | 4 km | 1998-2024  | North America, South America | [GOES Aggregated](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/) |
-| `GOESConusSolarAPI`  | 5, 15, 30, 60 min  | 2 km | 2018-2024  | Continental United States | [GOES Conus](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/) |
-| `GOESFullDiscSolarAPI`  | 10, 30, 60 min  | 2 km | 2018-2024  | North America, South America |  [GOES Full disc](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) |
+| `GOESAggregatedSolarAPI`  | 30, 60 min  | 4 km | 1998-2025  | North America, South America | [GOES Aggregated](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-aggregated-v4-0-0-download/) |
+| `GOESConusSolarAPI`  | 5, 15, 30, 60 min  | 2 km | 2018-2025  | Continental United States | [GOES Conus](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-conus-v4-0-0-download/) |
+| `GOESFullDiscSolarAPI`  | 10, 30, 60 min  | 2 km | 2018-2025  | North America, South America |  [GOES Full disc](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-full-disc-v4-0-0-download/) |
 | `GOESTMYSolarAPI`  | 60 min  | 4 km | 2022-2024, for tmy, tdy and tgy  | North America, South America |  [GOES TMY](https://developer.nlr.gov/docs/solar/nsrdb/nsrdb-GOES-tmy-v4-0-0-download/) |
 
 

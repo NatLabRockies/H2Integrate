@@ -50,6 +50,7 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
             81% efficiency). Optional if `charge_efficiency` and `discharge_efficiency` are
             provided.
 
+    See :class:`StoragePerformanceModel` and :doc:`/storage/simple_generic_storage`.
     """
 
     commodity: str = field()
@@ -124,7 +125,11 @@ class StoragePerformanceModelConfig(StoragePerformanceBaseConfig):
 
 @register
 class StoragePerformanceModel(StoragePerformanceBase):
-    """OpenMDAO component for a storage component."""
+    """OpenMDAO component for a storage component.
+
+    See :class:`StoragePerformanceModelConfig` and :doc:`/storage/simple_generic_storage` for
+    configuration, controls, inputs, and outputs.
+    """
 
     _time_step_bounds = (
         1,

@@ -18,6 +18,8 @@ class DemandOpenLoopStorageControllerConfig(OpenLoopControlBaseConfig):
 
     This class defines the parameters required to configure the `DemandOpenLoopStorageController`.
 
+    See :class:`DemandOpenLoopStorageController` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     require_storage_parameters = True
@@ -44,6 +46,9 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
     The `DemandOpenLoopStorageController` computes the dispatch commands for a commodity storage
     system. It uses a demand profile and storage parameters to determine how much of the
     commodity to charge, discharge, or curtail at each time step.
+
+    See :class:`DemandOpenLoopStorageControllerConfig` and
+    :doc:`/control/technology_level_control/open-loop_controllers`.
     """
 
     _time_step_bounds = (
@@ -110,7 +115,7 @@ class DemandOpenLoopStorageController(OpenLoopControlBase):
             * ``<commodity>_in``: Timeseries of commodity available at each time step.
             * ``<commodity>_set_point``: Timeseries set-point profile.
             * ``max_charge_rate``: Maximum charge rate permitted.
-            * ``max_capacity``: Maximum total storage capacity.
+            * ``storage_capacity``: Maximum total storage capacity.
             * ``timestep_index``: Starting index for the component simulation.
 
         Outputs populated:

@@ -29,6 +29,8 @@ class ATBBatteryCostConfig(CostModelBaseConfig):
             max_capacity and max_charge_rate. Must have a base of Watts ('W').
         commodity_amount_units (str | None, optional): Units of the commodity as an amount
             (i.e., kW*h or kg). If not provided, defaults to commodity_rate_units*h.
+
+    See :class:`ATBBatteryCostModel` and :doc:`/storage/storage_models_index`.
     """
 
     energy_capex: float | int = field(validator=validators.ge(0))
@@ -60,6 +62,8 @@ class ATBBatteryCostModel(CostModelBaseClass):
     - Energy_CapEx: Battery Energy Cost (USD/kWh)
     - Power_CapEx: Battery Power Cost (USD/kW)
 
+    See :class:`ATBBatteryCostConfig` and :doc:`/storage/storage_models_index` for
+    configuration, inputs, and outputs.
     """
 
     _time_step_bounds = (

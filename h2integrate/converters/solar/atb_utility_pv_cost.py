@@ -19,6 +19,8 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
         opex_per_kWac_per_year (float|int): annual operating cost of solar-PV
             system in $/kW-AC/year
         cost_year (int): dollar year corresponding to input costs
+
+    See :class:`ATBUtilityPVCostModel` and :doc:`/technology_models/atb_costs_pv`.
     """
 
     capex_per_kWac: float | int = field(validator=validators.gt(0))
@@ -27,6 +29,11 @@ class ATBUtilityPVCostModelConfig(CostModelBaseConfig):
 
 @register
 class ATBUtilityPVCostModel(CostModelBaseClass):
+    """Estimate utility PV costs from AC capacity.
+
+    See :class:`ATBUtilityPVCostModelConfig` and :doc:`/technology_models/atb_costs_pv`.
+    """
+
     _time_step_bounds = (
         3600,
         3600,

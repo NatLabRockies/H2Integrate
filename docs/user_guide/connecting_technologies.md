@@ -86,6 +86,24 @@ Behavior depends on which side carries a slice:
 When the destination has a slice, it must (1) start at `0` (a non-zero start raises a `ValueError`) and (2) include the destination length, e.g. `[0:8760]`. The length is required because the input shape is not known until `prob.setup()` has run.
 ```
 
+##### Input-to-input connections (demand profiles)
+
+The `source_parameter` of a 3-element connection can be an input instead of an output, so the destination shares the source's value.
+For a demand component's `{commodity}_demand` input, H2Integrate sets the shared default from the `demand_profile` in the tech config.
+This is how a threshold statistics model (`ThresholdStatisticsPerformanceModel`) receives its threshold:
+
+```yaml
+technology_interconnections: [
+  ["electrical_load_demand", "threshold_stats", ["electricity_demand", "electricity_threshold"]],
+]
+```
+
+```{note}
+OpenMDAO needs one unambiguous default for an input shared by two connected inputs.
+H2Integrate only sets this default automatically for demand component inputs, so thresholds currently come only from demand components.
+For any other input-to-input connection, the two inputs must already have the same default value and units; otherwise OpenMDAO raises an error that the value is ambiguous, and the default has to be set with `set_input_defaults` on the model before setup.
+```
+
 ### Internal connection logic
 
 H2Integrate processes these connections in `h2integrate_model.py`: `connect_technologies()` handles `technology_interconnections`, `connect_sites_to_techs()` handles `site_to_tech_connections`, `connect_techs_to_finance()` wires technology costs into the finance groups, and `connect_dispatch_rules()` handles `tech_to_dispatch_connections`. For `technology_interconnections`, here's what happens internally:
@@ -222,6 +240,18 @@ For the splitter outputs, variables are indexed as `wellhead_gas_mixture:<var_na
 ### Example
 
 See [Example 32](https://github.com/NatLabRockies/H2Integrate/tree/main/examples/32_multivariable_streams) for a complete working example that demonstrates two gas producers with different properties feeding into a gas stream combiner, which then feeds a consumer.
+
+The example-only {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerPerformance`
+generates randomized stream properties using
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerPerformanceConfig`.
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerPerformance`
+receives the stream and reports hydrogen flow, total gas consumed, and mean temperature and
+pressure; it has no model-specific configuration. The corresponding fixed-cost components are
+{py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerCost`
+with {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasProducerCostConfig`
+and {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerCost`
+with {py:class}`~h2integrate.converters.natural_gas.dummy_gas_components.SimpleGasConsumerCostConfig`.
+These components illustrate connections and do not model physical equipment.
 
 (transport-connections)=
 ## Combiners, splitters, and transporters

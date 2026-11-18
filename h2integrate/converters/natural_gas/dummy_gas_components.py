@@ -31,6 +31,8 @@ class SimpleGasProducerPerformanceConfig(BaseConfig):
     """
     Configuration class for dummy gas producer performance model.
 
+    See :class:`SimpleGasProducerPerformance` and :doc:`/user_guide/connecting_technologies`.
+
     Attributes:
         base_flow_rate: Base gas flow rate in kg/h
         base_temperature: Base gas temperature in K
@@ -54,6 +56,9 @@ class SimpleGasProducerPerformanceConfig(BaseConfig):
 class SimpleGasProducerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas producer component that outputs a 'wellhead_gas_mixture' multivariable stream.
+
+    See :class:`SimpleGasProducerPerformanceConfig`, :class:`SimpleGasConsumerPerformance`,
+    and :doc:`/user_guide/connecting_technologies`.
 
     This component produces time-varying outputs for each constituent variable
     of the wellhead_gas_mixture stream (mass_flow, hydrogen_mass_fraction, oxygen_mass_fraction,
@@ -139,6 +144,8 @@ class SimpleGasConsumerPerformance(PerformanceModelBaseClass):
     """
     A dummy gas consumer component that takes in a 'wellhead_gas_mixture' multivariable stream.
 
+    See :class:`SimpleGasProducerPerformance` and :doc:`/user_guide/connecting_technologies`.
+
     This component demonstrates receiving all constituent variables of a
     wellhead_gas_mixture stream (mass_flow, hydrogen_mass_fraction, oxygen_mass_fraction,
     temperature, pressure) and performing simple calculations.
@@ -207,6 +214,8 @@ class SimpleGasProducerCostConfig(CostModelBaseConfig):
     """
     Configuration class for dummy gas producer cost model.
 
+    See :class:`SimpleGasProducerCost` and :doc:`/user_guide/connecting_technologies`.
+
     Attributes:
         capex: Capital expenditure in USD
         opex: Fixed operational expenditure in USD/year
@@ -220,6 +229,8 @@ class SimpleGasProducerCostConfig(CostModelBaseConfig):
 class SimpleGasProducerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas producer.
+
+    See :class:`SimpleGasProducerCostConfig` and :doc:`/user_guide/connecting_technologies`.
     """
 
     _time_step_bounds = (
@@ -244,6 +255,8 @@ class SimpleGasConsumerCostConfig(CostModelBaseConfig):
     """
     Configuration class for dummy gas consumer cost model.
 
+    See :class:`SimpleGasConsumerCost` and :doc:`/user_guide/connecting_technologies`.
+
     Attributes:
         capex: Capital expenditure in USD
         opex: Fixed operational expenditure in USD/year
@@ -257,6 +270,8 @@ class SimpleGasConsumerCostConfig(CostModelBaseConfig):
 class SimpleGasConsumerCost(CostModelBaseClass):
     """
     Simple cost model for the dummy gas consumer.
+
+    See :class:`SimpleGasConsumerCostConfig` and :doc:`/user_guide/connecting_technologies`.
     """
 
     _time_step_bounds = (

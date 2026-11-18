@@ -34,6 +34,7 @@ class HumbertEwinPerformanceComponentConfig(BaseConfig):
         ore_fe_wt_pct (float): The iron content of the ore coming in, expressed as a percentage.
         capacity_mw (float): The MW electrical capacity of the electrowinning plant.
 
+    See :class:`HumbertEwinPerformanceComponent` and :doc:`/technology_models/iron_ewin`.
     """
 
     electrolysis_type: str = field(
@@ -49,16 +50,16 @@ class HumbertEwinPerformanceComponentConfig(BaseConfig):
 class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
     """OpenMDAO component for the Humbert iron electrowinning performance model.
 
+    See :class:`HumbertEwinPerformanceComponentConfig` and :doc:`/technology_models/iron_ewin`.
+
     Attributes:
         OpenMDAO Inputs:
 
         electricity_in (array): Electric power input available in kW for each timestep.
         iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
         ore_fe_concentration (float): The iron content of the ore coming in, given as a percentage.
-        spec_energy_cons_fe (float): The specific electrical energy consumption required to win
-            pure iron (Fe) from iron ore. These are currently calculated as averages between the
-            high and low stated values in Table 10 of Humbert et al., but this is exposed as an
-            OpenMDAO variable to probe the effect of specific energy consumption on iron cost.
+        spec_energy_all (float): Total specific electrical energy required to win iron.
+        spec_energy_electrolysis (float): Specific energy for the electrolysis step.
         capacity (float): The electrical capacity of the electrowinning plant in MW.
         NaOH_in (array): Mass flow of NaOH available in kg/h for each timestep.
         CaCl2_in (array): Mass flow of CaCl2 available in kg/h for each timestep.
@@ -69,10 +70,10 @@ class HumbertEwinPerformanceComponent(PerformanceModelBaseClass):
 
         electricity_consumed (array): Electric power consumption in kW for each timestep.
         limiting_input (array): An array of integers indicating which input is the limiting factor
-            for iron production at each timestep: 0 = iron ore, 1 = electricity, 2 = capacity
+            for iron production: 0 = iron ore, 1 = electricity, 2 = NaOH or capacity, 3 = CaCl2.
         sponge_iron_out (array): Sponge iron production in kg/h for each timestep.
-        total_sponge_iron_produced (float): Total annual sponge iron production in kg/y.
-        output_capacity (float): Maximum possible annual sponge iron production in kg/y.
+        total_sponge_iron_produced (float): Total sponge iron production over the simulation in kg.
+        rated_sponge_iron_production (float): Rated iron production in kg/h.
         NaOH_consumed (array): Mass flow of NaOH consumed in kg/h for each timestep.
         CaCl2_consumed (array): Mass flow of CaCl2 consumed in kg/h for each timestep.
 

@@ -25,14 +25,21 @@ class PyomoStorageRuleBaseConfig(PyomoRuleBaseConfig):
 
 @define(kw_only=True)
 class PyomoRuleStorageBaseclassConfig(PyomoStorageRuleBaseConfig):
-    """Configuration for the generic storage dispatch rule."""
+    """Configuration for :class:`PyomoRuleStorageBaseclass`.
+
+    See :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
 
     pass
 
 
 @register
 class PyomoRuleStorageBaseclass(PyomoRuleBaseClass):
-    """Base class defining Pyomo rules for generic commodity storage components."""
+    """Base class defining Pyomo rules for generic commodity storage components.
+
+    See :class:`PyomoRuleStorageBaseclassConfig` and
+    :doc:`/control/technology_level_control/pyomo_controllers`.
+    """
 
     _time_step_bounds = (
         3600,

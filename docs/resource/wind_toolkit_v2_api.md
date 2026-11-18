@@ -5,6 +5,11 @@ There are two datasets that use the [Wind Toolkit v2 API](https://developer.nlr.
 - ["WTKNLRDeveloperAPIWindResource"](wind_resource:wind_toolkit_data)
 - ["HRRRMETToolkitWindAPI"](wind_resource:hrrr_met_data)
 
+API and configuration references:
+
+- {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResource` and {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.WTKNLRDeveloperAPIWindResourceConfig`
+- {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPI` and {py:class}`~h2integrate.resource.wind.nlr_developer_wtk_api_models.HRRRMETToolkitWindAPIConfig`
+
 ```{note}
 These datasets require an API key from the [NLR developer network](https://developer.nlr.gov/signup/)
 ```

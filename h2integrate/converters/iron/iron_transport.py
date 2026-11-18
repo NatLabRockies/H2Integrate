@@ -32,6 +32,8 @@ class IronTransportPerformanceConfig(BaseConfig):
     Raises:
         ValueError: Raised if shipment_site is not set to "None" while find_closest_ship_site
             is True.
+
+    See :class:`IronTransportPerformanceComponent` and :doc:`/technology_models/iron_transport`.
     """
 
     find_closest_ship_site: bool = field()
@@ -50,8 +52,10 @@ class IronTransportPerformanceConfig(BaseConfig):
 
 @register(no_replacement_schedule=True)
 class IronTransportPerformanceComponent(om.ExplicitComponent):
-    """Component to calculate iron ore pellet transportation distances considering both
-    land and water routes.
+    """Estimate overland and Great Lakes route distances for iron ore.
+
+    See :class:`IronTransportPerformanceConfig` and
+    :doc:`/technology_models/iron_transport`.
     """
 
     _time_step_bounds = (
@@ -318,13 +322,15 @@ class IronTransportCostConfig(BaseConfig):
     """Configuration for calculating iron ore pellet transportation costs.
 
     Args:
-        transport_year (int): The year for which transportation costs are calculated.
-        cost_year (int): The year for which cost data is relevant.
+        transport_year (int): Transport year; currently not used by the calculation.
+        cost_year (int): Target cost year, supplied from the plant configuration.
         land_shipping_cost (float): Cost of land shipping in $/tonne-mi. Default is 0.0522
             $/tonne-mi. See :doc:`/technology_models/iron_transport` for more info on default cost.
         water_shipping_cost (float): Cost of water shipping in $/tonne-mi. Default is 0.0235
             $/tonne-mi. See :doc:`/technology_models/iron_transport` for more info on default cost.
-        marginal_cost (float): Marginal cost of transportation. Default is 0.0.
+        marginal_cost (float): Currently unused. Default is 0.0.
+
+    See :class:`IronTransportCostComponent` and :doc:`/technology_models/iron_transport`.
     """
 
     transport_year: int = field(converter=int, validator=(validators.ge(2022), validators.le(2065)))
@@ -336,7 +342,10 @@ class IronTransportCostConfig(BaseConfig):
 
 @register
 class IronTransportCostComponent(CostModelBaseClass):
-    """Component for calculating iron ore pellet transportation costs."""
+    """Estimate iron shipping costs from the input route and ore profile.
+
+    See :class:`IronTransportCostConfig` and :doc:`/technology_models/iron_transport`.
+    """
 
     _time_step_bounds = (
         3600,

@@ -47,6 +47,8 @@ class PYSAMSolarPlantPerformanceModelConfig(BaseConfig):
             `here <https://nrel-pysam.readthedocs.io/en/main/modules/Pvwattsv8.html>`__
             )
 
+    See :class:`PYSAMSolarPlantPerformanceModel` and
+    :doc:`/technology_models/pvwattsv8_solar_pv`.
     """
 
     pv_capacity_kWdc: float = field()
@@ -172,6 +174,9 @@ class PYSAMSolarPlantPerformanceModel(SolarPerformanceBaseClass):
     """
     An OpenMDAO component that wraps a SolarPlant model.
     It takes solar parameters as input and outputs power generation data.
+
+    See :class:`PYSAMSolarPlantPerformanceModelConfig` and
+    :doc:`/technology_models/pvwattsv8_solar_pv`.
     """
 
     _time_step_bounds = (

@@ -1,6 +1,7 @@
 # Reverse Osmosis Desalination
 
-`ReverseOsmosisPerformanceModel` represents a reverse osmosis plant that converts feedwater and
+{py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModel`
+represents a reverse osmosis plant that converts feedwater and
 electricity into freshwater. At each timestep, freshwater production (`water_out`, m^3/h) is the
 minimum of three limits:
 
@@ -24,19 +25,29 @@ ratio and specific energy consumption:
 The capacity and freshwater density are also OpenMDAO inputs, so they can be varied by a design of
 experiments or optimization.
 
-`ReverseOsmosisCostModel` estimates capital and operating costs from
+{py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModel`
+estimates capital and operating costs from
 `freshwater_capacity_kg_per_hr` using the model's reference costs. Its cost configuration is fixed
 to 2013 USD.
 Both models support time steps from 1 second to 1 hour. Rates (`water_out`, `electricity_in`,
 `feedwater_in`, and the consumed quantities) are per hour regardless of time step, while
 `total_water_produced` and `annual_water_produced` account for the time step length.
 
+The performance settings are described by
+{py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModelConfig`;
+the cost settings are described by
+{py:class}`~h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModelConfig`.
+The cost model exposes `rated_freshwater_production_capacity` in kg/s as an OpenMDAO input,
+initialized from the configured capacity, and reports `CapEx` in USD and `OpEx` in USD/year.
+The inherited `capacity_factor`, `rated_water_production`, `total_water_produced`, and
+`annual_water_produced` outputs summarize performance over the simulation.
+
 ```{eval-rst}
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisPerformanceModelConfig
-   :members:
+   :no-members:
    :no-index:
 
 .. autoclass:: h2integrate.converters.water.desal.desalination.ReverseOsmosisCostModelConfig
-   :members:
+   :no-members:
    :no-index:
 ```

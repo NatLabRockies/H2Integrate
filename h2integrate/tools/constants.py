@@ -19,6 +19,10 @@ R_GAS = 8.314  # Universal gas constant in kJ/(kmol·K)
 T_STD_K = 273.15  # Standard temperature in Kelvin (0 °C), used for normal volume calculations
 P_STD_KPA = 101.325  # Standard atmospheric pressure in kPa
 
+# to be used while H2Integrate remains limited to running without leap days in simulation
+SECONDS_PER_HOUR = 3600  # Number of seconds in one hour
+SECONDS_PER_YEAR = 8760 * SECONDS_PER_HOUR  # Number of seconds in one year (365 days)
+
 # NOTE: if trying to match values exactly in CMUElectricArcFurnaceDRIPerformanceComponent
 # and CMUElectricArcFurnaceScrapOnlyPerformanceComponent with DecarbSTEEL V5 Excel model
 # values use these constant values and comment out the more precise ones above.

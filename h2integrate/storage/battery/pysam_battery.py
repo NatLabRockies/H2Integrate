@@ -22,9 +22,9 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
 
     Attributes:
         max_capacity (float): Maximum battery energy capacity in kilowatt-hours (kWh).
-            Must be greater than zero.
+            Must be nonnegative. Zero capacity produces zero flow.
         max_charge_rate (float): Rated power capacity of the battery in kilowatts (kW).
-            Must be greater than zero.
+            Must be nonnegative. Zero charge rate produces zero flow.
         demand_profile (int | float | list): Demand values for each timestep, in
             the same units as `commodity_rate_units`. May be a scalar for constant
             demand or a list/array for time-varying demand.
@@ -51,6 +51,8 @@ class PySAMBatteryPerformanceModelConfig(StoragePerformanceBaseConfig):
             Defaults to 0.001.
         pysam_options (dict, optional): Additional PySAM BatteryStateful parameters grouped
             by PySAM group name (for example, ``{"ParamsCell": {"calendar_choice": 1}}``).
+
+    See :class:`PySAMBatteryPerformanceModel` and :doc:`/storage/pysam_battery`.
     """
 
     max_capacity: float = field(validator=validators.ge(0))
@@ -87,6 +89,8 @@ class PySAMBatteryPerformanceModel(StoragePerformanceBase):
     Attributes:
         system_model (``BatteryStateful``): Instance of the PySAM BatteryStateful model, initialized
             with the selected chemistry and configuration parameters.
+
+    See :class:`PySAMBatteryPerformanceModelConfig` and :doc:`/storage/pysam_battery`.
     """
 
     _time_step_bounds = (

@@ -20,13 +20,15 @@ class NaturalGasPerformanceConfig(BaseConfig):
     combustion turbines (NGCT) and natural gas combined cycle (NGCC) plants.
 
     Attributes:
-        system_capacity (float): rated capacity of the natural gas plant in MW
+        system_capacity_mw (float): rated capacity of the natural gas plant in MW
         heat_rate_mmbtu_per_mwh (float): Heat rate of the natural gas plant in MMBtu/MWh.
             This represents the amount of fuel energy required to produce
             one MWh of electricity. Lower values indicate higher efficiency.
             Typical values:
             - NGCT: 10-14 MMBtu/MWh
             - NGCC: 6-8 MMBtu/MWh
+
+    See :class:`NaturalGasPerformanceModel` and :doc:`/technology_models/natural_gas`.
     """
 
     system_capacity_mw: float = field(validator=validators.ge(0))
@@ -56,6 +58,7 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         electricity_out (array): Electricity output in MW for each timestep
         natural_gas_consumed (array): Natural gas consumed in MMBtu/h
 
+    See :class:`NaturalGasPerformanceConfig` and :doc:`/technology_models/natural_gas`.
     """
 
     _time_step_bounds = (
@@ -237,6 +240,8 @@ class NaturalGasCostModelConfig(CostModelBaseConfig):
             This includes variable O&M costs that scale with electricity generation.
             Typical values: 1-5 $/MWh
         cost_year (int): Dollar year corresponding to input costs.
+
+    See :class:`NaturalGasCostModel` and :doc:`/technology_models/natural_gas`.
     """
 
     capex_per_kw: float | int = field(validator=validators.ge(0))
@@ -249,12 +254,12 @@ class NaturalGasCostModel(CostModelBaseClass):
     """
     Cost model for natural gas power plants.
 
-    This model calculates capital and operating costs for natural gas plants
-    including fuel costs. It can be used for both NGCT and NGCC plants.
+    This model calculates capital and operating costs for natural gas plants.
+    Fuel costs are handled separately. It can be used for both NGCT and NGCC plants.
 
     The model calculates:
     - CapEx: Capital expenditure based on plant capacity
-    - OpEx: Operating expenditure including fixed O&M, variable O&M, and fuel costs
+    - OpEx: Operating expenditure including fixed O&M and variable O&M
 
     Cost components:
     1. Capital costs: capex_per_kw * plant_capacity_kw
@@ -262,7 +267,7 @@ class NaturalGasCostModel(CostModelBaseClass):
     3. Variable O&M: variable_opex_per_mwh * delivered_electricity_MWh
 
     Inputs:
-        system_capacity (float): Natural gas plant capacity in MW from performance model
+        rated_electricity_production (float): Plant capacity in MW from the performance model
         electricity_out (array): Hourly electricity output in MW from performance model
         capex_per_kw (float): Capital cost per unit capacity in $/kW
         fixed_opex_per_kw_per_year (float): Fixed operating expenses per unit capacity in $/kW/year
@@ -272,6 +277,10 @@ class NaturalGasCostModel(CostModelBaseClass):
         CapEx (float): Total capital expenditure in USD
         OpEx (float): Total operating expenditure in USD/year
         cost_year (int): Dollar year for the costs
+
+    Variable O&M is calculated from simulated electricity and is not annualized for a
+    partial-year simulation. See :class:`NaturalGasCostModelConfig` and
+    :doc:`/technology_models/natural_gas`.
     """
 
     _time_step_bounds = (

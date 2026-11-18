@@ -1,0 +1,1 @@
+from test.xdist_policy import pytest_xdist_auto_num_workers as pytest_xdist_auto_num_workers

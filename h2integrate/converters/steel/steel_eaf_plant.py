@@ -10,6 +10,9 @@ class HydrogenEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
     """Cost component for hydrogen-based electric arc furnace (EAF) plant
     using the Rosner cost model.
 
+    See :class:`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnaceCostBaseConfig`
+    and :doc:`/technology_models/steel_eaf`.
+
     Attributes:
         product (str): 'h2_eaf'
         config (ElectricArcFurnaceCostBaseConfig): configuration class
@@ -31,6 +34,9 @@ class NaturalGasEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
     """Cost component for natural gas-based electric arc furnace (EAF) plant
     using the Rosner cost model.
 
+    See :class:`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnaceCostBaseConfig`
+    and :doc:`/technology_models/steel_eaf`.
+
     Attributes:
         product (str): 'ng_eaf'
         config (ElectricArcFurnaceCostBaseConfig): configuration class
@@ -51,6 +57,10 @@ class NaturalGasEAFPlantCostComponent(ElectricArcFurnacePlantBaseCostComponent):
 class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanceComponent):
     """Performance component for hydrogen-based electric arc furnace (EAF) plant
     using the Rosner performance model.
+
+    See
+    :class:`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnacePerformanceBaseConfig`
+    and :doc:`/technology_models/steel_eaf`.
 
     Attributes:
         product (str): 'h2_eaf'
@@ -80,6 +90,10 @@ class HydrogenEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanc
 class NaturalGasEAFPlantPerformanceComponent(ElectricArcFurnacePlantBasePerformanceComponent):
     """Performance component for natural gas-based electric arc furnace (EAF) plant
     using the Rosner performance model.
+
+    See
+    :class:`~h2integrate.converters.steel.steel_eaf_baseclass.ElectricArcFurnacePerformanceBaseConfig`
+    and :doc:`/technology_models/steel_eaf`.
 
     Attributes:
         product (str): 'ng_eaf'

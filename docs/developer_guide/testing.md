@@ -52,6 +52,22 @@ def test_BaseConfig(subtests):
 
 Tests must be marked with at least one of `unit`, `regression`, `integration`, `hpc`, or `examples`. The test configuration rejects unknown markers, and `test/conftest.py` fails collection for unmarked tests.
 
+## Parallel Test Execution
+
+Install the `develop` extra from the `pyproject.toml` to include `pytest-xdist`.
+Tests run in parallel by default using `-n auto --dist=loadfile`, which keeps tests from the same file on one worker so they can reuse module-scoped fixtures.
+The automatic worker count considers core count and reported available memory.
+CI caps the automatic count at four workers per job.
+
+Use `pytest -n 0` to run serially, including when debugging.
+Use `pytest -n <num_workers>` to request a specific number of workers, or set `PYTEST_XDIST_AUTO_NUM_WORKERS` to override the automatic count.
+Use `pytest --maxprocesses=2` to cap the automatic count without bypassing the budget.
+
+Workers have separate process state but share the repository and other external resources.
+Tests must use temporary paths for generated files, restore changes to the working directory,
+and not depend on execution order.
+Each worker performs its own collection, so parameter values and test IDs must have a consistent order. `pytest-cov` combines coverage from the workers.
+
 ## Unit Tests
 
 Unit tests should test the correctness of the code in isolation from the rest of the system.

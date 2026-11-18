@@ -48,6 +48,7 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
         annual_labor_hours_per_position (float | int, optional): The labor hours per position
             per year. Defaults to 2000, the number used in the Humbert OpEx model.
 
+    See :class:`HumbertStinnEwinCostComponent` and :doc:`/technology_models/iron_ewin`.
     """
 
     electrolysis_type: str = field(
@@ -66,6 +67,8 @@ class HumbertStinnEwinCostComponentConfig(CostModelBaseConfig):
 class HumbertStinnEwinCostComponent(CostModelBaseClass):
     """OpenMDAO component for the Humbert/Stinn iron electrowinning cost model.
 
+    See :class:`HumbertStinnEwinCostComponentConfig` and :doc:`/technology_models/iron_ewin`.
+
     Default values for many inputs are set for 3 technology classes:
 
     - Aqueous Hydroxide Electrolysis (AHE)
@@ -83,9 +86,7 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
     Attributes:
         OpenMDAO Inputs:
 
-        output_capacity (float): Maximum annual iron production capacity in kg/year.
-        iron_ore_in (array): Iron ore mass flow available in kg/h for each timestep.
-        electricity_in (array): Electric power input available in kW for each timestep.
+        rated_sponge_iron_production (float): Rated iron production in t/h.
         specific_energy_electrolysis (float): The specific electrical energy consumption required
             to win pure iron (Fe) from iron ore - JUST the electrolysis step.
         electrolysis_temp (float): Electrolysis temperature (°C).
@@ -96,9 +97,6 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
         cell_voltage (float): Cell operating voltage (V).
         rectifier_lines (float): Number of rectifier lines.
         positions (float): Labor rate (position-years/tonne).
-        NaOH_ratio (float): Ratio of NaOH consumed to Fe produced.
-        CaCl2_ratio (float): Ratio of CaCl2 consumed to Fe produced.
-        limestone_ratio (float): Ratio of limestone consumed to Fe produced.
         anode_ratio (float): Ratio of anode mass to annual iron production.
         anode_replacement_interval (float): Replacement interval of anodes (years).
 
@@ -106,17 +104,15 @@ class HumbertStinnEwinCostComponent(CostModelBaseClass):
 
         CapEx (float): Total capital cost of the electrowinning plant (USD).
         OpEx (float): Yearly operating expenses in USD/year which do NOT depend on plant output.
-        VarOpEx (float): Yearly operating expenses in USD/year which DO depend on plant output.
+        VarOpEx (float): Annual anode cost based on rated production.
         processing_capex (float): Portion of the capex that is apportioned to preprocessing of ore.
         electrolysis_capex (float): Portion of the capex that is apportioned to electrolysis.
         rectifier_capex (float): Portion of the capex that is apportioned to rectifiers.
         labor_opex (float): Portion of the opex that is apportioned to labor.
-        NaOH_opex (float): Portion of the opex that is apportioned to NaOH.
-        CaCl2_opex (float): Portion of the opex that is apportioned to CaCl2.
-        limestone_opex (float): Portion of the opex that is apportioned to limestone.
         anode_opex (float): Portion of the opex that is apportioned to anodes.
-        ore_opex (float): Portion of the opex that is apportioned to ore.
-        elec_opex (float): Portion of the opex that is apportioned to electricity.
+
+    The declared NaOH, CaCl2, limestone, ore, and electricity cost breakdown outputs are not
+    assigned by the current calculation.
 
     """
 

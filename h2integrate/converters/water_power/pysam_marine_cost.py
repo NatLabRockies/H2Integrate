@@ -28,6 +28,8 @@ class PySAMMarineCostConfig(CostModelBaseConfig):
             `here <https://nrel-pysam.readthedocs.io/en/main/modules/MhkCosts.html>`__
             )
 
+    See :class:`PySAMMarineCostModel` and :doc:`/technology_models/marine_hydrokinetic`.
+
         Note:
         More information about the reference models and their
         associated costs can be found in the
@@ -149,6 +151,8 @@ class PySAMMarineCostModel(CostModelBaseClass):
         [Reference Model Project](https://energy.sandia.gov/programs/renewable-energy/water-power/projects/reference-model-project-rmp/).
         Additional MHK cost model information can be found
         through the [System Advisor Model](https://sam.nlr.gov/).
+
+    See :class:`PySAMMarineCostConfig` and :doc:`/technology_models/marine_hydrokinetic`.
 
     Note:
         The supported reference models in this cost model are:
