@@ -106,17 +106,17 @@ When no explicit output drives the demand, OpenMDAO connects that Auto-IVC outpu
 Those inputs receive the shared source value when the model runs, so listing inputs before running may still show component defaults.
 Destination inputs do not need matching configured defaults.
 Each source default is registered once, even when it feeds multiple destinations, avoiding duplicate-default warnings.
-When the demand input is not driven by an output, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected `threshold_stats.electricity_threshold` receives the updated value.
+When the demand input is not connected to the output of an upstream component, it can still be updated after setup using `h2i.prob.set_val("electrical_load_demand.electricity_demand", values, units="MW")`; the connected `threshold_stats.electricity_threshold` receives the updated value.
 Setting `threshold_stats.electricity_threshold` with `set_val` also updates the shared source, including the demand and other connected inputs; it does not create an independent threshold.
 Unlike `set_input_defaults`, `set_val` changes the source value rather than declaring default metadata.
 See OpenMDAO's [comparison of `set_input_defaults` and `set_val`](https://openmdao.org/newdocs/versions/latest/features/core_features/running_your_models/set_input_defaults.html#how-the-set-input-defaults-function-differs-from-the-set-val-function).
-If an output drives the demand input, that output supplies the shared value instead of the configured default.
+If the output of an upstream technology is connected to the demand input, that output supplies the shared value instead of the configured default.
 Connected inputs may use compatible but different units; OpenMDAO converts between them.
 
 ```{note}
 OpenMDAO needs one unambiguous default for an input shared by two connected inputs.
 H2Integrate automatically sets this default only when the source is a demand component's demand input.
-For other input-to-input connections, OpenMDAO must be able to resolve compatible default metadata; if setup reports ambiguous values, units, or shapes, set them explicitly with `h2i.model.set_input_defaults(...)` before setup.
+For other input-to-input connections, OpenMDAO must be able to resolve compatible default metadata; if `setup()` raises an error that the value, units, or shapes are ambiguous, set them explicitly with `h2i.model.set_input_defaults(...)` before calling `setup()`.
 For an array input, provide a value with the input's full shape, along with its units.
 Threshold inputs can also be connected to an output or set directly when they are not connected.
 ```
