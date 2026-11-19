@@ -59,7 +59,7 @@ class ProfitMaximizationControl(SystemLevelControlBase):
       divide by the dispatchable tech's annualized total production.
 
     See :class:`ProfitMaximizationControlConfig`,
-    :class:`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`,
+    :class:`~h2integrate.core.solver_options.NLSolverOptionsConfig`,
     and :doc:`/control/system_level_control/slc_profit_max`.
     """
 

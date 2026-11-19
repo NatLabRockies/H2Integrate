@@ -1,4 +1,3 @@
-import warnings
 import importlib.util
 from enum import IntEnum
 
@@ -34,9 +33,6 @@ from h2integrate.postprocess.reporting import (
 from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
-from h2integrate.control.control_strategies.system_level.solver_options import (
-    SLCSolverOptionsConfig,
-)
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     _get_tech_buy_price_input_name,
 )
@@ -1927,15 +1923,6 @@ class H2IntegrateModel:
 
         simulation_config = self.plant_config["plant"]["simulation"]
 
-        if simulation_config.get("nl_solver_options") is not None and not self._has_cycles:
-            # nl_solver_options provided even if technology interconnections doesn't have cycles
-            msg = (
-                "`nl_solver_options` is an extraneous input when no feedback cycles exist in "
-                "`technology_interconnections`. `nl_solver_options` is only used if "
-                "feedback cycles exist in `technology_interconnections`."
-            )
-            warnings.warn(msg, UserWarning, stacklevel=2)
-
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
         if self._is_time_marching:
@@ -1953,31 +1940,14 @@ class H2IntegrateModel:
             check_model_is_steppable(self.control_strategies, self.performance_models)
             return
 
-        if self.slc:
+        if self.slc or self._has_cycles:
             # Because the controller creates a feedback loop (controller outputs become technology
             # inputs, whose outputs feed back to the controller), a nonlinear solver is required.
             # Solver type and options are read from
-            # ``plant_config["system_level_control"]["solver_options"]`` via
-            # ``SLCSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and is
+            # ``plant_config["plant"]["simulation"]["nl_solver_options"]`` via
+            # ``NLSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and is
             # largely inconsequential as we're not propagating derivatives at this time.
-
-            plant_slc_config = self.plant_config["system_level_control"]
-
-            # The feedback loop (controller <-> technologies) requires an
-            # iterative nonlinear solver to converge.
-            solver_options = plant_slc_config.get("solver_options", {})
-            solver_config = SLCSolverOptionsConfig.from_dict(solver_options)
-            solver_cls = solver_config.return_nonlinear_solver()
-            solver = solver_cls()
-            solver_options = solver_config.get_solver_options()
-            for k, v in solver_options.items():
-                solver.options[k] = v
-            self.plant.nonlinear_solver = solver
-            self.plant.linear_solver = om.DirectSolver()
-            return
-
-        # If loops are present in the technology graph, add solvers to resolve the coupling
-        if self._has_cycles:
+            # If loops are present in the technology graph, add solvers to resolve the coupling
             solver_options = simulation_config.get("nl_solver_options", {})
             solver_config = NLSolverOptionsConfig.from_dict(solver_options)
             solver_cls = solver_config.return_nonlinear_solver()
@@ -1987,6 +1957,10 @@ class H2IntegrateModel:
                 solver.options[k] = v
             self.plant.nonlinear_solver = solver
             self.plant.linear_solver = om.DirectSolver()
+            return
+
+        # eventually, could allow for solver option to be specified for NonlinearRunOnce solver
+        return
 
     def create_driver_model(self):
         """

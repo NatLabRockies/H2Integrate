@@ -19,7 +19,7 @@ aims to fully meet the demand and does not have any inputs related to cost. It i
 technology and demand interface from
 {py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`.
 Its nonlinear solver settings use
-{py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`.
+{py:class}`~h2integrate.core.solver_options.NLSolverOptionsConfig`.
 
 The N2 diagram below shows an example system using the demand following controller with wind, natural gas, and battery storage technologies.
 The full example in `examples/35_system_level_control/demand_following` runs the same plant with no battery, with a battery, and with a battery that has its own open-loop controller.
