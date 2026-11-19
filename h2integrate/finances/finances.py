@@ -2,6 +2,8 @@ import numpy as np
 import openmdao.api as om
 import numpy_financial as npf
 
+from h2integrate.core.annualization import _expand_to_plant_life, time_weighted_annual_means
+
 
 class AdjustedCapexOpexComp(om.ExplicitComponent):
     """
@@ -90,17 +92,19 @@ class AdjustedCapexOpexComp(om.ExplicitComponent):
 class AdjustedCapacityFactorComp(om.ExplicitComponent):
     """OpenMDAO component to compute an adjusted capacity factor for a given commodity.
 
-    This component takes in a timeseries of commodity production values and computes
-    the rated (mean) production and a capacity factor for each year of the plant's
-    lifetime. Currently, the capacity factor is set to 1.0 by default.
+    This component takes a timeseries of commodity production values and splits it into
+    365-day plant-year segments. The rated production is the largest segment mean, and each
+    simulated year's capacity factor is its mean production divided by the rated production.
+    The simulation must cover one year, whose capacity factor is repeated across plant life,
+    or the full plant life.
 
     Inputs:
         {commodity}_produced (array): Timeseries of commodity production values
             with shape ``(n_timesteps,)``. Units are determined by connection.
 
     Outputs:
-        rated_{commodity}_production (float): Mean commodity production across all
-            timesteps. Units are copied from the input.
+        rated_{commodity}_production (float): Largest annual mean commodity production
+            across the simulated year segments. Units are copied from the input.
         capacity_factor (array): Capacity factor for each year of plant life,
             with shape ``(plant_life,)``. Unitless.
     """
@@ -113,6 +117,8 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
         self.commodity = self.options["commodity_type"]
         plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
         n_timesteps = int(self.options["plant_config"]["plant"]["simulation"]["n_timesteps"])
+        # Integer dt matches the base classes and plant validation, so the horizon agrees.
+        self.dt = int(self.options["plant_config"]["plant"]["simulation"]["dt"])
 
         self.add_input(
             f"{self.commodity}_produced",
@@ -136,10 +142,15 @@ class AdjustedCapacityFactorComp(om.ExplicitComponent):
         )
 
     def compute(self, inputs, outputs):
-        # Take the average of the timeseries profile
-        outputs[f"rated_{self.commodity}_production"] = np.mean(
-            inputs[f"{self.commodity}_produced"]
-        )
+        production_timeseries = inputs[f"{self.commodity}_produced"]
+        annual_mean_production, _ = time_weighted_annual_means(production_timeseries, self.dt)
+        rated_production = float(np.max(annual_mean_production))
+        outputs[f"rated_{self.commodity}_production"] = rated_production
 
-        # Set capacity factor equal to one
-        outputs["capacity_factor"] = 1.0
+        plant_life = int(self.options["plant_config"]["plant"]["plant_life"])
+        if rated_production == 0.0:
+            annual_capacity_factors = np.ones(annual_mean_production.size)
+        else:
+            annual_capacity_factors = annual_mean_production / rated_production
+
+        outputs["capacity_factor"] = _expand_to_plant_life(annual_capacity_factors, plant_life)
