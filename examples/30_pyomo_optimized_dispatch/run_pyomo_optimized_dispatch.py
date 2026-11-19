@@ -1,4 +1,3 @@
-import numpy as np
 from matplotlib import pyplot as plt
 
 from h2integrate import H2IntegrateModel
@@ -7,19 +6,13 @@ from h2integrate import H2IntegrateModel
 # Create an H2Integrate model
 model = H2IntegrateModel("pyomo_optimized_dispatch.yaml")
 
-demand_profile = np.ones(8760) * 100.0
-
-
-# TODO: Update with demand module once it is developed
-model.setup()
-model.prob.set_val("battery.electricity_set_point", demand_profile, units="MW")
-
 # Run the model
 model.run()
 
 model.post_process()
 
 # Plot the results
+demand_profile = model.prob.get_val("electrical_load_demand.electricity_demand", units="MW")
 fig, ax = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
 
 start_hour = 0

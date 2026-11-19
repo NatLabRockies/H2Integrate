@@ -238,15 +238,13 @@ Lets see what the LCOH is when the battery is used to keep the electrolyzer on:
 h2i.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0]
 ```
 
-If we re-run H2I and set the battery demand equal to the electrolyzer capacity instead, we can see that the LCOH increases:
+If we re-run H2I and set the battery demand equal to the electrolyzer capacity instead, we can see that the LCOH increases.
+The load demand remains at its configured value of 60 MW:
 
 ```{code-cell} ipython3
 
 # Set the battery demand equal to the rated electrical capacity of the electrolyzer
 h2i.prob.set_val("battery.electricity_set_point",electrolyzer_capacity_MW, units="MW")
-
-# Set the demand of the demand component equal to the rated electrical capacity of the electrolyzer
-h2i.prob.set_val("elec_load_demand.electricity_demand", electrolyzer_capacity_MW, units="MW")
 
 # Re-run H2I
 h2i.run()

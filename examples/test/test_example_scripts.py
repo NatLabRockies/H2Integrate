@@ -6,10 +6,12 @@ each ``run_*.py`` script, including its plotting and post-processing code, finis
 
 import os
 import sys
+import runpy
 import shutil
 import subprocess
 import importlib.util
 
+import numpy as np
 import pytest
 
 from h2integrate import EXAMPLE_DIR
@@ -108,3 +110,59 @@ def test_example_script_runs(script, tmp_path):
         f"--- stdout (last 3000 characters) ---\n{result.stdout[-3000:]}\n"
         f"--- stderr (last 6000 characters) ---\n{result.stderr[-6000:]}"
     )
+
+
+@pytest.mark.examples
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder,script,input_name,axis,label,expected",
+    [
+        (
+            "19_simple_dispatch",
+            None,
+            "run_wind_battery.py",
+            "battery.electricity_set_point",
+            1,
+            "Electricity Demand (MW)",
+            5.0,
+        ),
+        (
+            "23_solar_wind_ng_demand",
+            None,
+            "run_solar_wind_ng_demand.py",
+            "electrical_load_demand.electricity_demand",
+            0,
+            "Baseline Electricity Demand (MW)",
+            100.0,
+        ),
+        (
+            "30_pyomo_optimized_dispatch",
+            None,
+            "run_pyomo_optimized_dispatch.py",
+            "electrical_load_demand.electricity_demand",
+            1,
+            "Electrical Demand (MW)",
+            100.0,
+        ),
+    ],
+)
+def test_demand_plot_uses_model_input(
+    temp_copy_of_example, script, input_name, axis, label, expected, monkeypatch, subtests
+):
+    """Plot the actual demand input and retain the configured example profile."""
+    import matplotlib.pyplot as plt
+
+    if script == "run_pyomo_optimized_dispatch.py" and shutil.which("glpsol") is None:
+        pytest.skip("GLPK executable 'glpsol' is not available in PATH")
+
+    monkeypatch.setattr(plt, "show", lambda: None)
+    namespace = runpy.run_path(str(temp_copy_of_example / script), run_name="__main__")
+    demand = namespace["model"].prob.get_val(input_name, units="MW")
+    plotted = next(
+        line.get_ydata() for line in namespace["ax"][axis].lines if line.get_label() == label
+    )
+    plt.close(namespace["fig"])
+
+    with subtests.test("the configured demand profile is unchanged"):
+        np.testing.assert_allclose(demand, np.full(8760, expected))
+    with subtests.test("the plot uses the first 200 values of that profile"):
+        np.testing.assert_allclose(plotted, demand[:200])
