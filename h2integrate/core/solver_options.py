@@ -7,7 +7,7 @@ from h2integrate.core.utilities import BaseConfig
 
 
 @define(kw_only=True)
-class FeedbackNLSolverOptionsConfig(BaseConfig):
+class NLSolverOptionsConfig(BaseConfig):
     """Configuration for the nonlinear solver used H2I if there are
     feedback loops in the technology interconnections.
 
@@ -26,9 +26,7 @@ class FeedbackNLSolverOptionsConfig(BaseConfig):
             ``convergence_tolerance`` if None. Defaults to 1e-10.
         rtol (float | None, optional): Relative convergence tolerance. Uses
             ``convergence_tolerance`` if None. Defaults to 1e-10.
-        convergence_tolerance (float | None, optional): Convenience value used to set both
-            ``atol`` and ``rtol`` when they are not specified individually. Defaults to None.
-        iprint (int, optional): Solver print level (0 = silent, 2 = verbose). Defaults to 2.
+        iprint (int, optional): Solver print level (0 = silent, 1 or 2 = verbose). Defaults to 2.
         debug_print (bool, optional): If true, prints the input and output values of the variables.
             Defaults to False.
         solver_option_kwargs (dict, optional): Additional keyword arguments passed directly to the
@@ -42,31 +40,19 @@ class FeedbackNLSolverOptionsConfig(BaseConfig):
     maxiter: int = field(default=10, converter=int, validator=validators.ge(0))
     atol: float | None = field(default=1e-10, validator=validators.optional(validators.gt(0)))
     rtol: float | None = field(default=1e-10, validator=validators.optional(validators.gt(0)))
-    convergence_tolerance: float | None = field(
-        default=None, validator=validators.optional(validators.gt(0))
-    )
-    iprint: int = field(default=2)
+    iprint: int = field(default=2, validator=validators.in_([0, 1, 2]))
     debug_print: bool = field(default=False)
     solver_option_kwargs: dict = field(default={})
 
     # Maps user-facing solver names to OpenMDAO solver classes
     solver_map: ClassVar = {
+        # "run_once": om.NonlinearRunOnce, # only has debug_print and iprint
         "gauss_seidel": om.NonlinearBlockGS,
         "newton": om.NewtonSolver,
         "block_jacobi": om.NonlinearBlockJac,
     }
 
     def __attrs_post_init__(self):
-        if self.convergence_tolerance is None:
-            if self.atol is None or self.rtol is None:
-                msg = "Please provide `convergence_tolerance` if `atol` or `rtol` is set to None."
-                raise AttributeError(msg)
-        # Default atol/rtol to the shared convergence_tolerance if not set
-        if self.atol is None:
-            self.atol = self.convergence_tolerance
-        if self.rtol is None:
-            self.rtol = self.convergence_tolerance
-
         # check to ensure that no duplicate keys are
         # provided in solver_option_kwargs
         shared_options = set(self.solver_option_kwargs) & set(self.as_dict())
@@ -91,7 +77,6 @@ class FeedbackNLSolverOptionsConfig(BaseConfig):
             "solver_name",
             "solver_map",
             "solver_option_kwargs",
-            "convergence_tolerance",
         ]
         solver_options = {k: v for k, v in d.items() if k not in non_solver_option_attrs}
         # Merge extra kwargs and translate max_iter

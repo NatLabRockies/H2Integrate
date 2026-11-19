@@ -13,7 +13,7 @@ from h2integrate.core.model_checks import (
     check_time_marching_config,
     check_model_control_classifier,
 )
-from h2integrate.core.solver_options import FeedbackNLSolverOptionsConfig
+from h2integrate.core.solver_options import NLSolverOptionsConfig
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -1979,7 +1979,7 @@ class H2IntegrateModel:
         # If loops are present in the technology graph, add solvers to resolve the coupling
         if self._has_cycles:
             solver_options = simulation_config.get("nl_solver_options", {})
-            solver_config = FeedbackNLSolverOptionsConfig.from_dict(solver_options)
+            solver_config = NLSolverOptionsConfig.from_dict(solver_options)
             solver_cls = solver_config.return_nonlinear_solver()
             solver = solver_cls()
             solver_options = solver_config.get_solver_options()
