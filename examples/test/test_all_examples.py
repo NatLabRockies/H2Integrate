@@ -3191,8 +3191,19 @@ def test_nuclear_reactor_htse_example(subtests, temp_copy_of_example):
     with subtests.test("Nuclear LCOE is plausible"):
         assert 50.0 <= nuclear_lcoe <= 400.0
 
-    with subtests.test("Hydrogen LCOH is plausible"):
-        assert 0.0 < nuclear_lcoh < 100.0
+    with subtests.test("Hydrogen LCOH includes the price of nuclear electricity"):
+        assert nuclear_lcoh == pytest.approx(6.9855, rel=1e-4)
+
+    with subtests.test("Nuclear LCOE prices HTSE electricity and grid sales"):
+        htse_electricity_consumed = model.prob.get_val(
+            "htse_electricity_feedstock.annual_electricity_consumed", units="MW*h/year"
+        )[0]
+        htse_electricity_cost = model.prob.get_val(
+            "htse_electricity_feedstock.VarOpEx", units="USD/year"
+        )[0]
+        grid_sales_revenue = -model.prob.get_val("grid_sell.VarOpEx", units="USD/year")[0]
+        assert htse_electricity_cost == pytest.approx(htse_electricity_consumed * nuclear_lcoe)
+        assert grid_sales_revenue == pytest.approx(annual_grid_sell * 1e6 * nuclear_lcoe)
 
     with subtests.test("HTSE annual hydrogen production is positive"):
         assert annual_hydrogen == pytest.approx(5.951086956521741)

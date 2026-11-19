@@ -38,6 +38,7 @@
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
 - Evaluate system finance after coupled plant solves and completed time-marching simulations, with explicit checks for unsupported finance feedback. [PR 1010](https://github.com/NatLabRockies/H2Integrate/pull/1010)
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
+- Allow standalone cost models to opt into post-plant evaluation so example 36 can apply nuclear LCOE to electrolyzer electricity costs and grid sales in one run. [PR 1010](https://github.com/NatLabRockies/H2Integrate/pull/1010)
 
 ## 0.10.0 [October 12, 2026]
 

@@ -4,6 +4,7 @@ from enum import IntEnum
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.utilities import _PostPlantCostGroup
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
 from h2integrate.core.model_checks import (
@@ -15,6 +16,7 @@ from h2integrate.core.model_checks import (
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
+    post_plant_cost_group_name,
     check_technology_connections,
     check_resource_models_are_connected,
     validate_technology_interconnections,
@@ -880,6 +882,7 @@ class H2IntegrateModel:
         self.control_strategies = []
         self.dispatch_rule_sets = []
         self.cost_models = []
+        self._post_plant_costs: dict[str, _PostPlantCostGroup] = {}
         self.finance_models = []
         self.tech_control_classifiers = {}  # for system-level control
 
@@ -918,6 +921,18 @@ class H2IntegrateModel:
         # Create a technology group for each technology
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             perf_model = individual_tech_config.get("performance_model", {}).get("model")
+            cost_config = individual_tech_config.get("cost_model", {})
+            if cost_config.get("run_after_plant"):
+                if not self._separate_finance or cost_config["model"] == perf_model:
+                    raise ValueError(
+                        f"'{tech_name}' can use run_after_plant only for a standalone cost "
+                        "model in a plant with separated finance."
+                    )
+                self._post_plant_costs[tech_name] = self.model.add_subsystem(
+                    post_plant_cost_group_name(tech_name),
+                    _PostPlantCostGroup(tech_name, cost_config["model"]),
+                    promotes=["*"],
+                )
             # Defer this error so topology validation can report invalid connections first
             if (
                 self._separate_finance
@@ -1030,8 +1045,13 @@ class H2IntegrateModel:
                 perf_om_object = None
                 for model_type in model_types:
                     if model_type in individual_tech_config:
+                        model_group = (
+                            self._post_plant_costs.get(tech_name, tech_group)
+                            if model_type == "cost_model"
+                            else tech_group
+                        )
                         om_model_object = self._process_model(
-                            model_type, individual_tech_config, tech_group
+                            model_type, individual_tech_config, model_group
                         )
                         if "control_strategy" in model_type:
                             plural_model_type_name = "control_strategies"
@@ -1095,7 +1115,10 @@ class H2IntegrateModel:
                     comp,
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
-                self.plant.add_subsystem(tech_name, comp)
+                if tech_name in self._post_plant_costs:
+                    self._post_plant_costs[tech_name].add_subsystem(cost_model, comp)
+                else:
+                    self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
             1 for v in self.tech_control_classifiers.values() if v != "transport"
         )
@@ -1129,7 +1152,7 @@ class H2IntegrateModel:
                 plant_config=self.plant_config,
                 tech_config=individual_tech_config,
             ),
-            promotes=["*"],
+            promotes=None if isinstance(tech_group, _PostPlantCostGroup) else ["*"],
         )
 
         # Some controllers read performance-model outputs (e.g.
@@ -1694,12 +1717,13 @@ class H2IntegrateModel:
         # If the source is a feedstock, make sure to connect the amount of
         # feedstock consumed from the technology back to the feedstock cost model
         if "FeedstockCostModel" in cost_model_name:
-            self.plant.connect(
+            connection_owner = self.model if source_tech in self._post_plant_costs else self.plant
+            connection_owner.connect(
                 f"{dest_tech}.{transport_item}_consumed",
                 f"{source_tech}.{transport_item}_consumed",
             )
             # Connect the feedstock performance model output to the cost model input
-            self.plant.connect(
+            connection_owner.connect(
                 f"{source_tech}_source.{transport_item}_out",
                 f"{source_tech}.{transport_item}_out",
             )
@@ -1799,6 +1823,8 @@ class H2IntegrateModel:
                 self.model
                 if source_tech in self._downstream_finance_names
                 or dest_tech in self._downstream_finance_names
+                or source_tech in self._post_plant_costs
+                or dest_tech in self._post_plant_costs
                 else self.plant
             )
             connection_owner.connect(
@@ -2082,18 +2108,23 @@ class H2IntegrateModel:
 
         self.prob.setup()
 
-        if self._downstream_finance_names:
+        if self._downstream_finance_names or self._post_plant_costs:
             # Use resolved connections so this also covers programmatic connections.
             graph = self.model.compute_sys_graph()
-            plant_cycle = next(
-                group for group in nx.strongly_connected_components(graph) if "plant" in group
-            )
-            finance_in_cycle = self._downstream_finance_names.intersection(plant_cycle)
-            if finance_in_cycle:
+            cost_groups = {post_plant_cost_group_name(name) for name in self._post_plant_costs}
+            downstream = self._downstream_finance_names | cost_groups
+            for cycle in nx.strongly_connected_components(graph):
+                if len(cycle) < 2 or not cycle.intersection(downstream):
+                    continue
+                if "plant" in cycle and cycle.intersection(self._downstream_finance_names):
+                    message = "Feedback between the plant and separated finance is not supported."
+                else:
+                    message = "Feedback involving post-plant costs or finance is not supported."
                 raise ValueError(
-                    "Feedback between the plant and separated finance is not supported. "
-                    f"Break the cycle involving: {', '.join(sorted(finance_in_cycle))}."
+                    f"{message} Break the cycle involving: {', '.join(sorted(cycle))}."
                 )
+            if nx.ancestors(graph, "plant").intersection(cost_groups):
+                raise ValueError("A cost model with run_after_plant cannot feed the plant.")
 
         for tech, tech_info in self.technology_config["technologies"].items():
             check_inputs(self.prob, tech, tech_info, self.tech_config_path)

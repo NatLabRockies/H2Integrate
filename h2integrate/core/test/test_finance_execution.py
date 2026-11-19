@@ -52,6 +52,8 @@ class LocalController(Controller):
 
 
 class SentinelFinance(om.ExplicitComponent):
+    _time_step_bounds = (1, 3600)
+
     def initialize(self):
         for name in (
             "driver_config",
@@ -277,6 +279,22 @@ def test_feedback_between_plant_and_separated_finance_is_rejected(coupled_model,
         h2i.model.connect("finance_subgroup_default.price", "controller.bias")
 
     with pytest.raises(ValueError, match="Feedback between the plant and separated finance"):
+        h2i.setup()
+
+
+@pytest.mark.unit
+def test_post_plant_cost_cannot_feed_plant_operations(coupled_model):
+    def add_cost_model(config):
+        config["technology_config"]["technologies"]["producer"]["cost_model"] = {
+            "model": "SentinelFinance",
+            "run_after_plant": True,
+        }
+        config["plant_config"].pop("finance_parameters")
+
+    h2i = coupled_model(add_cost_model)
+    h2i.model.connect("producer.price", "controller.bias")
+
+    with pytest.raises(ValueError, match="Feedback involving post-plant costs"):
         h2i.setup()
 
 
