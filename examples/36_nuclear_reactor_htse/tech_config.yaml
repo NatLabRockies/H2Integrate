@@ -54,6 +54,7 @@ technologies:
       model: FeedstockPerformanceModel
     cost_model:
       model: FeedstockCostModel
+      run_after_plant: true
     model_inputs:
       shared_parameters:
         commodity: electricity
@@ -102,6 +103,7 @@ technologies:
       model: GridPerformanceModel
     cost_model:
       model: GridCostModel
+      run_after_plant: true
     model_inputs:
       shared_parameters:
         interconnection_size: 5000000  # 5 GW

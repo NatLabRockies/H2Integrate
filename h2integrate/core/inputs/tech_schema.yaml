@@ -40,6 +40,9 @@ properties:
               model_location:
                 type: [string, Path]
                 description: Filepath for a custom technology cost model
+              run_after_plant:
+                type: boolean
+                description: Run this standalone cost model outside the plant when finance is separated
             required: [model]
             additionalProperties: false
             description: Cost model name

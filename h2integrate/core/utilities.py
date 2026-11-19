@@ -3,10 +3,27 @@ from typing import Any, TypeVar
 import attrs
 import numpy as np
 import pandas as pd
+import openmdao.api as om
 from attrs import Attribute, define
 
 
 BaseConfigType = TypeVar("BaseConfigType", bound="BaseConfig")
+
+
+class _PostPlantCostGroup(om.Group):
+    """Expose a deferred cost component under its original promoted technology names."""
+
+    def __init__(self, tech_name: str, model_name: str) -> None:
+        super().__init__()
+        self.tech_name = tech_name
+        self.model_name = model_name
+
+    def configure(self) -> None:
+        component = getattr(self, self.model_name)
+        for iotype in ("input", "output"):
+            metadata = component.get_io_metadata(iotypes=iotype, return_rel_names=True)
+            aliases = [(name, f"{self.tech_name}.{name}") for name in metadata]
+            self.promotes(self.model_name, **{f"{iotype}s": aliases})
 
 
 def merge_shared_inputs(config, input_type):

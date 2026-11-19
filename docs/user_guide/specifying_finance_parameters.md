@@ -15,6 +15,24 @@ Other variables in finance_parameters vary depending on the financial analysis s
 - **Single-model mode (default)**: All technologies are grouped together into a single financial calculation.
 - **Subgroup mode**: Technologies are split into one or more subgroups, each with its own commodity and one or more finance models.
 
+(financeparameters:execution)=
+### Finance execution order within an H2I model
+
+For a plant with system-level control or a technology feedback cycle, system finance subgroups run after the plant's coupled operations are solved.
+In time-marching simulations, they run after the complete production history has been assembled.
+Finance remains part of each full H2Integrate model evaluation, including optimizer steps and parameter sweeps.
+Cost models needed by operations remain inside the plant group
+
+When finance is separated, connections that form a feedback loop between the plant group and a finance subgroup are rejected during setup.
+To use a finance result as a price for accounting only, set `run_after_plant: true` under the technology's `cost_model` and connect the finance output to the cost input in `technology_interconnections`.
+This option moves only the standalone cost model out of the plant, keeps its promoted `technology.variable` names, and lets OpenMDAO order it between finance subgroups when needed.
+The cost model cannot feed plant operations, and cycles between downstream costs and finance are rejected.
+An acyclic, non-time-marching plant keeps finance inside the plant and can use finance-to-technology connections.
+Call `H2IntegrateModel.setup()` (or `run()`) after adding connections so H2I's connection checks run; calling `prob.setup()` directly bypasses H2I validation.
+Technology-specific finance is also not supported in these plants or inside an iterative technology group.
+
+When system finance follows a coupled plant solve, the plant solver raises on nonconvergence rather than evaluating finance on a failed solve. An SLC configuration must set `max_iter` to a positive value and cannot disable `err_on_non_converge` in that case. These checks do not change the failure settings of independently configured nested solvers.
+
 ### Finance Groups vs. Finance Subgroups
 Within this framework, there are two distinct layers, **finance groups** and **finance subgroups**:
 

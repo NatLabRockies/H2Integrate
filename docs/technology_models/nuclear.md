@@ -125,3 +125,7 @@ inconsistency when interpreting `VarOpEx`. Both components require one-hour time
 
 [Example 36: Nuclear Reactor and HTSE](https://github.com/NatLabRockies/H2Integrate/tree/develop/examples/36_nuclear_reactor_htse)
 connects thermal nuclear output to the high-temperature steam electrolyzer.
+The YAML config connects the nuclear levelized cost of electricity (LCOE) to the
+cost models for the electrolyzer's electricity supply and grid sales. Both cost models
+set `run_after_plant: true` so the model can solve plant operations, calculate LCOE,
+and apply electricity prices before calculating hydrogen LCOH, all in one run.

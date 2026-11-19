@@ -4,6 +4,7 @@ from enum import IntEnum
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.utilities import _PostPlantCostGroup
 from h2integrate.core.dict_utils import check_inputs
 from h2integrate.core.file_utils import get_path, find_file, load_yaml, load_component_config
 from h2integrate.core.model_checks import (
@@ -15,6 +16,7 @@ from h2integrate.core.model_checks import (
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
+    post_plant_cost_group_name,
     check_technology_connections,
     check_resource_models_are_connected,
     validate_technology_interconnections,
@@ -480,6 +482,18 @@ class H2IntegrateModel:
 
         # Create the plant model group and add components
         self.plant = self.model.add_subsystem("plant", plant_group, promotes=["*"])
+        simulation = self.plant_config["plant"]["simulation"]
+        window = simulation.get("n_timesteps_window", simulation["n_timesteps"])
+        # Separate finance for SLC, cyclic technology graphs, or partial time windows;
+        # otherwise, keep finance inside the plant as in the original execution path
+        self._separate_finance = (
+            self.slc
+            or not nx.is_directed_acyclic_graph(self.technology_graph)
+            or window < simulation["n_timesteps"]
+        )
+        # Only populated with system-level finance subgroups when finance is separated.
+        self._downstream_finance_names = set()
+        self._unsupported_finance = []
 
     def _classify_slc_technologies(self):
         """Classify technologies for system-level control.
@@ -868,6 +882,7 @@ class H2IntegrateModel:
         self.control_strategies = []
         self.dispatch_rule_sets = []
         self.cost_models = []
+        self._post_plant_costs: dict[str, _PostPlantCostGroup] = {}
         self.finance_models = []
         self.tech_control_classifiers = {}  # for system-level control
 
@@ -906,6 +921,29 @@ class H2IntegrateModel:
         # Create a technology group for each technology
         for tech_name, individual_tech_config in self.technology_config["technologies"].items():
             perf_model = individual_tech_config.get("performance_model", {}).get("model")
+            cost_config = individual_tech_config.get("cost_model", {})
+            if cost_config.get("run_after_plant"):
+                if not self._separate_finance or cost_config["model"] == perf_model:
+                    raise ValueError(
+                        f"'{tech_name}' can use run_after_plant only for a standalone cost "
+                        "model in a plant with separated finance."
+                    )
+                self._post_plant_costs[tech_name] = self.model.add_subsystem(
+                    post_plant_cost_group_name(tech_name),
+                    _PostPlantCostGroup(tech_name, cost_config["model"]),
+                    promotes=["*"],
+                )
+            # Defer this error so topology validation can report invalid connections first
+            if (
+                self._separate_finance
+                and (tech_fin_model := individual_tech_config.get("finance_model", {}).get("model"))
+                is not None
+            ):
+                self._unsupported_finance.append(
+                    f"Technology-specific finance model '{tech_fin_model}' for "
+                    f"technology '{tech_name}' is not supported inside a coupled or "
+                    "time-marching plant. Please use a system-level finance model instead"
+                )
 
             if "control_parameters" in individual_tech_config["model_inputs"]:
                 if "tech_name" in individual_tech_config["model_inputs"]["control_parameters"]:
@@ -960,12 +998,25 @@ class H2IntegrateModel:
                         )
                         self.control_strategies.append(control_object)
 
+                    # Local finance cannot be separated from an iterative technology group.
+                    if (
+                        tech_fin_model := individual_tech_config.get("finance_model", {}).get(
+                            "model"
+                        )
+                    ) is not None and not isinstance(
+                        tech_group.nonlinear_solver, om.NonlinearRunOnce
+                    ):
+                        self._unsupported_finance.append(
+                            f"Technology-specific finance model '{tech_fin_model}' for "
+                            f"technology '{tech_name}' is not supported "
+                            "inside an iterative technology group."
+                        )
+
                     comp = self.supported_models[perf_model](
                         driver_config=self.driver_config,
                         plant_config=self.plant_config,
                         tech_config=individual_tech_config,
                     )
-
                     check_model_control_classifier(perf_model, comp, self.slc)
                     self.tech_control_classifiers.update({tech_name: comp._control_classifier})
                     check_model_time_step(
@@ -994,8 +1045,13 @@ class H2IntegrateModel:
                 perf_om_object = None
                 for model_type in model_types:
                     if model_type in individual_tech_config:
+                        model_group = (
+                            self._post_plant_costs.get(tech_name, tech_group)
+                            if model_type == "cost_model"
+                            else tech_group
+                        )
                         om_model_object = self._process_model(
-                            model_type, individual_tech_config, tech_group
+                            model_type, individual_tech_config, model_group
                         )
                         if "control_strategy" in model_type:
                             plural_model_type_name = "control_strategies"
@@ -1024,6 +1080,12 @@ class H2IntegrateModel:
                     if "model" in individual_tech_config["finance_model"]:
                         finance_name = individual_tech_config["finance_model"]["model"]
 
+                        # Keep local finance out of a technology's own residual norm too
+                        if not isinstance(tech_group.nonlinear_solver, om.NonlinearRunOnce):
+                            self._unsupported_finance.append(
+                                f"Technology-specific finance model for '{tech_name}' is not "
+                                "supported inside an iterative technology group."
+                            )
                         if finance_name != individual_tech_config.get("cost_model", {}).get(
                             "model", ""
                         ):
@@ -1053,7 +1115,10 @@ class H2IntegrateModel:
                     comp,
                     self.plant_config["plant"]["simulation"]["dt"],
                 )
-                self.plant.add_subsystem(tech_name, comp)
+                if tech_name in self._post_plant_costs:
+                    self._post_plant_costs[tech_name].add_subsystem(cost_model, comp)
+                else:
+                    self.plant.add_subsystem(tech_name, comp)
         n_non_transport_techs = sum(
             1 for v in self.tech_control_classifiers.values() if v != "transport"
         )
@@ -1087,7 +1152,7 @@ class H2IntegrateModel:
                 plant_config=self.plant_config,
                 tech_config=individual_tech_config,
             ),
-            promotes=["*"],
+            promotes=None if isinstance(tech_group, _PostPlantCostGroup) else ["*"],
         )
 
         # Some controllers read performance-model outputs (e.g.
@@ -1228,8 +1293,8 @@ class H2IntegrateModel:
         Side Effects:
             * Updates ``self.plant_config["finance_parameters"]["finance_group"]`` if only a
               single finance model is provided (wraps it in a default finance subgroup).
-            * Constructs and attaches OpenMDAO finance subsystem groups to the
-              plant model under names ``finance_subgroup_<subgroup_name>``.
+            * Constructs OpenMDAO finance subsystem groups under names
+              ``finance_subgroup_<subgroup_name>``.
             * Stores processed subgroup configurations in
               ``self.finance_subgroups``.
 
@@ -1531,8 +1596,14 @@ class H2IntegrateModel:
                 # add the finance component to the finance group
                 finance_subgroup.add_subsystem(finance_subsystem_name, fin_comp, promotes=["*"])
 
-            # add the finance group to the subgroup
-            self.plant.add_subsystem(f"finance_subgroup_{subgroup_name}", finance_subgroup)
+            subgroup_system_name = f"finance_subgroup_{subgroup_name}"
+            if self._separate_finance:
+                # Add the finance subgroup to model, not plant, so it runs after the plant
+                # without entering the plant's residual norm.
+                self.model.add_subsystem(subgroup_system_name, finance_subgroup)
+                self._downstream_finance_names.add(subgroup_system_name)
+            else:
+                self.plant.add_subsystem(subgroup_system_name, finance_subgroup)
 
         self.finance_subgroups = finance_subgroups
 
@@ -1590,6 +1661,12 @@ class H2IntegrateModel:
         combiner_counts = {}
         splitter_counts = {}
 
+        self_loops = list(nx.selfloop_edges(self.technology_graph))
+        if self_loops:
+            raise NotImplementedError(
+                f"Technology self-connections are not supported: {self_loops}"
+            )
+
         # loop through each linkage and instantiate an OpenMDAO object (assume it exists) for
         # the connection type (e.g. cable, pipeline, etc)
         for connection in technology_interconnections:
@@ -1640,12 +1717,13 @@ class H2IntegrateModel:
         # If the source is a feedstock, make sure to connect the amount of
         # feedstock consumed from the technology back to the feedstock cost model
         if "FeedstockCostModel" in cost_model_name:
-            self.plant.connect(
+            connection_owner = self.model if source_tech in self._post_plant_costs else self.plant
+            connection_owner.connect(
                 f"{dest_tech}.{transport_item}_consumed",
                 f"{source_tech}.{transport_item}_consumed",
             )
             # Connect the feedstock performance model output to the cost model input
-            self.plant.connect(
+            connection_owner.connect(
                 f"{source_tech}_source.{transport_item}_out",
                 f"{source_tech}.{transport_item}_out",
             )
@@ -1740,7 +1818,16 @@ class H2IntegrateModel:
                 splitter_counts,
             )
         else:
-            self.plant.connect(
+            # Cross-boundary connections must belong to the endpoints' common ancestor.
+            connection_owner = (
+                self.model
+                if source_tech in self._downstream_finance_names
+                or dest_tech in self._downstream_finance_names
+                or source_tech in self._post_plant_costs
+                or dest_tech in self._post_plant_costs
+                else self.plant
+            )
+            connection_owner.connect(
                 f"{source_tech}.{source_parameter}",
                 f"{dest_tech}.{dest_parameter}",
                 src_indices=src_indices,
@@ -1815,6 +1902,9 @@ class H2IntegrateModel:
         if "finance_parameters" not in self.plant_config:
             return
 
+        # Finance and technology may be siblings rather than children of the plant.
+        connection_owner = self.model if self._separate_finance else self.plant
+
         # Connect the outputs of the technology models to the appropriate finance groups
         for group_id, group_configs in self.finance_subgroups.items():
             tech_configs = group_configs.get("tech_configs")
@@ -1825,19 +1915,19 @@ class H2IntegrateModel:
             if is_system_finance_model:
                 if group_configs.get("use_commodity_stream_timeseries", False):
                     # TODO: finish this logic
-                    self.plant.connect(
+                    connection_owner.connect(
                         f"{commodity_stream}.{group_configs.get('commodity_stream_output')}",
                         f"finance_subgroup_{group_id}.{primary_commodity_type}_produced",
                     )
                 else:
                     # Connect the rated commodity production and capacity factor
                     # for system-level finance models
-                    self.plant.connect(
+                    connection_owner.connect(
                         f"{commodity_stream}.rated_{primary_commodity_type}_production",
                         f"finance_subgroup_{group_id}.rated_{primary_commodity_type}_production",
                     )
 
-                    self.plant.connect(
+                    connection_owner.connect(
                         f"{commodity_stream}.capacity_factor",
                         f"finance_subgroup_{group_id}.capacity_factor",
                     )
@@ -1850,24 +1940,24 @@ class H2IntegrateModel:
                 if perf_model in no_cost_models and cost_model is None:
                     continue
 
-                self.plant.connect(
+                connection_owner.connect(
                     f"{tech_name}.CapEx",
                     f"finance_subgroup_{group_id}.capex_{tech_name}",
                 )
-                self.plant.connect(
+                connection_owner.connect(
                     f"{tech_name}.OpEx", f"finance_subgroup_{group_id}.opex_{tech_name}"
                 )
-                self.plant.connect(
+                connection_owner.connect(
                     f"{tech_name}.VarOpEx", f"finance_subgroup_{group_id}.varopex_{tech_name}"
                 )
-                self.plant.connect(
+                connection_owner.connect(
                     f"{tech_name}.cost_year",
                     f"finance_subgroup_{group_id}.cost_year_{tech_name}",
                 )
 
                 if is_system_finance_model and perf_model not in no_replacement_schedule_models:
                     # connect replacement schedule to system-level finance models
-                    self.plant.connect(
+                    connection_owner.connect(
                         f"{tech_name}.replacement_schedule",
                         f"finance_subgroup_{group_id}.replacement_schedule_{tech_name}",
                     )
@@ -1904,9 +1994,12 @@ class H2IntegrateModel:
     def finalize_connections(self):
         """Let OpenMDAO order the plant and add solvers if the technology graph has loops."""
         self.plant.options["auto_order"] = True
+        if self._separate_finance:
+            # Order site, operations, and finance by their actual dependencies.
+            self.model.options["auto_order"] = True
 
         # If cycles are found, set solvers for the plant to resolve the coupling
-        if list(nx.simple_cycles(self.technology_graph)):
+        if not nx.is_directed_acyclic_graph(self.technology_graph):
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
 
@@ -1919,7 +2012,7 @@ class H2IntegrateModel:
         """
 
         simulation_config = self.plant_config["plant"]["simulation"]
-        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+        has_cycles = not nx.is_directed_acyclic_graph(self.technology_graph)
 
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
@@ -1950,6 +2043,19 @@ class H2IntegrateModel:
             solver_cls = solver_config.return_nonlinear_solver()
             solver = solver_cls()
             solver_options = solver_config.get_solver_options()
+            if self._downstream_finance_names:
+                # Do not evaluate finance after an unconverged plant solve.
+                if solver_options["maxiter"] <= 0:
+                    raise ValueError(
+                        "max_iter must be positive when finance is evaluated "
+                        "after a coupled plant solve."
+                    )
+                if solver_options.get("err_on_non_converge") is False:
+                    raise ValueError(
+                        "err_on_non_converge cannot be disabled when finance is evaluated "
+                        "after a coupled plant solve."
+                    )
+                solver_options["err_on_non_converge"] = True
             for k, v in solver_options.items():
                 solver.options[k] = v
             self.plant.nonlinear_solver = solver
@@ -1960,6 +2066,9 @@ class H2IntegrateModel:
         if has_cycles:
             self.plant.nonlinear_solver = om.NonlinearBlockGS()
             self.plant.linear_solver = om.DirectSolver()
+            if self._downstream_finance_names:
+                # Apply the same failure guard to technology cycles without SLC.
+                self.plant.nonlinear_solver.options["err_on_non_converge"] = True
 
         if time_marching:
             # Assign custom nonlinear solver to plant group to manage time-marching simulation
@@ -1986,24 +2095,46 @@ class H2IntegrateModel:
 
     def setup(self):
         """
-        Extremely light wrapper to setup the OpenMDAO problem and track setup status.
+        Set up the OpenMDAO problem, validate connections, and track setup status.
         """
-        self.prob.setup()
-        self.state = State.SETUP
-
-        for tech, tech_info in self.technology_config["technologies"].items():
-            check_inputs(self.prob, tech, tech_info, self.tech_config_path)
+        # Preserve topology errors before reporting unsupported finance arrangements.
         validate_technology_interconnections(
             self.plant_config.get("technology_interconnections", []),
             self.technology_graph,
             self.tech_control_classifiers,
         )
+        if self._unsupported_finance:
+            raise NotImplementedError(self._unsupported_finance[0])
+
+        self.prob.setup()
+
+        if self._downstream_finance_names or self._post_plant_costs:
+            # Use resolved connections so this also covers programmatic connections.
+            graph = self.model.compute_sys_graph()
+            cost_groups = {post_plant_cost_group_name(name) for name in self._post_plant_costs}
+            downstream = self._downstream_finance_names | cost_groups
+            for cycle in nx.strongly_connected_components(graph):
+                if len(cycle) < 2 or not cycle.intersection(downstream):
+                    continue
+                if "plant" in cycle and cycle.intersection(self._downstream_finance_names):
+                    message = "Feedback between the plant and separated finance is not supported."
+                else:
+                    message = "Feedback involving post-plant costs or finance is not supported."
+                raise ValueError(
+                    f"{message} Break the cycle involving: {', '.join(sorted(cycle))}."
+                )
+            if nx.ancestors(graph, "plant").intersection(cost_groups):
+                raise ValueError("A cost model with run_after_plant cannot feed the plant.")
+
+        for tech, tech_info in self.technology_config["technologies"].items():
+            check_inputs(self.prob, tech, tech_info, self.tech_config_path)
         check_technology_connections(
             self.prob,
             self.technology_config,
             self.technology_graph,
             self.plant_config_path,
         )
+        self.state = State.SETUP
 
     def run(self):
         # do model setup based on the driver config

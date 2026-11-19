@@ -5,6 +5,8 @@ from collections import Counter
 
 import numpy as np
 
+from h2integrate.core.connection_utils import post_plant_cost_group_name
+
 
 def dict_to_yaml_formatting(orig_dict):
     """Recursive method to convert arrays to lists and numerical entries to floats.
@@ -314,7 +316,13 @@ def check_inputs(prob, tech: str, tech_info: dict, tech_config_path: str):
         if (dispatch_sys := getattr(group, tech_info["dispatch_rule_set"]["model"])) is not None:
             dispatch_params = dispatch_sys.config.as_dict()
     if "cost_model" in tech_info:
-        if (cost_sys := getattr(group, tech_info["cost_model"]["model"])) is not None:
+        cost_model = tech_info["cost_model"]
+        cost_group = (
+            getattr(prob.model, post_plant_cost_group_name(tech))
+            if cost_model.get("run_after_plant")
+            else group
+        )
+        if (cost_sys := getattr(cost_group, cost_model["model"])) is not None:
             cost_params = cost_sys.config.as_dict()
     if "performance_model" in tech_info:
         if (perf_sys := getattr(group, tech_info["performance_model"]["model"])) is not None:
