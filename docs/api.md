@@ -32,7 +32,6 @@ and classes are included in the API reference:
    :toctree: _autosummary
 
    system_level_control_baseclass
-   solver_options
    demand_following_control
    cost_minimization_control
    profit_maximization_control
