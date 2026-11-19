@@ -1,6 +1,14 @@
 import numpy as np
+from attrs import field, define, validators
 from openmdao.recorders.recording_iteration_stack import Recording
 from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
+
+from h2integrate.core.solver_options import NLSolverOptionsConfig
+
+
+@define(kw_only=True)
+class TimeMarchingNLSolverOptionsConfig(NLSolverOptionsConfig):
+    solver_name: str = field(default="gauss_seidel", validator=validators.in_(["gauss_seidel"]))
 
 
 class TimeMarchingPlantSolver(NonlinearRunOnce):
@@ -12,6 +20,13 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
     def __init__(self, plant_config):
         super().__init__()
         self.plant_config = plant_config
+        # uncomment below code when PR #983 is merged
+        # solver_opts = self.plant_config["plant"]["simulation"].get("nl_solver_options",{})
+
+        # solver_config = TimeMarchingNLSolverOptionsConfig.from_dict(solver_opts)
+        # solver_options = solver_config.get_solver_options()
+        # for k, v in solver_options.items():
+        #     self.options[k] = v
 
     def solve(self):
         # Should only be used when system is the plant group
