@@ -19,7 +19,7 @@ dispatches technologies only when the revenue from selling the commodity exceeds
 It uses {py:class}`~h2integrate.control.control_strategies.system_level.profit_maximization_control.ProfitMaximizationControlConfig`,
 inherits its demand and technology interface from
 {py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`,
-and uses {py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`
+and uses {py:class}`~h2integrate.core.solver_options.NLSolverOptionsConfig`
 for solver options.
 
 The N2 diagram below shows an example system using the profit maximization controller with wind, natural gas, and battery storage technologies.

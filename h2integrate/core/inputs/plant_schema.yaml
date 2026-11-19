@@ -87,6 +87,10 @@ properties:
             default: 0
             minimum: -12
             maximum: 14
+          nl_solver_options:
+            type: object
+            description: nonlinear solver options for systems with feedback connections
+            additionalProperties: true
         required: [dt, n_timesteps]
     required: [plant_life, simulation]
   technology_interconnections:
@@ -163,4 +167,13 @@ properties:
         additionalProperties: false
     additionalProperties: false
     required: [finance_groups, cost_adjustment_parameters]
+  system_level_control:
+    type: object
+    description: input parameters for system level control
+    properties:
+      control_strategy:
+        type: string
+        description: Name of the system level control model
+    required: [control_strategy]
+    additionalProperties: true
 required: [name, description, plant]  # should plant be required?

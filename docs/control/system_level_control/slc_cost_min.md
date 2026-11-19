@@ -18,7 +18,7 @@ The {py:class}`~h2integrate.control.control_strategies.system_level.cost_minimiz
 meets demand using merit-order dispatch. It inherits its demand and technology interface from
 {py:class}`~h2integrate.control.control_strategies.system_level.system_level_control_baseclass.SystemLevelControlBase`;
 solver options use
-{py:class}`~h2integrate.control.control_strategies.system_level.solver_options.SLCSolverOptionsConfig`.
+{py:class}`~h2integrate.core.solver_options.NLSolverOptionsConfig`.
 Unlike the {ref}`demand following controller <slc-demand-following>`, which splits demand evenly across dispatchable technologies, this controller dispatches the cheapest technologies first.
 
 ## Dispatch Logic

@@ -12,6 +12,7 @@ from h2integrate.core.model_checks import (
     check_time_marching_config,
     check_model_control_classifier,
 )
+from h2integrate.core.solver_options import NLSolverOptionsConfig
 from h2integrate.core.connection_utils import (
     create_technology_graph,
     check_dispatch_connections,
@@ -32,9 +33,6 @@ from h2integrate.postprocess.reporting import (
 from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.core.commodity_stream_definitions import multivariable_streams
 from h2integrate.control.control_strategies.passthrough_controller import PassthroughController
-from h2integrate.control.control_strategies.system_level.solver_options import (
-    SLCSolverOptionsConfig,
-)
 from h2integrate.control.control_strategies.system_level.system_level_control_baseclass import (
     _get_tech_buy_price_input_name,
 )
@@ -61,6 +59,16 @@ class H2IntegrateModel:
         # defined in plant config
         self.technology_graph = create_technology_graph(
             self.plant_config.get("technology_interconnections", {})
+        )
+
+        # add bool for whether or not the technology connections have feedback cycles
+        self._has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
+
+        # add bool for whether running time-marching simulation
+        simulation_config = self.plant_config["plant"]["simulation"]
+        self._is_time_marching = (
+            simulation_config.get("n_timesteps_window", simulation_config["n_timesteps"])
+            < simulation_config["n_timesteps"]
         )
 
         # load in supported models
@@ -1905,11 +1913,6 @@ class H2IntegrateModel:
         """Let OpenMDAO order the plant and add solvers if the technology graph has loops."""
         self.plant.options["auto_order"] = True
 
-        # If cycles are found, set solvers for the plant to resolve the coupling
-        if list(nx.simple_cycles(self.technology_graph)):
-            self.plant.nonlinear_solver = om.NonlinearBlockGS()
-            self.plant.linear_solver = om.DirectSolver()
-
     def set_plant_solver(self):
         """Configures solvers on the plant group according to the needs of the run case.
 
@@ -1919,34 +1922,34 @@ class H2IntegrateModel:
         """
 
         simulation_config = self.plant_config["plant"]["simulation"]
-        has_cycles = bool(list(nx.simple_cycles(self.technology_graph)))
 
         # Validate the time-marching options before choosing any solver so unsupported
         # combinations fail loudly instead of silently simulating only the first window.
-        time_marching = False
-        n_timesteps_window = simulation_config.get("n_timesteps_window")
-        if n_timesteps_window is not None:
-            time_marching = check_time_marching_config(
+        if self._is_time_marching:
+            n_timesteps_window = simulation_config.get("n_timesteps_window")
+
+            check_time_marching_config(
                 simulation_config["n_timesteps"],
                 n_timesteps_window,
-                bool(self.slc),
-                has_cycles,
+                self.slc,
+                self._has_cycles,
             )
 
-        if self.slc:
+            # Assign custom nonlinear solver to plant group to manage time-marching simulation
+            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
+            check_model_is_steppable(self.control_strategies, self.performance_models)
+            return
+
+        if self.slc or self._has_cycles:
             # Because the controller creates a feedback loop (controller outputs become technology
             # inputs, whose outputs feed back to the controller), a nonlinear solver is required.
             # Solver type and options are read from
-            # ``plant_config["system_level_control"]["solver_options"]`` via
-            # ``SLCSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and is
+            # ``plant_config["plant"]["simulation"]["nl_solver_options"]`` via
+            # ``NLSolverOptionsConfig``. A ``DirectSolver`` is set as the linear solver and is
             # largely inconsequential as we're not propagating derivatives at this time.
-
-            plant_slc_config = self.plant_config["system_level_control"]
-
-            # The feedback loop (controller <-> technologies) requires an
-            # iterative nonlinear solver to converge.
-            solver_options = plant_slc_config.get("solver_options", {})
-            solver_config = SLCSolverOptionsConfig.from_dict(solver_options)
+            # If loops are present in the technology graph, add solvers to resolve the coupling
+            solver_options = simulation_config.get("nl_solver_options", {})
+            solver_config = NLSolverOptionsConfig.from_dict(solver_options)
             solver_cls = solver_config.return_nonlinear_solver()
             solver = solver_cls()
             solver_options = solver_config.get_solver_options()
@@ -1956,16 +1959,8 @@ class H2IntegrateModel:
             self.plant.linear_solver = om.DirectSolver()
             return
 
-        # If loops are present in the technology graph, add solvers to resolve the coupling
-        if has_cycles:
-            self.plant.nonlinear_solver = om.NonlinearBlockGS()
-            self.plant.linear_solver = om.DirectSolver()
-
-        if time_marching:
-            # Assign custom nonlinear solver to plant group to manage time-marching simulation
-            self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
-
-            check_model_is_steppable(self.control_strategies, self.performance_models)
+        # eventually, could allow for solver option to be specified for NonlinearRunOnce solver
+        return
 
     def create_driver_model(self):
         """

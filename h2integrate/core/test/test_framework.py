@@ -1666,3 +1666,37 @@ def test_check_dispatch_connections_missing_key_entirely_raises():
         "(at least): [['battery', 'battery'], ['combiner', 'battery'], "
         "['wave', 'combiner']]." in err
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("36_nuclear_reactor_htse", None)]
+)
+def test_nonlinear_solver_options(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
+    plant_config["plant"]["simulation"]["nl_solver_options"]["iprint"] = 0
+    plant_config["plant"]["simulation"]["nl_solver_options"]["rtol"] = 1e-12
+    plant_config["plant"]["simulation"]["nl_solver_options"].update({"debug_print": True})
+    config = {
+        "technology_config": example_folder / "tech_config.yaml",
+        "driver_config": example_folder / "driver_config.yaml",
+        "plant_config": plant_config,
+    }
+
+    h2i = H2IntegrateModel(config)
+    with subtests.test("cyclic connections"):
+        assert h2i._has_cycles
+
+    with subtests.test("solver options are updated"):
+        assert h2i.plant.nonlinear_solver.options["iprint"] == 0, "iprint"
+        assert h2i.plant.nonlinear_solver.options["rtol"] == 1e-12, "rtol"
+        assert h2i.plant.nonlinear_solver.options["debug_print"] is True, "debug_print"
+
+    plant_config["plant"]["simulation"]["nl_solver_options"].update(
+        {"solver_option_kwargs": {"rtol": 1e-12}}
+    )
+    with pytest.raises(AttributeError) as excinfo:
+        h2i = H2IntegrateModel(config)
+    err = str(excinfo.value)
+    assert "Duplicated definition of solver option(s): ['rtol']" in err
