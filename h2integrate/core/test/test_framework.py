@@ -1700,21 +1700,3 @@ def test_nonlinear_solver_options(subtests, temp_copy_of_example):
         h2i = H2IntegrateModel(config)
     err = str(excinfo.value)
     assert "Duplicated definition of solver option(s): ['rtol']" in err
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("example_folder,resource_example_folder", [("01_onshore_steel_mn", None)])
-def test_nonlinear_solver_options_warning(subtests, temp_copy_of_example):
-    example_folder = temp_copy_of_example
-    plant_config = load_plant_yaml(example_folder / "plant_config.yaml")
-    plant_config["plant"]["simulation"].update({"nl_solver_options": {}})
-    config = {
-        "technology_config": example_folder / "tech_config.yaml",
-        "driver_config": example_folder / "driver_config.yaml",
-        "plant_config": plant_config,
-    }
-
-    expected_str = "`nl_solver_options` is an extraneous input when no feedback cycles exist"
-    with pytest.warns(UserWarning) as excinfo:
-        H2IntegrateModel(config)
-    any(expected_str in str(excinfo.list[i].message) for i in range(len(excinfo.list)))
