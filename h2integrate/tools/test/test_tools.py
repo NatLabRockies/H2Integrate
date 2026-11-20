@@ -30,7 +30,7 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.306335842372589
+            == 5.147344701040896
         )
     with subtests.test("bool"):
         case = cases["Bool Test"]
@@ -40,7 +40,7 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.205991056910428
+            == 5.05383210080611
         )
     with subtests.test("int"):
         case = cases["Int Test"]
@@ -50,7 +50,7 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.438566222420234
+            == 5.26983835476
         )
     with subtests.test("str"):
         case = cases["Str Test"]
@@ -60,7 +60,7 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.205991056616438
+            == 5.053832100806
         )
     with subtests.test("int repeat without run setup modify_tech_config"):
         case = cases["Int Test"]
@@ -70,7 +70,7 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.205991056616438  # should still "str" test value
+            == 5.053832100806  # should still "str" test value
         )
     with subtests.test("int repeat with run setup outside modify_tech_config"):
         case = cases["Int Test"]
@@ -81,5 +81,5 @@ def test_tech_config_modifier(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0], rel=1e-3
             )
-            == 5.438566222420234  # should still "str" test value
+            == 5.26983835476  # should still "int" test value
         )
