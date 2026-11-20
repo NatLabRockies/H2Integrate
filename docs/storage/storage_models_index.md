@@ -7,6 +7,7 @@ Storage technologies input and output the 'Storage Commodity' (`commodity`) as a
 H2I currently supports the following storage performance models:
 - [`StoragePerformanceModel`](#simple-generic-storage-performance)
 - [`PySAMBatteryPerformanceModel`](#pysam-battery-performance)
+- [`SimSESBatteryPerformanceModel`](#simses-battery-performance)
 - `StorageAutoSizingModel`
 
 The following sections detail the inputs and outputs of the storage performance models.

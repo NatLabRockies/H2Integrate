@@ -49,7 +49,7 @@ the problem. All code and full tracebacks should be properly markdown formatted.
 <!-- Add your information here. -->
 - OS: <macOS 12.4>
   <!-- e.g. Ubuntu 20.04 or macOS 10.12 -->
-- Python version: <3.11.4>
+- Python version: <3.12>
   <!-- All OS: `python --version`-->
 - H2Integrate version: <0.1.1>
   <!--
