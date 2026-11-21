@@ -1,3 +1,12 @@
+"""
+Direct Ocean Capture CO2 Hydrogenation for Methanol
+===================================================
+
+Short Description.
+
+Longer Description.
+"""
+
 from plot_co2h_methanol import plot_methanol
 
 from h2integrate import H2IntegrateModel

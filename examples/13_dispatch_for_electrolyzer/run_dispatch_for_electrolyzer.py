@@ -1,3 +1,12 @@
+"""
+Battery Dispatching for Electrolysis
+====================================
+
+Short Description.
+
+Longer Description.
+"""
+
 from pathlib import Path
 
 from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml

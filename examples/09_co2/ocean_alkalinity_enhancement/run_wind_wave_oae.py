@@ -1,4 +1,6 @@
-"""Ocean alkalinity enhancement (OAE) powered by wind, with two cost modeling approaches.
+"""
+Ocean Alkalinity Enhancement (OAE) powered by wind, with two cost modeling approaches.
+======================================================================================
 
 - `offshore_plant_oae.yaml`: offshore wind and a battery power the OAE system, which uses
   `OAECostModel` and is included in a ProFAST levelized cost of CO2 calculation.

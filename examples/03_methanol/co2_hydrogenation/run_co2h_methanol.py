@@ -1,3 +1,12 @@
+"""
+CO2 Hydrogenation for Methanol
+==============================
+
+Short Description.
+
+Longer Description.
+"""
+
 from h2integrate import H2IntegrateModel
 
 

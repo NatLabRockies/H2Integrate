@@ -2,7 +2,9 @@
 Producing Steel
 ===============
 
-This is some text I don't have to think about, but someone else will.
+Short Description.
+
+Longer Description.
 """
 
 import numpy as np

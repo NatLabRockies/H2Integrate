@@ -1,4 +1,8 @@
-"""Example of an iron mine sending processed ore pellets to a separate DRI iron plant and EAF
+"""
+Iron Mine Outputs Splitting
+===========================
+
+Example of an iron mine sending processed ore pellets to a separate DRI iron plant and EAF
 
 In this example, iron ore pellets are produced at different iron mine locations in NE Minnesota.
 These mines send processed ore pellets to a separate iron DRI plant located outside Chicago.

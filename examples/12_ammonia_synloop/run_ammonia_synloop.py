@@ -1,3 +1,12 @@
+"""
+Ammonia Synloop
+===============
+
+Short Description.
+
+Longer Description.
+"""
+
 from pathlib import Path
 
 import numpy as np

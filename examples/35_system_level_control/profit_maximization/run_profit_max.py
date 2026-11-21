@@ -1,4 +1,7 @@
 """
+Profix Maximization Controller
+==============================
+
 Profit-maximization example with simple electricity price profiles.
 
 The controller dispatches the NG plant only during hours when the sell price

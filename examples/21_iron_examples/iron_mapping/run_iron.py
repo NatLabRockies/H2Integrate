@@ -1,4 +1,8 @@
-"""Use built in H2I mapping tools to plot a 3-step iron mining, transport, and reduction process.
+"""
+Iron Mapping
+============
+
+Use built in H2I mapping tools to plot a 3-step iron mining, transport, and reduction process.
 
 This example is focused not on the use of the main H2I model tools, but the post-processing mapping
 functions. The H2I model has already been run over several locations, with the data saved and

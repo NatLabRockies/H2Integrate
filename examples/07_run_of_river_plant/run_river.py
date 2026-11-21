@@ -1,3 +1,12 @@
+"""
+Run of River Hydropower
+=======================
+
+Short Description.
+
+Longer Description.
+"""
+
 from h2integrate import H2IntegrateModel
 
 

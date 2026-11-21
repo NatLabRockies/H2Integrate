@@ -1,3 +1,12 @@
+"""
+Direct Ocean Capture Powered by Wind & Wave
+===========================================
+
+Short Description.
+
+Longer Description.
+"""
+
 import numpy as np
 
 from h2integrate import H2IntegrateModel

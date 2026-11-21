@@ -1,3 +1,12 @@
+"""
+Pyomo Optimized Dispatch
+========================
+
+Short Description.
+
+Longer Description.
+"""
+
 import numpy as np
 from matplotlib import pyplot as plt
 

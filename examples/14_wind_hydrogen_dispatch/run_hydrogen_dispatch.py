@@ -1,5 +1,8 @@
-"""Example script for running the base example in the hydrogren dispatch open-loop controller
-example.
+"""
+Hydrogen Dispatch Open-Loop Controller
+======================================
+
+Example script for running the base example in the hydrogren dispatch open-loop controller example.
 """
 
 from pathlib import Path

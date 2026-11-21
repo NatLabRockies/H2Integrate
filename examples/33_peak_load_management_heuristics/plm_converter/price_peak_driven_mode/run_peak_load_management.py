@@ -1,5 +1,6 @@
 """
-Example 33: Peak load management converter heuristic dispatch (price-driven mode)
+Peak load management converter heuristic dispatch (price-driven mode)
+=====================================================================
 
 This example demonstrates peak load management dispatch open-loop control of a converter
 driven by an upstream *price* signal instead of an upstream demand profile.

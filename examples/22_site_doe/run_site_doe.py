@@ -1,3 +1,12 @@
+"""
+Site-Based Design of Experiments
+================================
+
+Short Description.
+
+Longer Description.
+"""
+
 import os
 from pathlib import Path
 

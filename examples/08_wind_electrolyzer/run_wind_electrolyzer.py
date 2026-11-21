@@ -1,3 +1,10 @@
+"""
+Wind Electrolysis Financing
+===========================
+
+This is some text I don't have to think about, but someone else will.
+"""
+
 import os
 from pathlib import Path
 

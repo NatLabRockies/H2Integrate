@@ -1,4 +1,11 @@
-"""Pared down version of the "Sizing Modes with Resizeable Converters" User Guide example."""
+"""
+Resizable Converters
+====================
+
+Pared down version of the "Sizing Modes with Resizeable Converters" User Guide example.
+
+Longer Description.
+"""
 
 import numpy as np
 

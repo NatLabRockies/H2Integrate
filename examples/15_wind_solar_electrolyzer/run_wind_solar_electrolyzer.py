@@ -1,3 +1,12 @@
+"""
+Financing Hydrogen with Wind & Solar
+====================================
+
+Short Description.
+
+Longer Description.
+"""
+
 from h2integrate import H2IntegrateModel
 
 

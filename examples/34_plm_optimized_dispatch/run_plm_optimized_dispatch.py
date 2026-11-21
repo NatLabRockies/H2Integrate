@@ -1,4 +1,9 @@
 """
+Optimized Battery Storage
+=========================
+
+Peak-load and demand-response managed battery dispatch.
+
 This example simulates a Battery Energy Storage system controller
 to demonstrate demand-response and peak-load management dispatch
 using a rolling-horizon MILP controller.

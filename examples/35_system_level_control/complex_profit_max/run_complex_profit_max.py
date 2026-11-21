@@ -1,4 +1,7 @@
 """
+Complex Profit Maximization Controller
+======================================
+
 Complex profit-maximization example with wind, solar, battery, NG, and grid.
 
 This example demonstrates profit-driven dispatch with:

@@ -1,8 +1,9 @@
 """
-Example 33: Peak load management converter heuristic dispatch
+Peak load management converter heuristic dispatch
+=================================================
 
-This example demonstrates peak load management dispatch open loop control of a converter
-with two demand profiles of interest
+This example demonstrates peak load management dispatch open-loop control of a converter
+with two demand profiles of interest.
 
 In this example, the fuel-cell converter command is determined by a simple open-loop
 threshold heuristic that uses two profiles:

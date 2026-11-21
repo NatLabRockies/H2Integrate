@@ -1,3 +1,12 @@
+"""
+Solar, Wind, & Natural Gas Demand Optimization
+==============================================
+
+Short Description.
+
+Longer Description.
+"""
+
 from h2integrate import H2IntegrateModel
 
 

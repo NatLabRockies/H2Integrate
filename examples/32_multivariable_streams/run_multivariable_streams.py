@@ -1,5 +1,8 @@
 """
-Example 32: Multivariable Streams with Gas Combiner
+Multivariable Streams with Gas Combiner
+=======================================
+
+Multiple input gas streams with controlled combining.
 
 This example demonstrates:
 1. Multivariable streams - connecting multiple related variables with a single connection

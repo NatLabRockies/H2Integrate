@@ -1,3 +1,12 @@
+"""
+Thermal Nuclear Reactor
+=======================
+
+Short Description.
+
+Longer Description.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 

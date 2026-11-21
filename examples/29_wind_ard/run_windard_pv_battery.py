@@ -1,3 +1,12 @@
+"""
+Ard Wind, Solar, & Battery
+==========================
+
+Short Description.
+
+Longer Description.
+"""
+
 import importlib
 
 import openmdao.api as om

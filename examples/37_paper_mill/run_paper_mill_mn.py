@@ -1,4 +1,8 @@
-"""Run script for the paper mill example (Minnesota site).
+"""
+Minnesota Paper Mill
+====================
+
+Run script for the paper mill example (Minnesota site).
 
 Sets up, runs, and post-processes the H2Integrate paper mill model, then exports
 results to CSV using the built-in SQL postprocessing utilities:

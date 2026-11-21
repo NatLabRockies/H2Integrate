@@ -1,3 +1,12 @@
+"""
+Wind & Battery Dispatch Optimization
+====================================
+
+Short Description.
+
+Longer Description.
+"""
+
 import matplotlib.pyplot as plt
 
 from h2integrate import H2IntegrateModel

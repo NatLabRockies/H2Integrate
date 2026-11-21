@@ -1,0 +1,5 @@
+complex_profit_max/run_complex_profit_max
+demand_following/run_demand_following
+profit_maximization/run_profit_max
+upstream_demand/run_multi_demand
+yes_hydrogen/run_multi_commodity

@@ -1,5 +1,6 @@
 """
-Example 33: Peak load management storage heuristic dispatch
+Peak load management storage heuristic dispatch
+===============================================
 
 This example demonstrates:
 1. Peak load management dispatch open loop control with two demand profiles of interest

@@ -1,3 +1,10 @@
+"""
+Geologic Hydrogen
+=================
+
+This is some text I don't have to think about, but someone else will.
+"""
+
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 

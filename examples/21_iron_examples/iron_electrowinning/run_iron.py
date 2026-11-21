@@ -1,4 +1,8 @@
-"""Comparing three different iron electrowinning technologies
+"""
+Iron Electrowinning
+===================
+
+Comparing three different iron electrowinning technologies
 
 This script runs an end-to-end iron production system (including the mine) and compares the
 levelized cost of sponge_iron across three different iron electrowinning technologies to see

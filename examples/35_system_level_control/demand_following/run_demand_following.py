@@ -1,4 +1,8 @@
-"""Demand-following system-level control with and without battery storage.
+"""
+Demand-Following SLC for Batteries
+==================================
+
+Demand-following system-level control with and without battery storage.
 
 The same wind and natural gas plant meets a fixed electrical load demand in three configurations:
 

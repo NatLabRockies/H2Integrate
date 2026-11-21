@@ -1,3 +1,12 @@
+"""
+Wind & Direct Ocean Capture Power Splitting
+===========================================
+
+Short Description.
+
+Longer Description.
+"""
+
 from h2integrate.core.h2integrate_model import H2IntegrateModel
 
 

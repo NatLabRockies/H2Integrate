@@ -1,4 +1,11 @@
-"""Minimal working example from the parameter sweep user guide docs."""
+"""
+Design of Experiments via CSV
+=============================
+
+Minimal working example from the parameter sweep user guide docs.
+
+Longer Description.
+"""
 
 from h2integrate import H2IntegrateModel
 from h2integrate.core.dict_utils import update_defaults
