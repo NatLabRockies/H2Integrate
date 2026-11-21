@@ -166,3 +166,16 @@ sphinx_gallery_conf = {
     "examples_dirs": "../examples",
     "gallery_dirs": "auto_examples",  # gallery generated output
 }
+
+# -- Options for Sphinx Gallery --------------------------------------------------------------------
+
+from docs.sphinxext.gallery_order import section_order, preserve_order, subsection_order
+
+
+sphinx_gallery_conf = {
+    "gallery_dirs": ["auto_examples"],
+    "minigallery_sort_order": preserve_order,
+    "subsection_order": section_order,
+    "within_subsection_order": subsection_order,
+    "parallel": True,
+}

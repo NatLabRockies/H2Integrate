@@ -113,7 +113,7 @@ develop = [
     "pytest-xdist[psutil]>=3.8",
     "ruff",
     "sphinxcontrib-napoleon",
-    "sphinx-gallery",
+    "sphinx-gallery>=0.18",
     "yamlfix"
 ]
 examples = [

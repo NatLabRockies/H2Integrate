@@ -77,7 +77,9 @@ docs/jupyter_execute/
 docs/_static/class_hierarchy.html
 docs/user_guide/model_registry.md
 docs/auto_examples/
-docs/sg_execution_times.rst
+**/sg_execution_times.rst
+**/examples_python.zip**
+**/examples_jupyter.zip**
 
 # PyBuilder
 target/
