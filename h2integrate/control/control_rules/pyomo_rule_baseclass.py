@@ -14,7 +14,7 @@ class PyomoRuleBaseConfig(BaseConfig):
 
     Attributes:
         commodity (str): Name of the commodity being controlled (e.g., "hydrogen").
-        commodity_units (str): Units of the commodity (e.g., "kg/h").
+        commodity_rate_units (str): Rate units for the commodity (e.g., ``"kg/h"``).
     """
 
     commodity: str = field()

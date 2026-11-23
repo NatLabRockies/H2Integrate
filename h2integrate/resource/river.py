@@ -12,6 +12,9 @@ from h2integrate.core.supported_models import register
 class RiverResourceConfig(BaseConfig):
     """Configure the discharge file used by :class:`RiverResource`.
 
+    Attributes:
+        filename (str | Path): Path to the USGS-format discharge data file.
+
     See :doc:`/technology_models/run_of_river` for the expected file format.
     """
 
