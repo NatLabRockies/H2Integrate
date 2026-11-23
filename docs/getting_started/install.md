@@ -108,11 +108,11 @@ pip install -e ".[all]"
     cd H2Integrate
     ```
 
-3. Create a new virtual environment and change to it. Using Conda Python 3.11 (choose your favorite
+3. Create a new virtual environment and change to it. Using Conda Python 3.12 or 3.13 (choose your favorite
    supported version) and naming it 'h2integrate' (choose your desired name):
 
     ```bash
-    conda create --name h2integrate python=3.11 -y
+    conda create --name h2integrate python=3.12 -y
     conda activate h2integrate
     ```
 
