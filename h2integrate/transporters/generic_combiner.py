@@ -9,7 +9,10 @@ from h2integrate.core.supported_models import register
 class GenericCombinerPerformanceConfig(BaseConfig):
     """Configuration class for a generic combiner.
 
-    Fields include `commodity`, `commodity_rate_units`, and `in_streams`.
+    Attributes:
+        commodity (str): Name of the commodity to combine.
+        commodity_rate_units (str): Rate units for the commodity (e.g., ``"kg/h"``).
+        in_streams (int): Number of input streams to combine.
 
     See :class:`GenericCombinerPerformanceModel` and
     :doc:`/technology_models/combiners_and_splitters`.

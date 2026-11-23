@@ -27,7 +27,7 @@ SALINITY_PROPERTIES = {
 class ReverseOsmosisPerformanceModelConfig(BaseConfig):
     """Configuration class for the ReverseOsmosisPerformanceModel.
 
-    Args:
+    Attributes:
         freshwater_capacity_kg_per_hr (float): Desalination plant capacity, represented as
             the maximum freshwater production rate [kg/h].
         salinity (str): "seawater" (>18,000 ppm) or "brackish" (<18,000 ppm). Sets the
@@ -184,7 +184,7 @@ class ReverseOsmosisPerformanceModel(PerformanceModelBaseClass):
 class ReverseOsmosisCostModelConfig(CostModelBaseConfig):
     """Configuration class for the ReverseOsmosisCostModel.
 
-    Args:
+    Attributes:
         freshwater_capacity_kg_per_hr (float): Desalination plant capacity, represented as
             the maximum freshwater production rate [kg/h].
         cost_year (int): Dollar year of the costs. Only 2013 is supported.

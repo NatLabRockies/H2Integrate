@@ -32,6 +32,7 @@
 - Moved system-level control purchase-price configuration helpers into `marginal_cost_tools.py`, kept price expansion inline, and combined VarOpEx and feedstock marginal-cost calculations. [PR 958](https://github.com/NatLabRockies/H2Integrate/pull/958)
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
 - Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
+- Standardize attrs configuration documentation and remove duplicate type-only fields from generated API pages. [PR 999](https://github.com/NatLabRockies/H2Integrate/pull/999)
 - Fixed `PeakLoadManagementOptimizedStorageController` issues affecting degraded batteries and multi-year simulations. [PR 988](https://github.com/NatLabRockies/H2Integrate/pull/988)
   - Removed a redundant initial-SOC constraint that prevented dispatch on the first step of each control window and made the MILP infeasible when that step required dispatch.
   - Monthly event and energy budgets are now tracked per year and month.

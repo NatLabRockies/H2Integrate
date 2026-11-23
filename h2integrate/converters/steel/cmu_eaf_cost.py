@@ -11,7 +11,7 @@ class CMUElectricArcFurnaceCostConfig(CostModelBaseConfig):
 
     See :class:`CMUElectricArcFurnaceCostModel` and :doc:`/technology_models/steel_eaf_cmu`.
 
-    Args:
+    Attributes:
         steel_production_capacity_tonnes_per_year (float): Rated electric arc furnace capacity
             in tonnes of steel produced per year. Default is 2200000 tonnes/year based on the CMU
             decarbSTEEL v5 model which assumes a 2.2 million tonne per year capacity for the EAF.

@@ -35,7 +35,7 @@ class GeospatialMapConfig(BaseConfig):
     function's argument map_preferences. Represents necessary parameters for formatting and
     plotting with GeoPandas, matplotlib, and contextily.
 
-    Args:
+    Attributes:
         lat_long_crs (str, optional): A string representing the CRS of the (longitude,latitude) data
             used to plot points. Defaults to 'EPSG:4326'.
         web_map_crs (str, optional): A string representing the Web Mercator projection CRS used to

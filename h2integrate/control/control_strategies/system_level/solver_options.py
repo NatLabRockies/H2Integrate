@@ -45,6 +45,10 @@ class SLCSolverOptionsConfig(BaseConfig):
         solver_option_kwargs: Additional keyword arguments passed directly to the
             solver's ``options`` dict.
 
+    Note:
+        ``solver_map`` is an internal class-level mapping and is not accepted in YAML
+        configuration.
+
     See :doc:`/control/system_level_control/system_level_control` for system-level control.
     """
 
