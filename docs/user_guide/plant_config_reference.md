@@ -45,6 +45,7 @@ Resource models have model-specific data ranges and time-step requirements. Some
 and solar resources support multiple years; see the [resource index](../resource/resource_index.md)
 and the wind and solar resource pages.
 
+(plant-simulation-settings)=
 ## Plant lifetime and simulation
 
 `plant.plant_life` is the project lifetime in years. `plant.simulation` controls the simulated
@@ -62,8 +63,19 @@ plant:
 
 `dt` and `n_timesteps` are required by the schema. The default `dt` is 3600 seconds and the
 default `n_timesteps` is 8760. `start_time` and `timezone` are optional; timezone is the UTC offset
-for the start time. Every performance model in the system must support the selected `dt`, and the
-requested simulation period must be compatible with the connected resource data.
+for the start time. Every selected model in the system must support the configured timestep and simulation
+duration, and the requested period must be compatible with the connected resource data.
+
+**One simulation year is exactly 8,760 hours (365 days, or 31,536,000 seconds); leap years
+of 8,784 hours are not modeled.** Annualization assumes 365-day plant years, so keep resource
+`include_leap_day: false` (the default) for any run that relies on it.
+
+Simulation duration is `n_timesteps * dt / 31_536_000` years and must cover exactly one year or
+exactly `plant_life`. A one-year simulation is repeated across plant life. Full-life runs require
+support from every selected model; otherwise models default to annual-only support.
+
+See the {ref}`model duration requirements <required-class-attributes>` and
+{ref}`annualization guidance <annualization-methods>` for developer details.
 
 `n_timesteps_window` is optional and enables a time-marching simulation that advances the plant
 a window of timesteps at a time; see [Time-Marching Simulation](time_marching_simulation.md).

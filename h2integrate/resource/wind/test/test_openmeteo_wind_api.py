@@ -7,8 +7,8 @@ import pytest
 import openmdao.api as om
 
 from h2integrate.core.supported_models import supported_models
-from h2integrate.resource.utilities.time_tools import resample_resource_data_to_dt
 from h2integrate.resource.utilities.download_tools import make_time_index_openmeteo
+from h2integrate.resource.utilities.resample_tools import resample_resource_data_to_dt
 
 
 @pytest.mark.unit

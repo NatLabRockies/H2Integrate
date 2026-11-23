@@ -45,7 +45,7 @@ If running a simulation that is longer than 1 year, then there are a few options
 API resource data may have a different native timestep from the simulation you would like to run. H2I does not resample resource data by default, but you can set explicit parameters in the input file to either upsample the data, downsample the data, or perform both upsampling and downsampling if you have nonuniform data time steps to obtain data for your desired timestep.
 The options available are those enabled in the pandas interpolation method for upsampling ([`pandas.DataFrame.interpolate`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html)) or a pandas aggregation method for downsampling ([`pandas.DataFrame.agg`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.agg.html)) in the resource's `resource_parameters`.
 
-Set `upsample_method` or `downsample_method` in `resource_parameters` to explicitly select the pandas operation. If the data timestep and simulation timestep already match, neither setting is needed. When resampling is requested, H2I emits a warning naming the source timestep, target timestep, direction, and method. If a mismatch requires resampling but no corresponding method is set, H2I raises an error. See {py:func}`h2integrate.resource.utilities.time_tools.resample_resource_data_to_dt` for method details.
+Set `upsample_method` or `downsample_method` in `resource_parameters` to explicitly select the pandas operation. If the data timestep and simulation timestep already match, neither setting is needed. When resampling is requested, H2I emits a warning naming the source timestep, target timestep, direction, and method. If a mismatch requires resampling but no corresponding method is set, H2I raises an error. See {py:func}`h2integrate.resource.utilities.resample_tools.resample_resource_data_to_dt` for method details.
 
 ### Non-uniform timestep resampling
 
@@ -60,7 +60,7 @@ simulation time step, applying downsampling and upsampling in the same run:
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from h2integrate.resource.utilities.time_tools import resample_resource_data_to_dt
+from h2integrate.resource.utilities.resample_tools import resample_resource_data_to_dt
 
 # Mixed-resolution series: 15-min intervals followed by 2-hour intervals
 idx1 = pd.date_range("2020-01-01 00:00", "2020-01-01 03:00", freq="15min")
