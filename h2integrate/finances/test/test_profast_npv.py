@@ -98,8 +98,13 @@ def fake_cost_dict():
 
 
 @pytest.mark.regression
+@pytest.mark.parametrize("scale_control_variables", [True, False])
 def test_profast_npv_no1_change_sell_price(
-    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests
+    profast_inputs_no1,
+    fake_filtered_tech_config,
+    fake_cost_dict,
+    subtests,
+    scale_control_variables,
 ):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -108,6 +113,9 @@ def test_profast_npv_no1_change_sell_price(
             "plant_life": 30,
         },
         "finance_parameters": {"model_inputs": profast_inputs_no1},
+        "system_level_control": {
+            "solver_options": {"scale_control_variables": scale_control_variables}
+        },
     }
     pf = ProFastNPV(
         driver_config={},
@@ -637,9 +645,16 @@ def test_profast_npv_uses_first_year_price_for_construction_padding(
 
 
 @pytest.mark.regression
-@pytest.mark.parametrize("use_slc", [True, False])
+@pytest.mark.parametrize(
+    "use_slc,scale_control_variables", [(False, False), (True, False), (True, True)]
+)
 def test_profast_npv_warnings(
-    profast_inputs_no1, fake_filtered_tech_config, fake_cost_dict, subtests, use_slc
+    profast_inputs_no1,
+    fake_filtered_tech_config,
+    fake_cost_dict,
+    subtests,
+    use_slc,
+    scale_control_variables,
 ):
     mean_hourly_production = 500000.0
     prob = om.Problem()
@@ -650,7 +665,9 @@ def test_profast_npv_warnings(
         "finance_parameters": {"model_inputs": profast_inputs_no1},
     }
     if use_slc:
-        plant_config["system_level_control"] = {}
+        plant_config["system_level_control"] = {
+            "solver_options": {"scale_control_variables": scale_control_variables}
+        }
     pf = ProFastNPV(
         driver_config={},
         plant_config=plant_config,
@@ -697,3 +714,42 @@ def test_profast_npv_warnings(
 
     with subtests.test("Test zero capacity factor value"):
         assert prob.get_val("pf.NPV_electricity_no1", units="GUSD")[0] == -1e11
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "slc_config,expected_reference",
+    [
+        (None, 1.0),
+        ({}, 1.0),
+        ({"solver_options": {"scale_control_variables": False}}, 1.0),
+        ({"solver_options": {"scale_control_variables": True}}, 1e20),
+    ],
+    ids=["no-slc", "default-options", "scaling-off", "scaling-on"],
+)
+def test_profast_npv_output_scaling(
+    profast_inputs_no1, fake_filtered_tech_config, slc_config, expected_reference
+):
+    plant_config = {
+        "plant": {"plant_life": 30},
+        "finance_parameters": {"model_inputs": profast_inputs_no1},
+    }
+    if slc_config is not None:
+        plant_config["system_level_control"] = slc_config
+    prob = om.Problem()
+    prob.model.add_subsystem(
+        "pf",
+        ProFastNPV(
+            driver_config={},
+            plant_config=plant_config,
+            tech_config=fake_filtered_tech_config,
+            commodity_type="electricity",
+            description="no1",
+        ),
+    )
+    prob.setup()
+
+    metadata = prob.model.pf._var_rel2meta["NPV_electricity_no1"]
+    assert metadata["ref"] == expected_reference
+    assert metadata["res_ref"] == expected_reference
+    assert metadata["units"] == "USD"

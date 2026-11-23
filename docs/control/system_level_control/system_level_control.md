@@ -64,3 +64,27 @@ See additional information, which is more developer focused, about the [`SystemL
 
 ## Solver Options
 The system attempts to converge the system using a solver. The solver is defined in `solver_options`.
+
+Set `scale_control_variables: true` in `solver_options` to scale SLC set points, automatically inserted passthrough command values, and the ProFAST levelized-cost and NPV outputs. This can prevent variables with large magnitudes from dominating the nonlinear solver's convergence norm in cyclic systems. Scaling is off by default.
+
+OpenMDAO uses `ref` to scale an output internally and `res_ref` to scale its residual, which the solver seeks to drive to 0 during convergence. For the default nonlinear block Gauss-Seidel solver, the residual is normally the change in outputs between iterations. The same characteristic value is used for both scales so that an output and a residual of that magnitude are each approximately one internally. These settings do not change the physical units or directly change reported output values, though scaling can affect solver convergence, and is used here to improve numerical stability.
+
+With the default zero output offset, the scaled output is `y / ref` and the scaled residual is `residual / res_ref`. For example, a `1000 kg/h` signal with `ref=1000` has an internal value of 1, while a `1 kg/h` change with `res_ref=1000` contributes 0.001 to the scaled residual vector. The solver can stop when either its absolute tolerance or its relative tolerance is satisfied; a large initial residual can therefore allow premature relative convergence.
+
+The rate references are coarse, fixed order-of-magnitude choices rather than values tuned to each plant: `1e5` for `kW` and `1e3` for `kg/h`.
+If units are unavailable or unrecognized, the fallback references are `1e5` for electricity, `1e3` for hydrogen, `4e3` for ammonia, and `1.0` for other commodities. In particular, units inherited from a connection may not be known when the scale is selected during setup; the commodity fallback then remains in use even after OpenMDAO resolves the units. These are numeric scales in the variable's units, not unit conversions, so the fallback may be a poor fit for different units or plant sizes.
+
+We selected these constants for the motivating heterogeneous commodity example, not derived as universal physical scales.
+User-specified or capacity-based reference values are a possible follow-up; this option does not currently accept custom reference values.
+
+The ProFAST references are `1e12` for levelized cost and `1e20` for NPV, matching the magnitudes of their zero-production penalties (`1e12` and `-1e20`, respectively).
+These scales prevent the penalties from overwhelming the residual norm, but also make ordinary financial changes small in that norm.
+They do not change the penalty values or make them physically meaningful.
+Scaling is just used here to help convergence, not to alter the physical meaning of the variables, and not a guarantee of convergence or accuracy; check the results and solver tolerances for the model.
+
+```yaml
+system_level_control:
+  solver_options:
+    solver_name: gauss_seidel
+    scale_control_variables: true
+```
