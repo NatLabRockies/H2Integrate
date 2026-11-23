@@ -77,6 +77,9 @@ timesteps represent half a year.
 
 `plant.simulation.annual_extrapolation_method` controls how annualized profiles are extended
 beyond the simulated horizon. Choose `tile`, `final_sim_value`, or `time_averaged_sim_value`.
+`tile` repeats simulated annual segments cyclically, `final_sim_value` repeats the last segment,
+and `time_averaged_sim_value` fills with their duration-weighted mean, weighting partial-year
+segments by their actual duration.
 Set it when multiple simulated year segments must be extended beyond the simulation horizon to
 cover plant life. It can be omitted for a single simulated year segment, where the methods
 produce the same result, or when the simulation covers the plant life. The setting applies to
