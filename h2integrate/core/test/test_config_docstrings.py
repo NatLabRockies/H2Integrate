@@ -5,6 +5,14 @@ from pathlib import Path
 import pytest
 
 
+def _is_class_var(annotation: ast.expr) -> bool:
+    if isinstance(annotation, ast.Subscript):
+        annotation = annotation.value
+    return (isinstance(annotation, ast.Name) and annotation.id == "ClassVar") or (
+        isinstance(annotation, ast.Attribute) and annotation.attr == "ClassVar"
+    )
+
+
 @pytest.mark.unit
 def test_configuration_docstrings_cover_declared_fields():
     """Require each configuration class to document its declared fields."""
@@ -26,6 +34,7 @@ def test_configuration_docstrings_cover_declared_fields():
                 if isinstance(statement, ast.AnnAssign)
                 and isinstance(statement.target, ast.Name)
                 and not statement.target.id.startswith("_")
+                and not _is_class_var(statement.annotation)
             ]
             if not fields:
                 continue
