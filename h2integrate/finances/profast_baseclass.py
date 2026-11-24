@@ -627,6 +627,12 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
             self.params.installation_time,
         )
 
+        # create list of years between analysis start year and first year of operation
+        construction_years = [
+            str(i) for i in range(self.params.analysis_start_year, int(years_of_operation[0]))
+        ]
+        # create list of 0.0 to reflect no replacements during construction years
+        non_replacement_years = [0.0] * len(construction_years)
         # update parameters with commodity, capacity, and utilization
         profast_params = self.params.as_dict()
         profast_params["commodity"].update({"name": self.options["commodity_type"]})
@@ -692,8 +698,11 @@ class ProFastBase(SkippableComputeMixin, om.ExplicitComponent):
                         * tech_capex_info["replacement_cost_percent"]
                     )
 
+                # refurbishment should be a dictionary to prevent replacements in construction years
+                refurb_dict_keys = construction_years + years_of_operation
+                refurb_dict_vals = non_replacement_years + list(refurb_schedule)
                 # add refurbishment schedule to tech-specific capital item entry
-                tech_capex_info["refurb"] = list(refurb_schedule)
+                tech_capex_info["refurb"] = dict(zip(refurb_dict_keys, refurb_dict_vals))
 
             # update any unset capital item parameters with the default values
             for cap_item_key, cap_item_val in capital_item_defaults.items():

@@ -91,13 +91,13 @@ def test_steel_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH_delivered", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 8.293500241229578
+            == 8.224505016949733
         )
 
     with subtests.test("Check LCOS"):
         assert (
             pytest.approx(model.prob.get_val("steel.LCOS", units="USD/t")[0], rel=1e-3)
-            == 1268.1622609902959
+            == 1263.561367176459
         )
 
     with subtests.test("Check total adjusted CapEx"):
@@ -232,7 +232,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.205885041540039
+            == 4.162882441402767
         )
 
     with subtests.test("Check price of hydrogen"):
@@ -241,7 +241,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.price_hydrogen", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 4.205885041540039
+            == 4.162882441402767
         )
 
     # Currently underestimated compared to the Reference Design Doc
@@ -251,7 +251,7 @@ def test_simple_ammonia_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_ammonia.LCOA", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 1.0286292128939685
+            == 1.01876179397
         )
 
     # Check that the expected output files exist
@@ -371,7 +371,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_h2.LCOH", units="USD/kg")[0], rel=1e-4
             )
-            == 4.2034231727488836
+            == 4.160443973405296
         )
 
     with subtests.test("Check LCOA"):
@@ -379,7 +379,7 @@ def test_ammonia_synloop_example(subtests, temp_copy_of_example):
             pytest.approx(
                 model.prob.get_val("finance_subgroup_nh3.LCOA", units="USD/kg")[0], rel=1e-3
             )
-            == 1.1531642215468845
+            == 1.14488604723
         )
     with subtests.test("Check LCON"):
         assert (
@@ -457,7 +457,7 @@ def test_co2h_methanol_example(subtests, temp_copy_of_example):
     with subtests.test("Check CO2 Hydrogenation LCOM"):
         assert (
             pytest.approx(model.prob.get_val("methanol.LCOM", units="USD/kg")[0], rel=1e-6)
-            == 1.7516172
+            == 1.728987041
         )
 
 
@@ -483,7 +483,7 @@ def test_doc_methanol_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_default.LCOM", units="USD/kg")[0],
                 rel=1e-4,
             )
-            == 2.5252588
+            == 2.4863761983183603
         )
 
 
@@ -712,7 +712,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 9.8059083
+            == 9.789832171
         )
 
     with subtests.test(
@@ -729,7 +729,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen_ts.LCOH", units="USD/kg")[0],
                 rel=1e-3,
             )
-            == 9.34595395123
+            == 9.330631843
         )
 
     with subtests.test("Check LCOC"):
@@ -786,7 +786,7 @@ def test_splitter_wind_doc_h2_example(subtests, temp_copy_of_example):
                 )[0],
                 rel=1e-3,
             )
-            == 182.8942790183688
+            == 182.5944352670
         )
 
     with subtests.test("Check finance_subgroup_electricity_electrolyzer electricity inputs"):
@@ -884,7 +884,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
         assert pytest.approx(131.68316748483326, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for min power)"):
-        assert pytest.approx(9.108995855797247, rel=1e-3) == lcoh
+        assert pytest.approx(9.022492480458581, rel=1e-3) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for min power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
@@ -915,7 +915,7 @@ def test_electrolyzer_demand(subtests, temp_copy_of_example):
         assert pytest.approx(131.66092750719028, rel=1e-6) == lcoe_sys
 
     with subtests.test("LCOH (battery for full power)"):
-        assert pytest.approx(9.282072582110251, rel=1e-6) == lcoh
+        assert pytest.approx(9.128115424812469, rel=1e-6) == lcoh
 
     with subtests.test("Electrolyzer capacity factor (Year 0) (battery for full power)"):
         elec_cf_yr0 = h2i.prob.get_val("electrolyzer.capacity_factor", units="percent")[0]
@@ -995,7 +995,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_all_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.647544985152393
+            == 5.513910360466343
         )
 
     with subtests.test("Check dispatched h2 LCOH"):
@@ -1004,7 +1004,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_dispatched_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 7.564000289456695
+            == 7.385559714538178
         )
     with subtests.test("Check LCOO"):
         assert (
@@ -1012,7 +1012,7 @@ def test_hydrogen_dispatch_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_oxygen.LCOO", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 0.666523050
+            == 0.6494818721671509
         )
 
 
@@ -1305,7 +1305,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
                 model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")[0],
                 rel=1e-5,
             )
-            == 5.3063358423
+            == 5.147344701040896
         )
 
     with subtests.test("Check LCOH from LCOE feedstock"):
@@ -1316,7 +1316,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
                 ],
                 rel=1e-5,
             )
-            == 5.50083
+            == 5.344009121497323
         )
 
     with subtests.test("Check LCOH from grid buy"):
@@ -1327,7 +1327,7 @@ def test_wind_solar_electrolyzer_example(subtests, temp_copy_of_example):
                 ],
                 rel=1e-5,
             )
-            == 5.50083
+            == 5.344009121497318
         )
 
     wind_generation = model.prob.get_val("wind.electricity_out", units="kW")
@@ -1395,7 +1395,7 @@ def test_wombat_electrolyzer_example(subtests, temp_copy_of_example):
     with subtests.test("Check LCOH from custom  model"):
         assert pytest.approx(lcoh_with_custom_model, rel=1e-5) == 4.1783979573
     with subtests.test("Check LCOH from ProFAST model"):
-        assert pytest.approx(lcoh_with_profast_model, rel=1e-5) == 5.3086307305
+        assert pytest.approx(lcoh_with_profast_model, rel=1e-5) == 5.2013170343
     with subtests.test("Check LCOE from custom model"):
         assert pytest.approx(lcoe_with_custom_model, rel=1e-5) == 51.17615298
     with subtests.test("Check LCOE from ProFAST model"):
@@ -1850,7 +1850,7 @@ def test_csvgen_parameter_sweep(subtests, temp_copy_of_example):
             min_lcoh_case_num = i
 
     with subtests.test("Min LCOH value"):
-        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.663014422338
+        assert pytest.approx(min_lcoh_val, rel=1e-6) == 4.5007544337229195
 
     with subtests.test("Min LCOH case number"):
         assert min_lcoh_case_num == 6
