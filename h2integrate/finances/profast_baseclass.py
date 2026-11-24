@@ -154,21 +154,25 @@ class BasicProFASTParameterConfig(BaseConfig):
             Defaults to "Revolving debt".
         loan_period_if_used (int, optional): Loan period in years.
             Only used if `debt_type` is "One time loan". Defaults to 0.
-        commodity (dict, optional):
+        commodity (dict, optional): Product sold by the model, including its name, unit, initial
+            price, and price escalation.
         installation_cost  (dict, optional):
             - **value** (*float*): installation cost in USD. Defaults to 0.
             - **depr type** (*str*): either "Straight line" or "MACRS". Defaults to "Straight line"
             - **depr period** (*int*): depreciation period in years. Defaults to 4.
             - **depreciable** (*bool*): True if cost depreciates. Defaults to False.
-        topc (dict, optional): take or pay contract.
-        annual_operating_incentive (dict, optional):
-        incidental_revenue (dict, optional):
-        road_tax (dict, optional):
-        labor (dict, optional):
-        maintenance (dict, optional):
-        rent (dict, optional):
-        license_and_permit (dict, optional):
-        one_time_cap_inct (dict, optional): investment tax credit.
+        topc (dict, optional): Take-or-pay contract assumptions, including unit price, decay,
+            sunset years, and supported utilization.
+        annual_operating_incentive (dict, optional): Annual operating incentive amount and its
+            decay, sunset, and taxability assumptions.
+        incidental_revenue (dict, optional): Other annual revenue and its escalation rate.
+        road_tax (dict, optional): Annual road tax expense and its escalation rate.
+        labor (dict, optional): Annual labor expense, labor rate, and escalation rate.
+        maintenance (dict, optional): Annual maintenance expense and its escalation rate.
+        rent (dict, optional): Annual rent expense and its escalation rate.
+        license_and_permit (dict, optional): License and permit expense and its escalation rate.
+        one_time_cap_inct (dict, optional): One-time capital investment tax credit, including its
+            amount and depreciation assumptions.
     """
 
     # --- Primary finance parameters ---

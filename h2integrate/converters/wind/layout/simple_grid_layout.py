@@ -8,7 +8,7 @@ from h2integrate.core.utilities import BaseConfig
 class BasicGridLayoutConfig(BaseConfig):
     """Configuration class for 'basicgrid' wind layout.
 
-    Args:
+    Attributes:
         row_D_spacing (float): rotor diameter multiplier for spacing between rows of
             turbines (y direction).
         turbine_D_spacing (float): rotor diameter multiplier for spacing between

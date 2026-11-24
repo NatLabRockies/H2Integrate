@@ -19,9 +19,12 @@ class WOMBATElectrolyzerModelConfig(ECOElectrolyzerPerformanceModelConfig):
     Configuration for :class:`WOMBATElectrolyzerModel`. See
     :doc:`/technology_models/wombat_electrolyzer_om`.
 
-    library_path: Path to the WOMBAT library directory, relative from this file
-    if not an absolute path.
-    cost_year: dollar-year corresponding to capex value.
+    Attributes:
+        library_path (Path): Path to the WOMBAT library directory. Relative paths
+            are resolved from this file.
+        cost_year (int): Dollar year corresponding to the capital cost value.
+
+    See :class:`ECOElectrolyzerPerformanceModelConfig` for inherited fields.
     """
 
     library_path: Path = field()

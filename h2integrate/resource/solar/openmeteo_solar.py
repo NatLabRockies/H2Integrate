@@ -25,7 +25,7 @@ class OpenMeteoHistoricalSolarResourceConfig(ResourceBaseAPIConfig):
 
     See :class:`OpenMeteoHistoricalSolarResource` and :doc:`/resource/openmeteo_solar_archive`.
 
-    Args:
+    Attributes:
         resource_year (int): Year to use for resource data.
             Must been between 1940 the year before the current calendar year. (inclusive).
         include_leap_day (bool, optional): If False, remove data from leap day if the
