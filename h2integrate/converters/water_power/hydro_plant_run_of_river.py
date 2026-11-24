@@ -15,7 +15,7 @@ class RunOfRiverHydroPerformanceConfig(BaseConfig):
     """Configuration class for the RunOfRiverHydroPerformanceComponent.
     This class defines the parameters for the run-of-river hydropower plant performance model.
 
-    Args:
+    Attributes:
         plant_capacity_mw (float): Capacity of the run-of-river hydropower plant in MW.
         water_density (float): Density of water in kg/m^3.
         acceleration_gravity (float): Acceleration due to gravity in m/s^2.
@@ -101,7 +101,7 @@ class RunOfRiverHydroCostConfig(CostModelBaseConfig):
     """Configuration class for the RunOfRiverHydroCostComponent.
     This class defines the parameters for the run-of-river hydropower plant cost model.
 
-    Args:
+    Attributes:
         plant_capacity_mw (float): Capacity of the run-of-river hydropower plant in MW.
         capital_cost_usd_per_kw (float): Capital cost of the run-of-river plant in USD/kW.
         operational_cost_usd_per_kw_year (float): Operational cost as a percentage of total

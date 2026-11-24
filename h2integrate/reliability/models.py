@@ -98,7 +98,7 @@ AVAILABILITY_TYPES = (
 class SimulationConfig(BaseConfig):
     """Shared configuration for the simulation details contained in the plant configuration.
 
-    Args:
+    Attributes:
         dt (int): Timestep in seconds.
         n_timesteps (int): Number of timesteps in a simulation.
 

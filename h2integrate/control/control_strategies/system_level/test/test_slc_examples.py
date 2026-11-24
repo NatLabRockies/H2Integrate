@@ -195,6 +195,39 @@ def test_slc_yes_hydrogen(subtests, temp_copy_of_example):
 
 @pytest.mark.examples
 @pytest.mark.parametrize(
+    "example_folder,resource_example_folder", [("35_system_level_control/yes_hydrogen", None)]
+)
+def test_slc_yes_hydrogen_scaled_control_variables(subtests, temp_copy_of_example):
+    example_folder = temp_copy_of_example
+
+    plant_config_path = example_folder / "plant_config.yaml"
+    plant_config = plant_config_path.read_text(encoding="utf-8")
+    solver_option = "    solver_name: gauss_seidel\n"
+    assert plant_config.count(solver_option) == 1
+    plant_config_path.write_text(
+        plant_config.replace(solver_option, solver_option + "    scale_control_variables: true\n"),
+        encoding="utf-8",
+    )
+
+    model = H2IntegrateModel(example_folder / "wind_ng_demand.yaml")
+    model.run()
+
+    with subtests.test("controller set points and passthrough commands are scaled"):
+        metadata = model.prob.model.get_io_metadata(
+            iotypes="output",
+            metadata_keys=["ref"],
+            includes=["*electrolyzer_hydrogen_set_point", "*hydrogen_command_value"],
+        )
+        assert metadata
+        assert all(entry["ref"] == 1e3 for entry in metadata.values())
+
+    with subtests.test("LCOH matches the unscaled solution"):
+        lcoh = model.prob.get_val("finance_subgroup_hydrogen.LCOH", units="USD/kg")
+        assert pytest.approx(lcoh, rel=1e-4) == 16.52990277
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
     "example_folder,resource_example_folder",
     [("35_system_level_control/demand_following", None)],
 )

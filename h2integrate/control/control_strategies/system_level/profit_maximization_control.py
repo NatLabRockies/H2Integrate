@@ -12,6 +12,14 @@ from h2integrate.control.control_strategies.system_level.system_level_control_ba
 class ProfitMaximizationControlConfig(BaseConfig):
     """Configure the sell price and per-technology marginal cost settings.
 
+    Attributes:
+        commodity_sell_price (float | str): Commodity sale price in dollars per
+            commodity amount unit, or a finance-group name whose
+            ``commodity_sell_price`` input supplies the price.
+        cost_per_tech (dict): Mapping from dispatchable technology names to marginal
+            cost sources. Values may be numeric prices or supported source names such
+            as ``"buy_price"``, ``"VarOpEx"``, and ``"feedstock"``.
+
     See :class:`ProfitMaximizationControl` and :doc:`/control/system_level_control/slc_profit_max`.
     """
 

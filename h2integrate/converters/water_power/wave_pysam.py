@@ -13,7 +13,7 @@ from h2integrate.core.supported_models import register
 class PySAMWavePerformanceConfig(BaseConfig):
     """Configuration class for PySAMWavePerformanceModel.
 
-    Args:
+    Attributes:
         device_rating_kw (float): Rated power of the MHK wave device [kW].
         num_devices (int): Number of MHK wave devices in the system.
         wave_power_matrix (List[List[float]]): Power matrix of the wave energy device
