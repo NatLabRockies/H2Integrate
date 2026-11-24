@@ -42,6 +42,7 @@
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
 - Add core framework support for non-annual simulation equal to plant life, including replacement-count observations across the plant life. [PR 934](https://github.com/NatLabRockies/H2Integrate/pull/934)
 - Moved resource resampling into `resample_tools.py`, used `contains_leap_day()` for leap-day detection in `time_tools.py` (fixing a malformed leap-day error message), and made the leap-day-excluded calendar regeneration exact instead of using an upper bound. [PR 964](https://github.com/NatLabRockies/H2Integrate/pull/964)
+- Add core framework support for any simulation duration, including CF and replacement-count projections across the plant life. [PR XXX](https://github.com/NatLabRockies/H2Integrate/pull/XXX)
 
 ## 0.10.0 [October 12, 2026]
 
