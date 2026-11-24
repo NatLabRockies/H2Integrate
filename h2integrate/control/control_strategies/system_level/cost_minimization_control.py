@@ -39,6 +39,8 @@ class CostMinimizationControl(SystemLevelControlBase):
     See :doc:`/control/system_level_control/slc_cost_min` for configuration and I/O.
     """
 
+    _is_steppable = True
+
     def setup(self):
         super().setup()
 

@@ -35,6 +35,8 @@ class DemandFollowingControl(SystemLevelControlBase):
     See :doc:`/control/system_level_control/slc_demand_following` for configuration and I/O.
     """
 
+    _is_steppable = True
+
     def compute(self, inputs, outputs):
         simulation_range = self._get_compute_time_range(inputs["timestep_index"])
 

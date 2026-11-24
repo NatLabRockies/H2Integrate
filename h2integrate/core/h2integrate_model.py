@@ -1943,7 +1943,11 @@ class H2IntegrateModel:
             # Assign custom nonlinear solver to plant group to manage time-marching simulation
             self.plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config=self.plant_config)
 
-            check_model_is_steppable(self.control_strategies, self.performance_models)
+            check_model_is_steppable(
+                control_strategies=self.control_strategies,
+                performance_models=self.performance_models,
+                system_level_controller=getattr(self.plant, "system_level_controller", None),
+            )
             return
 
         if self.slc:

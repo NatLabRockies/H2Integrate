@@ -71,6 +71,8 @@ class ProfitMaximizationControl(SystemLevelControlBase):
     and :doc:`/control/system_level_control/slc_profit_max`.
     """
 
+    _is_steppable = True
+
     def _resolve_sell_price(self, config):
         """Resolve commodity_sell_price from config.
 

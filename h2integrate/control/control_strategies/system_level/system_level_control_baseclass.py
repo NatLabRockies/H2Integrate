@@ -862,6 +862,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
         return converter_techs
 
     def _get_compute_time_range(self, time_index):
-        # TODO add comment
+        """
+        This method gets the range of timestep indices that are simulated in a
+        single call to compute.
+
+        Args:
+            time_index (numpy array): Starting time index of the simulation range.
+
+        Returns:
+            range: range of time indices
+        """
         ti = int(time_index[0])
         return range(ti, ti + self.n_timesteps_window)

@@ -88,7 +88,7 @@ def check_time_marching_config(
     return True
 
 
-def check_model_is_steppable(control_strategies, performance_models):
+def check_model_is_steppable(control_strategies, performance_models, system_level_controller):
     """Check that all technology control strategies and performance models have the attribute
     _is_steppable == True. If _is_steppable attribute is missing or evaluates to False, then the
     system is suitable for steppable simulation and an error is raised.
@@ -96,6 +96,7 @@ def check_model_is_steppable(control_strategies, performance_models):
     Args:
         control_strategies (list):
         performance_models (list):
+        system_level_controller (om.ExplicitComponent):
 
     Returns:
         None: Returns if all models are steppable.
@@ -120,10 +121,14 @@ def check_model_is_steppable(control_strategies, performance_models):
         performance_msg = f"Performance model(s): {sorted(non_steppable_performance_models)}"
         error_msg_list.append(performance_msg)
 
+    if system_level_controller:
+        if not getattr(system_level_controller, "_is_steppable", False):
+            error_msg_list.append(f"System level controller: {system_level_controller}")
+
     if error_msg_list:
         error_msg = (
             "Attempting to run a steppable simulation with unsupported models:\n\t"
             + "\n\t".join(error_msg_list)
-            + "\n\t are not flagged as capable of steppable simulation."
+            + "\n\tare not flagged as capable of steppable simulation."
         )
         raise AttributeError(error_msg)
