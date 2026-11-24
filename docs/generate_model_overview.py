@@ -102,6 +102,10 @@ SUBCATEGORY_LABELS: dict[str, tuple[str, str]] = {
         "natural_gas",
         "natural gas combined-cycle and combustion turbines",
     ),
+    "h2integrate.converters.combustion_machines": (
+        "combustion_machines",
+        "thermodynamic models for combustion turbines and engines",
+    ),
     "h2integrate.converters.nuclear": ("nuclear", "nuclear power plants"),
     "h2integrate.converters.grid": ("grid", "electricity grid connection"),
     "h2integrate.converters.water.desal": ("desal", "water desalination"),
