@@ -233,7 +233,7 @@ for value in [
 ### `resize_by_max_product` mode
 
 In this case, the electrolyzer will be sized to match the maximum hydrogen capacity of the ammonia plant.
-This requires the `technology_interconnections` entry to send the `max_hydrogen_capacity` from the ammonia plant to the electrolyzer.
+Add a `technology_interconnections` entry to send `max_hydrogen_capacity` from the ammonia plant to the electrolyzer while keeping the existing connections that supply both plants.
 This decreases the electrolyzer size to 560 MW, the closest multiple of 40 MW (the cluster size) that will ensure an h2 production capacity that matches the ammonia plant's h2 intake at its max ammonia production capacity.
 This increases the LCOH to \$4.64/kg H2, but reduces the LCOA to \$1.30/kg NH3, since electrolyzer size was matched to ammonia production but not the upstream renewable source.
 

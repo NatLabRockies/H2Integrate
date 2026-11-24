@@ -6,6 +6,11 @@ import networkx as nx
 import openmdao.api as om
 
 
+def post_plant_cost_group_name(tech_name: str) -> str:
+    """Return the root subsystem name for a deferred technology cost model."""
+    return f"post_plant_cost_{tech_name}"
+
+
 def create_technology_graph(technology_interconnections):
     """Create a directed graph from technology interconnection definitions.
 
@@ -428,6 +433,10 @@ def _technology_io_parameters(prob, technology_config, technology_graph):
             if not tech_info or model_type not in tech_info:
                 continue
             model_name = tech_info[model_type]["model"]
+            if model_type == "cost_model" and tech_info[model_type].get("run_after_plant"):
+                group = getattr(prob.model, post_plant_cost_group_name(tech_name))
+                parameters.update(getattr(group, model_name).get_io_metadata(return_rel_names=True))
+                continue
             group = getattr(
                 prob.model.plant,
                 f"{tech_name}_source" if model_name == "FeedstockPerformanceModel" else tech_name,

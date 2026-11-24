@@ -1,9 +1,8 @@
 # Changelog
 
 ## Unreleased [TBD]
-- Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
+- Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR 969](https://github.com/NatLabRockies/H2Integrate/pull/969)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
-
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
@@ -39,7 +38,9 @@
   - `n_control_window_hours` is now limited to 8016 h (334 days) so a control window never contains the same calendar month in two different years.
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
+- Evaluate system finance after coupled plant solves and completed time-marching simulations, with explicit checks for unsupported finance feedback. [PR 1010](https://github.com/NatLabRockies/H2Integrate/pull/1010)
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
+- Allow standalone cost models to opt into post-plant evaluation so example 36 can apply nuclear LCOE to electrolyzer electricity costs and grid sales in one run. [PR 1010](https://github.com/NatLabRockies/H2Integrate/pull/1010)
 
 ## 0.10.0 [October 12, 2026]
 

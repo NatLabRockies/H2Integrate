@@ -65,6 +65,9 @@ See additional information, which is more developer focused, about the [`SystemL
 ## Solver Options
 The system attempts to converge the system using a solver. The solver is defined in `solver_options`.
 
+System finance is evaluated after this coupled solve, not in its convergence norm.
+When system finance is present, `max_iter` must be positive and `solver_option_kwargs.err_on_non_converge` cannot be set to `false`.
+See [finance execution and model paths](financeparameters:execution) for supported connections and absolute-path changes.
 Set `scale_control_variables: true` in `solver_options` to scale SLC set points, automatically inserted passthrough command values, and the ProFAST levelized-cost output. This can prevent variables with large magnitudes from dominating the nonlinear solver's convergence norm in cyclic systems. Scaling is off by default.
 
 OpenMDAO uses `ref` to scale an output internally and `res_ref` to scale its residual, which the solver seeks to drive to 0 during convergence. For the default nonlinear block Gauss-Seidel solver, the residual is normally the change in outputs between iterations. The same characteristic value is used for both scales so that an output and a residual of that magnitude are each approximately one internally. These settings do not change the physical units or directly change reported output values, though scaling can affect solver convergence, and is used here to improve numerical stability.
