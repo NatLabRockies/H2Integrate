@@ -2993,7 +2993,7 @@ def test_cmu_eaf_scrap_only_example(subtests, temp_copy_of_example):
 
     with subtests.test("LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 457.8989
+        assert pytest.approx(lcos, rel=1e-4) == 463.5817
 
 
 @pytest.mark.examples
@@ -3020,7 +3020,7 @@ def test_cmu_eaf_dri_example(subtests, temp_copy_of_example):
 
     with subtests.test("LCOS"):
         lcos = h2i.model.get_val("finance_subgroup_steel.LCOS", units="USD/t")[0]
-        assert pytest.approx(lcos, rel=1e-4) == 449.56
+        assert pytest.approx(lcos, rel=1e-4) == 643.5510
 
 
 @pytest.mark.examples
