@@ -845,7 +845,7 @@ def test_custom_financial_model_grouping(temp_dir, subtests):
 
 # docs fencepost start: DO NOT REMOVE
 @pytest.mark.unit
-def test_unsupported_simulation_parameters(subtests) -> None:
+def test_unsupported_simulation_parameters():
     orig_plant_config = EXAMPLE_DIR / "01_onshore_steel_mn" / "plant_config.yaml"
     plant_config_data_ntimesteps = load_plant_yaml(orig_plant_config)
     plant_config_data_dt = deepcopy(plant_config_data_ntimesteps)
