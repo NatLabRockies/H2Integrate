@@ -16,7 +16,7 @@ class QuinnNuclearPerformanceModelConfig(BaseConfig):
 
     See :class:`QuinnNuclearPerformanceModel` and :doc:`/technology_models/nuclear`.
 
-    Args:
+    Attributes:
         system_capacity_kw (float): Rated electric capacity in kW.
     """
 
@@ -101,7 +101,7 @@ class QuinnNuclearCostModelConfig(CostModelBaseConfig):
 
     See :class:`QuinnNuclearCostModel` and :doc:`/technology_models/nuclear`.
 
-    Args:
+    Attributes:
         system_capacity_kw (float): Rated electric capacity in kW.
         capex_per_kw (float): Capital cost per kW.
         fixed_opex_per_kw_year (float): Fixed O&M per kW per year.

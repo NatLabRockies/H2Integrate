@@ -28,6 +28,17 @@ class SMRMethanolPlantFinanceModelConfig(MethanolFinanceConfig):
 class SMRMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
     """Configuration for :class:`SMRMethanolPlantPerformanceModel`.
 
+    Attributes:
+        meoh_syn_cat_consume_ratio (float): Synthesis catalyst consumed per kilogram of
+            methanol, in cubic feet per kilogram.
+        meoh_atr_cat_consume_ratio (float): Autothermal-reforming catalyst consumed per
+            kilogram of methanol, in cubic feet per kilogram.
+        ng_consume_ratio (float): Natural gas consumed per kilogram of methanol, in
+            kilograms per kilogram.
+        elec_produce_ratio (float): Electricity produced per kilogram of methanol, in
+            kilowatt-hours per kilogram.
+
+    See :class:`MethanolPerformanceConfig` for inherited capacity and production fields.
     See :doc:`/technology_models/methanol`.
     """
 
@@ -143,6 +154,15 @@ class SMRMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 class SMRMethanolPlantCostModelConfig(MethanolCostConfig):
     """Configuration for :class:`SMRMethanolPlantCostModel`.
 
+    Attributes:
+        ng_lhv (float): Natural gas lower heating value in megajoules per kilogram.
+        meoh_syn_cat_price (float): Synthesis catalyst cost in dollars per cubic foot.
+        meoh_atr_cat_price (float): Autothermal-reforming catalyst cost in dollars per
+            cubic foot.
+        ng_price (float): Natural gas cost in dollars per million British thermal units.
+        cost_year (int): Dollar year used for the cost assumptions.
+
+    See :class:`MethanolCostConfig` for inherited capacity and cost fields.
     See :doc:`/technology_models/methanol`.
     """
 
