@@ -212,9 +212,6 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
 
     _is_steppable = True
 
-    # Flag to avoid unnecessary re-calculation of PySAM model
-    _PYSAM_model_has_been_executed = False
-
     def setup(self):
         super().setup()
 
@@ -295,6 +292,9 @@ class PYSAMWindPlantPerformanceModel(WindPerformanceBaseClass):
             "wind_speed": 3,
             "wind_direction": 4,
         }
+
+        # Flag to avoid unnecessary re-calculation of PySAM model
+        self._PYSAM_model_has_been_executed = False
 
     def format_resource_data(self, hub_height, wind_resource_data):
         """Format wind resource data into the format required for the

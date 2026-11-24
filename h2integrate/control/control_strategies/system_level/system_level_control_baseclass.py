@@ -479,7 +479,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if in_name not in inputs:
             return remaining_demand
 
-        remaining_demand -= inputs[in_name]
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
+        remaining_demand[simulation_range] -= inputs[in_name][simulation_range]
         return remaining_demand
 
     def _subtract_flexible(self, flexible_tech, remaining_demand, commodity, inputs, outputs):
@@ -493,11 +495,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if f"{flexible_tech}_rated_{commodity}_production" not in inputs:
             return
 
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         # Set per-tech set-point equal to the rated production of that technology
-        outputs[f"{flexible_tech}_{commodity}_set_point"] = inputs[
+        outputs[f"{flexible_tech}_{commodity}_set_point"][simulation_range] = inputs[
             f"{flexible_tech}_rated_{commodity}_production"
-        ] * np.ones(self.n_timesteps)
-        remaining_demand -= inputs[f"{flexible_tech}_{commodity}_out"]
+        ] * np.ones(len(simulation_range))
+        remaining_demand[simulation_range] -= inputs[f"{flexible_tech}_{commodity}_out"][
+            simulation_range
+        ]
 
         return remaining_demand
 

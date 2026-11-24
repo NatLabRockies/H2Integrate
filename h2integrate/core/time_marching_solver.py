@@ -48,7 +48,7 @@ class TimeMarchingPlantSolver(NonlinearBlockGS):
             s.options["skip_compute"] = True
 
         try:
-            with Recording("NLRunOnce", 0, self):
+            with Recording(type(self).__name__, self._iter_count, self):
                 for ss in sim_starts:
                     # Update timestep_index in all subsystems
                     for tk in timestep_keys:
