@@ -37,11 +37,13 @@ class ThresholdStatisticsPerformanceModel(om.ExplicitComponent):
     The available statistics are currently: net deficit, net surplus, fraction of timesteps
     below threshold, and fraction of timesteps above threshold.
 
-    The threshold is currently only supported as the demand profile of a demand component
-    (e.g. ``GenericDemandComponent``). Connect it in ``technology_interconnections`` as
-    ``[demand_tech, this_tech, ["{commodity}_demand", "{commodity}_threshold"]]``. This is an
-    input-to-input connection, and H2Integrate only sets the shared default automatically for a
-    demand component's demand input.
+    A threshold can be set directly, connected from an output, or receive an input-to-input
+    connection from a demand component's demand input. For the latter, connect it in
+    ``technology_interconnections`` as
+    ``[demand_tech, this_tech, ["{commodity}_demand", "{commodity}_threshold"]]``.
+    H2Integrate automatically sets the shared default only for a demand component's demand input,
+    using its configured profile. Other input-to-input connections may require an explicit
+    ``set_input_defaults`` call when OpenMDAO cannot resolve their default metadata.
 
     Inputs:
         commodity_in (array): timeseries of commodity values (e.g., electricity flow in MW
