@@ -17,7 +17,7 @@ class SimpleThermalNuclearReactorPerformanceModelConfig(BaseConfig):
     See :class:`SimpleThermalNuclearReactorPerformanceModel` and
     :doc:`/technology_models/nuclear`.
 
-    Args:
+    Attributes:
         operating_mode (str): Dispatch mode of the reactor. Must be ``"heat"`` or
             ``"electricity"``. In ``heat`` mode the reactor satisfies process heat demand
             first and converts the remaining low-pressure heat to electricity; in
@@ -210,7 +210,7 @@ class SimpleThermalNuclearReactorCostModelConfig(CostModelBaseConfig):
 
     See :class:`SimpleThermalNuclearReactorCostModel` and :doc:`/technology_models/nuclear`.
 
-    Args:
+    Attributes:
         rated_capacity (float): Rated capacity used for cost calculations in MW.
         upfront_cost (float): Capital cost per MW in USD/MW.
         fixed_om_cost (float): Fixed annual O&M in USD/(MW*year).

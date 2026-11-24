@@ -13,7 +13,7 @@ from h2integrate.core.supported_models import register
 @define(kw_only=True)
 class TidalResourceConfig(BaseConfig):
     """
-    Args:
+    Attributes:
         resource_dir (str | Path, optional): Folder to save resource files to or
         load resource files from. Defaults to None.
         resource_filename (str, optional): Filename to save resource data to or load

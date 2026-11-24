@@ -6,6 +6,13 @@ from h2integrate.core.utilities import BaseConfig
 
 @define
 class SiteBaseConfig(BaseConfig):
+    """Base configuration for a geographic site.
+
+    Attributes:
+        latitude (float): Latitude in degrees north of the equator, from -90 to 90.
+        longitude (float): Longitude in degrees east of the prime meridian, from -180 to 180.
+    """
+
     latitude: float = field(default=0.0, validator=(validators.ge(-90), validators.le(90)))
     longitude: float = field(default=0.0, validator=(validators.ge(-180), validators.le(180)))
 
