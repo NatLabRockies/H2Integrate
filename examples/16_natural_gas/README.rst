@@ -1,6 +1,6 @@
-.. _wind_electrolyzer:
+.. _natural_gas_plant:
 
-Wind Plant Electrolysis
-=======================
+Natural Gas Plant
+=================
 
 Example description.

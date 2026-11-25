@@ -1,6 +1,6 @@
-.. _wind_electrolyzer:
+.. _system_controllers:
 
-Wind Plant Electrolysis
-=======================
+System Level Control
+====================
 
 Example description.

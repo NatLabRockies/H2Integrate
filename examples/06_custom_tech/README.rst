@@ -1,6 +1,6 @@
-.. _wind_electrolyzer:
+.. _wind_paper:
 
-Wind Plant Electrolysis
-=======================
+Wind Plant Paper Production
+===========================
 
 Example description.
