@@ -77,6 +77,7 @@ Energy Logistics
 .. toctree::
    :maxdepth: 1
 
+   generic_converter_cost
    transport
    combiners_and_splitters
    feedstocks

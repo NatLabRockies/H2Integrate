@@ -2,6 +2,10 @@
 Resource Models
 ###############
 
+.. toctree::
+   :maxdepth: 1
+
+   resource_index
 
 Wind Resource Models
 ====================
