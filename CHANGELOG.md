@@ -42,6 +42,10 @@
 - Update iron updates the iron and steel modeling inputs used to align with the values used in the iron project and improve scenario flexibility. [PR 989](https://github.com/NatLabRockies/H2Integrate/pull/989)
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
 
+### Documentation Refactor
+
+- Converts the site from a Jupyter Book basis to the Pydata Sphinx Theme with a reorganization of the layout for easier site perusal. Additionally, the site now adopts the Sphinx-Gallery tool to utilize the examples folder with minimal modification and easily link examples to related user guides. [PR 985](https://github.com/NatLabRockies/H2Integrate/pull/985)
+
 ## 0.10.0 [October 12, 2026]
 
 ### New Features
