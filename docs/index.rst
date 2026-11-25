@@ -56,6 +56,7 @@ The H2Integrate tool is built on top of `NASA's OpenMDAO framework <https://gith
    getting_started/index
    user_guide/index
    user_reference
+   model_reference
    api
    auto_examples/index
    developer_guide/index
@@ -112,6 +113,22 @@ The H2Integrate tool is built on top of `NASA's OpenMDAO framework <https://gith
             :click-parent:
 
             To the reference guide
+
+    .. grid-item-card::
+
+        Model Reference
+        ^^^
+
+        Hybrid user reference and API documentation, linking between relevant guides.
+
+        +++
+
+        .. button-ref:: model_reference
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the model guide
 
     .. grid-item-card::
 
