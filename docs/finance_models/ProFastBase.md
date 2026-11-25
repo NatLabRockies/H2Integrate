@@ -191,3 +191,34 @@ technologies:
           refurbishment_period_years: 15
           replacement_cost_percent: 1.0
 ```
+
+(profast:save_to_file)=
+## Providing Finance Parameters: Saving Results to Files
+
+Both ProFAST models support saving the ProFAST configuration to a .yaml file, this can be used to re-run ProFAST and replicate results without rerunning a full simulation. This is enabled by setting `save_profast_config` to True. An example is shown below that includes the other options for saving ProFAST information to a file:
+
+```yaml
+finance_parameters:
+  finance_model: "ProFastLCO"
+  model_inputs:
+    save_profast_config: True
+    profast_output_description: # optional description used for naming files. This defaults to the class-name, in this case, 'ProFASTLCO'
+    overwrite_config: False # optional. if False, this will create a unique filename for the config to prevent overwriting existing configuration files
+    profast_outputs_dir: # folder to save the profast_config to. If not provided, this will default to the 'folder_output' specified in the 'general' section of the driver config
+
+    params:
+      #Finance information
+    capital_items: #default parameters for capital items unless specified in tech_config
+      depr_type: "MACRS" ##depreciation method for capital items, can be "MACRS" or "Straight line"
+      depr_period: 5 #depreciation period for capital items
+      refurb: [0.]
+
+```
+
+The `ProFASTLCO` model supports saving results to a file. This is enabled similarly to saving the profast config, but by setting `save_profast_results` to True. Overwriting previously saved results is enabled by setting `overwrite_results` to True.
+
+There are two different ways to organize files saved from the ProFAST models, which is defined by setting `profast_outputs_format` to either `file` or `folder` (the default is `file`). The `file` option saves all the ProFAST files to filenames that start with the same filenaming convention (which is similar to how the outputs of the finance models are accessed using `get_val`). The filenames are formatted as: `<profast_output_description>_finance_subgroup_<finance_subgroup_name>-<commodity><output_description>`.
+
+The `profast_output_description` defaults to the name of the finance model being used if `profast_output_description` is described for that finance group. The `finance_subgroup_name` and `output_description` are based on the subgroup and group naming convention described in [Finance Parameters](financeparameters:specifiyingfinanceparameters)). The `output_description` is the commodity description and/or the finance group name, the `finance_subgroup_name` is the name of the finance subgroup.
+
+If the `profast_outputs_format` is set to `folder`, then the ProFAST files are saved to subdirectory structure that mirrors the finance group and subgroup structure. The subdirectory stucture and filename description are formatted as: `finance_group_<finance_group_name>/finance_subgroup_<finance_subgroup_name>/<profast_output_description>_<commodity>_<commodity_desc>`
