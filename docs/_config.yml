@@ -57,7 +57,6 @@ sphinx:
     autodoc_default_options:
       members: true
       member-order: bysource
-      undoc-members: true
       private-members: true
       # special-members: true
       # inherited-members
@@ -67,7 +66,7 @@ sphinx:
       # exclude-members
       # class-doc-from
       # no-value
-    autodoc_typehints: description
+    autodoc_typehints: signature
     html_static_path:
       - _static
     # A local ``autosummary/module.rst`` template lives here that filters out

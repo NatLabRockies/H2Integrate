@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools>=77", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -34,7 +34,8 @@ maintainers = [
 readme = {file = "README.md", content-type = "text/markdown"}
 description = "Holistic Hybrids Optimization and Design Tool"
 requires-python = ">=3.11, <3.14"
-license = {file = "LICENSE"}
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 dependencies = [
   "attrs",
   "CoolProp",
@@ -79,7 +80,7 @@ classifiers = [  # https://pypi.org/classifiers/
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Other Audience",
-    "License :: OSI Approved :: BSD License",
+    "BSD-3-Clause",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",

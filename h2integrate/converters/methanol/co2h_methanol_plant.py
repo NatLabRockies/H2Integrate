@@ -28,6 +28,19 @@ class CO2HMethanolPlantFinanceModelConfig(MethanolFinanceConfig):
 class CO2HMethanolPlantPerformanceModelConfig(MethanolPerformanceConfig):
     """Configuration for :class:`CO2HMethanolPlantPerformanceModel`.
 
+    Attributes:
+        meoh_syn_cat_consume_ratio (float): Methanol synthesis catalyst consumed per kilogram
+            of methanol produced, in cubic feet per kilogram.
+        ng_consume_ratio (float): Natural gas consumed per kilogram of methanol, in kilograms
+            per kilogram.
+        co2_consume_ratio (float): Carbon dioxide consumed per kilogram of methanol, in
+            kilograms per kilogram.
+        h2_consume_ratio (float): Hydrogen consumed per kilogram of methanol, in kilograms
+            per kilogram.
+        elec_consume_ratio (float): Electricity consumed per kilogram of methanol, in
+            kilowatt-hours per kilogram.
+
+    See :class:`MethanolPerformanceConfig` for inherited capacity and production fields.
     See :doc:`/technology_models/methanol`.
     """
 
@@ -161,6 +174,13 @@ class CO2HMethanolPlantPerformanceModel(MethanolPerformanceBaseClass):
 class CO2HMethanolPlantCostModelConfig(MethanolCostConfig):
     """Configuration for :class:`CO2HMethanolPlantCostModel`.
 
+    Attributes:
+        ng_lhv (float): Natural gas lower heating value in megajoules per kilogram.
+        meoh_syn_cat_price (float): Synthesis catalyst cost in dollars per cubic foot.
+        ng_price (float): Natural gas cost in dollars per million British thermal units.
+        co2_price (float): Carbon dioxide cost in dollars per kilogram.
+
+    See :class:`MethanolCostConfig` for inherited capacity and cost fields.
     See :doc:`/technology_models/methanol`.
     """
 

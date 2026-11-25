@@ -31,7 +31,7 @@ class ResourceBaseH5Config(BaseConfig):
         Attributes should be updated in subclasses and should not be modifiable by the user.
         These should be inherit attributes of the subclass.
 
-    Args:
+    Attributes:
         latitude (float): latitude to download resource data for.
         longitude (float): longitude to download resource data for.
         timezone (float | int, optional): timezone to output data in.

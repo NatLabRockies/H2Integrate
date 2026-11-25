@@ -285,12 +285,16 @@ class IronReductionCostBaseConfig(CostModelBaseConfig):
             cannot be user added under `cost_parameters`.
         skilled_labor_cost (float): Skilled labor cost in 2022 USD/hr
         unskilled_labor_cost (float): Unskilled labor cost in 2022 USD/hr
+        capex_modifier (float): Capital expenditure modifier. Multiplies capex by this amount.
+        opex_modifier (float): Operational expenditure modifier. Multiplies opex by this amount.
     """
 
     sponge_iron_production_rate_tonnes_per_hr: float = field()
     cost_year: int = field(converter=int)
     skilled_labor_cost: float = field(validator=validators.ge(0))
     unskilled_labor_cost: float = field(validator=validators.ge(0))
+    capex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
+    opex_modifier: float = field(default=1.0, validator=(validators.ge(0)))
 
 
 class IronReductionPlantBaseCostComponent(CostModelBaseClass):
@@ -356,6 +360,18 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
             shape=self.n_timesteps,
             units="t/h",
             desc="Pig iron produced",
+        )
+        self.add_input(
+            "capex_modifier",
+            val=self.config.capex_modifier,
+            units="unitless",
+            desc="Capital expenditure modifier",
+        )
+        self.add_input(
+            "opex_modifier",
+            val=self.config.opex_modifier,
+            units="unitless",
+            desc="Operational expenditure modifier",
         )
 
         coeff_fpath = ROOT_DIR / "converters" / "iron" / "rosner" / "cost_coeffs.csv"
@@ -487,6 +503,11 @@ class IronReductionPlantBaseCostComponent(CostModelBaseClass):
         tot_capex_adjusted = inflate_cepci(total_capex_usd, dollar_year, self.config.cost_year)
         tot_fixed_om_adjusted = inflate_cpi(tot_fixed_om, dollar_year, self.config.cost_year)
         tot_varopex_adjusted = inflate_cpi(tot_varopex, dollar_year, self.config.cost_year)
+
+        # Apply capex and opex modifiers
+        tot_capex_adjusted *= inputs["capex_modifier"]
+        tot_fixed_om_adjusted *= inputs["opex_modifier"]
+        tot_varopex_adjusted *= inputs["opex_modifier"]
 
         outputs["CapEx"] = tot_capex_adjusted
         outputs["VarOpEx"] = tot_varopex_adjusted

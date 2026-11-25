@@ -29,14 +29,17 @@
 - Consolidate redundant tests, strengthen weak assertions, and replace expensive recorder setups with a small grid model. [PR 974](https://github.com/NatLabRockies/H2Integrate/pull/974)
 - Run pytest in parallel by default with a memory-aware automatic worker count and isolate shared test outputs. [PR 982](https://github.com/NatLabRockies/H2Integrate/pull/982)
 - Improve model documentation guidance, embed configuration APIs, cross-link guides and APIs, and correct model interface descriptions across converters, storage, control, resources, transport, demand, feedstocks, and finance. [PR 971](https://github.com/NatLabRockies/H2Integrate/pull/971)
+- Moved system-level control purchase-price configuration helpers into `marginal_cost_tools.py`, kept price expansion inline, and combined VarOpEx and feedstock marginal-cost calculations. [PR 958](https://github.com/NatLabRockies/H2Integrate/pull/958)
 - Consolidate constants for SECONDS_PER_YEAR and SECONDS_PER_HOUR into one locations (`h2integrate/tools/constants.py`). [PR 990](https://github.com/NatLabRockies/H2Integrate/pull/990)
 - Update statsmodels requirement to statsmodels>=0.15.0 to address deprecation warnings. [PR 992](https://github.com/NatLabRockies/H2Integrate/pull/992)
+- Standardize attrs configuration documentation and remove duplicate type-only fields from generated API pages. [PR 999](https://github.com/NatLabRockies/H2Integrate/pull/999)
 - Fixed `PeakLoadManagementOptimizedStorageController` issues affecting degraded batteries and multi-year simulations. [PR 988](https://github.com/NatLabRockies/H2Integrate/pull/988)
   - Removed a redundant initial-SOC constraint that prevented dispatch on the first step of each control window and made the MILP infeasible when that step required dispatch.
   - Monthly event and energy budgets are now tracked per year and month.
   - `n_control_window_hours` is now limited to 8016 h (334 days) so a control window never contains the same calendar month in two different years.
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
+- Update iron updates the iron and steel modeling inputs used to align with the values used in the iron project and improve scenario flexibility. [PR 989](https://github.com/NatLabRockies/H2Integrate/pull/989)
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
 
 ## 0.10.0 [October 12, 2026]
