@@ -52,7 +52,7 @@ examples_dir_order = [
     "../../examples/09_co2",
     "../../examples/10_electrolyzer_om",
     "../../examples/17_splitter_wind_doc_h2",
-    "../../examples/21_iron_examples",
+    # "../../examples/21_iron_examples",
     "../../examples/25_sizing_modes",
     "../../examples/26_floris",
     "../../examples/29_wind_ard",
@@ -60,6 +60,7 @@ examples_dir_order = [
     "../../examples/32_multivariable_streams",
     "../../examples/36_nuclear_reactor_htse",
     "../../examples/37_paper_mill",
+    "*",  # TODO: iron examples break for unknown reasons, fix this during example reorg
 ]
 
 folder_lists = [*examples_dir_order]  # placeholder in case we decide to add other structures
