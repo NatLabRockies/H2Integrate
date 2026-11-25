@@ -2,7 +2,7 @@
 Creating Ammonia, in Texas
 ==========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

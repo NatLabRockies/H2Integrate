@@ -2,7 +2,7 @@
 Ammonia Synloop
 ===============
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

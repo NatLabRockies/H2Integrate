@@ -2,7 +2,7 @@
 Site Design Sweep
 =================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

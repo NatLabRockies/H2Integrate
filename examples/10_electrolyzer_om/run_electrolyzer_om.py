@@ -2,7 +2,7 @@
 Wind and Hydrogen Electrolysis O&M
 ==================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

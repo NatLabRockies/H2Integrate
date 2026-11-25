@@ -2,7 +2,7 @@
 Wind Plant Paper Production
 ===========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

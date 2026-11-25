@@ -2,7 +2,7 @@
 Upstream Fixed Load Demand
 ==========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

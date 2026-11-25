@@ -2,7 +2,7 @@
 Pyomo Heuristic Dispatching
 ===========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

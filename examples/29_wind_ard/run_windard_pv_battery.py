@@ -2,7 +2,7 @@
 Ard Wind, Solar, & Battery
 ==========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

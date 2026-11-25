@@ -2,7 +2,7 @@
 Direct Ocean Capture Powered by Wind & Wave
 ===========================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

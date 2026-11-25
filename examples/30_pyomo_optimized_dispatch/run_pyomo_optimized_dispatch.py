@@ -2,7 +2,7 @@
 Pyomo Optimized Dispatch
 ========================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

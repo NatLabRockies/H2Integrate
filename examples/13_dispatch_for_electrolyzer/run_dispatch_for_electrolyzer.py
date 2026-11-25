@@ -2,7 +2,7 @@
 Battery Dispatching for Electrolysis
 ====================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

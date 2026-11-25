@@ -2,7 +2,7 @@
 Thermal Nuclear Reactor
 =======================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

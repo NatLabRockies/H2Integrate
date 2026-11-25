@@ -2,7 +2,7 @@
 Natural Gas Plant
 =================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

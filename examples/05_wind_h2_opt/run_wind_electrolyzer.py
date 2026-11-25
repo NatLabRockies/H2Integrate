@@ -2,7 +2,7 @@
 Wind Plant Electrolysis
 =======================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

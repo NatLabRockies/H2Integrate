@@ -2,7 +2,7 @@
 Solar, Wind, & Natural Gas Demand Optimization
 ==============================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

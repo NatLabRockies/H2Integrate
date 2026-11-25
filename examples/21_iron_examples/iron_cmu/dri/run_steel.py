@@ -2,7 +2,7 @@
 Single Site Steel Production
 ============================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

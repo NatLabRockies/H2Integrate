@@ -2,7 +2,7 @@
 Producing Steel
 ===============
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

@@ -2,7 +2,7 @@
 Small Modular Nuclear Reactor for Methanol
 ==========================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

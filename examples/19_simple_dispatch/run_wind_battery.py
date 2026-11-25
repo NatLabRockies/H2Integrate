@@ -2,7 +2,7 @@
 Wind & Battery Dispatch Optimization
 ====================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

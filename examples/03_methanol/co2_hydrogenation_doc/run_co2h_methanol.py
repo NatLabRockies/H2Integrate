@@ -2,7 +2,7 @@
 Direct Ocean Capture CO2 Hydrogenation for Methanol
 ===================================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

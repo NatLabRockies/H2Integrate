@@ -2,7 +2,7 @@
 Site-Based Design of Experiments
 ================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

@@ -2,7 +2,7 @@
 Financing Hydrogen with Wind & Solar
 ====================================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

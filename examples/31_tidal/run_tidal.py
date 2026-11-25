@@ -2,7 +2,7 @@
 Tidal Power
 ===========
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

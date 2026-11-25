@@ -2,7 +2,7 @@
 Run of River Hydropower
 =======================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

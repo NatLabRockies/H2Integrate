@@ -2,7 +2,7 @@
 FLORIS Wind Plant
 =================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """

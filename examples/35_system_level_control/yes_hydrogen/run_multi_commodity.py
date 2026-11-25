@@ -2,7 +2,7 @@
 Wind Natural Gas Load Demand
 ============================
 
-Short Description.
+Thumbnail Alt Text.
 
 Longer Description.
 """
