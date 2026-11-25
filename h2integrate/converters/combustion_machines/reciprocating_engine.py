@@ -19,6 +19,21 @@ def compute_work_rate_compression(
     mass_flow_fluid=1.0,
     isentropic_efficiency=1.0,
 ):
+    """
+    Compute the work rate required to compress a fluid.
+
+    Args:
+        state_inlet: pyfluids fluid state at the start of compression
+        state_outlet: pyfluids fluid state at the end of (isentropic) compression
+        mass_flow_fluid (float): kg/s, mass flowrate of the fluid; defaults to 1.0
+        isentropic_efficiency (float): -, compression isentropic efficiency; defaults to 1.0
+
+    Returns:
+        float: kW, work rate required for the compression (real work is
+            larger than the isentropic work when the efficiency is below 1)
+    """
+    # compute the work that would be required for isentropic compression
+    # and then adjust it based on the isentropic efficiency
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -33,6 +48,21 @@ def compute_work_rate_expansion(
     mass_flow_fluid=1.0,
     isentropic_efficiency=1.0,
 ):
+    """
+    Compute the work rate obtained from expanding a fluid.
+
+    Args:
+        state_inlet: pyfluids fluid state at the start of expansion
+        state_outlet: pyfluids fluid state at the end of (isentropic) expansion
+        mass_flow_fluid (float): kg/s, mass flowrate of the fluid; defaults to 1.0
+        isentropic_efficiency (float): -, expansion isentropic efficiency; defaults to 1.0
+
+    Returns:
+        float: kW, work rate obtained from the expansion (real work is
+            smaller than the isentropic work when the efficiency is below 1)
+    """
+    # compute the work that would be obtained for isentropic expansion
+    # and then adjust it based on the isentropic efficiency
     work_rate_isentropic = compute_work_rate_isentropic(
         state_inlet,
         state_outlet,
@@ -48,8 +78,19 @@ class RICE:
     Simulates an Otto cycle engine with configurable compression and expansion
     stroke isentropic efficiencies. Computes work outputs, heat transfers, and
     thermodynamic states throughout the engine cycle given ambient conditions.
+
+    Attributes:
+        no_stroke (int): -, 2-stroke or 4-stroke engine.
+        ratio_compression (float): -, compression ratio.
+        Trel_combustion (float): deg C, temperature after combustion.
+        isentropic_efficiency_compression (float): -, compression stroke isentropic efficiency.
+        isentropic_efficiency_expansion (float): -, expansion stroke isentropic efficiency.
+        displacement_engine (float | None): m**3, engine displacement.
+        rpm_operating (float | None): rev/min, engine RPM.
+        design_conditions (dict): design conditions, only set if given at init.
     """
 
+    # class-level declarations, the units are listed here for quick reference
     no_stroke: int = 4  # -, 2-stroke or 4-stroke engine
     ratio_compression: float  # -, compression ratio
     Trel_combustion: float  # deg C, relative temperature
@@ -72,6 +113,18 @@ class RICE:
         rpm_operating: (float | None) = None,  # rev/min, engine RPM; unit-mass analysis if None
         design_conditions=None,  # dict, design conditions dictionary
     ):
+        """Set up the engine from its design parameters.
+
+        Args:
+            ratio_compression (float): -, compression ratio.
+            Trel_combustion (float): deg C, temperature after combustion.
+            isentropic_efficiency_compression (float): -, compression stroke isentropic efficiency.
+            isentropic_efficiency_expansion (float): -, expansion stroke isentropic efficiency.
+            displacement_engine (float | None): m**3, engine displacement.
+                Unit-mass analysis if None.
+            rpm_operating (float | None): rev/min, engine RPM. Unit-mass analysis if None.
+            design_conditions (dict | None): design conditions dictionary.
+        """
         # set in variables
         self.ratio_compression = ratio_compression
         self.Trel_combustion = Trel_combustion
@@ -80,11 +133,17 @@ class RICE:
         self.displacement_engine = displacement_engine
         self.rpm_operating = rpm_operating
 
+        # only store the design conditions if we were given some
         if design_conditions is not None:
             self.design_conditions = design_conditions
 
     def get_revs_per_cycle(self):
-        # mechanical cycles per thermodynamic cycle
+        """Get the number of crankshaft revolutions per thermodynamic cycle.
+
+        Returns:
+            float: -, 2 for a 4-stroke engine and 1 for a 2-stroke engine.
+        """
+        # get the number of mechanical cycles per thermodynamic cycle
         return self.no_stroke / 2  # -
 
     def get_mean_effective_pressure(
@@ -92,13 +151,25 @@ class RICE:
         power_setpoint,  # kW, indicated power at which to evaluate
         rpm_setpoint,  # rev/min., RPM at which to evaluate
     ):
+        """
+        Convert indicated power to mean effective pressure (MEP).
+
+        Args:
+            power_setpoint (float): kW, indicated power at which to evaluate
+            rpm_setpoint (float): rev/min, RPM at which to evaluate
+
+        Returns:
+            float: Pa, mean effective pressure
+        """
+        # MEP is the work per cycle per unit displacement, so divide the power
+        # by the displacement and by the thermodynamic cycle frequency
         mep = (
             power_setpoint
             / self.displacement_engine
             / (
                 rpm_setpoint / 60.0 / self.get_revs_per_cycle()  # to thermodynamic cycle Hz
             )
-            * 1.0e3
+            * 1.0e3  # kW to W
         )  # Pa
         return mep  # Pa
 
@@ -107,6 +178,19 @@ class RICE:
         mean_effective_pressure_value,  # Pa, MEP at which to evaluate
         rpm_setpoint,  # rev/min., RPM at which to evaluate
     ):
+        """
+        Convert mean effective pressure (MEP) to indicated power.
+
+        This is the inverse of `get_mean_effective_pressure`.
+
+        Args:
+            mean_effective_pressure_value (float): Pa, MEP at which to evaluate
+            rpm_setpoint (float): rev/min, RPM at which to evaluate
+
+        Returns:
+            float: kW, indicated power
+        """
+        # power is MEP times displacement (work per cycle) times cycle frequency
         power = (
             self.displacement_engine
             * (
@@ -126,10 +210,25 @@ class RICE:
         ),
         rpm_setpoint_list: list[float] | float | None = None,
     ):
+        """Run the Otto cycle model for one or more ambient states and engine speeds.
+
+        Args:
+            fluid_ambient_list: pyfluids ambient intake fluid state(s).
+            rpm_setpoint_list (list[float] | float | None): rev/min, engine speed(s).
+                A single value is broadcast against a list of ambient states and
+                vice versa. Uses `rpm_operating` if None.
+
+        Returns:
+            ThermodynamicCycleResult | list[ThermodynamicCycleResult]: one result if
+                both inputs were single values, otherwise a list with one result per
+                ambient state.
+        """
+        # flags to track which inputs were passed in as a single value
         singleton = False  # make a flag if there's just one state to run
         singleton_ambient = False  # make a flag if there's just one state to run
         singleton_rpm = False  # make a flag if there's just one state to run
 
+        # wrap a lone ambient fluid in a list so the loop below always works
         if isinstance(
             fluid_ambient_list,
             pyfluids.fluids.abstract_fluid.AbstractFluid,
@@ -139,6 +238,11 @@ class RICE:
             ]
             singleton_ambient = True
 
+        # fall back to the operating rpm if no rpm was given
+        if rpm_setpoint_list is None:
+            rpm_setpoint_list = self.rpm_operating
+
+        # same for a lone rpm value
         if isinstance(
             rpm_setpoint_list,
             float,
@@ -148,20 +252,23 @@ class RICE:
             ]
             singleton_rpm = True
 
+        # if only one input is a lone value, repeat it to match the length of the other
         if singleton_ambient and singleton_rpm:
             singleton = True
         elif singleton_ambient:
-            fluid_ambient_list = [fluid_ambient_list[0] for _ in len(rpm_setpoint_list)]
+            fluid_ambient_list = [fluid_ambient_list[0] for _ in range(len(rpm_setpoint_list))]
         elif singleton_rpm:
-            rpm_setpoint_list = [rpm_setpoint_list[0] for _ in len(fluid_ambient_list)]
+            rpm_setpoint_list = [rpm_setpoint_list[0] for _ in range(len(fluid_ambient_list))]
 
-        assert (rpm_setpoint_list is None) or (len(rpm_setpoint_list) == len(fluid_ambient_list))
+        # the two lists have to line up one-to-one
+        assert len(rpm_setpoint_list) == len(fluid_ambient_list)
 
         results = []  # vector to store results for each ambient fluid state
         for fluid_ambient, rpm_setpoint in zip(
             fluid_ambient_list, rpm_setpoint_list
         ):  # loop over ambient fluid states
             ### CALCULATE THE CYCLE STATES
+            # states: 1 ambient, 2 compressed, 3 combusted, 4 exhaust
             # note: gas phase enforcement speeds up computation significantly
 
             enforce_gas_phase(fluid_ambient)  # ensure the ambient fluid is in the gas phase
@@ -170,7 +277,7 @@ class RICE:
                 ratio_compression=self.ratio_compression,
             )  # after compression stroke
             enforce_gas_phase(fluid_compressed)  # ensure the compressed fluid is in the gas phase
-            fluid_combusted = fluid_compressed.with_state(
+            fluid_combusted = fluid_compressed.with_state(  # combustion is constant volume
                 pyfluids.Input.specific_volume(fluid_compressed.specific_volume),
                 pyfluids.Input.temperature(self.Trel_combustion),
             )  # after the combustion
@@ -193,7 +300,8 @@ class RICE:
                 isentropic_efficiency=self.isentropic_efficiency_expansion,
             )  # now that the gas states are determined, compute the work
 
-            mep_total_friction = self.compute_tfmep_model(rpm_setpoint)
+            # friction MEP at this rpm
+            mep_total_friction = self.compute_tfmep_model(rpm_setpoint)  # Pa
 
             ### CALCULATE THE HEAT INPUTS/OUTPUTS
             qdot_combustion = compute_heat_transfer(
@@ -205,7 +313,8 @@ class RICE:
                 fluid_ambient,
             )  # now that the gas states are determined, compute the heat transfer
 
-            ### CALCULATE THE MASS FLOWRATE W/ CONTROL IF APPLICABLE
+            ### CALCULATE THE MASS FLOWRATE
+            # note: this is set by the displacement and rpm, there's no control logic here
             mass_flowrate = self.get_mass_flowrate(fluid_ambient, rpm_setpoint)
 
             ### PACK THE RESULT
@@ -255,6 +364,7 @@ class RICE:
 
             result.add_loss(
                 1,
+                # friction MEP -> power (kW), then divide by mass flow to get kJ/kg
                 self.invert_mean_effective_pressure(
                     mep_total_friction,
                     rpm_setpoint,
@@ -263,7 +373,7 @@ class RICE:
                 "total friction loss",
             )
 
-            # return logic
+            # return logic: a lone input gets a lone result, otherwise collect them all
             if singleton:
                 return result
             results.append(result)
@@ -274,6 +384,16 @@ class RICE:
         self,
         rpm_setpoint=None,  # revs/min, crankshaft RPM
     ) -> float:
+        """
+        Get the volumetric flowrate of air through the engine.
+
+        Args:
+            rpm_setpoint (float | None): rev/min, crankshaft RPM; uses
+                `rpm_operating` if None
+
+        Returns:
+            float: m**3/s, volumetric flowrate
+        """
         if rpm_setpoint is None:
             rpm_setpoint = self.rpm_operating
         # note: 4-cycle have 2 mech. cycles per thermo. cycle
@@ -286,20 +406,47 @@ class RICE:
         fluid_intake_manifold: pyfluids.fluids.abstract_fluid.AbstractFluid,
         rpm_setpoint=None,  # revs/min, crankshaft RPM
     ) -> float:
+        """
+        Get the mass flowrate of air through the engine.
+
+        Args:
+            fluid_intake_manifold: pyfluids fluid state at the intake manifold
+            rpm_setpoint (float | None): rev/min, crankshaft RPM; uses
+                `rpm_operating` if None
+
+        Returns:
+            float: kg/s, mass flowrate.
+        """
+        # mass flow is the intake density times the volumetric flow
         Q_flow = self.get_volumetric_flowrate_engine(rpm_setpoint=rpm_setpoint)
         return fluid_intake_manifold.density * Q_flow
 
     @staticmethod
     def compute_tfmep_model(rpm_in: np.ndarray | float) -> np.ndarray | float:
+        """
+        Compute the total friction mean effective pressure (TFMEP).
+
+        Uses the empirical quadratic-in-rpm fit from Heywood (SI form, S13.5.1).
+
+        Args:
+            rpm_in (np.ndarray | float): rev/min, engine speed(s)
+
+        Returns:
+            np.ndarray | float: Pa, total friction mean effective pressure
+        """
+        # fit is in bar with rpm in thousands, so scale by 100 kPa/bar to get Pa
         return (
             0.97 + 0.15 * rpm_in / 1000.0 + 0.05 * (rpm_in / 1000.0) ** 2
         ) * 100.0e3  # SI model from S13.5.1 of Heywood, _Internal Combustion Engine Fundamentals_
 
 
 if __name__ == "__main__":
+    # quick driver script: pick an engine, then either calibrate it,
+    # run it at one operating point, or sweep ambient pressure
+
     # options
-    do_optimization = False
-    engine_name = "LS1"
+    do_optimization = False  # calibrate Trel_combustion to hit P_rated
+    engine_name = "LS1"  # "LS1" uses the Corvette numbers, anything else uses Cengel ex. 9-3
 
     if engine_name == "LS1":
         # ambient air conditions
@@ -330,7 +477,16 @@ if __name__ == "__main__":
     if do_optimization:
         # use Brent's method to find Trel_combustion that achieves expected power
         def power_error(Trel_comb):
-            """Calculate power error from expected rated power."""
+            """
+            Calculate power error from expected rated power.
+
+            Args:
+                Trel_comb (float): deg C, combustion temperature to try
+
+            Returns:
+                float: kW, modeled net power minus the rated power
+            """
+            # build an engine at the trial combustion temperature
             ice = RICE(
                 ratio_compression=ratio_compression,
                 Trel_combustion=Trel_comb,
@@ -344,17 +500,19 @@ if __name__ == "__main__":
                 pyfluids.Input.pressure(P_ambient),
                 pyfluids.Input.temperature(Trel_ambient),
             )
+            # run at the operating rpm and compare net power (with losses) to the rating
             result = ice.run_engine_model(fluid_ambient, ice.rpm_operating)
             net_power = result.get_net_work(losses=True)
             return net_power - P_rated
 
-        # Find Trel_combustion using Brent's method
+        # Find Trel_combustion using Brent's method (the root of the power error)
         Trel_combustion_optimal = brentq(power_error, 800, 2500)
 
         print(f"Optimal Trel_combustion: {Trel_combustion_optimal:.10f} °C")
         print(f"Expected power: {P_rated:.2f} kW")
 
     elif True:
+        # single operating point at the engine's operating rpm
         ice = RICE(
             ratio_compression=ratio_compression,
             Trel_combustion=Trel_combustion,
@@ -387,7 +545,7 @@ if __name__ == "__main__":
         print(result)
         print("totals:")
         print(f"\tnet power: {result.get_net_work():.02f} kW")
-        print(f"\tefficiency: {result.get_efficiency():.03f}%")
+        print(f"\tefficiency: {100 * result.get_efficiency():.03f}%")
         print(
             f"\tnet heat: {result.get_net_heat_input() + result.get_net_heat_rejection():.02f} kW"
         )
@@ -395,14 +553,23 @@ if __name__ == "__main__":
         print(f"mass flowrate: {ice.get_mass_flowrate(fluid_ambient, ice.rpm_operating):.03f} kg/s")
         print(f"net power: {result.get_net_work():.02f} kW")
 
+        # sweep rpm and plot the air mass flowrate
         rpm_vec = np.linspace(1000.0, 6000.0, 201)
         mass_flowrate_vec = [ice.get_mass_flowrate(fluid_ambient, rpm_val) for rpm_val in rpm_vec]
-        power_vec = [ice.get_mass_flowrate(fluid_ambient, rpm_val) for rpm_val in rpm_vec]
-        result.mass_flowrate = None
-        plt.plot(rpm_vec, mass_flowrate_vec)
+        # note: this is the same calculation as mass_flowrate_vec, not a power calculation
+        power_vec = [
+            result.get_net_work() * ice.get_mass_flowrate(fluid_ambient, rpm_val)
+            for rpm_val in rpm_vec
+        ]
+        result.mass_flowrate = None  # clear the stored flowrate on the result
+        fig, ax = plt.subplots()
+        ax.plot(rpm_vec, mass_flowrate_vec)
+        ax.set_xlabel("engine speed, output shaft (RPM)")
+        ax.set_ylabel("mass flowrate (kg/s)")
         plt.show()
 
     else:
+        # sweep of ambient pressure (e.g. altitude) at fixed ambient temperature
         ice = RICE(
             ratio_compression=ratio_compression,
             Trel_combustion=Trel_combustion,
@@ -420,7 +587,7 @@ if __name__ == "__main__":
         #     rel_humidity_ambient,
         # )
 
-        # create the ambient pyfluid fluid
+        # create the ambient pyfluid fluid at each pressure, 75% to 100% of ambient
         P_vec = P_ambient * np.linspace(0.75, 1.0, 201)
         fluids_ambient = [
             working_fluid.with_state(
@@ -434,9 +601,11 @@ if __name__ == "__main__":
         results = ice.run_engine_model(fluids_ambient)
         for f, r in zip(fluids_ambient, results):
             r.mass_flowrate = ice.get_mass_flowrate(f)
+        # collect efficiency and net power across the sweep
         efficiency_vec = np.array([r.get_efficiency() for r in results])
         net_power_vec = np.array([r.get_net_work() for r in results])
 
+        # top: net power relative to rated power, bottom: efficiency
         fig, axes = plt.subplots(2, 1, sharex=True)
         axes[0].plot(P_vec, net_power_vec / P_rated)
         axes[1].plot(P_vec, efficiency_vec)
@@ -445,6 +614,6 @@ if __name__ == "__main__":
 
         print(results[-1])
 
-        print(f"net work: {results[-1].get_net_work(losses=False):.02f}")
-        print(f"net work before losses: {results[-1].get_net_work(losses=True):.02f}")
+        print(f"net work: {results[-1].get_net_work(losses=True):.02f}")
+        print(f"net work before losses: {results[-1].get_net_work(losses=False):.02f}")
         print(f"{ice.get_mean_effective_pressure(results[-1].get_net_work()):.02f}")
