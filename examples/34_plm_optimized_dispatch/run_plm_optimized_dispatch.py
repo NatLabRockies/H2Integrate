@@ -12,21 +12,17 @@ to maximize incentives and during off-peak hours to minimize the
 operation cost.
 """
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
-from h2integrate.core.h2integrate_model import H2IntegrateModel
-
-
-EXAMPLE_DIR = Path(__file__).parent
 
 
 # Run H2Integrate
-model = H2IntegrateModel(EXAMPLE_DIR / "34_plm_optimized_dispatch.yaml")
+example_path = EXAMPLE_DIR / "34_plm_optimized_dispatch"
+model = H2IntegrateModel(example_path / "34_plm_optimized_dispatch.yaml")
 model.setup()
 model.run()
 

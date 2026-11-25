@@ -10,11 +10,12 @@ Ocean Alkalinity Enhancement (OAE) powered by wind, with two cost modeling appro
 
 import numpy as np
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 ##################################
 # OAE with the OAE cost model and ProFAST finance
+example_path = EXAMPLE_DIR / "09_co2/ocean_alkalinity_enhancement"
 h2i_model = H2IntegrateModel("offshore_plant_oae.yaml")
 
 # Set battery demand profile

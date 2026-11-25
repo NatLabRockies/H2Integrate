@@ -7,10 +7,10 @@ Short Description.
 Longer Description.
 """
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
-h2i = H2IntegrateModel("wind_plant_paper.yaml")
+h2i = H2IntegrateModel(EXAMPLE_DIR / "06_custom_tech/wind_plant_paper.yaml")
 
 # Run the model
 h2i.run()

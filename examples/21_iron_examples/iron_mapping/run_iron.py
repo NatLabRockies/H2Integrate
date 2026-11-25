@@ -12,12 +12,11 @@ Warning: this may take some time (up to a few minutes) depending on your PC's pr
 
 """
 
-from pathlib import Path
-
 import pandas as pd
 
 from h2integrate import (
     ROOT_DIR,
+    EXAMPLE_DIR,
     H2IntegrateModel,
     load_tech_yaml,
     load_plant_yaml,
@@ -41,7 +40,7 @@ from h2integrate.postprocess.mapping import (
 rerun_model = True
 
 # Define filepaths
-ex_dir = Path(__file__).parent
+ex_dir = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
 ex_out_dir = ex_dir / "ex_out"
 save_plot_filepath = ex_out_dir / "example_iron_map.png"
 save_plot_filepath.unlink(missing_ok=True)
@@ -52,9 +51,9 @@ shipping_coords_filepath = ROOT_DIR / "converters/iron/simple_transport/shipping
 shipping_prices_filepath = ex_dir / "example_shipping_prices.csv"
 
 # Set config inputs to create H2Integrate model
-tech_config = load_tech_yaml("tech_config.yaml")
-plant_config = load_plant_yaml("plant_config.yaml")
-driver_config = load_driver_yaml("driver_config.yaml")
+tech_config = load_tech_yaml(ex_dir / "tech_config.yaml")
+plant_config = load_plant_yaml(ex_dir / "plant_config.yaml")
+driver_config = load_driver_yaml(ex_dir / "driver_config.yaml")
 input_config = {
     "name": "H2Integrate_config",
     "system_summary": "hybrid plant containing ammonia plant and electrolyzer",
@@ -66,7 +65,7 @@ input_config = {
 if rerun_model:
     # Run mine sweep
     mine_model = H2IntegrateModel(input_config)
-    case_file = Path("mine_inputs.csv")
+    case_file = ex_dir / "mine_inputs.csv"
     cases = load_tech_config_cases(case_file)
     casenames = ["Northshore", "Hibbing", "United"]
     casenames = list(cases.keys())
@@ -82,13 +81,13 @@ if rerun_model:
     ore_prices.to_csv(ore_prices_filepath)
 
     # Run transport sweep
-    input_config["driver_config"] = load_driver_yaml("driver_transport.yaml")
+    input_config["driver_config"] = load_driver_yaml(ex_dir / "driver_transport.yaml")
     transport_model = H2IntegrateModel(input_config)
     transport_model.run()
     transport_model.post_process(summarize_sql=True)
 
     # Run iron plant sweep
-    input_config["driver_config"] = load_driver_yaml("driver_iron_plant.yaml")
+    input_config["driver_config"] = load_driver_yaml(ex_dir / "driver_iron_plant.yaml")
     iron_plant_model = H2IntegrateModel(input_config)
     iron_plant_model.run()
     iron_plant_model.post_process(summarize_sql=True)

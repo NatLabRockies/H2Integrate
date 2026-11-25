@@ -7,19 +7,19 @@ Short Description.
 Longer Description.
 """
 
-from pathlib import Path
-
 import numpy as np
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 
 
+example_path = EXAMPLE_DIR / "12_ammonia_synloop"
+
 # Create a H2Integrate model
-model = H2IntegrateModel("12_ammonia_synloop.yaml")
+model = H2IntegrateModel(example_path / "12_ammonia_synloop.yaml")
 
 # Load cases
-case_file = Path("hb_inputs.csv")
+case_file = example_path / "hb_inputs.csv"
 cases = load_tech_config_cases(case_file)
 
 # Modify and run the model for different cases

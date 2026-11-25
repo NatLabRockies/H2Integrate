@@ -21,7 +21,7 @@ and the battery shifts energy toward high-price hours.
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,8 @@ grid_buy_price = sell_price + 0.02  # grid is always more expensive than selling
 # ---------------------------------------------------------------------------
 # Create and run model
 # ---------------------------------------------------------------------------
-h2i = H2IntegrateModel("complex_profit_max.yaml")
+example_path = EXAMPLE_DIR / "35_system_level_control/complex_profit_max"
+h2i = H2IntegrateModel(example_path / "complex_profit_max.yaml")
 h2i.setup()
 
 # Override demand profile

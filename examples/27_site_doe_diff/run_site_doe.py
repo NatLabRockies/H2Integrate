@@ -8,18 +8,18 @@ Longer Description.
 """
 
 import os
-from pathlib import Path
 
 import pandas as pd
 import openmdao.api as om
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
-os.chdir(Path(__file__).parent)
+example_path = EXAMPLE_DIR / "27_site_doe_diff"
+os.chdir(example_path)
 
 # Create an H2I model
-h2i = H2IntegrateModel("27_wind_solar_site_doe.yaml")
+h2i = H2IntegrateModel(example_path / "27_wind_solar_site_doe.yaml")
 
 # Run the model
 h2i.run()
@@ -28,7 +28,7 @@ h2i.run()
 h2i.post_process(summarize_sql=True)
 
 # Specify the filepath to the sql file, the folder and filename are in the driver_config
-sql_fpath = Path(__file__).parent / "ex_27_out" / "cases.sql"
+sql_fpath = example_path / "ex_27_out" / "cases.sql"
 
 # load the cases
 cr = om.CaseReader(sql_fpath)

@@ -7,11 +7,11 @@ Short Description.
 Longer Description.
 """
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # Create a H2Integrate model
-model = H2IntegrateModel("15_wind_solar_electrolyzer.yaml")
+model = H2IntegrateModel(EXAMPLE_DIR / "15_wind_solar_electrolyzer/15_wind_solar_electrolyzer.yaml")
 
 # Run the model
 model.run()

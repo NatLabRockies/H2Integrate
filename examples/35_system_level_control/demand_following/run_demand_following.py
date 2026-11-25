@@ -16,13 +16,14 @@ Each case is run, post-processed, and plotted for the first week of the year.
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
+example_path = EXAMPLE_DIR / "35_system_level_control/demand_following"
 cases = {
-    "no_battery": "wind_ng_demand.yaml",
-    "battery": "wind_ng_battery_demand.yaml",
-    "battery_with_controller": "wind_ng_battery_controller_demand.yaml",
+    "no_battery": example_path / "wind_ng_demand.yaml",
+    "battery": example_path / "wind_ng_battery_demand.yaml",
+    "battery_with_controller": example_path / "wind_ng_battery_controller_demand.yaml",
 }
 
 # Plot the first 168 hours (1 week)

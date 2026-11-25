@@ -7,18 +7,23 @@ Short Description.
 Longer Description.
 """
 
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.core.file_utils import load_yaml
-from h2integrate.core.h2integrate_model import H2IntegrateModel
 
+
+example_path = EXAMPLE_DIR / "36_nuclear_reactor_htse"
+os.chdir(example_path)
 
 # load config and update htse refurb profile
-config = load_yaml("nuclear_reactor_thermal_htse.yaml")
-plant_config = load_yaml(config["plant_config"])
+config = load_yaml(example_path / "nuclear_reactor_thermal_htse.yaml")
+plant_config = load_yaml(example_path / config["plant_config"])
 plant_life = plant_config["plant"]["plant_life"]
-tech_config = load_yaml(config["technology_config"])
+tech_config = load_yaml(example_path / config["technology_config"])
 
 refurb = np.zeros(plant_life)
 refurb[3::4] = 1

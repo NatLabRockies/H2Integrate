@@ -8,16 +8,16 @@ Longer Description.
 """
 
 import os
-from pathlib import Path
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
-os.chdir(Path(__file__).parent)
+example_path = EXAMPLE_DIR / "35_system_level_control/yes_hydrogen"
+os.chdir(example_path)
 
 ##################################
 # Create an H2I model with a fixed electricity load demand
-h2i = H2IntegrateModel("wind_ng_demand.yaml")
+h2i = H2IntegrateModel(example_path / "wind_ng_demand.yaml")
 
 h2i.setup()
 

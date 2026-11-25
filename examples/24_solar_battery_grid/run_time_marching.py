@@ -16,7 +16,13 @@ from pathlib import Path
 
 import yaml
 
-from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate import (
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
 from h2integrate.core.dict_utils import percent_diff_dicts, find_nonzero_percent_diffs
 
 
@@ -27,7 +33,7 @@ run_dict = {
 }
 
 # Load config files into dict
-config_root = Path(__file__).parent
+config_root = EXAMPLE_DIR / "24_solar_battery_grid"
 config_path = config_root / "solar_battery_grid.yaml"
 
 # Load top level config

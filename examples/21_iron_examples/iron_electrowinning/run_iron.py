@@ -16,11 +16,13 @@ how the technologies are set up, as well as the  plant_config.yaml (particularly
 technology_interconnections) to see how the technologies are connected.
 """
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # Create H2Integrate model
-model = H2IntegrateModel("iron_electrowinning.yaml")
+model = H2IntegrateModel(
+    EXAMPLE_DIR / "21_iron_examples/iron_electrowinning/iron_electrowinning.yaml"
+)
 
 # Define the electrowinning types as a list
 electrolysis_types = ["ahe", "mse", "moe"]

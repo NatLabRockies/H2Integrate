@@ -20,13 +20,16 @@ of the steel produced by the EAF (LCOS).
 
 """
 
+import os
 from pathlib import Path
 
 import pandas as pd
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 
+
+os.chdir(EXAMPLE_DIR / "21_iron_examples/iron_dri/")
 
 casenames = [
     "Standard Iron - Hibbing",

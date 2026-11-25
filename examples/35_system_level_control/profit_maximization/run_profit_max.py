@@ -12,11 +12,12 @@ dispatchable generation.
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # -- Create and run model --
-h2i = H2IntegrateModel("wind_ng_demand.yaml")
+example_path = EXAMPLE_DIR / "35_system_level_control/profit_maximization"
+h2i = H2IntegrateModel(example_path / "wind_ng_demand.yaml")
 
 # Setup first so we can set values
 h2i.setup()

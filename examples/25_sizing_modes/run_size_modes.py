@@ -9,7 +9,13 @@ Longer Description.
 
 import numpy as np
 
-from h2integrate import H2IntegrateModel, load_tech_yaml, load_plant_yaml, load_driver_yaml
+from h2integrate import (
+    EXAMPLE_DIR,
+    H2IntegrateModel,
+    load_tech_yaml,
+    load_plant_yaml,
+    load_driver_yaml,
+)
 from h2integrate.core.utilities import merge_shared_inputs
 from h2integrate.core.model_baseclass import (
     ResizeablePerformanceModelBaseClass,
@@ -68,9 +74,10 @@ class TechPerformanceModel(ResizeablePerformanceModelBaseClass):
             self.set_val("size", size)
 
 
-driver_config = load_driver_yaml("driver_config.yaml")
-plant_config = load_plant_yaml("plant_config.yaml")
-tech_config = load_tech_yaml("tech_config.yaml")
+example_path = EXAMPLE_DIR / "25_sizing_modes"
+driver_config = load_driver_yaml(example_path / "driver_config.yaml")
+plant_config = load_plant_yaml(example_path / "plant_config.yaml")
+tech_config = load_tech_yaml(example_path / "tech_config.yaml")
 
 # When we run this example in resize_by_max_commodity mode, the electrolyzer is sized to
 # 640 MW (as set by the config), although the electricity profile going in has a max of

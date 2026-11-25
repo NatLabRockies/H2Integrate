@@ -13,7 +13,7 @@ import openmdao.api as om
 import matplotlib.pyplot as plt
 from ard.viz.layout import plot_layout  # a plotting tool!
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 if not importlib.util.find_spec("ard"):
@@ -25,7 +25,7 @@ if not importlib.util.find_spec("ard"):
     raise ModuleNotFoundError(msg)
 
 # Create the model
-h2i_model = H2IntegrateModel("./h2i_inputs/wind_pv_battery.yaml")
+h2i_model = H2IntegrateModel(EXAMPLE_DIR / "29_wind_ard/h2i_inputs/wind_pv_battery.yaml")
 
 # Run the model
 h2i_model.run()

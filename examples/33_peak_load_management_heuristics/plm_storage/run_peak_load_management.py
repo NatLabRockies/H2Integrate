@@ -28,12 +28,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
 
 
 # Create, setup, and run the H2Integrate model
-model = H2IntegrateModel("33_plm_storage_heuristic.yaml")
+example_path = EXAMPLE_DIR / "33_peak_load_management/plm_storage"
+model = H2IntegrateModel(example_path / "33_plm_storage_heuristic.yaml")
 
 model.setup()
 model.run()
