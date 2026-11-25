@@ -1,14 +1,23 @@
+"""
+FLORIS Wind Plant
+=================
+
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
 import os
-from pathlib import Path
 
-from h2integrate import H2IntegrateModel, load_yaml
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel, load_yaml
 
 
-os.chdir(Path(__file__).parent)
+example_path = EXAMPLE_DIR / "26_floris"
+os.chdir(example_path)
 
-driver_config = load_yaml(Path(__file__).parent / "driver_config.yaml")
-tech_config = load_yaml(Path(__file__).parent / "tech_config.yaml")
-plant_config = load_yaml(Path(__file__).parent / "plant_config.yaml")
+driver_config = load_yaml(example_path / "driver_config.yaml")
+tech_config = load_yaml(example_path / "tech_config.yaml")
+plant_config = load_yaml(example_path / "plant_config.yaml")
 
 h2i_config = {
     "name": "H2Integrate_config",

@@ -1,8 +1,20 @@
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+"""
+Geologic Hydrogen
+=================
 
+This is some text I don't have to think about, but someone else will.
+"""
+
+import os
+
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
+
+
+example_path = EXAMPLE_DIR / "04_geo_h2"
+os.chdir(example_path)
 
 # Create an H2I model for natural geologic hydrogen production
-h2i_nat = H2IntegrateModel("04_geo_h2_natural.yaml")
+h2i_nat = H2IntegrateModel(example_path / "04_geo_h2_natural.yaml")
 
 # Run the model
 h2i_nat.run()

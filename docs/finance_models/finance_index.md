@@ -36,3 +36,14 @@ finance_parameters:
       model_inputs: #inputs for the finance model
         discount_rate: 0.09
 ```
+
+```{eval-rst}
+.. toctree::
+   :hidden:
+
+   financial_analyses
+   ProFastBase
+   ProFastComp
+   ProFastNPV
+   numpy_financial_npv
+```

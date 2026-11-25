@@ -1,4 +1,8 @@
-"""Example of an iron mine sending processed ore pellets to a separate DRI iron plant and EAF
+"""
+Iron Mine Outputs Splitting
+===========================
+
+Example of an iron mine sending processed ore pellets to a separate DRI iron plant and EAF
 
 In this example, iron ore pellets are produced at different iron mine locations in NE Minnesota.
 These mines send processed ore pellets to a separate iron DRI plant located outside Chicago.
@@ -16,13 +20,16 @@ of the steel produced by the EAF (LCOS).
 
 """
 
+import os
 from pathlib import Path
 
 import pandas as pd
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.tools.run_cases import modify_tech_config, load_tech_config_cases
 
+
+os.chdir(EXAMPLE_DIR / "21_iron_examples/iron_dri/")
 
 casenames = [
     "Standard Iron - Hibbing",

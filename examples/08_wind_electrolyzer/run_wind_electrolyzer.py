@@ -1,18 +1,24 @@
+"""
+Wind Electrolysis Financing
+===========================
+
+This is some text I don't have to think about, but someone else will.
+"""
+
 import os
-from pathlib import Path
 
 import openmdao.api as om
 
-from h2integrate.core.h2integrate_model import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # change the current working directory to the example folder
-os.chdir(Path(__file__).parent)
+os.chdir(EXAMPLE_DIR)
 
-top_level_fpath = Path(__file__).parent / "wind_plant_electrolyzer.yaml"
+top_level_fpath = EXAMPLE_DIR / "08_wind_electrolyzer"
 
 # Create a GreenHEART model
-h2i_model = H2IntegrateModel(top_level_fpath)
+h2i_model = H2IntegrateModel(top_level_fpath / "wind_plant_electrolyzer.yaml")
 
 # Run the model
 h2i_model.run()
@@ -21,7 +27,7 @@ h2i_model.run()
 h2i_model.post_process()
 
 # Specify the filepath to the sql file, the folder and filename are in the driver_config
-sql_fpath = Path(__file__).parent / "wind_electrolyzer" / "cases.sql"
+sql_fpath = top_level_fpath / "wind_electrolyzer/cases.sql"
 
 # load the cases
 cr = om.CaseReader(sql_fpath)

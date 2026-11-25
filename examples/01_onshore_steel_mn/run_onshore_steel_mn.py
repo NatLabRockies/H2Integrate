@@ -1,10 +1,19 @@
+"""
+Producing Steel
+===============
+
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
 import numpy as np
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # Create a H2Integrate model
-model = H2IntegrateModel("01_onshore_steel_mn.yaml")
+model = H2IntegrateModel(EXAMPLE_DIR / "01_onshore_steel_mn/01_onshore_steel_mn.yaml")
 # Set battery demand profile to electrolyzer capacity
 # TODO: Update with demand module once it is developed
 demand_profile = np.ones(8760) * 720.0

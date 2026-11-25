@@ -72,8 +72,14 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_autosummary/
+docs/jupyter_execute/
 docs/_static/class_hierarchy.html
 docs/user_guide/model_registry.md
+docs/auto_examples/
+**/sg_execution_times.rst
+**/examples_python.zip**
+**/examples_jupyter.zip**
 
 # PyBuilder
 target/
@@ -142,7 +148,6 @@ tests/h2integrate/test_hydrogen/output/
 **/wind_electrolyzer/*
 **.cache.sqlite
 docs/misc_resources/wind_electrolyzer/
-docs/_autosummary
 
 output*
 snopt_history.txt

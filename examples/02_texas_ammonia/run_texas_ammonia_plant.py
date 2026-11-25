@@ -1,11 +1,20 @@
+"""
+Creating Ammonia, in Texas
+==========================
+
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
 import numpy as np
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.postprocess.sql_timeseries_to_csv import save_case_timeseries_as_csv
 
 
 # Create a H2Integrate model
-model = H2IntegrateModel("02_texas_ammonia.yaml")
+model = H2IntegrateModel(EXAMPLE_DIR / "02_texas_ammonia/02_texas_ammonia.yaml")
 
 # Set battery demand profile to electrolyzer capacity
 # TODO: Update with demand module once it is developed

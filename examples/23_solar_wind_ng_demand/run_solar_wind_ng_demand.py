@@ -1,9 +1,20 @@
-from h2integrate import H2IntegrateModel
+"""
+Solar, Wind, & Natural Gas Demand Optimization
+==============================================
 
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
+
+
+example_path = EXAMPLE_DIR / "23_solar_wind_ng_demand"
 
 ##################################
 # Create an H2I model with a fixed electricity load demand
-h2i = H2IntegrateModel("solar_wind_ng_demand.yaml")
+h2i = H2IntegrateModel(example_path / "solar_wind_ng_demand.yaml")
 
 # Run the model
 h2i.run()
@@ -14,7 +25,7 @@ h2i.post_process()
 
 ##################################
 # Create H2I model but replace electrical load demand to be flexible
-h2i_flexible = H2IntegrateModel("solar_wind_ng_flexible_demand.yaml")
+h2i_flexible = H2IntegrateModel(example_path / "solar_wind_ng_flexible_demand.yaml")
 
 # Run the model
 h2i_flexible.run()

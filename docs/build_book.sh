@@ -32,4 +32,5 @@ python generate_class_hierarchy.py
 # Generate the ignored model registry page from the live supported_models registry.
 python generate_model_overview.py
 
-jupyter-book build --keep-going --warningiserror "$@" .
+# jupyter-book build --keep-going --warningiserror "$@" .
+sphinx-build -M html . _build

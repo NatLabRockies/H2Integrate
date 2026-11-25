@@ -1,9 +1,18 @@
+"""
+Wind & Battery Dispatch Optimization
+====================================
+
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
 import matplotlib.pyplot as plt
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
-h2i = H2IntegrateModel("wind_battery_dispatch.yaml")
+h2i = H2IntegrateModel(EXAMPLE_DIR / "19_simple_dispatch/wind_battery_dispatch.yaml")
 
 # Run the model
 h2i.run()

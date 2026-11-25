@@ -3,12 +3,124 @@
 # Model Overview
 Currently, H2I recognizes five types of models:
 
-- [Resource](#resource)
-- [Converter](#converters)
-- [Transport](#transport)
-- [Storage](#storage)
-- [Controllers](#controller)
-- [Reliability](#reliability)
+```{eval-rst}
+
+.. grid:: 1 1 2 3
+    :gutter: 2 3 4 4
+
+    .. grid-item-card::
+
+        Technology Models
+        ^^^
+
+        Listing and in-depth descriptions of each of technologies for energy generation
+        or conversion.
+
+        +++
+
+        .. button-ref:: ../technology_models/index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the technology reference.
+
+    .. grid-item-card::
+
+        Storage Models
+        ^^^
+
+        Guide to energy storage models.
+
+        +++
+
+        .. button-ref:: ../storage/storage_models_index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the storage reference
+
+    .. grid-item-card::
+
+        Resource Models
+        ^^^
+
+        Explanations, background, configuration, and usage of the resource (tides, solar, wind, etc.).
+
+        +++
+
+        .. button-ref:: ../resource/index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the resource reference
+
+    .. grid-item-card::
+
+        Control Models
+        ^^^
+
+        Guide to controlled energy dispatching and optimization.
+
+        +++
+
+        .. button-ref:: ../control/index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the controller reference
+
+    .. grid-item-card::
+
+        Demand Models
+        ^^^
+
+        Learn more about commodity demand profiling.
+
+        +++
+
+        .. button-ref:: ../demand/index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the demand reference
+
+    .. grid-item-card::
+
+        Finance Models
+        ^^^
+
+        Learn more about financial modeling.
+
+        +++
+
+        .. button-ref:: ../finance_models/finance_index
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the finance reference
+
+    .. grid-item-card::
+
+        Reliability Modeling
+        ^^^
+
+        Learn more about modeling system and component availability.
+
+        +++
+
+        .. button-ref:: ../reliability/reliability_guide
+            :expand:
+            :color: secondary
+            :click-parent:
+
+            To the reliability reference
+```
 
 (resource)=
 ## Resource

@@ -1,12 +1,11 @@
 """Plot labeled mine, dock, and iron plant locations."""
 
-from pathlib import Path
-
+from h2integrate import EXAMPLE_DIR
 from h2integrate.postprocess.mapping import plot_geospatial_point_heat_map
 
 
 # Define directories
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = EXAMPLE_DIR / "21_iron_examples/iron_mapping"
 
 files = [
     "mine_sites.csv",

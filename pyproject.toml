@@ -105,6 +105,7 @@ populate_tech_yaml = "h2integrate.preprocess.populate_tech_yaml:main"
 develop = [
     "isort",
     "jupyter-book<2",
+    "pydata-sphinx-theme",
     "networkx",
     "pre-commit",
     "pyvis",
@@ -113,6 +114,7 @@ develop = [
     "pytest-xdist[psutil]>=3.8",
     "ruff",
     "sphinxcontrib-napoleon",
+    "sphinx-gallery>=0.18",
     "yamlfix"
 ]
 examples = [

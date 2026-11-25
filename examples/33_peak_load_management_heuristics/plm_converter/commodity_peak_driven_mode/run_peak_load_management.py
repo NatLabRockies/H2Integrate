@@ -1,8 +1,9 @@
 """
-Example 33: Peak load management converter heuristic dispatch
+Peak load management converter heuristic dispatch
+=================================================
 
-This example demonstrates peak load management dispatch open loop control of a converter
-with two demand profiles of interest
+This example demonstrates peak load management dispatch open-loop control of a converter
+with two demand profiles of interest.
 
 In this example, the fuel-cell converter command is determined by a simple open-loop
 threshold heuristic that uses two profiles:
@@ -24,12 +25,13 @@ converter output, resulting unmet demand, and grid purchases.
 import numpy as np
 import matplotlib.pyplot as plt
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 from h2integrate.core.utilities import build_time_series_from_plant_config
 
 
 # Create, setup, and run the H2Integrate model
-model = H2IntegrateModel("33_plm_converter_heuristic.yaml")
+example_path = EXAMPLE_DIR / "33_peak_load_management/plm_converter/commodity_peak_driven_mode"
+model = H2IntegrateModel(example_path / "33_plm_converter_heuristic.yaml")
 
 model.setup()
 # om.n2(model.prob)

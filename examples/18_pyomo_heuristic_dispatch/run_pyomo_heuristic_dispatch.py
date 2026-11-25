@@ -1,11 +1,20 @@
+"""
+Pyomo Heuristic Dispatching
+===========================
+
+Thumbnail Alt Text.
+
+Longer Description.
+"""
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # Create an H2Integrate model
-model = H2IntegrateModel("pyomo_heuristic_dispatch.yaml")
+model = H2IntegrateModel(EXAMPLE_DIR / "18_pyomo_heuristic_dispatch/pyomo_heuristic_dispatch.yaml")
 
 demand_profile = np.ones(8760) * 50.0
 

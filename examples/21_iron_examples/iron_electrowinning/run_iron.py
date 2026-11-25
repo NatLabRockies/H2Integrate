@@ -1,4 +1,8 @@
-"""Comparing three different iron electrowinning technologies
+"""
+Iron Electrowinning
+===================
+
+Comparing three different iron electrowinning technologies
 
 This script runs an end-to-end iron production system (including the mine) and compares the
 levelized cost of sponge_iron across three different iron electrowinning technologies to see
@@ -12,11 +16,13 @@ how the technologies are set up, as well as the  plant_config.yaml (particularly
 technology_interconnections) to see how the technologies are connected.
 """
 
-from h2integrate import H2IntegrateModel
+from h2integrate import EXAMPLE_DIR, H2IntegrateModel
 
 
 # Create H2Integrate model
-model = H2IntegrateModel("iron_electrowinning.yaml")
+model = H2IntegrateModel(
+    EXAMPLE_DIR / "21_iron_examples/iron_electrowinning/iron_electrowinning.yaml"
+)
 
 # Define the electrowinning types as a list
 electrolysis_types = ["ahe", "mse", "moe"]
