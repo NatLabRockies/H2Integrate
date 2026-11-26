@@ -40,6 +40,7 @@
   - Monthly cycle budgets now use a 365-day year, so February always has 28 days.
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
+- Validate time-marching dispatch options, stop on non-converging windows, and fix windowed reliability and generation in the natural gas and PySAM wind models. [PR TBD]
 
 ## 0.10.0 [October 12, 2026]
 

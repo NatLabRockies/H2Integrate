@@ -88,21 +88,19 @@ def check_time_marching_config(
     return True
 
 
-def check_model_is_steppable(control_strategies, performance_models, system_level_controller):
-    """Check that all technology control strategies and performance models have the attribute
-    _is_steppable == True. If _is_steppable attribute is missing or evaluates to False, then the
-    system is suitable for steppable simulation and an error is raised.
+def check_model_is_steppable(control_strategies, performance_models, system_level_controller=None):
+    """Require all performance models and controllers to opt in to time marching.
 
     Args:
-        control_strategies (list):
-        performance_models (list):
-        system_level_controller (om.ExplicitComponent):
+        control_strategies (list): Technology-level control strategies.
+        performance_models (list): Technology performance models.
+        system_level_controller (om.ExplicitComponent | None): Plant-level controller, if any.
 
     Returns:
         None: Returns if all models are steppable.
 
     Raises:
-        AttributeError: If control strategies or performance models are not flagged as steppable.
+        AttributeError: If any model or controller is not flagged as steppable.
     """
 
     error_msg_list = []
@@ -121,9 +119,10 @@ def check_model_is_steppable(control_strategies, performance_models, system_leve
         performance_msg = f"Performance model(s): {sorted(non_steppable_performance_models)}"
         error_msg_list.append(performance_msg)
 
-    if system_level_controller:
-        if not getattr(system_level_controller, "_is_steppable", False):
-            error_msg_list.append(f"System level controller: {system_level_controller}")
+    if system_level_controller is not None and not getattr(
+        system_level_controller, "_is_steppable", False
+    ):
+        error_msg_list.append(f"System level controller: {system_level_controller}")
 
     if error_msg_list:
         error_msg = (

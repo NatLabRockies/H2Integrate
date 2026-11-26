@@ -1,4 +1,5 @@
 import numpy as np
+from openmdao.core.analysis_error import AnalysisError
 from openmdao.recorders.recording_iteration_stack import Recording
 from openmdao.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 
@@ -9,13 +10,13 @@ class TimeMarchingPlantSolver(NonlinearBlockGS):
 
     """
 
-    def __init__(self, plant_config):
-        super().__init__()
+    def __init__(self, plant_config: dict, **solver_options):
+        super().__init__(**({"iprint": 0, "err_on_non_converge": True} | solver_options))
+        if not self.options["err_on_non_converge"]:
+            raise ValueError("Time marching requires err_on_non_converge=True.")
+        if self.options["maxiter"] < 1:
+            raise ValueError("Time marching requires at least one solver iteration per window.")
         self.plant_config = plant_config
-        # iprint is hardcoded to 0 for now to suppress excessive printouts from every time marching
-        # step.
-        # TODO Set allow the use solver options from config files?
-        self.options["iprint"] = 0
 
     def solve(self):
         # Should only be used when system is the plant group
@@ -61,12 +62,11 @@ class TimeMarchingPlantSolver(NonlinearBlockGS):
                             s.options["skip_compute"] = False
 
                     try:
-                        self._solve()
-
-                    except Exception as err:
-                        if self.options["debug_print"]:
-                            self._print_exc_debug_info()
-                        raise err
+                        super().solve()
+                    except AnalysisError as err:
+                        raise AnalysisError(
+                            f"Time-marching window starting at timestep {ss} failed: {err}"
+                        ) from err
 
         finally:
             # A failed step must not leave cost and finance models skipped on the next run.

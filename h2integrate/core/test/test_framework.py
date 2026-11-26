@@ -938,21 +938,10 @@ def test_check_model_is_steppable(subtests):
         def __str__(self):
             return "PerformanceModelNonSteppable"
 
-    class SystemLevelControllerSteppable:
-        _is_steppable = True
-
-        def __str__(self):
-            return "SystemLevelControllerSteppable"
-
-    class SystemLevelControllerNonSteppable:
-        def __str__(self):
-            return "SystemLevelControllerNonSteppable"
-
     with subtests.test("Steppable classes"):
         check_model_is_steppable(
             control_strategies=[TechControllerSteppable()],
             performance_models=[PerformanceModelSteppable()],
-            system_level_controller=SystemLevelControllerSteppable(),
         )
 
     with subtests.test("Nonsteppable classes"):
@@ -960,8 +949,11 @@ def test_check_model_is_steppable(subtests):
             check_model_is_steppable(
                 control_strategies=[TechControllerNonSteppable()],
                 performance_models=[PerformanceModelSteppable(), PerformanceModelNonSteppable()],
-                system_level_controller=SystemLevelControllerNonSteppable(),
             )
+
+    with subtests.test("Nonsteppable system-level controller"):
+        with pytest.raises(AttributeError, match="System level controller"):
+            check_model_is_steppable([], [], TechControllerNonSteppable())
 
 
 @pytest.mark.unit

@@ -603,6 +603,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         for tech_name in self.dispatchable_techs:
             cost_spec = self.cost_per_tech.get(tech_name, 0.0)
+            if self.n_timesteps_window < self.n_timesteps and cost_spec in ("VarOpEx", "feedstock"):
+                raise ValueError(
+                    f"Time marching does not support cost_per_tech '{cost_spec}' for "
+                    f"'{tech_name}': cost model outputs are unavailable before the final "
+                    "window. Use a numeric marginal cost or 'buy_price' instead."
+                )
 
             if isinstance(cost_spec, int | float):
                 self.dispatchable_marginal_cost_types.append(("scalar", cost_spec))

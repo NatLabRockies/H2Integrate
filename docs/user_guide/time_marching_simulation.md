@@ -36,8 +36,7 @@ plant:
 ```
 
 - `n_timesteps_window` must be a positive integer that evenly divides `n_timesteps`.
-- Cost and finance models are computed once, after the final window.
-
+- Cost and finance models are skipped until the final window. They may compute more than once as that window converges.
 
 
 To maintain the default behavior, omit `n_timesteps_window`, or set it equal to `n_timesteps`, and all subsystem models will simulate their full time series individually and separately.
@@ -52,10 +51,11 @@ In the standard simulation configuration, the plant solver loops over all the mo
 Default plant group nonlinear solver.
 ```
 
-When `n_timesteps_window` is specified in the configuration files, H2Integrate assigns a custom time-marching nonlinear solver to the plant group to manage the time-marching simulation. The time-marching nonlinear solver differs from from the default nonlinear solver in one important aspect. The time-marching solver loops over each simulation window in the time-marching simulation, and within any given simulation window, loops over the performance and control models in the plant, computing a slice of the output time series (length `n_timesteps_window`) for each. If necessary, the models are iteratively simulated repeatedly using the NLBGS method until their inputs and outputs in the current simulation window converge.
-
-
-The cost and finance models are ran once, after all the control and performance models have been simulated and converged for all simulation windows in the time-marching simulation.
+When `n_timesteps_window` is smaller than `n_timesteps`, H2Integrate uses nonlinear block
+Gauss-Seidel to solve each window before advancing. If a window fails to converge, the solver
+stops and reports its starting timestep. Time marching honors the Gauss-Seidel settings in
+`system_level_control.solver_options`, but does not support other solver types, zero solver
+iterations, or disabling errors on non-convergence.
 
 
 ```{figure} figures/time_marching_solver.png
@@ -67,8 +67,9 @@ Time-marching plant group nonlinear solver.
 
 ## Current limitations
 
-- Every technology performance model and technology control strategy in the plant must be steppable.
+- Every technology performance model, technology control strategy, and system-level controller  in the plant must be steppable.
   If any is not, H2Integrate raises an error that lists the unsupported models.
+- For cost-aware system-level controllers, use a numeric marginal cost or `buy_price` in `cost_per_tech`. Time marching does not support `VarOpEx` or `feedstock` pricing because the required cost outputs are unavailable in earlier windows.
 - Derivatives are not propagated through a time-marching simulation, so use gradient-free or finite-difference drivers.
 
 ## Steppable models

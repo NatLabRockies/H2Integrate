@@ -178,7 +178,9 @@ class NaturalGasPerformanceModel(PerformanceModelBaseClass):
         available_capacity = system_capacity
         if self.use_reliability:
             self.reliability_model.run()
-            available_capacity = system_capacity * self.reliability_model.availability
+            available_capacity = (
+                system_capacity * self.reliability_model.availability[simulation_range]
+            )
 
         # electrical command value, saturated at the available system capacity
         electricity_command_value = np.minimum(

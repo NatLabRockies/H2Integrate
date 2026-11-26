@@ -3,6 +3,7 @@ import pytest
 import openmdao.api as om
 from pytest import fixture
 
+from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.converters.natural_gas.natural_gas_cc_ct import (
     NaturalGasCostModel,
     NaturalGasPerformanceModel,
@@ -267,7 +268,10 @@ def test_ngct_performance(plant_config, ngct_performance_params, subtests):
 
 
 @pytest.mark.unit
-def test_ngcc_performance_with_reliability(plant_config, ngcc_performance_params, subtests):
+@pytest.mark.parametrize("window_size", [None, 730])
+def test_ngcc_performance_with_reliability(
+    plant_config, ngcc_performance_params, subtests, window_size
+):
     """Test that reliability availability derates the NGCC output and headroom."""
     tech_config_dict = {
         "model_inputs": {
@@ -286,7 +290,11 @@ def test_ngcc_performance_with_reliability(plant_config, ngcc_performance_params
 
     prob = om.Problem()
     perf_comp = NaturalGasPerformanceModel(plant_config=plant_config, tech_config=tech_config_dict)
-    prob.model.add_subsystem("ng_perf", perf_comp, promotes=["*"])
+    plant = prob.model.add_subsystem("plant", om.Group(), promotes=["*"])
+    plant.add_subsystem("ng_perf", perf_comp, promotes=["*"])
+    if window_size is not None:
+        plant_config["plant"]["simulation"]["n_timesteps_window"] = window_size
+        plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config)
     prob.setup()
     prob.set_val("natural_gas_in", np.full(8760, 750.0))
     prob.run_model()

@@ -1,3 +1,7 @@
+from copy import deepcopy
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import numpy as np
 import pytest
 import openmdao.api as om
@@ -5,6 +9,59 @@ import openmdao.api as om
 from h2integrate import H2I_LIBRARY_DIR, load_yaml
 from h2integrate.resource.wind import WTKNLRDeveloperAPIWindResource
 from h2integrate.converters.wind.wind_pysam import PYSAMWindPlantPerformanceModel
+
+
+@pytest.mark.unit
+def test_pysam_wind_short_horizon_retry(
+    plant_config_wtk: dict, wind_plant_config: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sam_model = Mock(
+        Farm=SimpleNamespace(system_capacity=0.0),
+        Outputs=SimpleNamespace(gen=(1, 2, 3, 4, 5, 6), annual_energy=21.0),
+    )
+
+    def sam_value(name: str, value: float | None = None) -> tuple[float, float] | None:
+        if name == "system_capacity":
+            sam_model.Farm.system_capacity = value
+        elif name == "wind_turbine_powercurve_powerout":
+            return (0.0, 10.0)
+        return None
+
+    sam_model.value.side_effect = sam_value
+    monkeypatch.setattr(
+        "h2integrate.converters.wind.wind_pysam.Windpower.default", lambda _: sam_model
+    )
+
+    plant_config = deepcopy(plant_config_wtk)
+    plant_config["plant"]["simulation"].update(n_timesteps=4, n_timesteps_window=2)
+    wind_plant_config = wind_plant_config | {"run_recalculate_power_curve": False}
+    wind_plant = PYSAMWindPlantPerformanceModel(
+        plant_config=plant_config,
+        tech_config={"model_inputs": {"performance_parameters": wind_plant_config}},
+        driver_config={},
+    )
+    monkeypatch.setattr(wind_plant, "format_resource_data", lambda *_: {})
+    prob = om.Problem()
+    prob.model.add_subsystem("comp", wind_plant, promotes=["*"])
+    prob.setup()
+
+    prob.run_model()  # First window only; the final window has not run.
+    initial_rating = prob.get_val("rated_electricity_production").copy()
+    prob.set_val("num_turbines", 1)
+    prob.run_model()  # Retry the first window with a different design.
+    np.testing.assert_allclose(
+        prob.get_val("rated_electricity_production"),
+        initial_rating / wind_plant_config["num_turbines"],
+    )
+
+    prob.set_val("timestep_index", 2)
+    prob.run_model()
+    assert sam_model.execute.call_count == 2
+    expected_generation = np.arange(1, 5)
+    np.testing.assert_allclose(prob.get_val("electricity_out"), expected_generation)
+    np.testing.assert_allclose(
+        prob.get_val("total_electricity_produced"), expected_generation.sum()
+    )
 
 
 @pytest.mark.unit
