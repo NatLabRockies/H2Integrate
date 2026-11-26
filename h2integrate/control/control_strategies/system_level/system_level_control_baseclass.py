@@ -88,6 +88,11 @@ class SystemLevelControlBase(om.ExplicitComponent):
         )
 
         self.n_timesteps = plant_config["plant"]["simulation"]["n_timesteps"]
+        self.n_timesteps_window = plant_config["plant"]["simulation"].get(
+            "n_timesteps_window", self.n_timesteps
+        )
+
+        self.add_input("timestep_index", val=0, desc="Time step index")
 
         # Read pre-computed classification from plant_config
         self.commodity = slc_topology["demand_commodity"]
@@ -474,7 +479,9 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if in_name not in inputs:
             return remaining_demand
 
-        remaining_demand -= inputs[in_name]
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
+        remaining_demand[simulation_range] -= inputs[in_name][simulation_range]
         return remaining_demand
 
     def _subtract_flexible(self, flexible_tech, remaining_demand, commodity, inputs, outputs):
@@ -488,11 +495,15 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if f"{flexible_tech}_rated_{commodity}_production" not in inputs:
             return
 
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         # Set per-tech set-point equal to the rated production of that technology
-        outputs[f"{flexible_tech}_{commodity}_set_point"] = inputs[
+        outputs[f"{flexible_tech}_{commodity}_set_point"][simulation_range] = inputs[
             f"{flexible_tech}_rated_{commodity}_production"
-        ] * np.ones(self.n_timesteps)
-        remaining_demand -= inputs[f"{flexible_tech}_{commodity}_out"]
+        ] * np.ones(len(simulation_range))
+        remaining_demand[simulation_range] -= inputs[f"{flexible_tech}_{commodity}_out"][
+            simulation_range
+        ]
 
         return remaining_demand
 
@@ -507,6 +518,8 @@ class SystemLevelControlBase(om.ExplicitComponent):
         if set_point_name not in outputs:
             return
 
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         if self.storage_techs_to_control.get(storage_tech, False):
             # Storage tech has its own sub-controller: emit a combined demand
             # signal (always positive) equal to the commodity flowing into
@@ -516,14 +529,18 @@ class SystemLevelControlBase(om.ExplicitComponent):
             for tech_name in upstream_techs:
                 commodity_into_storage += inputs[f"{tech_name}_{commodity}_out"]
 
-            outputs[set_point_name] = commodity_into_storage + remaining_demand
+            outputs[set_point_name][simulation_range] = (
+                commodity_into_storage[simulation_range] + remaining_demand[simulation_range]
+            )
         else:
             # Storage without a sub-controller: emit a charge/discharge
             # command directly. Charge when remaining demand is negative,
             # discharge when positive.
-            outputs[set_point_name] = remaining_demand
+            outputs[set_point_name][simulation_range] = remaining_demand[simulation_range]
 
-        remaining_demand -= inputs[f"{storage_tech}_{commodity}_out"]
+        remaining_demand[simulation_range] -= inputs[f"{storage_tech}_{commodity}_out"][
+            simulation_range
+        ]
         return remaining_demand
 
     def _get_commodity_for_tech(self, tech_name):
@@ -586,6 +603,12 @@ class SystemLevelControlBase(om.ExplicitComponent):
 
         for tech_name in self.dispatchable_techs:
             cost_spec = self.cost_per_tech.get(tech_name, 0.0)
+            if self.n_timesteps_window < self.n_timesteps and cost_spec in ("VarOpEx", "feedstock"):
+                raise ValueError(
+                    f"Time marching does not support cost_per_tech '{cost_spec}' for "
+                    f"'{tech_name}': cost model outputs are unavailable before the final "
+                    "window. Use a numeric marginal cost or 'buy_price' instead."
+                )
 
             if isinstance(cost_spec, int | float):
                 self.dispatchable_marginal_cost_types.append(("scalar", cost_spec))
@@ -849,3 +872,17 @@ class SystemLevelControlBase(om.ExplicitComponent):
                 last_converter = source_tech
 
         return converter_techs
+
+    def _get_compute_time_range(self, time_index):
+        """
+        This method gets the range of timestep indices that are simulated in a
+        single call to compute.
+
+        Args:
+            time_index (numpy array): Starting time index of the simulation range.
+
+        Returns:
+            range: range of time indices
+        """
+        ti = int(time_index[0])
+        return range(ti, ti + self.n_timesteps_window)

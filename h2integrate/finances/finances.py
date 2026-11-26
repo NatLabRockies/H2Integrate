@@ -2,8 +2,10 @@ import numpy as np
 import openmdao.api as om
 import numpy_financial as npf
 
+from h2integrate.core.model_baseclass import SkippableComputeMixin
 
-class AdjustedCapexOpexComp(om.ExplicitComponent):
+
+class AdjustedCapexOpexComp(SkippableComputeMixin, om.ExplicitComponent):
     """
     OpenMDAO component to adjust CapEx and OpEx values for multiple technologies to a target
     dollar year using inflation.
@@ -35,6 +37,7 @@ class AdjustedCapexOpexComp(om.ExplicitComponent):
         self.options.declare("driver_config", types=dict)
         self.options.declare("tech_configs", types=dict)
         self.options.declare("plant_config", types=dict)
+        super().initialize()
 
     def setup(self):
         tech_configs = self.options["tech_configs"]

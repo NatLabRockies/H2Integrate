@@ -279,4 +279,4 @@ class PySAMWavePerformanceModel(PerformanceModelBaseClass):
 
         # Honor a system-level controller's set-point by curtailing
         # `electricity_out`. No-op when there is no system-level controller.
-        self.apply_curtailment(outputs)
+        self.apply_curtailment(inputs, outputs)

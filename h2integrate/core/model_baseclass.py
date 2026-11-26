@@ -201,7 +201,7 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
         ti = int(time_index[0])
         return range(ti, ti + self.n_timesteps_window)
 
-    def apply_curtailment(self, outputs):
+    def apply_curtailment(self, inputs, outputs):
         """Apply curtailment to ``{commodity}_out`` based on ``{commodity}_command_value``.
 
         Copies the current ``{commodity}_out`` into ``uncurtailed_{commodity}_out``,
@@ -215,15 +215,19 @@ class PerformanceModelBaseClass(om.ExplicitComponent):
             if getattr(self, "_control_classifier", None) != "flexible":
                 return
 
+            simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
             commodity_out_key = f"{self.commodity}_out"
             uncurtailed_key = f"uncurtailed_{self.commodity}_out"
             command_value_key = f"{self.commodity}_command_value"
 
             uncurtailed = np.array(outputs[commodity_out_key])
-            outputs[uncurtailed_key] = uncurtailed
+            outputs[uncurtailed_key][simulation_range] = uncurtailed[simulation_range]
 
             command_value = self._inputs[command_value_key]
-            outputs[commodity_out_key] = np.minimum(uncurtailed, command_value)
+            outputs[commodity_out_key][simulation_range] = np.minimum(uncurtailed, command_value)[
+                simulation_range
+            ]
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
         """

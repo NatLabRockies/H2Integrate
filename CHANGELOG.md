@@ -1,9 +1,9 @@
 # Changelog
 
 ## Unreleased [TBD]
+- Add time-marching simulation capability to all rule-based system level controls, wind pysam model, and natural gas model [PR 983](https://github.com/NatLabRockies/H2Integrate/pull/983)
 - Corrected thermal nuclear variable O&M energy units and aligned example 36 O&M inputs with the cited INL estimates. [PR TBD](https://github.com/NatLabRockies/H2Integrate/pull/TBD)
 - Add time-marching simulation capability (`n_timesteps_window`) to the h2integrate framework, with steppable example component models. [PR 857](https://github.com/NatLabRockies/H2Integrate/pull/857)
-
 - Added a documentation changelog and version indicator, and updated installation, environment variable, and contribution guidance. [PR 917](https://github.com/NatLabRockies/H2Integrate/pull/917)
 - Added user references for PEM electrolysis, transport, FLORIS, configuration files, and additional registered models, with API and example links. [PR 918](https://github.com/NatLabRockies/H2Integrate/pull/918)
 - Updated `make_price_breakdown()` and `run_profast()` in `profast_tools.py` so that fixed cost items and feedstock cost items are properly labelled. [PR 930](https://github.com/NatLabRockies/H2Integrate/pull/930)
@@ -41,6 +41,7 @@
   - Fixed the misspelled `_time_step_bounds` attribute so time steps from 300 to 3600 s are allowed as intended.
 - Update iron updates the iron and steel modeling inputs used to align with the values used in the iron project and improve scenario flexibility. [PR 989](https://github.com/NatLabRockies/H2Integrate/pull/989)
 - Updated the GOES API solar resource models to have an upper-bound resource year validator of 2025 [PR 1006](https://github.com/NatLabRockies/H2Integrate/pull/1006)
+- Validate time-marching dispatch options, stop on non-converging windows, and fix windowed reliability and generation in the natural gas and PySAM wind models. [PR TBD]
 
 ## 0.10.0 [October 12, 2026]
 

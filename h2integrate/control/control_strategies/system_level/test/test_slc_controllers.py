@@ -5,6 +5,7 @@ import pytest
 import networkx as nx
 import openmdao.api as om
 
+from h2integrate.core.time_marching_solver import TimeMarchingPlantSolver
 from h2integrate.control.control_strategies.system_level.marginal_cost_tools import (
     _get_tech_buy_price_input_name,
     _get_buy_price_default_and_shape,
@@ -190,6 +191,67 @@ def _build_problem(slc_cls, plant_config, slc_topology, demand=50000, tech_confi
     prob.set_val(demand_name, demand)
 
     return prob
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("maxiter", [10, 1])
+def test_time_marching_slc_feedback(maxiter: int) -> None:
+    connections = [["gen", "demand", "electricity", "cable"]]
+    plant_config = _build_plant_config(connections)
+    plant_config["plant"]["simulation"]["n_timesteps_window"] = 2
+    topology = _build_slc_topology(
+        _build_technology_graph(connections), _build_tech_control_classifiers(dispatchable=["gen"])
+    )
+    expected = np.arange(1.0, 5.0)
+    topology["demand_profile"] = expected
+
+    prob = om.Problem()
+    plant = prob.model.add_subsystem("plant", om.Group())
+    plant.add_subsystem(
+        "slc",
+        CostMinimizationControl(
+            plant_config=plant_config, slc_topology=topology, tech_config={}, driver_config={}
+        ),
+    )
+    plant.add_subsystem(
+        "gen",
+        om.ExecComp(
+            ["production = command", "rated = 5.0"],
+            production={"val": np.zeros(4), "units": "kW"},
+            command={"val": np.zeros(4), "units": "kW"},
+            rated={"val": 0.0, "units": "kW"},
+        ),
+    )
+    plant.connect("slc.gen_electricity_set_point", "gen.command")
+    plant.connect("gen.production", "slc.gen_electricity_out")
+    plant.connect("gen.rated", "slc.gen_rated_electricity_production")
+    plant.nonlinear_solver = TimeMarchingPlantSolver(plant_config, maxiter=maxiter)
+    prob.setup()
+
+    if maxiter == 1:
+        set_point_name = "plant.slc.gen_electricity_set_point"
+        initial_later_window = prob.get_val(set_point_name)[2:].copy()
+        with pytest.raises(om.AnalysisError, match="window starting at timestep 0"):
+            prob.run_model()
+        np.testing.assert_array_equal(prob.get_val(set_point_name)[2:], initial_later_window)
+    else:
+        prob.run_model()
+        np.testing.assert_allclose(prob.get_val("plant.gen.production"), expected)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("cost_spec", ["VarOpEx", "feedstock"])
+def test_time_marching_rejects_marginal_costs_from_cost_outputs(cost_spec: str) -> None:
+    connections = [["gen", "demand", "electricity", "cable"]]
+    plant_config = _build_plant_config(connections, cost_per_tech={"gen": cost_spec})
+    plant_config["plant"]["simulation"]["n_timesteps_window"] = 2
+    topology = _build_slc_topology(
+        _build_technology_graph(connections), _build_tech_control_classifiers(dispatchable=["gen"])
+    )
+    with pytest.raises(
+        ValueError, match=f"Time marching does not support cost_per_tech '{cost_spec}'"
+    ):
+        _build_problem(ProfitMaximizationControl, plant_config, topology)
 
 
 # ---------------------------------------------------------------------------

@@ -1,16 +1,21 @@
 import numpy as np
+from openmdao.core.analysis_error import AnalysisError
 from openmdao.recorders.recording_iteration_stack import Recording
-from openmdao.solvers.nonlinear.nonlinear_runonce import NonlinearRunOnce
+from openmdao.solvers.nonlinear.nonlinear_block_gs import NonlinearBlockGS
 
 
-class TimeMarchingPlantSolver(NonlinearRunOnce):
+class TimeMarchingPlantSolver(NonlinearBlockGS):
     """
     Custom nonlinear solver to manage running the plant group in a loop.
 
     """
 
-    def __init__(self, plant_config):
-        super().__init__()
+    def __init__(self, plant_config: dict, **solver_options):
+        super().__init__(**({"iprint": 0, "err_on_non_converge": True} | solver_options))
+        if not self.options["err_on_non_converge"]:
+            raise ValueError("Time marching requires err_on_non_converge=True.")
+        if self.options["maxiter"] < 1:
+            raise ValueError("Time marching requires at least one solver iteration per window.")
         self.plant_config = plant_config
 
     def solve(self):
@@ -44,7 +49,7 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
             s.options["skip_compute"] = True
 
         try:
-            with Recording("NLRunOnce", 0, self) as rec:
+            with Recording(type(self).__name__, self._iter_count, self):
                 for ss in sim_starts:
                     # Update timestep_index in all subsystems
                     for tk in timestep_keys:
@@ -56,11 +61,13 @@ class TimeMarchingPlantSolver(NonlinearRunOnce):
                         for s in skippable_subsystems:
                             s.options["skip_compute"] = False
 
-                    # Run one GS iteration on the plant group
-                    self._gs_iter()
+                    try:
+                        super().solve()
+                    except AnalysisError as err:
+                        raise AnalysisError(
+                            f"Time-marching window starting at timestep {ss} failed: {err}"
+                        ) from err
 
-                rec.abs = 0.0
-                rec.rel = 0.0
         finally:
             # A failed step must not leave cost and finance models skipped on the next run.
             for s in skippable_subsystems:

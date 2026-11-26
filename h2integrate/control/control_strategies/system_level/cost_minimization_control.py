@@ -39,6 +39,8 @@ class CostMinimizationControl(SystemLevelControlBase):
     See :doc:`/control/system_level_control/slc_cost_min` for configuration and I/O.
     """
 
+    _is_steppable = True
+
     def setup(self):
         super().setup()
 
@@ -46,6 +48,8 @@ class CostMinimizationControl(SystemLevelControlBase):
         self._setup_marginal_costs()
 
     def compute(self, inputs, outputs):
+        simulation_range = self._get_compute_time_range(inputs["timestep_index"])
+
         demand = inputs[self.demand_input_name].copy()
 
         # 1. Fixed techs: always produce, subtract from demand
@@ -85,7 +89,7 @@ class CostMinimizationControl(SystemLevelControlBase):
 
         # Initialize all dispatchable set-point outputs to zero
         for set_point_name in self.dispatchable_set_point_names:
-            outputs[set_point_name] = np.zeros(self.n_timesteps)
+            outputs[set_point_name][simulation_range] = np.zeros(self.n_timesteps_window)
 
         # Dispatch in merit order
         for idx in dispatch_order:
@@ -94,5 +98,5 @@ class CostMinimizationControl(SystemLevelControlBase):
             rated = inputs[rated_name]
 
             dispatch = np.minimum(remaining, rated)
-            outputs[set_point_name] = dispatch
+            outputs[set_point_name][simulation_range] = dispatch[simulation_range]
             remaining -= dispatch

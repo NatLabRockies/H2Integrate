@@ -85,35 +85,22 @@ def check_time_marching_config(
             f"must be divisible by n_timesteps_window ({n_timesteps_window})."
         )
 
-    if system_level_control_enabled:
-        raise NotImplementedError(
-            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
-            "with system-level control."
-        )
-
-    if has_cycles:
-        raise NotImplementedError(
-            "Time-marching simulation (n_timesteps_window < n_timesteps) is not supported "
-            "when the technology interconnections contain a cycle."
-        )
-
     return True
 
 
-def check_model_is_steppable(control_strategies, performance_models):
-    """Check that all technology control strategies and performance models have the attribute
-    _is_steppable == True. If _is_steppable attribute is missing or evaluates to False, then the
-    system is suitable for steppable simulation and an error is raised.
+def check_model_is_steppable(control_strategies, performance_models, system_level_controller=None):
+    """Require all performance models and controllers to opt in to time marching.
 
     Args:
-        control_strategies (list):
-        performance_models (list):
+        control_strategies (list): Technology-level control strategies.
+        performance_models (list): Technology performance models.
+        system_level_controller (om.ExplicitComponent | None): Plant-level controller, if any.
 
     Returns:
         None: Returns if all models are steppable.
 
     Raises:
-        AttributeError: If control strategies or performance models are not flagged as steppable.
+        AttributeError: If any model or controller is not flagged as steppable.
     """
 
     error_msg_list = []
@@ -132,10 +119,15 @@ def check_model_is_steppable(control_strategies, performance_models):
         performance_msg = f"Performance model(s): {sorted(non_steppable_performance_models)}"
         error_msg_list.append(performance_msg)
 
+    if system_level_controller is not None and not getattr(
+        system_level_controller, "_is_steppable", False
+    ):
+        error_msg_list.append(f"System level controller: {system_level_controller}")
+
     if error_msg_list:
         error_msg = (
             "Attempting to run a steppable simulation with unsupported models:\n\t"
             + "\n\t".join(error_msg_list)
-            + "\n\t are not flagged as capable of steppable simulation."
+            + "\n\tare not flagged as capable of steppable simulation."
         )
         raise AttributeError(error_msg)
